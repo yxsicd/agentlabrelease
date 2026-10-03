@@ -12,6 +12,7 @@ from pathlib import Path, PurePosixPath
 import re
 import subprocess
 import sys
+import time
 from typing import Any
 
 
@@ -176,16 +177,71 @@ def execute(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
     output.mkdir(parents=True)
     source_contract_path = output / "source-contract.json"
     write_json(source_contract_path, contract)
-    command = [
-        str(hvigorw),
-        "--mode", "module",
-        "-p", f"module={args.build_module}@ohosTest",
-        "-p", f"product={args.product}",
-        "-p", f"buildMode={args.build_mode}",
-        "assembleHap",
-        "--no-daemon",
+    planner = args.build_planner.resolve(strict=True)
+    require(planner.is_file() and not planner.is_symlink() and os.access(planner, os.X_OK),
+            "build planner must be an executable regular file")
+    plan_path = output / "build-plan.json"
+    plan_result = run_build([
+        str(planner), "--prepare-harmony-build-plan", "--project-root", str(root),
+        "--build-module", args.build_module, "--host-module", args.host_module or args.build_module,
+        "--product", args.product, "--build-mode", args.build_mode,
+        "--output", str(plan_path),
+    ], root, min(args.build_timeout_seconds, 30))
+    write_json(output / "build-plan-command.json", plan_result)
+    require(not plan_result["timedOut"] and plan_result["exitCode"] == 0,
+            "source-bound build planning failed; inspect build-plan-command.json")
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    require(plan.get("schema") == "agentlab.harmony_standard_test_build_plan.v1"
+            and plan.get("module") == args.build_module
+            and plan.get("hostModule") == (args.host_module or args.build_module)
+            and plan.get("product") == args.product and plan.get("buildMode") == args.build_mode
+            and plan.get("automaticPromotion") is False and plan.get("runtimeQualified") is False,
+            "build plan identity differs")
+    task = "assembleHap" if plan.get("outputType") == "hap" else "genOnDeviceTestHap"
+    require(plan.get("outputType") in {"hap", "har", "hsp"}, "unsupported planned output type")
+    expected_steps = [
+        {"module": plan["hostModule"], "target": "default", "task": "assembleHap"},
+        {"module": args.build_module, "target": "ohosTest", "task": task},
     ]
-    build_result = run_build(command, root, args.build_timeout_seconds)
+    require(plan.get("commands") == expected_steps, "planned build commands differ")
+    module_relative = safe_relative(plan["modulePath"], "planned module")
+    selected_files = [path for path in files
+                      if PurePosixPath(path.relative_to(root).as_posix()).is_relative_to(module_relative)
+                      or path == root / "oh-package.json5"]
+    require(any(item.get("framework") == FRAMEWORK and item.get("sourceContractQualified") is True
+                for item in contract_module.inspect_lanes(root, selected_files)),
+            "selected module lacks a qualified ohosTest/Hypium source contract")
+    require(isinstance(plan.get("sourceBindings"), list) and plan["sourceBindings"],
+            "build plan has no source bindings")
+    for source in plan["sourceBindings"]:
+        relative = safe_relative(source["path"], "planned source")
+        require(snapshot.get(relative.as_posix()) == {
+            "sha256": source["sha256"], "byteLength": source["byteLength"]},
+            "build plan source differs from frozen project")
+    for artifact, owner in ((app_relative, plan["hostModulePath"]), (test_relative, plan["modulePath"])):
+        prefix = safe_relative(owner, "planned module") / "build"
+        require(artifact.is_relative_to(prefix), "HAP output is outside its planned module build directory")
+    verify_source_snapshot(root, snapshot)
+    # One total timeout for both builds, rather than one full budget per step.
+    deadline = time.monotonic() + args.build_timeout_seconds
+    steps = []
+    for step in expected_steps:
+        command = [str(hvigorw), "--mode", "module", "-p",
+                   f"module={step['module']}@{step['target']}", "-p", f"product={args.product}",
+                   "-p", f"buildMode={args.build_mode}", step["task"], "--no-daemon", "--no-parallel"]
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            steps[-1]["timedOut"] = True
+            break
+        result = run_build(command, root, remaining)
+        steps.append(result)
+        if result["timedOut"] or result["exitCode"] != 0:
+            break
+    command = steps[-1]["command"]
+    build_result = {**steps[-1], "steps": steps,
+                    "startedAt": steps[0]["startedAt"],
+                    "stdout": "\n".join(step["stdout"] for step in steps),
+                    "stderr": "\n".join(step["stderr"] for step in steps)}
     build_log_path = output / "build-command.json"
     write_json(build_log_path, build_result)
 
@@ -228,7 +284,13 @@ def execute(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
             "testTarget": f"{args.build_module}@ohosTest",
             "product": args.product,
             "buildMode": args.build_mode,
+            "outputType": plan["outputType"],
+            "hostModule": plan["hostModule"],
+            "task": task,
         },
+        "buildPlan": binding(plan_path, "build-plan.json"),
+        "buildPlanner": binding(planner, str(planner)),
+        "buildPlanLog": binding(output / "build-plan-command.json", "build-plan-command.json"),
         "buildTool": binding(hvigorw, str(hvigorw)),
         "sourceContract": binding(source_contract_path, "source-contract.json"),
         "sourceIntegrityPreserved": source_integrity,
@@ -301,6 +363,9 @@ def main() -> int:
     parser.add_argument("--source-set-sha256", required=True)
     parser.add_argument("--hvigorw", type=Path, required=True)
     parser.add_argument("--build-module", required=True)
+    parser.add_argument("--host-module", help="Installable HAP host; required for a library test module")
+    parser.add_argument("--build-planner", type=Path, required=True,
+                        help="Native agentlab-maintainer-skill-flywheel executable")
     parser.add_argument("--product", default="default")
     parser.add_argument("--build-mode", default="debug")
     parser.add_argument("--app-hap", required=True)

@@ -1,0 +1,26 @@
+{
+  "schema": "agentlab.host_source_trace_summary.v1",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "sourceCheckoutClean": true,
+  "evidence": [
+    {"path":"products/phone/oh-package.json5","gitBlobOid":"0d5b378c1ff1722c5a107e39aaafaf9c58781920","observation":"Phone declares a local dependency on abilitycommon."},
+    {"path":"features/abilitycommon/oh-package.json5","gitBlobOid":"e0aee289f6023b38317876bb54abefb8675ef01a","observation":"Abilitycommon declares a local dependency on componentlibrary."},
+    {"path":"features/abilitycommon/src/main/ets/view/HomeView.ets","gitBlobOid":"3e13b58ddf620b1662120220d00e3e1885864c7e","observation":"HomeView imports ComponentHomeView from componentlibrary and instantiates it in TabContentsBuilder."},
+    {"path":"products/phone/src/main/ets/entryability/EntryAbility.ets","gitBlobOid":"42499e95830d996734e11bb72c37dae230ba3250","observation":"EntryAbility delegates window-stage creation to BaseAbilityHelper."},
+    {"path":"features/abilitycommon/src/main/ets/abilityhelper/BaseAbilityHelper.ets","gitBlobOid":"f0a6e7c157fb6f98b26d0eebaa52db38caca4e10","observation":"After successful loadContent of page/SplashPage, the callback invokes WindowUtil.initialize; failure logs and returns before initialization."},
+    {"path":"common/src/main/ets/util/WindowUtil.ets","gitBlobOid":"869be036a4753b40ff809e718d36be0a304493bf","observation":"Initialize obtains the main window UIContext and writes StorageKey.UI_CONTEXT to AppStorage inside a try/catch."},
+    {"path":"features/componentlibrary/src/main/resources/base/profile/router_map.json","gitBlobOid":"a7c050302df25f54e029852d0423ef07579c8153","observation":"The library registers ComponentDetailView and its builder separately from its public Index exports."}
+  ],
+  "changedNextAction": "Reuse the existing phone/abilitycommon host candidate rather than assume a new host is necessary. Verify page loading and target dialog reachability, then declare bounded test edits and runtime readiness observations.",
+  "limitations": [
+    "Dependency and import/use edges are source evidence only; no build, link, signing, installation or emulator execution was performed.",
+    "The complete SplashPage-to-target-dialog navigation and runtime initialization ordering remain unqualified.",
+    "No independent dialog Oracle or negative-control calibration is established.",
+    "This operator review is not authenticated independent approval or admitted TableGit knowledge. Historical review artifacts are unchanged."
+  ],
+  "authorityWritePerformed": false,
+  "formalCaseQualified": false,
+  "runtimeQualified": false,
+  "completeAutomaticBusinessLoops": 0,
+  "overallMaturityEstimatePercent": 68
+}

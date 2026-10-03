@@ -7,6 +7,8 @@ import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import re
+import subprocess
+import tempfile
 
 
 SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -169,7 +171,50 @@ def validate_qualification(root: Path, value, label: str, candidate: dict,
             "verificationBoundary": "recorded receipt content only; no execution replay or producer authentication"}
 
 
-def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: Path) -> dict:
+def construction_bindings(knowledge: Path, candidate: dict, edit_boundary: Path | None,
+                          source_worktree: Path | None, flywheel_tool: Path | None) -> dict | None:
+    supplied = (edit_boundary, source_worktree, flywheel_tool)
+    if not any(value is not None for value in supplied):
+        return None
+    require(all(value is not None for value in supplied), "construction binding requires packet, source and native tool")
+    require(edit_boundary.is_file() and not edit_boundary.is_symlink()
+            and edit_boundary.stat().st_size <= 1024 * 1024, "construction packet is not a bounded regular file")
+    packet_sha = file_digest(edit_boundary)
+    require(packet_sha == candidate.get("lineage", {}).get("editBoundarySha256"),
+            "construction packet differs from candidate lineage")
+    require(flywheel_tool.is_file() and not flywheel_tool.is_symlink(), "construction native tool invalid")
+    tool_sha = file_digest(flywheel_tool)
+    with tempfile.TemporaryDirectory(prefix="agentlab-path-binding-") as directory:
+        root = Path(directory)
+        candidate_path = root / "candidate.json"
+        candidate_path.write_bytes(canonical(candidate))
+        output = root / "binding.json"
+        command = [str(flywheel_tool.resolve()), "--bind-construction-paths",
+                   "--knowledge", str(knowledge.absolute()), "--source-worktree", str(source_worktree.absolute()),
+                   "--edit-boundary", str(edit_boundary.absolute()), "--candidate", str(candidate_path),
+                   "--output", str(output)]
+        result = subprocess.run(command, capture_output=True, text=True, timeout=120)
+        require(result.returncode == 0, f"construction native binding failed: {result.stderr}")
+        require(file_digest(flywheel_tool) == tool_sha and file_digest(edit_boundary) == packet_sha,
+                "construction binding input changed during validation")
+        binding = load(output)
+    require(binding.get("schema") == "agentlab.case_construction_path_binding.v1"
+            and binding.get("candidateId") == candidate["id"]
+            and binding.get("candidateSha256") == value_digest(candidate)
+            and binding.get("editBoundarySha256") == packet_sha
+            and all(binding.get(key) is False for key in (
+                "qualified", "automaticPromotion", "authorityWritePerformed", "grantsEditablePaths", "calibrationInherited")),
+            "construction native binding receipt differs")
+    binding["validatorExecutableSha256"] = tool_sha
+    binding["validatorStdout"] = result.stdout
+    binding["validatorStderr"] = result.stderr
+    binding["validatorExitCode"] = result.returncode
+    return binding
+
+
+def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: Path,
+           edit_boundary: Path | None = None, source_worktree: Path | None = None,
+           flywheel_tool: Path | None = None) -> dict:
     cut_path = knowledge / "maintainer-knowledge-cut.json"
     cut = load(cut_path)
     candidates = [row for row in rows(knowledge / "case_generation_candidates.jsonl") if row["id"] == candidate_id]
@@ -225,6 +270,8 @@ def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: P
     require(set(plan) == required_fields, "construction plan fields differ")
     editable = set(strings(candidate.get("editablePaths"), "candidate editablePaths"))
     context = set(candidate.get("contextPaths") or [])
+    binding = construction_bindings(knowledge, candidate, edit_boundary, source_worktree, flywheel_tool)
+    selected = {row["path"]: row for row in binding["paths"]} if binding else {}
 
     def path_checks(field: str, permitted: set[str], permission_name: str) -> list[dict]:
         values = plan.get(field)
@@ -258,6 +305,9 @@ def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: P
                 permission_name: path in permitted,
                 "readOnlyContextBound": readonly_context,
                 "contextOwnerScopeSkillIds": owners if readonly_context else [],
+                **({"constructionSelectionBound": path in selected,
+                    "constructionPrecondition": selected[path]["precondition"] if path in selected else None}
+                   if binding else {}),
             })
         return checks
 
@@ -300,14 +350,14 @@ def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: P
     for row in implementation:
         if not row["inCandidateScope"]:
             knowledge_blockers.append(f"implementation path escapes candidate scope: {row['path']}")
-        if not row["factEvidenceBound"]:
+        if not row["factEvidenceBound"] and not row.get("constructionSelectionBound", False):
             knowledge_blockers.append(f"implementation path is absent from bound fact evidence: {row['path']}")
         if not row["editable"]:
             knowledge_blockers.append(f"implementation path is absent from candidate editablePaths: {row['path']}")
     for row in oracle_paths:
         if not row["inCandidateScope"] and not row["readOnlyContextBound"]:
             knowledge_blockers.append(f"Oracle path escapes candidate scope: {row['path']}")
-        if not row["factEvidenceBound"]:
+        if not row["factEvidenceBound"] and not row.get("constructionSelectionBound", False):
             knowledge_blockers.append(f"Oracle path is absent from bound fact evidence: {row['path']}")
         if not row["candidateVisible"]:
             knowledge_blockers.append(f"Oracle path is absent from candidate editable/context paths: {row['path']}")
@@ -354,6 +404,7 @@ def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: P
         "decision": decision,
         "nextGate": next_gate,
         "automaticPromotion": False,
+        **({"constructionPathBinding": binding} if binding else {}),
     }
 
 
@@ -364,8 +415,12 @@ def main() -> None:
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--evidence-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--edit-boundary", type=Path)
+    parser.add_argument("--source-worktree", type=Path)
+    parser.add_argument("--flywheel-tool", type=Path)
     args = parser.parse_args()
-    result = assess(args.knowledge, args.candidate_id, args.plan, args.evidence_root)
+    result = assess(args.knowledge, args.candidate_id, args.plan, args.evidence_root,
+                    args.edit_boundary, args.source_worktree, args.flywheel_tool)
     require(not args.output.exists(), "readiness output already exists")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")

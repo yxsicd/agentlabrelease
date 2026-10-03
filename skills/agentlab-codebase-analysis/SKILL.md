@@ -23,6 +23,80 @@ no candidate may enter semantic review without a passing candidate-stage receipt
 
 Every claim needs a source location or analysis record. Distinguish observed behavior from inferred intent. Use program facts to support the semantic model; do not manufacture dependency edges from prose. Preserve unresolved questions as gaps.
 
+Scope-local build/test counts do not describe the enclosing module or repository.
+Before declaring a missing harness, inspect the pinned owning module, its test
+registration and the installable host separately. Record existing entrypoints
+independently from behavioral coverage: a registered template assertion is not
+an Oracle for the selected responsibility. Library output, test output and host
+application output may have different build contracts. Bind SDK requirements,
+exports and host dependencies to their actual configuration Blobs; a sibling
+application is only a host candidate until its connection is verified.
+Trace local package dependencies transitively and verify an actual import/use
+edge before proposing a new host: absence of a direct dependency does not prove
+absence of a host. Inspect lifecycle initialization of shared UI/context state
+separately from the dependency graph. A success callback that seeds state is a
+source contract, not proof that initialization completed before a test action;
+runtime readiness and failure paths still need explicit observation. Refresh
+the relevant configuration/test-owner Skills rather than broadening a behavior
+scope's ownership or treating uninspected paths as absent.
+
+Resolve build tools from existing composition/toolchain receipts before declaring
+them absent from PATH or a bounded search. Revalidate their current entrypoints
+and SDK metadata, then inspect the exact module/target task registration. A tool
+version, successful help/task listing or successful initialization does not prove
+the requested build task exists. Check whether task discovery includes lazy
+registrations before interpreting a setup-only listing as missing tasks. Resolve
+the supported task from the owning module's output type and plugin contract;
+library device-test packaging need not use the application packaging task.
+Keep historical build qualification separate from a fresh build, which needs
+terminal logs and a newly bound output artifact. A successful build may skip
+signing: qualify package identity, signing and installation independently before
+claiming executable tests. Generated test scaffolding is not behavioral coverage.
+Automate this selection from parsed source registrations and output types, not
+directory-name guesses or operator-selected task strings. Bind the configuration
+bytes used by the planner to the executor's frozen source set. Build the declared
+installable host and device-test output separately, stop on either build failure,
+and check test evidence inside the selected module rather than borrowing a sibling's
+framework. Host packaging is not proof of runtime navigation or case calibration.
+
+For cross-scope construction gaps, use the Rust
+`--prepare-construction-context --knowledge ABSOLUTE_CUT --source-worktree
+ABSOLUTE_CHECKOUT --repository ID --context-path PATH --output FRESH_PACKET`,
+repeating the path option for explicitly reviewed non-secret inputs. It checks
+all five table digests, clean source/origin/revision, unique scope ownership and
+regular UTF-8 Git Blobs, then retains original text and per-file hashes under
+bounded byte limits. Root context covers direct root files, not every child.
+Use the returned owner IDs for focused analysis; the packet neither updates
+knowledge nor grants edits. Later facts and successor construction inputs still
+need their existing admission gates. Unchanged reordered selection must reproduce
+the same packet; raw source packets stay in the operator artifact archive.
+
+For proposed cross-scope host/test changes, prepare a separate Rust
+`--prepare-construction-edit-boundary` packet with the same knowledge/source/repository
+options and `--edit-selection ABSOLUTE_JSON --output FRESH_PACKET`. The selection
+schema is `agentlab.case_edit_selection.v1`; each `edits` entry declares `path`,
+`mode` (`modify` or `create`), `ownerScopeSkillId`, `anchorPath` and `reason`.
+Modification anchors are the target's exact source Blob. Creation anchors are
+existing files of the same owner; the new target must independently match that
+owner's selectors and be absent from the source Tree and checkout. An exact-file
+selector never authorizes a new sibling. Keep this bound selection separate from
+read-only context and executable edit authority, and carry its digest into the
+successor construction input. It does not update the parent candidate, establish
+host integration or inherit oracle/calibration qualification.
+Consumers can reconstruct it with `--validate-construction-edit-boundary`, the
+same knowledge/source options and `--edit-boundary ABSOLUTE_PACKET --output FRESH`;
+do not trust only embedded owners or the producer's declared digest.
+
+The v2 context packet also carries committed owner-scope analysis facts with
+their original value digests and limitations. Only same-source facts with a
+selected exact Blob match are included; stale/unmatched analyses are reported
+separately. `allFactEvidenceLoaded` and `unloadedEvidencePaths` distinguish a
+complete source check from partially loaded context. Neither is new semantic
+qualification. Inspect this existing knowledge before spending another analysis
+turn: a relevant fact omitted from construction is an input-selection gap, not
+evidence that its Maintainer Skill needs rebuilding. Repeated conclusions are
+not a productive refresh, and a changed prompt is not measured downstream benefit.
+
 Build knowledge through repeated evidence rounds, not a single repository read.
 First freeze the structural scope catalog, then bind revision-matched program
 facts, assess universal evidence dimensions, and use the resulting gap queue to

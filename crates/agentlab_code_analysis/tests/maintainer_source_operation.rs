@@ -384,7 +384,7 @@ with tempfile.TemporaryDirectory() as directory:
 #[test]
 fn source_recipe_dispatch_uses_explicit_constructor_limits_without_retry() {
     let code = r#"
-import importlib.util, json, os, sys, tempfile
+import hashlib, importlib.util, json, os, sys, tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -402,6 +402,10 @@ with tempfile.TemporaryDirectory() as d:
     revision_packet = {'parentProposalOriginal':json.dumps({'scopeSkillId':'arbitrary-scope'}),
                        'reviewOriginal':json.dumps({'findings':[{'id':'grounded-feedback'}]})}
     revision_path.write_text(json.dumps(revision_packet))
+    parent_design=root/'parent-design.json'
+    parent_design.write_text('{"schema":"agentlab.source_recipe_design.v2"}')
+    design_feedback=root/'design-feedback.json'
+    design_feedback.write_text('{"findings":[{"id":"grounded-design-review"}]}')
     for index, extra, effort, deadline, thinking in [(0, [], 'low', 180, None),
         (1, ['--reasoning-effort','high','--gateway-timeout-seconds','120'], 'high',120,None),
         (2, ['--reasoning-effort','default'], None,180,None),
@@ -409,7 +413,15 @@ with tempfile.TemporaryDirectory() as d:
         (4, ['--api','openai-responses','--reasoning-effort','none','--response-format','json-object'],'none',180,None),
         (5, ['--revision-request',str(revision_path)],'low',180,None),
         (6, ['--design-first'],'low',180,None),
-        (7, ['--max-output-tokens','8192'],'low',180,None)]:
+        (7, ['--max-output-tokens','8192'],'low',180,None),
+        (8, ['--design-first','--design-only'],'low',180,None),
+        (9, ['--design-first','--design-only','--parent-design',str(parent_design),
+             '--design-review-feedback',str(design_feedback)],'low',180,None),
+        (10, ['--frozen-design',str(parent_design),'--frozen-design-sha256',
+              hashlib.sha256(parent_design.read_bytes()).hexdigest()],'low',180,None),
+        (11, ['--frozen-design',str(parent_design),'--frozen-design-sha256',
+              hashlib.sha256(parent_design.read_bytes()).hexdigest(),
+              '--revision-request',str(revision_path)],'low',180,None)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -453,17 +465,50 @@ with tempfile.TemporaryDirectory() as d:
         assert seen['turn']['reasoning_effort'] == effort
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
-        assert stage.call_count == (2 if index in (5,6) else 1)
+        assert stage.call_count == (3 if index==11 else 2 if index in (5,6,9,10) else 1)
+        if index in (8,9):
+            assert seen['labels']==['source-recipe-design']
+            receipt=json.loads((root/str(index)/'design-capture.json').read_bytes())
+            assert receipt['reviewRequired'] is True and receipt['semanticQualified'] is False
+            assert receipt['verifierGenerationPerformed'] is False
+            assert receipt['executionPerformed'] is False
+            assert not (root/str(index)/'proposal.json').exists()
+            assert '--validate-source-recipe-design' in stage.call_args[0][0]
+            if index==9:
+                assert '--validate-source-design-review' in stage.call_args_list[0][0][0]
+                assert 'grounded-design-review' in seen['turn']['prompt']
+                assert json.loads((root/str(index)/'parent-design.json').read_bytes())==json.loads(parent_design.read_bytes())
+            continue
         if index==6:
             assert seen['labels']==['source-recipe-design','source-recipe-author']
             assert '--validate-source-recipe-design' in stage.call_args_list[0][0][0]
             assert '--design' in stage.call_args[0][0]
             assert (root/str(index)/'evidence/design-0-generation-completion.json').exists()
+        if index in (10,11):
+            assert seen['labels']==['source-recipe-author']
+            assert '--validate-source-recipe-design' in stage.call_args_list[0][0][0]
+            assert '--design' in stage.call_args[0][0]
+            assert (root/str(index)/'design.json').read_bytes()==parent_design.read_bytes()
+            receipt=json.loads((root/str(index)/'design-continuation.json').read_bytes())
+            assert receipt['designGenerationPerformed'] is False and receipt['semanticQualified'] is False
+            assert receipt['designSha256']==hashlib.sha256(parent_design.read_bytes()).hexdigest()
+            if index==11:
+                assert '--check-source-recipe-revision' in stage.call_args_list[1][0][0]
+                assert 'grounded-feedback' in seen['turn']['prompt']
+                assert (root/str(index)/'revision-request.json').read_bytes()==revision_path.read_bytes()
         if index==5:
             assert '--check-source-recipe-revision' in stage.call_args_list[0][0][0]
             assert json.loads((root/str(index)/'revision-request.json').read_bytes()) == revision_packet
         assert '--stage-source-recipe-proposal' in stage.call_args[0][0]
         assert json.loads((root/str(index)/'proposal.json').read_bytes()) == {}
+    argv = ['author','--request',str(request),'--output',str(root/'invalid-design-only'),
+            '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi','--design-only']
+    with patch.object(sys,'argv',argv), patch.object(module.importlib.util,'spec_from_file_location') as dispatch:
+        try: module.main()
+        except SystemExit as failure: assert failure.code==2
+        else: raise AssertionError('Unpaired design-only dispatch was accepted')
+        dispatch.assert_not_called()
+        assert not (root/'invalid-design-only').exists()
     argv = ['author','--request',str(request),'--output',str(root/'rejected-revision'),
             '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi',
             '--revision-request',str(revision_path)]
@@ -488,6 +533,101 @@ with tempfile.TemporaryDirectory() as d:
         else: raise AssertionError('rejected design continued')
         assert seen['labels']==['source-recipe-design'] and seen['closed'] is True
     assert not (root/'rejected-design/proposal.json').exists()
+    for suffix, extra in [('digest',['--frozen-design',str(parent_design),'--frozen-design-sha256','0'*64]),
+                          ('pair',['--frozen-design',str(parent_design)]),
+                          ('mixed',['--frozen-design',str(parent_design),'--frozen-design-sha256','0'*64,'--design-first'])]:
+        argv=['author','--request',str(request),'--output',str(root/('rejected-frozen-'+suffix)),
+              '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi',*extra]
+        with patch.dict(os.environ,env), patch.object(sys,'argv',argv), \
+             patch.object(module.importlib.util,'spec_from_file_location') as dispatch, \
+             patch.object(module.subprocess,'run') as gate:
+            try: module.main()
+            except (ValueError,SystemExit): pass
+            else: raise AssertionError('Invalid frozen continuation accepted')
+            dispatch.assert_not_called()
+            gate.assert_not_called()
+    argv=['author','--request',str(request),'--output',str(root/'rejected-frozen-source'),
+          '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi',
+          '--frozen-design',str(parent_design),'--frozen-design-sha256',
+          hashlib.sha256(parent_design.read_bytes()).hexdigest()]
+    with patch.dict(os.environ,env), patch.object(sys,'argv',argv), \
+         patch.object(module.importlib.util,'spec_from_file_location') as dispatch, \
+         patch.object(module.subprocess,'run',return_value=failure):
+        try: module.main()
+        except subprocess.CalledProcessError: pass
+        else: raise AssertionError('Rejected frozen source dispatched')
+        dispatch.assert_not_called()
+    assert not (root/'rejected-frozen-source/proposal.json').exists()
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "AUTHOR_SCRIPT",
+            root().join("scripts/run-source-recipe-author.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn proposal_format_correction_retains_original_and_stops_on_incomplete_or_drift() {
+    let code = r#"
+import importlib.util, json, os, tempfile
+from pathlib import Path
+spec=importlib.util.spec_from_file_location('author',os.environ['AUTHOR_SCRIPT'])
+module=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+with tempfile.TemporaryDirectory() as d:
+    for name in ['recover','exhaust','incomplete','truncated','drift','semantic']:
+        output=Path(d)/name
+        output.mkdir()
+        workspace=output/'workspace'; workspace.mkdir()
+        evidence=output/'evidence'; evidence.mkdir()
+        policy=module.freeze_pi_retry_policy(output/'participant-state',workspace,evidence)
+        labels=[]; prompts=[]
+        class Participant:
+            def turn(self,label,workspace,**options):
+                labels.append(label); prompts.append(options['prompt'])
+                assert options['transport_retry_limit']==0
+                gateway=evidence/'gateway'; gateway.mkdir(exist_ok=True)
+                complete=name!='incomplete'
+                (gateway/f'{len(labels):04d}.status.json').write_text(json.dumps(dict(
+                    status=200,outcome='completed' if complete else 'incomplete',
+                    semanticComplete=complete,upstreamEof=complete,streamError=None,clientDisconnected=False)))
+                if name=='drift': (output/'participant-state/settings.json').write_text('{}')
+                content='```json\n{"contract":{"checks":[]}}\n```'
+                if len(labels)>1 and name=='recover': content='{"contract":{"checks":[]}}'
+                if name=='semantic': content='{"invalidSchemaButValidJson":true}'
+                return dict(content=content,message={'stopReason':'length' if name=='truncated' else 'stop'})
+        try:
+            result=module.construct_proposal(Participant(),workspace,evidence,output,
+                'frozen initial construction','low',1,policy)
+            assert name in ['recover','semantic']
+            if name=='recover': assert result=={'contract':{'checks':[]}}
+            else: assert result=={'invalidSchemaButValidJson':True}
+        except ValueError:
+            assert name not in ['recover','semantic']
+        expected=2 if name in ['recover','exhaust'] else 1
+        assert len(labels)==expected
+        assert not (output/'proposal.json').exists() and not (output/'proposal-stage').exists()
+        if name not in ['incomplete','truncated']:
+            ledger=json.loads((output/'proposal-attempts.json').read_bytes())
+            assert len(ledger['attempts'])==expected
+            assert ledger['semanticQualified'] is False and ledger['automaticPromotion'] is False
+            if name!='semantic':
+                assert ledger['attempts'][0]['accepted'] is False
+                assert (output/'proposal-attempt-0.txt').read_text().startswith('```json')
+        else: assert not (output/'proposal-attempts.json').exists()
+        if expected==2:
+            assert labels[-1]=='source-recipe-author-format-revision-1'
+            assert 'Preserve' in prompts[-1] and 'format-only' in prompts[-1]
+            assert (evidence/'proposal-0-generation-completion.json').exists()
+            assert (evidence/'proposal-1-generation-completion.json').exists()
 "#;
     let result = Command::new("python3")
         .args(["-c", code])
@@ -998,12 +1138,17 @@ fn loop_fixture() -> (PathBuf, Value) {
 }
 
 fn loop_fixture_with_extra_source(extra: bool) -> (PathBuf, Value) {
+    loop_fixture_with_source_context(extra.then_some(b"{\"metadata\":true}".as_slice()))
+}
+
+fn loop_fixture_with_source_context(context: Option<&[u8]>) -> (PathBuf, Value) {
+    let extra = context.is_some();
     let (dir, mut first, _, mut recipe) = fixture();
     let source = dir.join("source");
     fs::create_dir(source.join("other")).unwrap();
     fs::write(source.join("other/state.json"), b"{\"value\":1}").unwrap();
-    if extra {
-        fs::write(source.join("src/unloaded.json"), b"{\"metadata\":true}").unwrap();
+    if let Some(bytes) = context {
+        fs::write(source.join("src/unloaded.json"), bytes).unwrap();
     }
     for args in [
         vec!["add", "other/state.json", "src"],
@@ -1133,6 +1278,36 @@ fn loop_fixture_with_extra_source(extra: bool) -> (PathBuf, Value) {
 }
 
 #[test]
+fn source_author_context_keeps_large_scopes_bounded_and_binary_files_unloaded() {
+    for bytes in [vec![b'x'; 129 * 1024], vec![0xff, 0xfe]] {
+        let (dir, _) = loop_fixture_with_source_context(Some(&bytes));
+        let original: Value =
+            serde_json::from_slice(&fs::read(dir.join("recipe-0.json")).unwrap()).unwrap();
+        let node = fs::canonicalize(
+            original["controls"][0]["command"]["program"]
+                .as_str()
+                .unwrap(),
+        )
+        .unwrap();
+        let policy = json!({"schema":"agentlab.source_recipe_author_policy.v1","automaticPromotion":false,
+            "program":node,"programSha256":digest(&fs::read(&node).unwrap()),"methodDependencies":[]});
+        let request = agentlab_code_analysis::maintainer_source_recipe_author::prepare(
+            &dir.join("knowledge"),
+            &dir.join("source"),
+            "arbitrary",
+            &serde_json::to_vec(&policy).unwrap(),
+        )
+        .unwrap();
+        assert!(request["sourceFiles"][0]["content"].is_string());
+        assert!(request["sourceFiles"][1]["content"].is_null());
+        assert_eq!(request["sourceFiles"][1]["sha256"], digest(&bytes));
+        assert_eq!(request["reviewed"], false);
+        assert_eq!(request["closedLoopQualified"], false);
+        fs::remove_dir_all(dir).unwrap();
+    }
+}
+
+#[test]
 fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_review() {
     use agentlab_code_analysis::maintainer_source_recipe_author as author;
     let (dir, catalog) = loop_fixture_with_extra_source(true);
@@ -1156,7 +1331,7 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     assert_eq!(request["scope"]["id"], "scope-arbitrary");
     assert_eq!(request["sourceFiles"].as_array().unwrap().len(), 2);
     assert_eq!(request["sourceFiles"][0]["path"], "src/state.json");
-    assert_eq!(request["sourceFiles"][1]["content"], Value::Null);
+    assert_eq!(request["sourceFiles"][1]["content"], "{\"metadata\":true}");
     let proposal = json!({"schema":"agentlab.source_recipe_author_proposal.v1","scopeSkillId":"scope-arbitrary",
         "sourcePaths":["src/state.json"],"verifierSource":"const fs=require('fs'),path=require('path');const n=JSON.parse(fs.readFileSync(path.join(process.argv[2],'src/state.json'))).value; console.log(JSON.stringify({value:process.argv[3]==='wrong'?0:n}));",
         "rationale":"Exercise actual source state and independent wrong output.","limitations":["No platform runtime","One scoped contract only"],
@@ -1224,6 +1399,64 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     assert_eq!(checked["semanticQualified"], false);
     assert_eq!(checked["executionPerformed"], false);
     assert_eq!(checked["controls"][1]["edits"][0]["matchCount"], 1);
+    let mut oversized = design.clone();
+    oversized["limitations"] = json!(vec!["retained limitation"; 9]);
+    let error =
+        author::design(&request_bytes, &serde_json::to_vec(&oversized).unwrap()).unwrap_err();
+    assert!(error.contains("limitations count must be 2..8; observed 9"));
+    oversized = design.clone();
+    oversized["invariant"] = json!("x".repeat(2049));
+    let error =
+        author::design(&request_bytes, &serde_json::to_vec(&oversized).unwrap()).unwrap_err();
+    assert!(error.contains("invariant byte budget 2048; observed 2049"));
+    let design_bytes = serde_json::to_vec(&design).unwrap();
+    let review = json!({"schema":"agentlab.source_recipe_design_review.v1",
+        "parentRequestSha256":digest(&request_bytes),"parentDesignSha256":digest(&design_bytes),
+        "reviewed":true,"verdict":"revise","reviewer":"independent-fixture-review","automaticPromotion":false,
+        "findings":[{"id":"source-shape","sourcePaths":["src/state.json"],
+            "observed":"Draft needs an independent shape review.","requiredChange":"Match actual source return values."}]});
+    let admission = author::design_review(
+        &request_bytes,
+        &design_bytes,
+        &serde_json::to_vec(&review).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(admission["semanticQualified"], false);
+    assert_eq!(admission["revisionRequested"], true);
+    for field in [
+        "parentRequestSha256",
+        "parentDesignSha256",
+        "reviewed",
+        "verdict",
+        "automaticPromotion",
+    ] {
+        let mut bad = review.clone();
+        bad[field] = json!("forged");
+        assert!(author::design_review(
+            &request_bytes,
+            &design_bytes,
+            &serde_json::to_vec(&bad).unwrap()
+        )
+        .is_err());
+    }
+    for path in ["other/state.json", "src/missing.json", "../src/state.json"] {
+        let mut bad = review.clone();
+        bad["findings"][0]["sourcePaths"] = json!([path]);
+        assert!(author::design_review(
+            &request_bytes,
+            &design_bytes,
+            &serde_json::to_vec(&bad).unwrap()
+        )
+        .is_err());
+    }
+    let mut changed_request = request.clone();
+    changed_request["source"]["revision"] = json!("0".repeat(40));
+    assert!(author::design_review(
+        &serde_json::to_vec(&changed_request).unwrap(),
+        &design_bytes,
+        &serde_json::to_vec(&review).unwrap()
+    )
+    .is_err());
     let mut seam_design = design.clone();
     seam_design["schema"] = json!("agentlab.source_recipe_design.v2");
     seam_design["scenarios"][0]["inputs"]["seams"] = json!({
@@ -1473,7 +1706,7 @@ const runtime=require(process.argv[1])(process.argv[2],'baseline',null);
         )
         .is_err());
     }
-    for path in ["other/state.json", "src/unloaded.json", "../src/state.json"] {
+    for path in ["other/state.json", "src/missing.json", "../src/state.json"] {
         let mut bad = feedback.clone();
         bad["findings"][0]["sourcePaths"] = json!([path]);
         assert!(author::revision(
@@ -1646,8 +1879,10 @@ const runtime=require(process.argv[1])(process.argv[2],'baseline',null);
     .is_err());
     let mut bad = proposal.clone();
     bad["sourcePaths"] = json!(["src/unloaded.json"]);
+    let mut anchor_only = request.clone();
+    anchor_only["sourceFiles"][1]["content"] = Value::Null;
     assert!(author::stage(
-        &request_bytes,
+        &serde_json::to_vec(&anchor_only).unwrap(),
         &serde_json::to_vec(&bad).unwrap(),
         &dir.join("unloaded-stage")
     )
@@ -1739,6 +1974,91 @@ async function observe(control,scenario){
         fs::read_to_string(dir.join("source/body.js")).unwrap(),
         source
     );
+}
+
+#[test]
+fn business_selects_fresh_operation_without_promoting_candidate_or_borrowing_recipe() {
+    let (dir, mut catalog) = loop_fixture();
+    let knowledge = dir.join("knowledge");
+    let cut_path = knowledge.join("maintainer-knowledge-cut.json");
+    let mut cut: Value = serde_json::from_slice(&fs::read(&cut_path).unwrap()).unwrap();
+    let inventory = b"arbitrary\n";
+    fs::write(knowledge.join("source-set.txt"), inventory).unwrap();
+    cut["sourceSetSha256"] = json!(digest(inventory));
+    cut["tableGitAuthority"]["repo"] = json!("fixture-knowledge");
+    let cut_bytes = serde_json::to_vec_pretty(&cut).unwrap();
+    fs::write(&cut_path, &cut_bytes).unwrap();
+    catalog["knowledgeCutSha256"] = json!(digest(&cut_bytes));
+    let state = json!({"schema":"agentlab.flywheel_business_state.v1","automaticPromotion":false,
+        "repositoryId":"arbitrary","sourceRevision":cut["repositories"][0]["revision"],
+        "knowledge":{"directory":knowledge,"cutSha256":digest(&cut_bytes),"revision":cut["tableGitAuthority"]["revision"]},
+        "guidanceMode":"reviewed-bootstrap","bootstrapReview":{"reviewed":true,"knowledgeCutSha256":digest(&cut_bytes)}});
+    let execute = |name: &str, catalog: &Value, conflicting: bool| {
+        let catalog_bytes = serde_json::to_vec(catalog).unwrap();
+        let catalog_path = dir.join(format!("{name}-catalog.json"));
+        fs::write(&catalog_path, &catalog_bytes).unwrap();
+        let mut input = state.clone();
+        input["operationCatalog"] = json!({"path":catalog_path,"sha256":digest(&catalog_bytes)});
+        if conflicting {
+            input["operationExecution"] = json!({});
+        }
+        let bytes = serde_json::to_vec(&input).unwrap();
+        let path = dir.join(format!("{name}-state.json"));
+        fs::write(&path, &bytes).unwrap();
+        let output = dir.join(name);
+        fs::create_dir(&output).unwrap();
+        let request = json!({"schema":"agentlab.flywheel_stage_request.v1","round":0,
+            "stage":"maintenance-verification","automaticPromotion":false,
+            "inputState":{"path":path,"sha256":digest(&bytes)}});
+        let result = agentlab_code_analysis::maintainer_flywheel_business::run(
+            &serde_json::to_vec(&request).unwrap(),
+            &output,
+        )
+        .unwrap();
+        let report: Value =
+            serde_json::from_slice(&fs::read(output.join("business/report.json")).unwrap())
+                .unwrap();
+        (result, report, output)
+    };
+    let (result, report, _) = execute("selected", &catalog, false);
+    assert_eq!(result["status"], "completed", "{report}");
+    assert_eq!(report["automaticSelectionPerformed"], true);
+    assert_eq!(report["freshOperationExecuted"], true);
+    assert_eq!(report["selection"]["productiveOperationRounds"], 1);
+    assert_eq!(report["selection"]["authorityWritePerformed"], false);
+    assert_eq!(report["selection"]["closedLoopQualified"], false);
+    assert_eq!(report["qualificationScope"]["sourceMaintenance"], true);
+    assert_eq!(report["qualificationScope"]["runtime"], false);
+    assert!(PathBuf::from(report["operationKnowledgeCandidate"].as_str().unwrap()).exists());
+    assert_eq!(fs::read(&cut_path).unwrap(), cut_bytes);
+    for (name, field, value) in [
+        ("foreign", "repositorySelector", json!("foreign")),
+        ("stale", "knowledgeCutSha256", json!("0".repeat(64))),
+    ] {
+        let mut bad = catalog.clone();
+        bad[field] = value;
+        let (result, _, output) = execute(name, &bad, false);
+        assert_eq!(result["status"], "rejected");
+        assert!(!output
+            .join("business/selected-operation/iteration-1/capture")
+            .exists());
+    }
+    let (result, _, output) = execute("conflicting", &catalog, true);
+    assert_eq!(result["status"], "rejected");
+    assert!(!output.join("business/selected-operation").exists());
+    catalog["entries"] = json!([catalog["entries"][1].clone()]);
+    let (result, report, output) = execute("missing", &catalog, false);
+    assert_eq!(result["status"], "review-required");
+    assert_eq!(report["freshOperationExecuted"], false);
+    assert_eq!(
+        report["selection"]["gap"]["code"],
+        "selected-source-operation-recipe-required"
+    );
+    assert!(!output
+        .join("business/selected-operation/iteration-1/capture")
+        .exists());
+    assert_eq!(fs::read(&cut_path).unwrap(), cut_bytes);
+    fs::remove_dir_all(dir).unwrap();
 }
 
 #[test]

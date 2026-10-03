@@ -1,0 +1,30 @@
+{
+  "schema": "agentlab.construction_edit_boundary_observation.v1",
+  "parentMethodRevision": "10af0d6",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "knowledgeAuthorityRevision": "da9a10a8049b138738d05aae9b2d47710b6b9a7d",
+  "authorityBoundary": "Existing fixed committed export, not a fresh read of the current remote head; all five table digests and source/origin identity were checked by the native preparer and validator.",
+  "selectionSha256": "8d531cdb1f3e70c93ec0a184c14144a964da54e976b18e0f6f25fc441dd2afd7",
+  "packetSha256": "a8665e043bc4d59df8043514c3f143a4a5e68b5a9f281574c9830843bde06196",
+  "validationSha256": "775cb25742f9169156b7ced98a11130dd73b3e3b260896ab51d260c3d3680ee7",
+  "nativePreparationExitCode": 0,
+  "nativeReconstructionExitCode": 0,
+  "editPaths": 5,
+  "existingModificationPaths": 3,
+  "newCreationPaths": 2,
+  "ownerScopes": 3,
+  "rustRegression": {"constructionContextPassed":6,"operationCasePassed":7,"failed":0,"exitCode":0},
+  "retainedFailures": [
+    "Initial Rust test compilation rejected an overlapping immutable/mutable fixture borrow; fixed by cloning before the mutable append.",
+    "Initial real-source preparation rejected a Git query because the partial clone lacked the phone MainPage Blob. A normal exact-revision Git read obtained the original Blob; unchanged strict preparation then succeeded."
+  ],
+  "targetSourceModified": false,
+  "authorityWritePerformed": false,
+  "grantsEditablePaths": false,
+  "automaticPromotion": false,
+  "formalCaseQualified": false,
+  "completeAutomaticBusinessLoops": 0,
+  "overallMaturityEstimatePercent": 69,
+  "maturityChangeBasis": "Construction can now explicitly describe and reconstruct scope-owned implementation/test/host paths including absent new files, but no successor constructor consumes the packet yet and no generated behavioral oracle has been calibrated.",
+  "nextAction": "Bind the edit boundary and new committed source context into the generic successor request, preserve parent bytes and lineage, then dispatch construction and calibrate the generated reference and discriminating wrong controls on the verified emulator executor."
+}

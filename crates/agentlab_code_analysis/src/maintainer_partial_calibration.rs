@@ -3,7 +3,7 @@ use crate::{digest, maintainer_downstream};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::{Component, Path},
 };
@@ -46,6 +46,10 @@ enum Selector {
         owner: Value,
         node: Value,
         field: String,
+    },
+    HypiumNativeTest {
+        class: String,
+        test: String,
     },
 }
 #[derive(Deserialize)]
@@ -134,6 +138,20 @@ fn observe(
     owner_attributes: Option<&Value>,
 ) -> Result<Value, String> {
     match selector {
+        Selector::HypiumNativeTest { class, test } => {
+            need(
+                owner_attributes.is_none(),
+                "partial Hypium adapter does not accept owner attributes",
+            )?;
+            identifier(class)?;
+            identifier(test)?;
+            let results = hypium_results(raw)?;
+            results
+                .get(&(class.clone(), test.clone()))
+                .cloned()
+                .map(Value::String)
+                .ok_or("partial Hypium test absent".into())
+        }
         Selector::JsonPointer { pointer } => {
             need(
                 owner_attributes.is_none(),
@@ -192,6 +210,150 @@ fn observe(
                 .ok_or("partial observable field absent".into())
         }
     }
+}
+
+// Supported lane: completed, non-skipped Hypium tests using native status
+// codes 1/start, 0/pass and -2/assertion failure. Other codes are not kills.
+fn hypium_results(raw: &Value) -> Result<BTreeMap<(String, String), String>, String> {
+    need(
+        raw["exitCode"].as_i64() == Some(0) && raw["timedOut"] == false,
+        "partial Hypium process interrupted",
+    )?;
+    need(raw["stderr"].is_string(), "partial Hypium stderr absent")?;
+    let stdout = raw["stdout"]
+        .as_str()
+        .ok_or("partial Hypium stdout absent")?;
+    let mut fields = BTreeMap::<String, String>::new();
+    let mut pending = BTreeMap::new();
+    let mut results = BTreeMap::<(String, String), String>::new();
+    let mut ordinals = BTreeSet::new();
+    let mut announced_total = None;
+    let mut summary = None;
+    let mut final_code = None;
+    for line in stdout.lines().map(str::trim) {
+        need(
+            !line.starts_with("OHOS_REPORT_ALL_RESULT:")
+                && !line.starts_with("OHOS_REPORT_ALL_CODE:"),
+            "partial Hypium aggregate report lane unsupported",
+        )?;
+        if let Some(value) = line.strip_prefix("OHOS_REPORT_STATUS: ") {
+            if let Some((key, value)) = value.split_once('=') {
+                fields.insert(key.into(), value.into());
+            }
+        } else if let Some(value) = line.strip_prefix("OHOS_REPORT_STATUS_CODE: ") {
+            need(summary.is_none(), "partial Hypium status follows summary")?;
+            let code: i64 = value
+                .parse()
+                .map_err(|_| "partial Hypium status code invalid")?;
+            need(
+                matches!(code, 1 | 0 | -2),
+                "partial Hypium unsupported/error status",
+            )?;
+            let class = fields
+                .get("class")
+                .ok_or("partial Hypium class absent")?
+                .clone();
+            let test = fields
+                .get("test")
+                .ok_or("partial Hypium test absent")?
+                .clone();
+            identifier(&class)?;
+            identifier(&test)?;
+            let number = |key| -> Result<usize, String> {
+                fields
+                    .get(key)
+                    .ok_or("partial Hypium inventory absent")?
+                    .parse()
+                    .map_err(|_| "partial Hypium inventory invalid".into())
+            };
+            let total = number("numtests")?;
+            let current = number("current")?;
+            need(
+                total > 0 && total <= 1024 && current > 0 && current <= total,
+                "partial Hypium inventory outside bound",
+            )?;
+            need(
+                announced_total.is_none_or(|n| n == total),
+                "partial Hypium inventory changed",
+            )?;
+            announced_total = Some(total);
+            let key = (class, test);
+            if code == 1 {
+                need(
+                    !results.contains_key(&key)
+                        && pending.insert(key, current).is_none()
+                        && ordinals.insert(current),
+                    "partial Hypium duplicate test start",
+                )?;
+            } else {
+                need(
+                    pending.remove(&key) == Some(current),
+                    "partial Hypium completion lacks matching start",
+                )?;
+                need(
+                    results
+                        .insert(key, if code == 0 { "passed" } else { "failed" }.into())
+                        .is_none(),
+                    "partial Hypium duplicate completion",
+                )?;
+            }
+            fields.clear();
+        } else if let Some(value) = line.strip_prefix("OHOS_REPORT_RESULT: stream=Tests run: ") {
+            need(summary.is_none(), "partial Hypium duplicate summary")?;
+            let mut counts = Vec::new();
+            let mut parts = value.split(", ");
+            counts.push(
+                parts
+                    .next()
+                    .ok_or("partial Hypium summary absent")?
+                    .parse::<usize>()
+                    .map_err(|_| "partial Hypium summary invalid")?,
+            );
+            for label in ["Failure: ", "Error: ", "Pass: ", "Ignore: "] {
+                counts.push(
+                    parts
+                        .next()
+                        .and_then(|p| p.strip_prefix(label))
+                        .ok_or("partial Hypium summary invalid")?
+                        .parse::<usize>()
+                        .map_err(|_| "partial Hypium summary invalid")?,
+                );
+            }
+            need(
+                parts.next().is_none() && pending.is_empty(),
+                "partial Hypium unfinished inventory",
+            )?;
+            summary = Some(counts);
+        } else if let Some(value) = line.strip_prefix("OHOS_REPORT_CODE: ") {
+            need(
+                summary.is_some() && final_code.is_none(),
+                "partial Hypium final code absent/duplicated/out of order",
+            )?;
+            final_code = Some(
+                value
+                    .parse::<i64>()
+                    .map_err(|_| "partial Hypium final code invalid")?,
+            );
+        }
+    }
+    let counts = summary.ok_or("partial Hypium final summary absent")?;
+    let failures = results.values().filter(|s| s.as_str() == "failed").count();
+    need(
+        counts[0] > 0
+            && Some(counts[0]) == announced_total
+            && counts[0] == results.len()
+            && counts[0] == ordinals.len()
+            && counts[1] == failures
+            && counts[2] == 0
+            && counts[4] == 0
+            && counts[3] == results.len() - failures,
+        "partial Hypium native counts inconsistent or error/ignored tests present",
+    )?;
+    need(
+        final_code == Some(if failures == 0 { 0 } else { -1 }),
+        "partial Hypium final code contradicts outcomes",
+    )?;
+    Ok(results)
 }
 fn read(root: &Path, observation: &Observation) -> Result<Vec<u8>, String> {
     let relative = Path::new(&observation.path);

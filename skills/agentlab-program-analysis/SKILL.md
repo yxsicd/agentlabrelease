@@ -58,6 +58,80 @@ semantic-ready counts, grant operation readiness, execute the Oracle, or mutate
 the frozen candidate. Persist the enhanced fact as one revision-fenced TableGit
 transaction; regenerate the downstream candidate only from the later cut.
 
+Distinguish inventoried paths from loaded implementation context when constructing
+source-maintenance verifiers. For a small responsibility whose complete UTF-8
+source fits the author context budget, include its owned implementation bodies
+with exact Blob/digest identities rather than only anchor files; this can expose
+real mapping/helper behavior without guessing dependencies. Larger responsibilities
+retain bounded anchor context and require explicit decomposition or context refresh.
+Binary bodies remain unloaded. Additional context is not semantic verification,
+permission to modify another responsibility, or evidence of platform execution.
+
+Use the constructor's `--design-first --design-only` mode when a new behavior
+surface needs independent semantic review before verifier generation. The retained
+design/validation digests bind an unreviewed draft, not an approved Oracle. Review
+source-derived return shapes, synchronous versus Promise seams, initialization,
+and the actual branch affected by each wrong control; structural validation cannot
+prove those semantics. Preserve complete design failures and partial generation
+captures. A generation deadline is not permission to stage incomplete output or
+to treat isolation validation as behavioral qualification.
+
+For a design-level revision, pair `--parent-design` with
+`--design-review-feedback` and retain `--design-first --design-only`. Rust binds
+the original request/design hashes, checks that the source/knowledge request still
+reproduces, and limits findings to loaded owned paths before model dispatch.
+Feedback requests revision; it cannot approve the parent or successor. This path
+does not require inventing a completed verifier proposal after an earlier code
+generation failure. Keep design feedback separate from executable-proposal review.
+
+Keep repair feedback actionable: distinguish schema/scope mismatches from invariant
+byte limits and limitation counts, report the observed value, and retain unchanged
+acceptance limits. Draft state must use strict JSON; undefined source behavior needs
+an explicit observation representation, not an illegal literal or a source rewrite
+to null. Constructor lookup sequences and real method argument shapes are execution
+inputs, not facts established by prose descriptions of initial state.
+
+Before negative calibration, execute unchanged source and behavior-preserving
+controls against the frozen scenario/check contract. A baseline check failure
+invalidates that contract even if a wrong control matches its declared failure
+set; do not count inherited baseline failures as mutation detection. Retain raw
+initialized state, emitted results and ordered seam arguments separately from
+expected values. Re-derive contradicted expectations from source causality in a
+new reviewed design cut, preserving the original failure. With shared sequential
+seams, an edit that removes a lookup may shift later consumers without changing
+their returned values: trace each edited control rather than inferring impact
+from the unmodified call graph. Controlled source probes are diagnostic evidence,
+not admitted Oracles, Agent evaluations or platform execution.
+
+After reviewing a retained design, use `--frozen-design` paired with its exact
+`--frozen-design-sha256` to continue verifier generation without another design
+model call. The constructor preserves original design bytes and revalidates
+them against the current reproducible author request before participant dispatch.
+Do not mix this continuation with design regeneration or design-review revision.
+A digest-bound `--revision-request` may revise verifier code while retaining the
+same frozen design; both native preflights must pass before participant dispatch.
+This freezes
+the intended contract, not approval: independently inspect and calibrate generated
+code before execution qualification or knowledge promotion.
+
+For complete constructor responses rejected only by strict JSON parsing, an
+explicit `--proposal-format-revisions 1` permits one same-session protocol
+correction. Preserve every original response and completion receipt. Do not strip
+Markdown fences into an accepted proposal, retry incomplete/truncated transport,
+reset the budget, or treat a repaired format as source-semantic approval. A valid
+JSON object with an invalid proposal contract goes to the existing native gate,
+not this format loop. Frozen seam call records expose arguments, not return
+values: absent record fields cannot establish undefined source behavior.
+
+Use the optimized native producer for operational construction and calibration,
+not a debug executable by default. Full-cut reassessment and repeated executable
+hashing can dominate the fixed native-gate deadline. Compare retained input,
+design-validation and helper digests when measuring build-profile changes; do not
+skip identity checks, cache an unbound verdict or restart a completed Agent to
+recover a static-stage timeout. Keep original timeout evidence and recover only
+the same frozen output with a fresh native-stage destination. Faster gates do
+not certify behavioral benefit or an automatic end-to-end recovery.
+
 Separate modification ownership from read-only source context. A construction
 Oracle may inspect a path outside its editable responsibility only when the
 candidate explicitly lists it as context, a bound fact cites its exact Blob,

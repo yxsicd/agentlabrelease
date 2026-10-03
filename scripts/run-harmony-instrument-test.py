@@ -297,7 +297,7 @@ def execute(
             "app": binding(args.app_hap.resolve(strict=True), args.app_hap.name),
             "test": binding(args.test_hap.resolve(strict=True), args.test_hap.name),
         },
-        "packagesInstalled": not skip_install,
+        "packagesInstalled": preflight_ok and install_ok and not skip_install,
         "report": binding(report_path, "native-report.json"),
         "logs": [binding(path, f"logs/{path.name}") for path in sorted(logs_dir.iterdir())],
         "startedAt": commands[0]["startedAt"],

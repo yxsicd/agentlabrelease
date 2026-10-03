@@ -174,7 +174,7 @@ class HarmonyAssessedHandoffTests(unittest.TestCase):
             "standardTest": {
                 "sourceExecutor": binding(program),
                 "configuration": {
-                    "hvigorw": binding(program), "hdc": binding(program),
+                    "hvigorw": binding(program), "hdc": binding(program), "buildPlanner": binding(program),
                     "buildModule": "entry", "appHap": "app.hap", "testHap": "test.hap",
                     "target": "device", "bundle": "com.example.app", "testModule": "entry_test",
                 },

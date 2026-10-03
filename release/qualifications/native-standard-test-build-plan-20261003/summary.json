@@ -1,0 +1,57 @@
+{
+  "schema": "agentlab.native_standard_test_build_plan_qualification.v1",
+  "methodBaseRevision": "db36aeb",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "nativePlanSha256": "28ff9c0c40900f5d7dcaf262cc0003d9bde166dff2d27a0c1352b1a1ae93f83f",
+  "nativePlanExitCode": 0,
+  "sourceCheckoutCleanBeforeAndAfter": true,
+  "sourceConfigurationBindings": 5,
+  "actualSourceSelection": {
+    "outputType": "har",
+    "hostModule": "phone",
+    "hostModulePath": "products/phone",
+    "module": "componentlibrary",
+    "modulePath": "features/componentlibrary",
+    "tasks": ["assembleHap", "genOnDeviceTestHap"]
+  },
+  "implementedGenericCapabilities": [
+    "Rust JSON5 source registration and srcPath parsing, bounded regular configuration files, source digests and declared product/build-mode/target checks",
+    "Application versus library device-test task selection with explicit installable host",
+    "Two fixed argument-vector builds under one deadline, host failure stops device-test build and installation",
+    "Plan/source reconciliation, selected-module standard-test evidence, module-bound package paths, planner/plan/log bindings",
+    "Assessed executor and portable host-profile forwarding of the native planner and optional host module"
+  ],
+  "validation": {
+    "rustPlannerTests": {"passed": 4, "failed": 0},
+    "sourceExecutorTests": {"passed": 10, "failed": 0},
+    "instrumentExecutorTests": {"passed": 8, "failed": 0},
+    "assessedStandardTestTests": {"passed": 5, "failed": 0},
+    "portableHandoffTests": {"passed": 13, "failed": 0},
+    "assessedCampaignTests": {"passed": 8, "failed": 0},
+    "nativeCliBuilt": true,
+    "skillQuickValidationPassed": true,
+    "releaseValidationPassed": true,
+    "initialRegressionFailure": "Concurrent test fixtures collided on time-only directory names; an atomic per-process suffix fixed isolation. Failed first run is not counted as passing."
+  },
+  "compatibility": {
+    "newSourceExecutorInput": "--build-planner",
+    "assessedConfigurationInput": "buildPlanner",
+    "libraryHostInput": "--host-module / hostModule",
+    "historicalBuildReceiptFieldsRetained": true,
+    "historicalReceiptsRewritten": false
+  },
+  "limitations": [
+    "Local executor regressions use fake compiler/device programs and the real Rust planner, not a new Linux runtime acceptance",
+    "The real fixed-source plan matches the previous observed Linux task pair; the modified integrated executor has not yet run there",
+    "HSP task selection is locally tested, not live HSP artifact/runtime qualification",
+    "Old host profiles must supply the native planner explicitly; release packaging and live profile migration remain unqualified",
+    "The build plan proves configuration selection, not host navigation, independent behavioral Oracle, wrong-control calibration or signing portability"
+  ],
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "formalCaseQualified": false,
+  "completeAutomaticBusinessLoops": 0,
+  "overallMaturityEstimatePercent": 69,
+  "maturityChangeBasis": "Held constant: a general execution gap is implemented and locally verified, but no additional real generated-case or automatic-loop acceptance is claimed",
+  "nextAction": "Deploy the exact native planner and integrated source executor to HW Linux with a pinned host profile, then execute source-bound behavioral references and discriminating wrong controls."
+}

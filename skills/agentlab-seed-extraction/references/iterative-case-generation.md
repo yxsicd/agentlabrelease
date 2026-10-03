@@ -58,6 +58,19 @@ still needs an independent Oracle, meaningful wrong implementations, declared
 runtime qualification and freeze gates. Repeating preparation under unchanged
 inputs yields the same packet and performs no authority writes or executions.
 
+At the admission boundary, compare the complete staged delta with the fixed
+committed baseline before writing. Persist an operation fact and its refresh
+record atomically; retain the transaction identity before dispatch. On uncertain
+completion, reconcile that exact transaction rather than generating another one.
+Export only after complete fixed-revision readback agrees with the staged rows,
+and retain the original assessment and every inherited operation receipt. The
+export may preserve assessed table bytes after payload equality is established;
+never turn a staging cut into authority by merely replacing its revision label.
+The [real admission replay](../../../release/qualifications/dialog-operation-admission-20261003/summary.json)
+exercised this boundary and the Rust input/shadow bridges. It was operator-driven,
+not an automatic five-stage round; the shadow request still requires source-Blob
+preflight, construction, independent task calibration and runtime qualification.
+
 Translate the packet for the existing shadow constructor with
 `--prepare-operation-case-shadow --knowledge /absolute/committed-export
 --operation-inputs fresh-operation-case-inputs.json --runtime-target
@@ -71,6 +84,16 @@ The constructor checks clean pinned source and every referenced semantic Blob
 before launching a participant. This preflight is not process containment.
 Retain maintainer-authored drafts separately from captured Agent generation;
 neither one sampled draft nor unchanged coverage satisfies cohort breadth.
+
+For an isolated Docker constructor, the source link must name the container's
+read-only `/agentlab/case/source` projection, not the host checkout path. The
+constructor now prepares that projection from only the semantic fact's exact
+Git Blobs, binds its manifest to the request, and rebinds a separate runtime
+config without changing the original template. Missing sparse-checkout files
+stop before participant dispatch: materialize the pinned files, never substitute
+stubs or drop their evidence. Retain the projection, config and runtime receipts;
+projection tests are not container execution proof. Constructor transport retries
+are explicitly disabled; preserve terminal failures before a fresh attempt.
 
 1. Pin the source set, knowledge cut and latest Maintainer Skill refresh round.
 2. Select explicit residual gaps and under-covered scope Skills. Preserve

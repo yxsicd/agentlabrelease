@@ -1,0 +1,54 @@
+{
+  "schema": "agentlab.build_task_discovery_observation.v1",
+  "rawArchiveSha256": "409f987a09a9b66c476b300b621ef19abcbe6eb5dd0a9b72caec75dbc896854d",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "sourceCleanObservedBeforeAndAfterTaskProbes": true,
+  "peerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "routeDecision": "peer_direct",
+  "toolchain": {
+    "root": "/home/huawei/.local/share/asrelease-node/toolchains/harmony/6.1.1.300",
+    "versionProbeOperationId": "exec-0000000000000244",
+    "metadataProbeOperationId": "exec-0000000000000245",
+    "hvigorVersion": "6.24.4",
+    "ohpmVersion": "6.1.2.285",
+    "sdkApiVersion": "24",
+    "sdkMetadataVersion": "6.1.1.125",
+    "hvigorEntrypointSha256": "31fc01ad4b0bace37a97f25e1b242bb6d2179b777fb0c3a5ea9d1e5081dafb78",
+    "ohpmEntrypointSha256": "06d3192310619e12ba6ed36c39f6d0354e0761884df6f42ea76e50cd352d47fe",
+    "buildQualified": false
+  },
+  "testBuildAttempt": {
+    "operationId": "exec-0000000000000248",
+    "moduleTarget": "componentlibrary@ohosTest",
+    "task": "assembleHap",
+    "exitCode": 1,
+    "durationMs": 2619,
+    "terminal": true,
+    "failure": "00306054: Task assembleHap was not found",
+    "compilationReached": false
+  },
+  "taskInventories": [
+    {"operationId":"exec-0000000000000249","moduleTarget":"componentlibrary@ohosTest","exitCode":0,"observedTasks":["tasks","taskTree","init"]},
+    {"operationId":"exec-000000000000024a","moduleTarget":"phone@ohosTest","exitCode":0,"observedTasks":["tasks","taskTree","init"]},
+    {"operationId":"exec-000000000000024b","moduleTarget":"phone@default","exitCode":0,"observedTasks":["tasks","taskTree","init"]},
+    {"operationId":"exec-000000000000024c","moduleTarget":"componentlibrary@default","exitCode":0,"observedTasks":["tasks","taskTree","init"]}
+  ],
+  "syncAttempt": {"operationId":"exec-0000000000000250","exitCode":0,"terminal":true,"observation":"phone:init finished; post-sync build task recovery has not been verified"},
+  "historicalEvidence": {
+    "path": "release/qualifications/code-workshop-7aa95cac-componentlibrary-build/build-qualification.json",
+    "sameSourceRevision": true,
+    "scope": "Historical componentlibrary default HAR packaging only",
+    "historicalOperationReadback": "operation_not_found after transient transport failure; current build output was not reproduced"
+  },
+  "limitations": [
+    "Tools exist outside the previously searched directories; previous bounded absence observations remain historical, not whole-host absence claims.",
+    "The cause of setup-only task registration is unresolved. An optional cangjie support warning was logged but is not proven causal.",
+    "No fresh HAR/HAP, signing, installation, source behavior test or negative-control calibration is qualified.",
+    "Failed and truncated diagnostics remain in the raw archive. Operator observations do not authenticate independent approval."
+  ],
+  "nextAction": "Check task registration after sync, then inspect shared plugin task initialization without replacing pinned source or weakening qualification gates.",
+  "authorityWritePerformed": false,
+  "formalCaseQualified": false,
+  "completeAutomaticBusinessLoops": 0,
+  "overallMaturityEstimatePercent": 68
+}

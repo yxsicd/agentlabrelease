@@ -1,0 +1,80 @@
+{
+  "schema": "agentlab.native_standard_executor_runtime_observation.v1",
+  "methodRevision": "e1ad41ba6914cc6a1f8e8b3ef1f595df2b565652",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "sourceSetSha256": "21c1291c471773197b29d98f3a0f49c77bdff5927f344c14b1e292eab0441811",
+  "sourceSetMeaning": "SHA256 of the executor's sorted path/content-digest/byte-length inventory of 1533 non-generated source files; not a calibrated case or published seed identity",
+  "peerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "routeDecision": "peer_direct",
+  "rawObservationsArchiveSha256": "31f5c1b41ac0752b20f911b8823cf9274a902aa58afaa86269b3e1df2b1bf862",
+  "originalUtf8ArchiveSha256": "8c8783f2378b225b718f9fac4c603819525ce91ddeb56ad90c461f16f79fa907",
+  "sourceReceiptSha256": "294b322718b8f042d1e810d17d72929de84c8beeb77afa7574e9a28c9497d827",
+  "buildReceiptSha256": "1541bacf4169101f691b98e3e66a33b69e760fff48395d7bb2dae23db90a729b",
+  "executionReceiptSha256": "71abc2600a94f7e209edc32d7df009d2fdf8f667586f879ec5d69688de19bda3",
+  "nativeReportSha256": "8fc99273ff85996cacd0d016abfeabe57bdd85173c0d8deb1ab5efe61d884908",
+  "nativeBuild": {
+    "operationId": "exec-000000000000026a",
+    "exitCode": 0,
+    "durationMs": 13912,
+    "lockedDependencyBuild": true,
+    "rustVersion": "1.97.1",
+    "plannerSha256": "02692d1877aa8847f83b209f0d302f4bfb75f7d7a67409cc360611c7954a47fa"
+  },
+  "linuxRustTests": {"operationId":"exec-000000000000026d","passed":4,"failed":0,"exitCode":0},
+  "integratedExecution": {
+    "operationId": "exec-000000000000026e",
+    "exitCode": 0,
+    "durationMs": 28215,
+    "status": "passed",
+    "observationId": "native-standard-executor-preflight-20261003",
+    "framework": "instrument-test-ohosTest-hypium",
+    "buildSteps": [
+      {"module":"phone@default","task":"assembleHap","exitCode":0,"timedOut":false},
+      {"module":"componentlibrary@ohosTest","task":"genOnDeviceTestHap","exitCode":0,"timedOut":false}
+    ],
+    "nativeInstallSuccesses": 2,
+    "target": "127.0.0.1:5555",
+    "nativeFinalCode": 0,
+    "total": 1,
+    "pass": 1,
+    "failure": 0,
+    "error": 0,
+    "testMeaning": "Existing ActsAbilityTest assertContain template; no generated dialog behavior is exercised",
+    "sourceIntegrityPreserved": true,
+    "methodAndTargetCheckoutsCleanAfterExecution": true
+  },
+  "localReadbackVerification": {
+    "originalFilesVerified": 12,
+    "receiptReferencesVerified": 11,
+    "standardReceiptGatePassed": true,
+    "buildPlanSha256": "28ff9c0c40900f5d7dcaf262cc0003d9bde166dff2d27a0c1352b1a1ae93f83f",
+    "planMatchesPriorMacSourcePlan": true,
+    "originalTerminalNewlinesPreservedInUtf8Envelope": true
+  },
+  "runtimeCleanup": {
+    "startOperationId": "exec-000000000000026c",
+    "stopOperationId": "exec-0000000000000270",
+    "explicitStopSucceeded": true,
+    "startOperationTerminal": true,
+    "exitCode": 0,
+    "timedOut": false,
+    "processLifetimeMs": 165461,
+    "processLifetimeIsNotBootLatency": true,
+    "audioFallbackObserved": true
+  },
+  "limitations": [
+    "This is real operator-dispatched integrated executor acceptance, not an autonomous business flywheel",
+    "Successful cached builds reproduce the same app/test artifact bytes; no clean rebuild or changed-source behavior is claimed",
+    "The initial whole-project lane diagnostic exceeded capture limits; complete source-contract bytes were separately read and retained",
+    "Unsigned installation is qualified only for this existing emulator configuration; signing, audio and other runtime profiles remain unqualified",
+    "Generated behavioral references, discriminating wrong controls, measured feedback benefit and cross-repository transfer remain incomplete"
+  ],
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "formalCaseQualified": false,
+  "completeAutomaticBusinessLoops": 0,
+  "overallMaturityEstimatePercent": 69,
+  "maturityChangeBasis": "Held constant: the previous local implementation now has Linux integration evidence, but repeated template success does not add a calibrated generated case or accepted business loop",
+  "nextAction": "Use the verified integrated executor for a successor candidate with explicit host/test edit ownership; independently calibrate correct references and semantic wrong controls, then consume and return the evidence through the business flywheel.",
+  "verificationBoundary": "Exact method and target cuts, terminal AWMCP execution, complete original UTF8 sidecars and local digest/native-report validation. The public summary is not the complete raw archive, authenticated independent review, published case or full-loop acceptance."
+}

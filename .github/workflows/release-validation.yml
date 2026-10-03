@@ -49,6 +49,8 @@ jobs:
           fetch-depth: 0
       - name: Validate release manifests and tests
         run: |
+          # Source/build integration tests invoke the native planner on clean runners.
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
           python3 scripts/validate-release.py
           python3 scripts/component-reuse.py validate --registry release/components/registry.json
           python3 scripts/validate-release-graph.py \

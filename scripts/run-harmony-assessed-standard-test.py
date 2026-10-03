@@ -197,7 +197,7 @@ def main() -> int:
         config = plan.get("configuration")
         if not isinstance(config, dict):
             raise StandardGateError("standard-test configuration is required")
-        required = ("hvigorw", "buildModule", "appHap", "testHap", "target", "bundle", "testModule")
+        required = ("hvigorw", "buildPlanner", "buildModule", "appHap", "testHap", "target", "bundle", "testModule")
         if any(not isinstance(config.get(key), str) or not config[key] for key in required):
             raise StandardGateError("standard-test configuration is incomplete")
         if output.exists():
@@ -207,6 +207,7 @@ def main() -> int:
         command = [
             str(executor), "--project-root", str(project), "--case-id", case["id"],
             "--source-set-sha256", case["sourceSetSha256"], "--hvigorw", config["hvigorw"],
+            "--build-planner", config["buildPlanner"],
             "--build-module", config["buildModule"], "--product", config.get("product", "default"),
             "--build-mode", config.get("buildMode", "debug"), "--app-hap", config["appHap"],
             "--test-hap", config["testHap"], "--build-timeout-seconds", str(config.get("buildTimeoutSeconds", 900)),
@@ -219,6 +220,8 @@ def main() -> int:
         ]
         if config.get("testClass"):
             command.extend(["--test-class", config["testClass"]])
+        if config.get("hostModule"):
+            command.extend(["--host-module", config["hostModule"]])
         emulator_config = plan.get("emulator")
         lifecycle = None
         lifecycle_receipt_path = None

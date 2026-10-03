@@ -11,6 +11,52 @@ metadata:
 
 Validate the benchmark independently from the assessed Agent. Check source/environment reproducibility, baseline behavior, a reference implementation, meaningful wrong implementations and regressions across turns. Successful compilation alone is not functional correctness.
 
+For stateful UI negative controls, retain per-test failure locations and distinguish
+the intended semantic failure from later failures caused by residual UI state.
+A passing reference does not prove cleanup after an early assertion failure.
+Do not count cascaded failures as independent Oracle coverage. Preserve the frozen
+checks during calibration, restore the reference and verify recovery; any cleanup
+repair creates a successor test cut requiring fresh positive and negative controls.
+
+The generic frozen-behavior consumer requires a wrong control's observed failed
+check set to equal its declared set before scheduling an Agent attempt. Additional
+failures route to `review-unexpected-control-failures`; retain them without
+assuming whether their cause is cleanup, another defect or an incomplete design.
+Do not expand expectations after observing a failure merely to pass this gate.
+A genuinely intended multi-failure control needs an explicit frozen declaration.
+
+Use the [native control producer](../../docs/flywheel-native-behavior-calibration-20261003.md)
+to execute reviewed source variants through the existing behavior-executor
+protocol before bounded repair. Reuse one executor for calibration and attempts;
+require fresh accepted-reference recovery under unchanged predicates, without
+counting that rerun as another distinct valid implementation. Preserve the
+original control declarations when a real run exposes additional failures and
+review attribution before issuing a successor contract. A successful host seam
+does not restore or qualify a Git workspace, UI state or emulator runtime.
+
+When additional failures appear, first compare earlier declared contracts and
+their exact control-source bytes. A translation may have lost failure IDs; do
+not infer contamination or rebuild expectations from the latest verdict alone.
+Use the native declaration reconciliation/validation path linked above when the
+prior recorded source-operation format is supported. Preserve old profiles and
+require a reviewed, parent-bound successor with unchanged checks, inputs, task,
+source edits and budgets. Recorded-content reconstruction does not prove input
+interpretation, intent, ancestry or producer identity. Normal preparation must
+validate and pin the reference/parent, not merely trust a reconciliation label.
+
+Inspect the installed framework's failure-path hook order, not just hook names.
+The retained Hypium 1.0.19 async runner calls afterEach in the same try block as
+the test body; a thrown assertion can skip it. For independent UI test scenarios,
+establish and verify clean state before the next test as well as after success.
+Use an explicit close action for a non-autoCancel overlay instead of assuming
+Back closes it. Preserve all behavioral predicates and compare the same mutation
+before/after the cleanup successor, followed by a byte-restored positive control.
+Do not reset between phases of one stateful long-horizon scenario or generalize
+this hook behavior to an uninspected framework version. Keep skipped-hook and
+cleanup failures separate from independent product failures.
+See [the controlled UI isolation sequence](../../docs/flywheel-ui-isolation-calibration-20261003.md)
+for the preserved failed attempt, same-mutation comparison and recovery boundary.
+
 An evidence file's existence and matching digest do not qualify its contents.
 Construction-readiness uses recorded `agentlab.shadow_case_qualification.v1`
 receipts: bind candidate ID/digest, source revision, source-set and knowledge-cut
@@ -47,7 +93,7 @@ authenticate the historical producer or qualify a new runtime execution. See
 
 Use `--feedback-partial-calibration` to reconstruct reviewed retained observations
 before planning scoped follow-up. Its profile declares source/candidate/plan
-bindings, runtime observations, JSON-pointer or attribute-tree selectors, shared
+bindings, runtime observations, JSON-pointer, attribute-tree or named Hypium-test selectors, shared
 checks, accepted/wrong control expectations and missing controls. The consumer
 checks exact peer-directed file envelopes and raw bytes; a missing/ambiguous
 observable is a readback failure, not a killed wrong implementation. It preserves
@@ -55,6 +101,14 @@ formal gate actions separately and never infers build, mutation or runtime
 attestation from observed values. Consume `scopedActions` only within their declared
 runtime; equal owned evidence suppresses duplicate scoped work, not unrelated
 formal qualification. See [the partial consumer](../../docs/flywheel-partial-calibration-consumer-20261003.md).
+
+For retained Instrument Test command logs, select `hypium-native-test` by class
+and test name rather than reading aggregate pass counts as behavior coverage.
+The supported lane reconstructs matching start/completion records and reconciles
+the native summary/final code; incomplete, error or ambiguous reports stop
+readback. Keep cascaded test failures explicit in reviewed control expectations
+and missing-isolation work. Source/build identities still require independent
+admission: named recorded outcomes cannot bind new host/test facts by themselves.
 
 Use the task's actual expected baseline: a bug-fix case may fail before the patch; an extension case may pass old tests but fail new demand checks. Reference passes and targeted wrong-boundary/lost-history variants should fail the intended checks. Save complete output and exact identities in `evaluation_cases` calibration rows, with analysis evidence in `program_facts`.
 

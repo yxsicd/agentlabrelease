@@ -6,6 +6,12 @@ members = [
   "crates/agentlab_code_analysis",
 ]
 
+# Identity gates repeatedly hash large executable bytes. Optimize only the
+# compression dependency; retain debug assertions and unoptimized project code.
+# Test inherits dev, while the independent release profile stays unchanged.
+[profile.dev.package.sha2]
+opt-level = 3
+
 [profile.release]
 codegen-units = 1
 lto = "thin"

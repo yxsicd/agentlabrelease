@@ -253,3 +253,45 @@ fn batch_rejects_parent_drift_instead_of_suppressing_unverified_history() {
             .contains("parent digest differs")
     );
 }
+
+#[test]
+fn draft_proposal_lineage_is_not_candidate_supersession() {
+    use agentlab_code_analysis::maintainer_downstream::batch;
+    let parent = json!({"id":"parent"});
+    let mut draft = json!({"id":"draft","lineage":{"parentProposalId":"parent",
+        "runtimeTarget":"repository-test"}});
+    let fields = [
+        "operationInputsSha256",
+        "parentRequestSha256",
+        "parentProposalSha256",
+        "reviewSha256",
+        "contextSha256",
+        "editBoundarySha256",
+        "shadowRequestValueSha256",
+    ];
+    for key in fields {
+        draft["lineage"][key] = json!("a".repeat(64));
+    }
+    let plan = json!({"schema":"agentlab.maintainer_downstream_plan.v1",
+        "candidateId":"parent","candidateSha256":digest(&serde_json::to_vec(&parent).unwrap()),
+        "automaticPromotion":false,"schedulingAllowed":true,"actions":[]});
+    let result = batch(
+        format!("{parent}\n{draft}\n").as_bytes(),
+        &serde_json::to_vec(&json!([plan])).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(result["retainedHistoricalCandidateIds"], json!([]));
+    assert_eq!(result["activeCandidateIds"], json!(["parent"]));
+    // An unpublished draft parent need not be fabricated as a stored row.
+    assert!(batch(format!("{draft}\n").as_bytes(), b"[]").is_ok());
+    for field in fields {
+        let mut bad = draft.clone();
+        bad["lineage"].as_object_mut().unwrap().remove(field);
+        assert!(
+            batch(format!("{bad}\n").as_bytes(), b"[]").is_err(),
+            "{field}"
+        );
+    }
+    draft["lineage"]["parentCandidateId"] = json!("parent");
+    assert!(batch(format!("{parent}\n{draft}\n").as_bytes(), b"[]").is_err());
+}

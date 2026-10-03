@@ -3,8 +3,8 @@
 The Rust `maintainer_partial_calibration` consumer reconstructs retained JSON
 observations using reviewed profile data. Repository names, application identity,
 check names, expectations and missing controls are not built into the consumer.
-Its two explicitly supported extraction adapters are JSON Pointer and attribute
-trees with a unique owner and unique owned node. Unsupported formats are errors,
+Its explicitly supported extraction adapters are JSON Pointer, attribute
+trees with a unique owner/node, and named Hypium native tests. Unsupported formats are errors,
 not silent qualification or evidence of an Agent failure.
 
 This capability closes the operator-only readback step from
@@ -58,6 +58,15 @@ provided by this optional local lane.
   the expected value is null. An `attribute-tree` selector contains nonempty
   scalar `owner`/`node` attribute maps and a `field`. The raw tree uses
   `attributes` and `children`. Selection never searches an unrelated owner.
+- A `hypium-native-test` selector contains `class` and `test`, selecting an
+  exact named result (`passed` or `failed`) from an original Instrument Test
+  command-log JSON with `stdout`, `stderr`, `exitCode` and `timedOut`. The lane
+  supports status 1/start, 0/pass and -2/assertion failure, one native summary
+  and one final code. Matching start/completion, unique names/ordinals and
+  consistent nonempty final counts are required. Process errors, incomplete
+  reports, error/ignored tests and unsupported aggregate-report markers fail
+  extraction, never count as killed implementations. No owner attributes are
+  accepted. This is recorded native test status, not independent UI measurement.
 - `controls` declare unique IDs, `role:accepted|wrong`, explicit
   `expectedFailedCheckIds`, and one observation for every phase. An accepted
   control expects no failures; a wrong control expects named failing checks.
@@ -125,3 +134,101 @@ The optional lane still requires a reviewed profile and retained captures. It
 does not discover historical evidence automatically, wire cross-Action capture
 history, persist new observations to TableGit, dispatch the missing control or
 prove the guidance improves an Agent. Those remain business-loop gaps.
+
+## Native dialog capture integration checkpoint
+
+The named Hypium adapter consumed the original command-log contents from real
+dialog runs 6, 7, 8 and 10 reported in
+[the runtime calibration](flywheel-real-dialog-controls-20261003.md).
+It reconstructs two accepted observation controls and two rejected observation
+controls with matching reviewed failure sets. Run 8's later context failure is
+explicitly retained as a possible cascade, not independent semantic coverage.
+The run-9 log, despite HDC process exit zero, is rejected with
+`partial Hypium final summary absent`; no feedback output is created.
+
+This consumer checkpoint used an isolated, unadmitted planning projection. The
+retained constructor proposal was reconstructed using its original request and
+the existing proposal validator; an operator-declared construction plan kept
+Oracle, all five required wrong variants and runtime requirements unqualified.
+No active TableGit row, released knowledge snapshot or historical proposal changed.
+The source revision remains the original candidate base; the derived reference
+commit/source-set is declared separately in the reviewed runtime profile. These
+declarations do not authenticate the tested source or its mutation lineage.
+
+The ordinary independent readiness assessor detected five path-binding blockers:
+new standard-test source, test registration and the new host page are not bound
+in the retained candidate's program facts (two paths also block Oracle binding).
+The Rust consumer preserves the exact `focused-knowledge-refresh` action rather
+than treating runtime green as admission. Repeating the final same-evidence
+input produces `awaiting-new-evidence` and `schedulingAllowed:false`, with formal
+gate actions unchanged. The remaining UI isolation and uncovered behavior stay
+in the reviewed profile; knowledge repair takes scheduling priority.
+
+Private controlled artifacts are retained under `flywheel-native-feedback-k5jAGTm5`:
+original-content readback envelopes, proposal-derived candidate, construction
+plan, independently assessed readiness, reviewed profile, final feedback/repeat,
+and the interrupted-log rejection. Public source contains protocol code and
+arbitrary Rust fixtures, not these raw runtime captures.
+
+Overall maturity remains approximately **69%**. This closes named native-log
+consumption and duplicate-work suppression for reviewed captures, not automatic
+profile construction, source/patch authentication, knowledge admission,
+participant integration or a complete autonomous flywheel. Next, admit an
+explicit successor source/knowledge cut for the new host/test facts, repair
+failure cleanup in a successor test cut and rerun its controls before assessment.
+
+## Construction-binding correction
+
+The preceding proposed source-refresh step was too broad: new test and host
+targets are intentionally absent at the original source revision. Requiring their
+old-source facts creates an unsatisfiable refresh loop. The optional native
+`--bind-construction-paths` gate now reconstructs the original edit packet against
+the clean pinned checkout and knowledge cut, then checks candidate source, packet
+digest, selected editable paths and owners. Existing targets retain source-Blob
+preconditions; created targets retain absence preconditions. Construction binding
+does not change `factEvidenceBound`, semantic readiness or formal qualification.
+
+The ordinary batch supports reviewed profiles under
+`AGENTLAB_CONSTRUCTION_BINDING_ROOT/profiles/<candidateId>.json`, with only schema
+`agentlab.construction_path_binding_profile.v1`, reviewed=true, candidateId and
+absolute sourceWorktree/editBoundary fields. Missing profiles preserve the prior
+route. Supplied invalid profiles fail; no source or packet is inferred.
+
+Controlled `flywheel-construction-binding-NseNZyis/batch1` consumed the retained
+dialog candidate and original packet. Individual assessment cleared five path
+blockers and retained all six qualification blockers. Formal routing and the
+partial native-log consumer completed; scoped work now targets missing controls
+and isolation rather than the impossible source refresh. However, final batch
+summary rejected the isolated projection with `downstream parent absent`.
+No successful batch, authority admission, repeat-batch guard or new runtime
+execution is claimed. Preserve this failed batch rather than inventing parent
+rows or disabling digest-bound lineage. Overall maturity remains **69%**.
+
+## Draft-provenance correction and ordinary batch replay
+
+Inspection of the retained constructor inputs showed a second structural issue:
+the operation successor's parent is an unadmitted proposal, not a stored candidate
+with a candidate-value digest. Fresh enrichment now emits `parentProposalId` and
+the original input digests. The native input packet stays byte-identical; its old
+internal `parentCandidateId` label is not changed. The candidate schema explicitly
+separates the two parent roles. Rust rejects mixed roles or missing draft digests;
+draft provenance never suppresses another stored candidate's scheduling.
+
+The original request and proposal were replayed under the current validator into
+`flywheel-construction-binding-NseNZyis/current-method`, not overwritten in the
+historical projection. Historical candidate value digest `0ad1b86b...` and current
+replay digest `70bccf85...` are separately recorded. The isolated construction plan
+and reviewed partial profile were explicitly rebound and remain unqualified.
+An initial profile used a plan-value digest rather than the required file-byte
+digest; the consumer rejected it. Both failed batches remain retained.
+
+After correcting that profile, ordinary `batch3` completed with no knowledge
+blockers and all six qualification blockers preserved. It reconstructed the
+original positive, wrong and recovery observations and selected missing control
+work. `batch4` repeated the same entrypoint with `batch3` as predecessor: formal
+and partial active cohorts became empty and both routes awaited new evidence.
+This closes the actual local ordinary batch wiring for this controlled replay,
+not cross-Action history, active TableGit admission, automatic control execution
+or a new physical experiment. Overall maturity remains **69%**; complete accepted
+automatic business loops remain zero. Next work must qualify construction and
+calibration producers rather than spend another turn re-consuming these captures.

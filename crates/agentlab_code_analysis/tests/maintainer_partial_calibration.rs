@@ -69,6 +69,115 @@ fn run(root: &PathBuf, r: &Value, p: &Value, previous: Option<&Value>) -> Result
     )
 }
 
+fn hypium_log(failed: Option<&str>) -> Value {
+    let mut stdout = String::new();
+    for (i, test) in ["text", "state"].into_iter().enumerate() {
+        for code in [1, if failed == Some(test) { -2 } else { 0 }] {
+            stdout.push_str(&format!("OHOS_REPORT_STATUS: class=IndependentSuite\nOHOS_REPORT_STATUS: current={}\nOHOS_REPORT_STATUS: numtests=2\nOHOS_REPORT_STATUS: test={test}\nOHOS_REPORT_STATUS_CODE: {code}\n", i + 1));
+        }
+    }
+    let failures = usize::from(failed.is_some());
+    stdout.push_str(&format!("OHOS_REPORT_RESULT: stream=Tests run: 2, Failure: {failures}, Error: 0, Pass: {}, Ignore: 0\nOHOS_REPORT_CODE: {}\n", 2-failures, if failures == 0 { 0 } else { -1 }));
+    json!({"stdout":stdout,"stderr":"","exitCode":0,"timedOut":false})
+}
+
+fn replace_observation(root: &PathBuf, p: &mut Value, index: usize, raw: &Value) {
+    let content = serde_json::to_string(raw).unwrap();
+    let envelope = json!({"ok":true,"routeDecision":"peer_direct","targetPeerId":"arbitrary-peer",
+        "result":{"ok":true,"content":content,"size":content.len()}});
+    let bytes = serde_json::to_vec(&envelope).unwrap();
+    let observation = &mut p["controls"][index]["observations"][0];
+    fs::write(root.join(observation["path"].as_str().unwrap()), &bytes).unwrap();
+    observation["envelopeSha256"] = json!(digest(&bytes));
+    observation["rawSha256"] = json!(digest(content.as_bytes()));
+    observation["byteLength"] = json!(content.len());
+}
+
+fn hypium_fixture() -> (PathBuf, Value, Value) {
+    let (root, r, mut p) = fixture(true);
+    for (i, failed) in [None, Some("text"), Some("state")].into_iter().enumerate() {
+        replace_observation(&root, &mut p, i, &hypium_log(failed));
+    }
+    for (i, test) in ["text", "state"].into_iter().enumerate() {
+        p["phases"][0]["checks"][i]["selector"] =
+            json!({"adapter":"hypium-native-test","class":"IndependentSuite","test":test});
+        p["phases"][0]["checks"][i]["expected"] = json!("passed");
+    }
+    (root, r, p)
+}
+
+#[test]
+fn hypium_named_outcomes_reconstruct_controls_and_stop_unchanged_work() {
+    let (root, r, p) = hypium_fixture();
+    let first = run(&root, &r, &p, None).unwrap();
+    assert_eq!(first["acceptedObservationControlCount"], 1);
+    assert_eq!(first["rejectedObservationControlCount"], 2);
+    assert_eq!(first["scopedControlsConsistent"], true);
+    assert_eq!(first["qualified"], false);
+    assert_eq!(first["implementationMutationVerified"], false);
+    assert_eq!(
+        run(&root, &r, &p, Some(&first)).unwrap()["schedulingAllowed"],
+        false
+    );
+    let formal = maintainer_downstream::plan(&serde_json::to_vec(&r).unwrap(), None).unwrap();
+    assert_eq!(first["formalGateActions"], formal["actions"]);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn hypium_incomplete_ambiguous_and_contradictory_reports_are_not_wrong_controls() {
+    let (root, r, original) = hypium_fixture();
+    let good = hypium_log(None);
+    let stdout = good["stdout"].as_str().unwrap();
+    let mut invalid = vec![];
+    for (from, to) in [
+        ("OHOS_REPORT_RESULT:", "IGNORED_RESULT:"),
+        ("OHOS_REPORT_CODE:", "IGNORED_CODE:"),
+        ("OHOS_REPORT_CODE: 0", "OHOS_REPORT_CODE: -1"),
+        ("Failure: 0", "Failure: 1"),
+        ("Error: 0", "Error: 1"),
+        ("Ignore: 0", "Ignore: 1"),
+        ("current=2", "current=1"),
+        ("numtests=2", "numtests=3"),
+        ("test=state", "test=text"),
+        ("OHOS_REPORT_STATUS_CODE: 0", "OHOS_REPORT_STATUS_CODE: -1"),
+    ] {
+        let mut raw = good.clone();
+        raw["stdout"] = json!(stdout.replace(from, to));
+        invalid.push(raw);
+    }
+    for tail in [
+        "OHOS_REPORT_CODE: 0\n",
+        "OHOS_REPORT_ALL_CODE: -1\n",
+        "OHOS_REPORT_RESULT: stream=Tests run: 2, Failure: 0, Error: 0, Pass: 2, Ignore: 0\n",
+    ] {
+        let mut raw = good.clone();
+        raw["stdout"] = json!(format!("{stdout}{tail}"));
+        invalid.push(raw);
+    }
+    let mut interrupted = good.clone();
+    interrupted["timedOut"] = json!(true);
+    invalid.push(interrupted);
+    let mut nonzero = good.clone();
+    nonzero["exitCode"] = json!(1);
+    invalid.push(nonzero);
+    let mut unfinished = good.clone();
+    unfinished["stdout"] = json!(stdout.split("OHOS_REPORT_RESULT:").next().unwrap());
+    invalid.push(unfinished);
+    for raw in invalid {
+        let mut p = original.clone();
+        replace_observation(&root, &mut p, 0, &raw);
+        assert!(run(&root, &r, &p, None).is_err(), "{raw}");
+    }
+    let mut p = original.clone();
+    replace_observation(&root, &mut p, 0, &good);
+    p["phases"][0]["checks"][0]["selector"]["test"] = json!("absent");
+    assert!(run(&root, &r, &p, None)
+        .unwrap_err()
+        .contains("test absent"));
+    fs::remove_dir_all(root).unwrap();
+}
+
 #[test]
 fn both_adapters_reconstruct_scoped_controls_without_qualifying_formal_runtime() {
     for pointer in [false, true] {
@@ -242,75 +351,76 @@ fn a_single_retained_positive_control_is_progress_not_a_complete_calibration() {
 
 #[test]
 fn actual_downstream_wrapper_consumes_opt_in_profiles_and_suppresses_unchanged_work() {
-    let (root, _r, mut p) = fixture(false);
-    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let invoke = |name: &str, profile: bool, previous: Option<&str>| {
-        let mut cmd = std::process::Command::new("bash");
-        cmd.current_dir(&repo)
-            .arg("scripts/plan-maintainer-downstream.sh")
-            .arg("examples/maintainer-knowledge-gate/first-four")
-            .arg(".")
-            .arg(root.join(name))
-            .env_remove("AGENTLAB_PARTIAL_CALIBRATION_ROOT")
-            .env(
-                "AGENTLAB_FLYWHEEL_BIN",
-                env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"),
+    for (root, _r, mut p) in [fixture(false), hypium_fixture()] {
+        let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let invoke = |name: &str, profile: bool, previous: Option<&str>| {
+            let mut cmd = std::process::Command::new("bash");
+            cmd.current_dir(&repo)
+                .arg("scripts/plan-maintainer-downstream.sh")
+                .arg("examples/maintainer-knowledge-gate/first-four")
+                .arg(".")
+                .arg(root.join(name))
+                .env_remove("AGENTLAB_PARTIAL_CALIBRATION_ROOT")
+                .env(
+                    "AGENTLAB_FLYWHEEL_BIN",
+                    env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"),
+                );
+            if profile {
+                cmd.env("AGENTLAB_PARTIAL_CALIBRATION_ROOT", &root);
+            }
+            if let Some(previous) = previous {
+                cmd.arg(root.join(previous));
+            }
+            let result = cmd.output().unwrap();
+            assert!(
+                result.status.success(),
+                "{}",
+                String::from_utf8_lossy(&result.stderr)
             );
-        if profile {
-            cmd.env("AGENTLAB_PARTIAL_CALIBRATION_ROOT", &root);
+        };
+        invoke("baseline", false, None);
+        let id = "shadow-case-uiability-backup-restore-state-recovery";
+        let readiness: Value = serde_json::from_slice(
+            &fs::read(root.join("baseline").join(id).join("readiness.json")).unwrap(),
+        )
+        .unwrap();
+        for (key, rkey) in [
+            ("candidateId", "candidateId"),
+            ("candidateSha256", "candidateSha256"),
+            ("sourceRevision", "sourceRevision"),
+            ("constructionPlanSha256", "planSha256"),
+        ] {
+            p[key] = readiness[rkey].clone();
         }
-        if let Some(previous) = previous {
-            cmd.arg(root.join(previous));
-        }
-        let result = cmd.output().unwrap();
-        assert!(
-            result.status.success(),
-            "{}",
-            String::from_utf8_lossy(&result.stderr)
-        );
-    };
-    invoke("baseline", false, None);
-    let id = "shadow-case-uiability-backup-restore-state-recovery";
-    let readiness: Value = serde_json::from_slice(
-        &fs::read(root.join("baseline").join(id).join("readiness.json")).unwrap(),
-    )
-    .unwrap();
-    for (key, rkey) in [
-        ("candidateId", "candidateId"),
-        ("candidateSha256", "candidateSha256"),
-        ("sourceRevision", "sourceRevision"),
-        ("constructionPlanSha256", "planSha256"),
-    ] {
-        p[key] = readiness[rkey].clone();
+        fs::create_dir(root.join("profiles")).unwrap();
+        fs::write(
+            root.join("profiles").join(format!("{id}.json")),
+            serde_json::to_vec(&p).unwrap(),
+        )
+        .unwrap();
+        invoke("first", true, None);
+        invoke("second", true, Some("first"));
+        let read = |name: &str| {
+            serde_json::from_slice::<Value>(
+                &fs::read(root.join(name).join(id).join("scoped-next-actions.json")).unwrap(),
+            )
+            .unwrap()
+        };
+        let first = read("first");
+        let second = read("second");
+        assert_eq!(first["schedulingAllowed"], true);
+        assert_eq!(second["schedulingAllowed"], false);
+        assert_eq!(first["formalGateActions"], second["formalGateActions"]);
+        assert_eq!(second["qualified"], false);
+        assert_eq!(second["scopedControlsConsistent"], true);
+        let summary = |name: &str| {
+            serde_json::from_slice::<Value>(
+                &fs::read(root.join(name).join("partial-summary.json")).unwrap(),
+            )
+            .unwrap()
+        };
+        assert_eq!(summary("first")["activeCandidateIds"], json!([id]));
+        assert_eq!(summary("second")["activeCandidateIds"], json!([]));
+        fs::remove_dir_all(root).unwrap();
     }
-    fs::create_dir(root.join("profiles")).unwrap();
-    fs::write(
-        root.join("profiles").join(format!("{id}.json")),
-        serde_json::to_vec(&p).unwrap(),
-    )
-    .unwrap();
-    invoke("first", true, None);
-    invoke("second", true, Some("first"));
-    let read = |name: &str| {
-        serde_json::from_slice::<Value>(
-            &fs::read(root.join(name).join(id).join("scoped-next-actions.json")).unwrap(),
-        )
-        .unwrap()
-    };
-    let first = read("first");
-    let second = read("second");
-    assert_eq!(first["schedulingAllowed"], true);
-    assert_eq!(second["schedulingAllowed"], false);
-    assert_eq!(first["formalGateActions"], second["formalGateActions"]);
-    assert_eq!(second["qualified"], false);
-    assert_eq!(second["scopedControlsConsistent"], true);
-    let summary = |name: &str| {
-        serde_json::from_slice::<Value>(
-            &fs::read(root.join(name).join("partial-summary.json")).unwrap(),
-        )
-        .unwrap()
-    };
-    assert_eq!(summary("first")["activeCandidateIds"], json!([id]));
-    assert_eq!(summary("second")["activeCandidateIds"], json!([]));
-    fs::remove_dir_all(root).unwrap();
 }

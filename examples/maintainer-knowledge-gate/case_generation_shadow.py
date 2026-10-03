@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -180,6 +181,16 @@ def runtime_target(policy: dict, scope: dict) -> str:
     return target
 
 
+def oracle_framework(policy: dict, scope: dict) -> str:
+    target = runtime_target(policy, scope)
+    if "oracleFramework" in policy:
+        expected = "ohosTest" if target == "harmony-emulator" else "repository-test"
+        require(policy["oracleFramework"] == expected, "shadow Oracle framework conflicts with runtime")
+        return expected
+    # Retained requests bind the old inference; never silently rewrite their cuts.
+    return "ohosTest" if any("ohosTest" in p for p in scope.get("testEntrypoints", [])) else "repository-test"
+
+
 def select_iteration(loop_receipt: dict, facts: dict[str, dict], existing: list[dict]) -> tuple[dict, dict]:
     iterations = loop_receipt.get("iterations")
     require(isinstance(iterations, list) and iterations, "bounded loop has no completed iterations")
@@ -258,6 +269,7 @@ def prepare(args) -> None:
             "independentOracleRequired": True,
             "wrongVariantCalibrationRequired": True,
             "runtimeTarget": getattr(args, "runtime_target", "harmony-emulator"),
+            "oracleFramework": "ohosTest" if getattr(args, "runtime_target", "harmony-emulator") == "harmony-emulator" else "repository-test",
             "externalHardwareAllowed": False,
             "physicalDeviceFallbackAllowed": False,
             "shadowEligible": not external_hardware_blockers(scope, fact),
@@ -276,10 +288,56 @@ def request_origin(request: dict) -> dict:
         require(isinstance(digest, str) and SHA256.fullmatch(digest), "operation inputs digest invalid")
         require(request.get("policy", {}).get("caseCalibrationInherited") is False,
                 "maintenance proof cannot inherit case calibration")
-        return {"operationInputsSha256": digest}
+        origin = {"operationInputsSha256": digest}
+        if "successorConstruction" in request:
+            bound = request["successorConstruction"]
+            require(bound.get("schema") == "agentlab.shadow_case_successor_inputs.v1"
+                    and bound.get("calibrationInherited") is False
+                    and bound.get("formalCaseQualified") is False
+                    and bound.get("automaticPromotion") is False, "invalid successor construction boundary")
+            for key, raw in (("parentRequestSha256", "parentRequestUtf8"),
+                             ("parentProposalSha256", "parentProposalUtf8"), ("reviewSha256", "reviewUtf8"),
+                             ("contextSha256", "contextUtf8"), ("editBoundarySha256", "editBoundaryUtf8")):
+                require(isinstance(bound.get(raw), str)
+                        and hashlib.sha256(bound[raw].encode()).hexdigest() == bound["bindings"].get(key),
+                        "successor original input digest differs")
+            require(json.loads(bound["contextUtf8"]) == bound["sourceContext"]
+                    and json.loads(bound["editBoundaryUtf8"]) == bound["editBoundary"],
+                    "successor parsed construction inputs differ")
+            require(bound["bindings"].get("operationInputsSha256") == digest
+                    and bound["bindings"].get("runtimeTarget") == request["policy"].get("runtimeTarget"),
+                    "successor operation or runtime binding differs")
+            # Native packets retain their historical field name. The parent is
+            # an unadmitted proposal, not a stored candidate supersession edge.
+            parent_id = bound["parentCandidateId"]
+            require(SAFE_ID.fullmatch(parent_id) is not None
+                    and json.loads(bound["parentProposalUtf8"]).get("id") == parent_id,
+                    "successor parent proposal identity differs")
+            origin.update({"parentProposalId": parent_id, **bound["bindings"]})
+        return origin
     require(request.get("schema") == "agentlab.case_generation_shadow_request.v1", "bad shadow request")
     require("operationInputsSha256" not in request, "semantic loop request borrows operation lineage")
     return {"loopReceiptSha256": request["loopReceiptSha256"]}
+
+
+def constructor_evidence(request: dict) -> list[dict]:
+    evidence = list(request["fact"].get("evidence", []))
+    bound = request.get("successorConstruction")
+    if bound:
+        for context in (bound["sourceContext"], bound["editBoundary"]["sourceContext"]):
+            for item in context["selectedFiles"]:
+                prior = next((row for row in evidence if row["path"] == item["path"]), None)
+                require(prior is None or prior["gitBlobOid"] == item["gitBlobOid"],
+                        "successor context contradicts semantic Blob")
+                if prior is None:
+                    evidence.append(item)
+    return evidence
+
+
+def constructor_source_bytes(source: Path, item: dict) -> bytes:
+    # Native preflight binds context text to committed Blobs even for sparse
+    # checkouts; avoid requiring an unrelated full checkout projection.
+    return item["contentUtf8"].encode() if "contentUtf8" in item else (source / item["path"]).read_bytes()
 
 
 def verify_fact_source(request: dict, source: Path) -> None:
@@ -290,7 +348,7 @@ def verify_fact_source(request: dict, source: Path) -> None:
             "source checkout revision differs")
     require(not subprocess.check_output(["git", "-C", str(source), "status", "--porcelain"], text=True),
             "source checkout is dirty before construction")
-    evidence = request["fact"].get("evidence")
+    evidence = constructor_evidence(request)
     require(isinstance(evidence, list) and evidence, "semantic source evidence absent")
     seen = set()
     for item in evidence:
@@ -304,15 +362,102 @@ def verify_fact_source(request: dict, source: Path) -> None:
         for part in path.parts:
             current = current / part
             require(not current.is_symlink(), "semantic source symlink rejected")
-        require(current.is_file() and current.stat().st_size <= 16 * 1024 * 1024,
+        require("contentUtf8" in item or current.is_file() and current.stat().st_size <= 16 * 1024 * 1024,
                 "semantic source is not a bounded file")
-        data = current.read_bytes()
+        data = constructor_source_bytes(source, item)
+        require(len(data) <= 16 * 1024 * 1024, "constructor source exceeds budget")
         blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
         committed = subprocess.check_output(["git", "-C", str(source), "rev-parse", f"{revision}:{relative}"], text=True).strip()
         require(blob == committed == item.get("gitBlobOid"), "semantic source Blob differs")
 
 
+def prepare_isolated_source(request: dict, source: Path, output: Path, template: Path) -> Path:
+    """Rebind the existing isolated runtime to exactly the semantic source bytes."""
+    require(template.is_file() and not template.is_symlink(), "runtime template must be a regular file")
+    config = load(template)
+    require(config.get("schema") == "agentlab.participant_docker_runtime.v1"
+            and config.get("executor") == "docker", "unsupported isolated runtime")
+    verify_fact_source(request, source)
+    case = output / "case-input"
+    case.mkdir(parents=True, exist_ok=False)
+    inventory = []
+    for item in constructor_evidence(request):
+        relative = item["path"]
+        data = constructor_source_bytes(source, item)
+        require(hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+                == item["gitBlobOid"], "projected source Blob differs")
+        target = case / "source" / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        inventory.append({**item, "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)})
+    verify_fact_source(request, source)
+    write_json(case / "manifest.json", {
+        "schema": "agentlab.shadow_constructor_source_input.v1",
+        "requestValueSha256": value_digest(request),
+        "sourceRevision": request["repository"]["revision"],
+        "files": inventory,
+        "automaticQualification": False,
+    })
+    config["caseInputRoot"] = str(case.resolve())
+    config["participantManifestSha256"] = file_digest(case / "manifest.json")
+    config["forbiddenHostPaths"] = list(dict.fromkeys([
+        *config.get("forbiddenHostPaths", []), str(source.resolve()),
+    ]))
+    runtime = output / "runtime-config.json"
+    write_json(runtime, config)
+    return runtime
+
+
 def run_agent(args) -> None:
+    revision = getattr(args, "revision_request", None)
+    successor = "successorConstruction" in load(args.request)
+    require(not (revision is not None and successor), "draft revision and successor are exclusive")
+    if successor:
+        require(all(getattr(args, name, None) is not None
+                    for name in ("flywheel_tool", "knowledge", "operation_inputs")),
+                "successor requires native tool, knowledge and operation inputs")
+        args.output.mkdir(parents=True, exist_ok=False)
+        subprocess.run([str(args.flywheel_tool), "--validate-operation-case-successor",
+                        "--knowledge", str(args.knowledge), "--operation-inputs", str(args.operation_inputs),
+                        "--source-worktree", str(args.source.resolve(strict=True)),
+                        "--shadow-request", str(args.request),
+                        "--output", str(args.output / "successor-validation.json")], check=True)
+    elif revision is not None:
+        require(all(getattr(args, name, None) is not None
+                    for name in ("flywheel_tool", "knowledge", "operation_inputs")),
+                "shadow revision requires native tool, knowledge and operation inputs")
+        args.output.mkdir(parents=True, exist_ok=False)
+        subprocess.run([str(args.flywheel_tool), "--validate-shadow-case-revision",
+                        "--knowledge", str(args.knowledge), "--operation-inputs", str(args.operation_inputs),
+                        "--shadow-request", str(args.request), "--revision-request", str(revision),
+                        "--output", str(args.output / "revision-validation.json")], check=True)
+    else:
+        require(not any(getattr(args, name, None) is not None
+                        for name in ("flywheel_tool", "knowledge", "operation_inputs")),
+                "shadow revision dependencies require a revision request")
+    template = os.environ.get("AGENTLAB_PARTICIPANT_RUNTIME_CONFIG")
+    if not template:
+        return run_agent_inner(args)
+    runtime = prepare_isolated_source(load(args.request), args.source.resolve(strict=True),
+                                      args.output, Path(template))
+    os.environ["AGENTLAB_PARTICIPANT_RUNTIME_CONFIG"] = str(runtime.resolve())
+    try:
+        return run_agent_inner(args)
+    finally:
+        os.environ["AGENTLAB_PARTICIPANT_RUNTIME_CONFIG"] = template
+
+
+def participant_options(args) -> dict:
+    effort = getattr(args, "reasoning_effort", "default")
+    require(effort in ("default", "low", "medium", "high", "max"), "invalid constructor reasoning effort")
+    tokens = getattr(args, "max_output_tokens", None)
+    require(tokens is None or type(tokens) is int and tokens in (8192, 16384),
+            "invalid constructor output token bound")
+    return {"reasoning_effort": None if effort == "default" else effort,
+            "max_output_tokens": tokens}
+
+
+def run_agent_inner(args) -> None:
     request = load(args.request)
     request_origin(request)
     require(request["policy"].get("shadowEligible") is True,
@@ -327,26 +472,51 @@ def run_agent(args) -> None:
     workspace.mkdir(parents=True)
     evidence.mkdir()
     shutil.copy2(args.request, workspace / "shadow-request.json")
+    frozen_request_sha = file_digest(workspace / "shadow-request.json")
+    successor = request.get("successorConstruction")
+    if successor:
+        require(frozen_request_sha == load(args.output / "successor-validation.json")["requestSha256"],
+                "successor request changed after native preflight")
+    revision = getattr(args, "revision_request", None)
+    if revision is not None:
+        shutil.copy2(revision, args.output / "revision-request.json")
+        bound = load(args.output / "revision-request.json")
+        require(file_digest(args.output / "revision-request.json")
+                == load(args.output / "revision-validation.json")["revisionRequestSha256"],
+                "shadow revision changed after preflight")
+        require(frozen_request_sha == load(args.output / "revision-validation.json")["currentRequestSha256"],
+                "shadow request changed after revision preflight")
+        (workspace / "parent-proposal.json").write_text(bound["parentProposalUtf8"], encoding="utf-8")
+        (workspace / "review-feedback.json").write_text(bound["reviewUtf8"], encoding="utf-8")
     source_link = workspace / "source"
-    source_link.symlink_to(source_root, target_is_directory=True)
+    # Host absolute paths are intentionally absent in the isolated namespace.
+    source_link.symlink_to(Path("/agentlab/case/source")
+                          if os.environ.get("AGENTLAB_PARTICIPANT_RUNTIME_CONFIG")
+                          else source_root, target_is_directory=True)
     participant_path = Path(__file__).resolve().parents[1] / "real-code-agent" / "participant.py"
     spec = importlib.util.spec_from_file_location("agentlab_participant", participant_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     participant = module.Participant(
         evidence, args.output / "participant-state", args.pi, args.gateway, args.model,
-        route=args.provider_route, implementation="pi",
+        route=args.provider_route, implementation="pi", **participant_options(args),
     )
     scope = request["scope"]
     fact = request["fact"]
-    framework = "ohosTest" if any("ohosTest" in path for path in scope.get("testEntrypoints", [])) else "repository-test"
+    framework = oracle_framework(request["policy"], scope)
     environment_instruction = (
         "The complete functional Oracle must be executable on a HarmonyOS emulator with no physical-device fallback and no attached USB, serial, or other external hardware; name the emulator image/device type in requiredEnvironment."
         if target == "harmony-emulator" else
         "The complete functional Oracle must use the pinned repository's test runner in a controlled host or container, without external hardware or physical-device fallback; name the required runner and environment in requiredEnvironment."
     )
+    source_instruction = (
+        "Use the primary semantic fact and the successor's explicitly bound owner scopes. "
+        "Use only loaded constructor source paths for context and explicitly selected edit paths for changes."
+        if successor else
+        f"Use only scope {scope['id']} and semantic fact {fact['id']}. Use only paths present in the fact evidence."
+    )
     prompt = f"""You are constructing one shadow evaluation-case hypothesis, not assessing an Agent.
-Read shadow-request.json and the exact read-only source/ checkout. Use only scope {scope['id']} and semantic fact {fact['id']}.
+Read shadow-request.json and the exact read-only source/ checkout. {source_instruction}
 Write exactly one JSON object to shadow-case-proposal.json. Do not modify source/ or the request.
 
 The object must have exactly these fields:
@@ -359,15 +529,28 @@ The object must have exactly these fields:
 - status: shadow-proposal
 - automaticPromotion: false
 
-Give at least two observables and two meaningful wrong variants. {environment_instruction} Validate every field type against the exact shape above, and parse the completed JSON once before finishing. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Use only paths present in the fact evidence. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
+Give at least two observables and two meaningful wrong variants. {environment_instruction} Validate every field type against the exact shape above, and parse the completed JSON once before finishing. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
+Keep source build-target/compatible SDK, installed build tools, and observed runtime-image versions as distinct axes. Do not require identical versions without an explicit task constraint or compatibility evidence. Likewise, do not invent a signing requirement from a packaging convention: identify the required install policy and retain unsupported signing or installation as a gap, not as a proven prerequisite. Inspect loaded lifecycle entrypoints and initialization/error branches before claiming state initialization is absent. Distinguish missing construction context from missing source behavior, and source-established initialization from runtime readiness or deterministic failure reproduction.
 An existing test name, done() callback, or successful runner exit is not a behavior assertion. If proposing reuse of an existing test, inspect its actual assertions and error branches at the pinned source; if the necessary test source is not in fact evidence, record that knowledge gap instead of inventing support. Require independently controlled success/failure checks before runtime calibration. A swallowed failure is an Oracle defect, while an unsupported adapter, timeout, or build fault is infrastructure failure, never a killed wrong variant. Define each wrong variant as one meaningful semantic change; do not assume a cosmetic rename is invalid. Record these as unresolved qualification requirements, not completed experiments.
+The required framework is a proposed test contract, not evidence that the repository already contains that test harness. Missing entrypoints are construction gaps, not permission to select an incompatible runner. Distinguish mutations to an old instance's fields from effects on a freshly constructed instance; source assignment alone does not prove a resource leak, runtime cleanup, or causal discrimination. Staged demands must describe one evolving implementation task rather than independent baseline smoke-test descriptions.
 """
+    if revision is not None:
+        prompt += "\nRevise the retained proposal rather than sampling an unrelated task. Address every finding, preserving request identity and unqualified status. Review is not an approved Oracle. Original rejected proposal bytes:\n" + bound["parentProposalUtf8"] + "\nExact source-review feedback:\n" + bound["reviewUtf8"]
+    if successor:
+        prompt += "\nConstruct an additive successor of the retained parent, not an unrelated sample. scopeSkillIds must equal " + json.dumps(request["candidateScopeSkillIds"]) + ". editablePaths may use only successorConstruction.editBoundary.edits paths, including explicitly selected create paths; contextPaths may use only loaded constructor source paths and must remain disjoint. All source is still read-only during hypothesis construction. Inspect the bound ownerKnowledge and preserve its limitations; no build, runtime or calibration proof is inherited. Address every review finding. Exact parent proposal:\n" + successor["parentProposalUtf8"] + "\nExact review:\n" + successor["reviewUtf8"]
     try:
-        participant.turn("shadow-case-constructor", workspace, prompt=prompt, wall_time_limit_seconds=720)
+        participant.turn("shadow-case-constructor", workspace, prompt=prompt,
+                         wall_time_limit_seconds=720, transport_retry_limit=0)
     finally:
         participant.close()
         source_link.unlink(missing_ok=True)
     proposal = workspace / "shadow-case-proposal.json"
+    require(file_digest(workspace / "shadow-request.json") == frozen_request_sha,
+            "Agent modified the frozen shadow request")
+    if revision is not None:
+        require((workspace / "parent-proposal.json").read_bytes() == bound["parentProposalUtf8"].encode()
+                and (workspace / "review-feedback.json").read_bytes() == bound["reviewUtf8"].encode(),
+                "Agent modified retained revision inputs")
     require(proposal.is_file() and not proposal.is_symlink(), "Agent did not produce a shadow proposal")
     shutil.copy2(proposal, args.output / "shadow-case-proposal.json")
     status = subprocess.check_output(["git", "-C", str(source_root), "status", "--porcelain"], text=True)
@@ -399,7 +582,8 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
     require(proposal["repositoryId"] == fact["repositoryId"], "shadow repository differs")
     require(proposal["sourceRevision"] == fact["sourceRevision"] and SHA1.fullmatch(proposal["sourceRevision"]),
             "shadow revision differs")
-    require(proposal["scopeSkillIds"] == fact["scopeSkillIds"] == [scope["id"]], "shadow scope binding differs")
+    require(fact["scopeSkillIds"] == [scope["id"]]
+            and proposal["scopeSkillIds"] == request.get("candidateScopeSkillIds", fact["scopeSkillIds"]), "shadow scope binding differs")
     require(proposal["factIds"] == [fact["id"]], "shadow fact binding differs")
     require(isinstance(proposal["title"], str)
             and TITLE_MIN_LENGTH <= len(proposal["title"]) <= TITLE_MAX_LENGTH,
@@ -411,15 +595,21 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
     editable = strings(proposal["editablePaths"], "editablePaths", *EDITABLE_PATHS_LIMITS)
     context = strings(proposal["contextPaths"], "contextPaths", *CONTEXT_PATHS_LIMITS)
     evidence_paths = {row["path"] for row in fact.get("evidence", []) if isinstance(row, dict)}
-    require(set(editable + context).issubset(evidence_paths), "shadow paths are not fact evidence")
+    if "successorConstruction" in request:
+        allowed_edits = {row["path"] for row in request["successorConstruction"]["editBoundary"]["edits"]}
+        require(set(editable).issubset(allowed_edits), "successor editable path not selected")
+        require(set(context).issubset({row["path"] for row in constructor_evidence(request)}),
+                "successor context path not loaded")
+    else:
+        require(set(editable + context).issubset(evidence_paths), "shadow paths are not fact evidence")
     require(not set(editable).intersection(context), "editable and context paths overlap")
-    require(all(scope_owns_path(scope, path) for path in editable),
+    require("successorConstruction" in request or all(scope_owns_path(scope, path) for path in editable),
             "editable path escapes the selected scope")
     oracle = proposal["oracleHypothesis"]
     require(isinstance(oracle, dict) and set(oracle) == {
         "framework", "observables", "requiredEnvironment", "wrongVariants", "status",
     }, "oracle hypothesis fields differ")
-    expected_framework = "ohosTest" if any("ohosTest" in path for path in scope.get("testEntrypoints", [])) else "repository-test"
+    expected_framework = oracle_framework(request["policy"], scope)
     require(oracle["framework"] == expected_framework, "oracle framework differs")
     require(oracle["status"] == "hypothesis-unqualified", "oracle status overclaims qualification")
     strings(oracle["observables"], "oracle observables", *OBSERVABLES_LIMITS)
@@ -474,7 +664,7 @@ def build_round(request: dict, rounds_before: list[dict], candidate_id: str,
         ],
         "coverage": {
             "repositoryIds": [request["repository"]["id"]],
-            "scopeSkillCount": 1,
+            "scopeSkillCount": len(request.get("candidateScopeSkillIds", fact["scopeSkillIds"])),
             "behaviorReadyBefore": before["semanticReadyCount"],
             "behaviorReadyAfter": after["semanticReadyCount"],
             "oracleReadyBefore": oracle_count,
@@ -569,6 +759,12 @@ def main() -> None:
     command.add_argument("--gateway", required=True)
     command.add_argument("--model", required=True)
     command.add_argument("--provider-route", required=True)
+    command.add_argument("--reasoning-effort", choices=["default", "low", "medium", "high", "max"], default="default")
+    command.add_argument("--max-output-tokens", type=int, choices=[8192, 16384])
+    command.add_argument("--revision-request", type=Path)
+    command.add_argument("--flywheel-tool", type=Path)
+    command.add_argument("--knowledge", type=Path)
+    command.add_argument("--operation-inputs", type=Path)
     command.set_defaults(handler=run_agent)
     command = commands.add_parser("record-success")
     command.add_argument("--request", type=Path, required=True)

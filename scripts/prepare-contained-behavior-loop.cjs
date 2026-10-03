@@ -60,6 +60,20 @@ for(const row of profile.sources){
  requireOk(!originals.has(row.path),'Repeated source');originals.set(row.path,bytes.toString('utf8'));
 }
 const original=originals.get(profile.originalSourcePath);requireOk(typeof original==='string','Original source missing');
+const declarationDependencies=[];
+if(profile.controlDeclarationReference){
+ const binding=profile.controlDeclarationReference;
+ requireOk(process.argv.includes('--flywheel-tool'),'Declaration reconciliation requires the native validator');
+ for(const row of [binding,binding.parentProfile]){
+  requireOk(row&&safe(row.path),'Declaration reference path unsafe');
+  run('git',['ls-files','--error-unmatch','--',row.path],root);
+  const file=path.join(root,row.path);requireOk(sha(fs.readFileSync(file))===row.sha256,'Declaration reference bytes differ');
+  declarationDependencies.push(file);
+ }
+ run(fs.realpathSync(option('--flywheel-tool')),['--validate-control-declaration-reference','--profile',profilePath,
+  '--control-reference',path.join(root,binding.path),'--parent-profile',path.join(root,binding.parentProfile.path),
+  '--source-bytes',path.join(source,profile.originalSourcePath),'--output',path.join(out,'control-declaration-validation.json')],out,30000);
+}
 requireOk(sha(fs.readFileSync(compiler))===profile.compilerSha256,'Compiler differs');
 const support={...profile.supportFields,compilerSha256:profile.compilerSha256};
 for(const row of profile.supportSources){
@@ -87,6 +101,36 @@ const contract={schema:'agentlab.frozen_behavior_checks.v1',candidateId:profile.
  compilerSha256:profile.compilerSha256,runtime,workerDeadlineMs:profile.workerDeadlineMs,checks:profile.checks,controls:controls.map(c=>c.manifest),automaticPromotion:false};
 // Freeze normative predicates and source variants before any calibration worker.
 const contractBytes=save(path.join(out,'frozen-checks.json'),contract);
+const adapter=path.join(root,'examples/real-code-agent/behavior-participant.py');
+const command=args=>({program:python,programSha256:sha(fs.readFileSync(python)),args,cwd:'.',timeoutMs:180000});
+const executorCommand=command([launcher,descriptorPath,'{request}']);executorCommand.timeoutMs=profile.workerDeadlineMs;
+const immutable=[profilePath,candidatesPath,compiler,supportPath,descriptorPath,worker,launcher,adapter,path.join(root,'examples/real-code-agent/participant.py')];
+immutable.push(...declarationDependencies);
+let captureBytes;
+if(process.argv.includes('--flywheel-tool')){
+ const tool=fs.realpathSync(option('--flywheel-tool')),toolBytes=fs.readFileSync(tool);
+ const recipe={schema:'agentlab.behavior_calibration_recipe.v1',reviewed:true,automaticPromotion:false,
+  contractSha256:sha(contractBytes),sources:controls.map(c=>({id:c.manifest.id,submittedSource:c.source})),
+  recoveryControlId:controls.find(c=>c.manifest.role==='accepted')?.manifest.id,
+  executorCommand,immutableInputs:immutable.map(p=>({path:p,sha256:sha(fs.readFileSync(p))}))};
+ requireOk(typeof recipe.recoveryControlId==='string','Accepted recovery source absent');
+ const recipePath=path.join(out,'calibration-recipe.json');save(recipePath,recipe);
+ const calibrationRoot=path.join(out,'calibration');
+ const result=cp.spawnSync(tool,['--execute-behavior-calibration','--contract',path.join(out,'frozen-checks.json'),
+  '--calibration-recipe',recipePath,'--output',calibrationRoot],{cwd:out,encoding:'utf8',
+  timeout:(controls.length+1)*profile.workerDeadlineMs+30000,maxBuffer:1024*1024});
+ fs.writeFileSync(path.join(out,'calibration-dispatch.stdout'),result.stdout||'',{flag:'wx'});
+ fs.writeFileSync(path.join(out,'calibration-dispatch.stderr'),result.stderr||'',{flag:'wx'});
+ requireOk(!result.error&&result.status===0,'Native calibration infrastructure failure; logs retained');
+ const receipt=JSON.parse(fs.readFileSync(path.join(calibrationRoot,'calibration-result.json')));
+ requireOk(receipt.status==='calibration-passed','Calibration or recovery needs review; no participant recipe emitted');
+ requireOk(sha(fs.readFileSync(tool))===sha(toolBytes),'Native calibration tool changed');
+ save(path.join(out,'calibration-tool-binding.json'),{path:tool,sha256:sha(toolBytes),qualified:false});
+ captureBytes=fs.readFileSync(path.join(calibrationRoot,'capture.json'));
+ fs.writeFileSync(path.join(out,'worker-capture.json'),captureBytes,{flag:'wx'});
+ // The ordinary repair loop pins both the fresh calibration and recovery verdict.
+ for(const file of ['contract.json','recipe.json','capture.json','feedback.json','recovery-capture.json','recovery-feedback.json','calibration-result.json']) immutable.push(path.join(calibrationRoot,file));
+}else{
 const workers=[];
 for(const control of controls){
  const dir=path.join(out,'control-'+control.manifest.id);fs.mkdirSync(dir);
@@ -101,12 +145,9 @@ for(const control of controls){
 }
 const capture={schema:'agentlab.behavior_worker_capture.v1',contractSha256:sha(contractBytes),candidateId:contract.candidateId,candidateSha256:contract.candidateSha256,
  sourceRevision:contract.sourceRevision,methodSha256:contract.methodSha256,compilerSha256:contract.compilerSha256,runtime,workers};
-const captureBytes=save(path.join(out,'worker-capture.json'),capture);
+captureBytes=save(path.join(out,'worker-capture.json'),capture);
+}
 for(const [file,bytes] of [[__filename,preparerBytes],[launcher,launcherBytes],[profilePath,profileBytes],[candidatesPath,candidatesBytes]])requireOk(sha(fs.readFileSync(file))===sha(bytes),'Preparation method or input changed; capture not admitted');
-const adapter=path.join(root,'examples/real-code-agent/behavior-participant.py');
-const command=args=>({program:python,programSha256:sha(fs.readFileSync(python)),args,cwd:'.',timeoutMs:180000});
-const executorCommand=command([launcher,descriptorPath,'{request}']);executorCommand.timeoutMs=profile.workerDeadlineMs;
-const immutable=[profilePath,candidatesPath,compiler,supportPath,descriptorPath,worker,launcher,adapter,path.join(root,'examples/real-code-agent/participant.py')];
 const recipe={schema:'agentlab.behavior_loop_recipe.v1',reviewed:true,automaticPromotion:false,contractSha256:sha(contractBytes),captureSha256:sha(captureBytes),taskDemand:profile.taskDemand,
  maximumAttempts,participantCompletionRequired:true,
  participantEnvironmentNames:['AGENTLAB_LM_GATEWAY_URL','AGENTLAB_LM_GATEWAY_KEY','AGENTLAB_PI_BINARY','AGENTLAB_MODEL','AGENTLAB_PROVIDER_ROUTE','AGENTLAB_REASONING_EFFORT'],

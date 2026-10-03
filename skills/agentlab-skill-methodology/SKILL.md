@@ -106,8 +106,32 @@ verify complete committed knowledge and operational-source readbacks, select the
 admitted guidance explicitly, and retire prior executable inputs before scheduling
 new work. State advancement is not fresh analysis, model consumption or benefit.
 
+For maintenance verification, an exact-cut reviewed source-operation catalog can
+let the business runner select the next actual capability gap and execute its
+matching recipe. Do not substitute another responsibility's recipe when the
+selected recipe is absent. Keep captured evidence, direct execution and catalog
+selection mutually exclusive. Requalify the fresh capture independently and
+retain the resulting knowledge candidate separately from committed active
+knowledge. Source-only qualification does not grant build, runtime, performance
+or full-loop acceptance; catalog selection is not automatic recipe generation.
+
 Keep original method bytes and analysis projection identity when revalidating older
 evidence after a tool upgrade. Record the current validator separately and compare
 all reconstructed semantic results; do not rewrite historical rows to match current
 IDs or substitute the current method for a frozen historical one. Hash agreement
 does not authenticate the declared Git revision or original producer.
+
+For integration delivery, reproduce the workflow's actual preflight gates, not
+only its downstream tests. Build native planners before integration tests that
+invoke them; an existing local target directory can hide a clean-runner dependency
+failure. Preserve those real planner checks rather than skipping them or replacing
+them with success fixtures. Formatting and dependency-order repairs improve
+delivery reliability, not semantic coverage or completed flywheel-round counts.
+
+When a clean-runner gate exceeds its budget, inspect the individual test and a
+completed comparison run before calling it a hang. Repeated exact-byte executable
+hashing can dominate debug builds, especially when one platform has a small loader
+and another a monolithic runtime. Measure representative byte volumes. Prefer
+optimizing the hashing dependency over weakening identity checks, caching by
+metadata, skipping negative controls or blindly extending deadlines. Preserve
+known-digest and changed-byte regressions; local timing is not cloud acceptance.

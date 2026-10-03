@@ -153,6 +153,7 @@ python3 scripts/run-harmony-source-standard-test.py \
   --case-id case-42 \
   --source-set-sha256 <frozen-source-set-sha256> \
   --hvigorw /absolute/path/to/hvigorw \
+  --build-planner /absolute/path/to/agentlab-maintainer-skill-flywheel \
   --build-module entry \
   --product default \
   --build-mode debug \
@@ -165,8 +166,19 @@ python3 scripts/run-harmony-source-standard-test.py \
   --output-dir /absolute/new/evidence-directory
 ```
 
-It runs the fixed argument-vector Hvigor target
-`module=<module>@ohosTest ... assembleHap --no-daemon`, retains the build
+The Rust planner parses the root JSON5 module registrations and resolves
+`srcPath`, output type and the declared product/build mode. It binds the root,
+host and tested-module configurations. An entry/feature module selects
+`assembleHap`; a HAR/shared-library module selects `genOnDeviceTestHap` and
+requires an explicit `--host-module` naming an installable entry/feature module.
+Build the planner with `cargo build -p agentlab_code_analysis --bin
+agentlab-maintainer-skill-flywheel`. The executor verifies its source bindings
+against the frozen project and checks standard-test evidence in the selected
+module, not an unrelated sibling.
+
+It first builds `module=<host>@default ... assembleHap`, then the selected
+`module=<module>@ohosTest` device-test task, using fixed argument vectors,
+`--no-daemon --no-parallel` and one shared build deadline. It retains the build
 command and output, binds both generated packages, verifies that every
 pre-existing source/configuration file stayed byte-identical, and then invokes
 the device executor below. Generated dependency and build directories
@@ -175,6 +187,14 @@ excluded from the source-tree identity so repeated builds of the same source
 remain the same case. A build failure or source mutation stops before device
 installation and is retained in `build-receipt.json`; `receipt.json` binds the
 build receipt to the nested native execution receipt.
+The native `build-plan.json` is also bound by that build receipt. Package paths
+must stay within the corresponding module's build directory. This planning
+does not prove the host's runtime navigation, signing or behavioral coverage;
+those still need independent execution and case calibration.
+Assessed standard-test configurations now also require `buildPlanner` (the
+native executable path); portable host profiles supply its usual file binding.
+Use `hostModule` when the tested module is a library. Older profiles need these
+inputs supplied explicitly rather than silently falling back to the HAP task.
 
 For an `ohosTest` Instrument Test, run the app HAP and its test HAP against an
 already booted emulator target with the bounded executor:

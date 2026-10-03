@@ -1,0 +1,48 @@
+{
+  "schema": "agentlab.emulator_readiness_observation.v1",
+  "rawArchiveSha256": "f1d1a36917b2e12feee201fef41315faf0460de1e94244a6e4443a7d1ca8fb03",
+  "peerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "routeDecision": "peer_direct",
+  "instance": "codex_phone_7",
+  "bootMode": "coldboot",
+  "dataResetRequested": false,
+  "start": {
+    "operationId": "exec-000000000000023d",
+    "terminal": true,
+    "exitCode": 0,
+    "durationMs": 78048,
+    "durationMeaning": "Process lifetime through explicit stop, not measured boot latency",
+    "stderr": "KVM is supported and accessible\naudio: Could not init `pa' audio driver\naudio: warning: Using timer based audio emulation\n"
+  },
+  "readinessProbe": {
+    "operationId": "exec-0000000000000241",
+    "exitCode": 0,
+    "target": "127.0.0.1:5555",
+    "systemVersionStdout": "OpenHarmony-7.0.0.105 ",
+    "productStdout": "emulator ",
+    "uiTestStdout": "DumpLayout saved to:/data/local/tmp/agentlab-flywheel-ready-20261003.json",
+    "layoutContentsInspected": false
+  },
+  "cleanup": {
+    "operationId": "exec-0000000000000242",
+    "exitCode": 0,
+    "stdout": "Stop emulator codex_phone_7 successfully\n"
+  },
+  "buildToolDiscovery": {
+    "qualified": false,
+    "observation": "Bounded discovery found no full build SDK/Hvigor/OHPM in the queried tool, opt, Library and code directories. This is not a whole-host absence proof. SDK compatibility remains unresolved."
+  },
+  "retainedDiagnosticLimitations": [
+    "The historical start log path was absent; diagnostic stderr is preserved even though the compound probe exited zero.",
+    "Help and detailed instance listing reached capture limits; retained output is marked truncated and is not a complete inventory.",
+    "Instance metadata version 7.0.0.107 differs from guest fullname 7.0.0.105; preserve both observations instead of equating package metadata with running OS identity.",
+    "No source application was built, installed, launched or tested. Audio-driver fallback was observed; audio scenarios remain unqualified.",
+    "This is operator-driven runtime readiness, not an authenticated independent case acceptance or automatic business loop."
+  ],
+  "applicationBuildQualified": false,
+  "formalCaseQualified": false,
+  "authorityWritePerformed": false,
+  "completeAutomaticBusinessLoops": 0,
+  "overallMaturityEstimatePercent": 68,
+  "nextAction": "Resolve a revision-compatible complete build SDK and signing/test artifacts; reuse the known host candidate, then calibrate exact ohosTest baselines and wrong controls."
+}

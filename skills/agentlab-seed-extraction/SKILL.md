@@ -51,6 +51,82 @@ New proposals retain the runtime target and canonical request-value SHA in
 lineage so later consumers can distinguish routing cuts without rewriting
 historical candidates. The value digest is not the original request-file SHA.
 
+Fresh shadow requests declare `oracleFramework` from their runtime contract:
+`ohosTest` on the Harmony emulator, `repository-test` on the host repository
+lane. An empty test inventory is a harness-construction gap, not evidence for
+a different framework. Retained requests keep their historical inference and
+bytes; regenerate a new request rather than relabeling a completed proposal.
+Independent source review must separate old-instance field cleanup from resource
+leak claims, single-change negative controls from confounded mutations, and an
+evolving implementation task from several unrelated smoke tests. Shape validity
+and isolated Agent completion do not establish these semantic properties.
+
+Before implementing an Oracle, reconcile the demands with the pinned module
+kind, supported SDK, registered tests, installable host and permitted edits.
+Framework selection does not establish any of these. If a demand needs a new
+host page, test registration or cross-scope dependency absent from the bound
+evidence, return a focused knowledge/construction gap with the owning scopes;
+do not invent installation commands or silently grant those paths for editing.
+After refreshing the supporting facts, create separate successor inputs and
+calibrate the actual host/test combination. Keep a passing proposal-shape check
+separate from this source review and from baseline/wrong-variant execution.
+
+For a new cross-module host, inspect both the library export surface and the
+importing module's dependency declaration. A dependency available through another
+module does not establish that the new host import resolves. Select missing
+manifest edits explicitly before implementation. Compile the actual host and
+standard-test source before mutation calibration; helper syntax accepted by a
+host language seam may be rejected by the target compiler. Keep these construction
+diagnostics separate from behavior failures and preserve the original failed cut.
+
+During construction, separate source build/compatible SDK, installed build tools
+and observed runtime-image versions; require equality only when the task or
+compatibility evidence establishes it. Packaging conventions do not establish a
+mandatory signing policy. Inspect the selected lifecycle initialization and
+error branches before declaring state seeding absent. If that source was omitted
+from the input, replenish the context rather than converting the omission into
+a repository defect. Source-established initialization still does not prove
+runtime readiness or a deterministic missing-state test. Retain those remaining
+gaps and verify them through the actual behavioral executor.
+
+For a rejected, unpublished operation-origin draft, prepare
+`--prepare-shadow-case-revision` with the committed knowledge, operation inputs,
+current shadow request, original parent request/proposal and source-review feedback.
+Rust reproduces the current request, preserves parent identity except the explicit
+framework-policy correction, and bounds findings to the semantic source evidence.
+The packet retains original UTF-8 bytes and digests, not an approved replacement.
+Pass it to `case_generation_shadow.py run-agent --revision-request` together with
+`--flywheel-tool`, `--knowledge` and `--operation-inputs`; native revalidation runs
+before dispatch. Each fresh attempt receives the original proposal and feedback,
+keeps them unchanged, and disables transport retries. This is a revision input
+handoff, not successful semantic repair, calibrated-case admission or a full loop.
+
+For an operation-origin candidate requiring new cross-scope evidence or host/test
+paths, use `--prepare-operation-case-successor` with `--knowledge`,
+`--source-worktree`, `--operation-inputs`, `--runtime-target`, the original
+`--parent-request`/`--parent-proposal`, `--review-feedback`, exact
+`--construction-context`, separately selected `--edit-boundary` and a fresh output.
+Native reconstruction binds the parent bytes, review, committed context and
+edit ownership; it does not authenticate an operator review or inherit calibration.
+The constructor consumes this request through `run-agent` with `--flywheel-tool`,
+`--knowledge` and `--operation-inputs`, without `--revision-request`. Its native
+preflight must pass before dispatch. Isolated projection includes the selected
+context and edit anchors; newly created targets remain absent until implementation.
+Output scope IDs must match the successor's declared owners, editable paths must
+be explicitly selected and context paths must be loaded. Keep source read-only
+while proposing; semantic admission, actual host integration and independent
+behavioral calibration remain separate gates. This bounded embedded-input handoff
+is not proof of an indefinite multi-round lineage or downstream benefit.
+
+The shadow constructor accepts explicit `--reasoning-effort` and
+`--max-output-tokens` through the existing captured participant adapter; defaults
+remain unchanged. Consult the selected provider's supported values, freeze source,
+task, feedback and deadlines, then inspect the actual upstream request before
+attributing a timing change to configuration. Keep incomplete terminal streams and
+missing proposals as transport/construction failures, not semantic repair results.
+A faster completed draft still needs independent review and calibration; historical
+runs with different method cuts are exploratory controls, not a causal paired test.
+
 After focused knowledge refresh, derive a stable successor candidate instead of
 rewriting the original candidate or construction plan. Bind the parent candidate
 ID/value digest, parent knowledge cut, refreshed fact digest and refresh receipt
@@ -87,6 +163,30 @@ plan. Unsupported profiles/readback failures stop the batch explicitly. Missing
 profiles retain the normal formal route; never interpret their absence as proof
 that no historical experiment exists. Follow the calibration Skill to consume
 and scope that evidence before spending another diagnostic turn.
+
+Distinguish planned construction targets from source facts. An absent new host or
+test cannot acquire an old-commit Blob through repeated knowledge refresh. When
+the candidate already binds an explicit edit-boundary packet, opt in through
+`AGENTLAB_CONSTRUCTION_BINDING_ROOT/profiles/<candidateId>.json` (schema
+`agentlab.construction_path_binding_profile.v1`, reviewed=true, exact candidateId,
+absolute sourceWorktree and editBoundary). Rust reconstructs the packet against
+the clean pinned source and knowledge cut, verifying selected owners, existing
+anchors and absent create targets. This binds construction inputs only; absent
+targets remain non-facts and Oracle/runtime/calibration gates remain independent.
+Do not move the benchmark baseline to the reference implementation to obtain
+missing source facts. Keep full parent candidate/value-digest lineage in a batch:
+a partial projection may pass individual gates and still fail batch admission.
+
+Keep draft revision provenance distinct from stored-candidate supersession.
+Operation constructor parents are unadmitted proposals: emitted lineage uses
+`parentProposalId` plus original request/proposal/review/context/edit-boundary
+digests. Historical native input packets retain their original field names and
+bytes. Only `parentCandidateId` with an exact stored parent-value digest denotes
+a candidate supersession edge; draft provenance must not suppress candidate
+scheduling. After a method correction, retain historical output separately and
+label any current-method replay, including both candidate-value digests. Rebind
+an isolated unqualified plan/profile explicitly; never reuse the historical
+candidate or plan digest or count replay as a new Agent/runtime observation.
 
 When replacing an invalid raw knowledge export with a reviewed snapshot, reconcile
 independently retained candidate and generation-round records too. Verify their

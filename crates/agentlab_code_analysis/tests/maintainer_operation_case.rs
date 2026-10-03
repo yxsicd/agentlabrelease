@@ -1,6 +1,8 @@
 use agentlab_code_analysis::{
     digest,
-    maintainer_operation_case::{prepare, shadow_request},
+    maintainer_operation_case::{
+        prepare, revision_request, shadow_request, validate_revision_request,
+    },
 };
 use serde_json::{json, Value};
 use std::{
@@ -82,6 +84,9 @@ fn constructor_translation_reverifies_bytes_and_preserves_operation_origin() {
     assert!(request.get("loopReceiptSha256").is_none());
     assert_eq!(request["fact"], packet["semanticFact"]);
     assert_eq!(request["policy"]["caseCalibrationInherited"], false);
+    assert_eq!(request["policy"]["oracleFramework"], "ohosTest");
+    let host = shadow_request(&base, &bytes, "repository-test").unwrap();
+    assert_eq!(host["policy"]["oracleFramework"], "repository-test");
     assert_eq!(
         request,
         shadow_request(&base, &bytes, "harmony-emulator").unwrap()
@@ -97,6 +102,118 @@ fn constructor_translation_reverifies_bytes_and_preserves_operation_origin() {
     .unwrap_err()
     .contains("differ"));
 }
+#[test]
+fn shadow_review_revision_binds_original_bytes_and_rejects_drift() {
+    let base = fixture();
+    let inputs = serde_json::to_vec(&prepare(&base, SCOPE, SEMANTIC, OPERATION).unwrap()).unwrap();
+    let current = shadow_request(&base, &inputs, "harmony-emulator").unwrap();
+    let current_bytes = serde_json::to_vec(&current).unwrap();
+    let mut parent = current.clone();
+    parent["policy"]
+        .as_object_mut()
+        .unwrap()
+        .remove("oracleFramework");
+    let parent_bytes = serde_json::to_vec(&parent).unwrap();
+    let proposal = json!({"schema":"agentlab.shadow_case_candidate.v1", "id":parent["candidateId"],
+        "repositoryId":parent["repository"]["id"],"sourceRevision":parent["repository"]["revision"],
+        "scopeSkillIds":parent["fact"]["scopeSkillIds"],"factIds":[SEMANTIC],
+        "status":"shadow-proposal","automaticPromotion":false});
+    let proposal_bytes = serde_json::to_vec(&proposal).unwrap();
+    let mut published = proposal.clone();
+    published["lineage"] = json!({"operationInputsSha256":digest(&inputs)});
+    assert!(revision_request(
+        &base,
+        &inputs,
+        &current_bytes,
+        &parent_bytes,
+        &serde_json::to_vec(&published).unwrap(),
+        b"{}"
+    )
+    .unwrap_err()
+    .contains("successor"));
+    let review = json!({"schema":"agentlab.operator_shadow_source_review.v1","verdict":"revision-required",
+        "proposalSha256":digest(&proposal_bytes),"requestSha256":digest(&parent_bytes),
+        "sourceRevision":parent["repository"]["revision"],"formalCaseQualified":false,
+        "runtimeQualified":false,"automaticPromotion":false,
+        "findings":[{"id":"causal-gap","sourcePaths":[parent["fact"]["evidence"][0]["path"]],
+            "observation":"A source assignment alone does not establish a resource outcome.",
+            "requestedRevision":"Propose a separately observable contract and bounded controls."}]});
+    let review_bytes = serde_json::to_vec(&review).unwrap();
+    let packet = revision_request(
+        &base,
+        &inputs,
+        &current_bytes,
+        &parent_bytes,
+        &proposal_bytes,
+        &review_bytes,
+    )
+    .unwrap();
+    assert_eq!(packet["parentProposalSha256"], digest(&proposal_bytes));
+    assert_eq!(
+        packet["parentProposalUtf8"],
+        std::str::from_utf8(&proposal_bytes).unwrap()
+    );
+    assert_eq!(packet["formalCaseQualified"], false);
+    let packet_bytes = serde_json::to_vec(&packet).unwrap();
+    validate_revision_request(&base, &inputs, &current_bytes, &packet_bytes).unwrap();
+    let mut forged = packet.clone();
+    forged["reviewSha256"] = json!("0".repeat(64));
+    assert!(validate_revision_request(
+        &base,
+        &inputs,
+        &current_bytes,
+        &serde_json::to_vec(&forged).unwrap()
+    )
+    .is_err());
+    for field in ["proposalSha256", "requestSha256", "sourceRevision"] {
+        let mut changed = review.clone();
+        changed[field] = json!("0".repeat(64));
+        assert!(revision_request(
+            &base,
+            &inputs,
+            &current_bytes,
+            &parent_bytes,
+            &proposal_bytes,
+            &serde_json::to_vec(&changed).unwrap()
+        )
+        .is_err());
+    }
+    let mut borrowed = review.clone();
+    borrowed["findings"][0]["sourcePaths"] = json!(["unbound.ts"]);
+    assert!(revision_request(
+        &base,
+        &inputs,
+        &current_bytes,
+        &parent_bytes,
+        &proposal_bytes,
+        &serde_json::to_vec(&borrowed).unwrap()
+    )
+    .unwrap_err()
+    .contains("unbound"));
+    let mut changed_parent = parent.clone();
+    changed_parent["knowledgeCutSha256"] = json!("0".repeat(64));
+    assert!(revision_request(
+        &base,
+        &inputs,
+        &current_bytes,
+        &serde_json::to_vec(&changed_parent).unwrap(),
+        &proposal_bytes,
+        &review_bytes
+    )
+    .is_err());
+    let mut approved = review.clone();
+    approved["formalCaseQualified"] = json!(true);
+    assert!(revision_request(
+        &base,
+        &inputs,
+        &current_bytes,
+        &parent_bytes,
+        &proposal_bytes,
+        &serde_json::to_vec(&approved).unwrap()
+    )
+    .is_err());
+}
+
 #[test]
 fn staging_or_changed_table_is_not_admitted_knowledge() {
     let dir = isolated();

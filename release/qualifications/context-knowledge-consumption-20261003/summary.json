@@ -1,0 +1,41 @@
+{
+  "schema":"agentlab.context_knowledge_consumption_summary.v1",
+  "sourceRevision":"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "knowledgeRevision":"da9a10a8049b138738d05aae9b2d47710b6b9a7d",
+  "contextPacketSchema":"agentlab.case_construction_context_packet.v2",
+  "contextSha256":"56896d9b1fe894aa9c9b8f51072730c420d79bf083fb914a1a9ac6e9515c14b7",
+  "selectedFileCount":9,
+  "completeVerificationOwnedFileCount":5,
+  "existingRelatedFactIds":[
+    "agent-analysis-componentlibrary-detail-view-vm-orchestration",
+    "agent-analysis-componentlibrary-hypium-verification-scaffold",
+    "agent-analysis-multi-product-build-manifest-contract"
+  ],
+  "newFactExperiment":{
+    "proposalSha256":"4229c9ecedf37a9854d713f6a8b23b90ffcbc82c635e8c8f5eca4df6c31bbdba",
+    "participantExitCode":0,"outerExitCode":0,"toolCalls":0,
+    "proposalShapePassed":true,"gatewayOutcome":"completed","semanticComplete":true,
+    "gatewayDurationMs":16103,"participantDurationMs":22581,
+    "isolationQualified":true,"disposition":"retain-not-admit-duplicate-knowledge",
+    "scopeMaturityAdvanced":false
+  },
+  "existingKnowledgeConsumptionExperiment":{
+    "fullCapturedContextValueMatches":true,"originalFactLimitationsPreserved":true,
+    "participantExitCode":0,"outerExitCode":1,"toolCalls":0,
+    "gatewayOutcome":"completed","semanticComplete":true,"upstreamEof":true,
+    "gatewayDurationMs":28878,"isolationQualified":true,
+    "planAccepted":false,"reviewFindings":["gap-plan-format-rejected","gap-plan-redundant-refresh"]
+  },
+  "preModelFailuresRetained":["sparse-owned-files-not-materialized","contained-source-manifest-missing"],
+  "rustTests":{"contextPassed":4,"operationCasePassed":7,"failed":0},
+  "remainingGaps":[
+    "V2 input preparation and captured consumption are verified; production shadow-request/successor wiring and acceptance of an executable next plan remain incomplete",
+    "Known facts must reach construction rather than being regenerated; the retained redundant proposal is not new knowledge",
+    "Installable host, supported build SDK, emulator connection and independent task Oracle/negative-control calibration remain unqualified",
+    "No complete automatic business loop, multi-round closure, cross-repository transfer or measured downstream benefit is established"
+  ],
+  "grantsEditablePaths":false,"authorityWritePerformed":false,"automaticPromotion":false,
+  "formalCaseQualified":false,"feedbackBenefitMeasured":false,
+  "completeAutomaticBusinessLoops":0,"overallMaturityEstimatePercent":68,
+  "verificationBoundary":"Original prompts, native events, proposals, source/context capsules, runtime isolation and failed preparation are retained in the operator artifact archive. This summary does not embed the complete raw archive or authenticate the operator review. Captured delivery and repeated static conclusions are not semantic improvement, an accepted refresh plan, calibrated case or full-loop qualification."
+}

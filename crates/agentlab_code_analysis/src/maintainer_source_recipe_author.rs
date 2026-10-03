@@ -225,6 +225,7 @@ pub fn prepare(
     )?;
     let mut files = Vec::new();
     let mut remaining: usize = 128 * 1024;
+    let mut text_bytes: usize = 0;
     for entry in result.stdout.split(|b| *b == 0).filter(|b| !b.is_empty()) {
         let entry = std::str::from_utf8(entry).map_err(|e| e.to_string())?;
         let (meta, path) = entry.split_once('\t').ok_or("recipe author tree entry")?;
@@ -237,6 +238,11 @@ pub fn prepare(
             "recipe author unsupported owned file",
         )?;
         let bytes = read(&source.join(path), 4 * 1024 * 1024)?;
+        if std::str::from_utf8(&bytes).is_ok() {
+            text_bytes = text_bytes
+                .checked_add(bytes.len())
+                .ok_or("recipe author text context size overflow")?;
+        }
         let content = if anchors.contains(path) {
             remaining = remaining
                 .checked_sub(bytes.len())
@@ -246,6 +252,23 @@ pub fn prepare(
             Value::Null
         };
         files.push(json!({"path":path,"gitBlobOid":parts[2],"sha256":digest(&bytes),"byteCount":bytes.len(),"content":content}));
+    }
+    // Small responsibilities can supply actual dependency implementations, not
+    // just anchor bodies and filenames. Larger ones retain the bounded anchor
+    // cut rather than silently providing a partial arbitrary dependency set.
+    if text_bytes <= 128 * 1024 {
+        for file in &mut files {
+            if file["content"].is_null() {
+                let bytes = read(&source.join(text(file, "path")?), 4 * 1024 * 1024)?;
+                need(
+                    file["sha256"] == digest(&bytes),
+                    "recipe author context changed during preparation",
+                )?;
+                if let Ok(content) = std::str::from_utf8(&bytes) {
+                    file["content"] = json!(content);
+                }
+            }
+        }
     }
     need(
         files.len() <= 80 && skill["trackedFileCount"] == files.len(),
@@ -406,6 +429,79 @@ pub fn check_revision(current_bytes: &[u8], packet_bytes: &[u8]) -> Result<Value
     )
 }
 
+/// Bind independent semantic findings to a reproducible draft before new inference.
+/// A reviewed request to revise is not approval of either design or executable code.
+pub fn design_review(
+    request_bytes: &[u8],
+    design_bytes: &[u8],
+    review_bytes: &[u8],
+) -> Result<Value, String> {
+    need(
+        request_bytes.len() <= 512 * 1024
+            && design_bytes.len() <= 64 * 1024
+            && review_bytes.len() <= 16 * 1024,
+        "design review input budget",
+    )?;
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    need(
+        prepare(
+            Path::new(text(&request, "knowledgeDirectory")?),
+            Path::new(text(&request, "sourceWorktree")?),
+            text(&request, "repositorySelector")?,
+            &serde_json::to_vec(&request["policy"]).map_err(|e| e.to_string())?,
+        )? == request,
+        "design review request no longer reproduces",
+    )?;
+    design(request_bytes, design_bytes)?;
+    let review: Value = serde_json::from_slice(review_bytes).map_err(|e| e.to_string())?;
+    need(
+        review.as_object().is_some_and(|o| o.len() == 8)
+            && review["schema"] == "agentlab.source_recipe_design_review.v1"
+            && review["parentRequestSha256"] == digest(request_bytes)
+            && review["parentDesignSha256"] == digest(design_bytes)
+            && review["reviewed"] == true
+            && review["verdict"] == "revise"
+            && review["automaticPromotion"] == false
+            && text(&review, "reviewer")?.len() <= 128,
+        "design review feedback binding",
+    )?;
+    let findings = review["findings"]
+        .as_array()
+        .filter(|a| !a.is_empty() && a.len() <= 8)
+        .ok_or("design review findings budget")?;
+    let mut ids = BTreeSet::new();
+    for finding in findings {
+        need(
+            finding.as_object().is_some_and(|o| o.len() == 4)
+                && ids.insert(text(finding, "id")?)
+                && text(finding, "id")?.len() <= 64
+                && text(finding, "observed")?.len() <= 1024
+                && text(finding, "requiredChange")?.len() <= 1024,
+            "design review finding contract",
+        )?;
+        let paths = finding["sourcePaths"]
+            .as_array()
+            .filter(|a| !a.is_empty() && a.len() <= 4)
+            .ok_or("design review finding paths")?;
+        need(
+            paths.iter().all(|path| {
+                request["sourceFiles"].as_array().is_some_and(|files| {
+                    files
+                        .iter()
+                        .any(|f| path.is_string() && f["path"] == *path && f["content"].is_string())
+                })
+            }),
+            "design review finding requires loaded owned source",
+        )?;
+    }
+    Ok(
+        json!({"schema":"agentlab.source_recipe_design_review_admission.v1",
+        "authorRequestSha256":digest(request_bytes),"parentDesignSha256":digest(design_bytes),
+        "reviewSha256":digest(review_bytes),"revisionRequested":true,"semanticQualified":false,
+        "executionPerformed":false,"authorityWritePerformed":false,"automaticPromotion":false}),
+    )
+}
+
 /// Static source correction before code generation; this does not establish semantic truth.
 fn frozen_seams(inputs: &Value) -> Result<(), String> {
     let seams = inputs["seams"]
@@ -479,15 +575,40 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
                 design["schema"].as_str(),
                 Some("agentlab.source_recipe_design.v1" | "agentlab.source_recipe_design.v2")
             )
-            && design["scopeSkillId"] == request["scope"]["id"]
-            && text(&design, "invariant")?.len() <= 2048
-            && design["limitations"].as_array().is_some_and(|a| {
-                (2..=8).contains(&a.len())
-                    && a.iter()
-                        .all(|v| v.as_str().is_some_and(|s| !s.is_empty() && s.len() <= 1024))
-            }),
+            && design["scopeSkillId"] == request["scope"]["id"],
         "recipe design schema/scope",
     )?;
+    let invariant = design["invariant"]
+        .as_str()
+        .filter(|s| !s.is_empty())
+        .ok_or("recipe design invariant must be nonempty text")?;
+    need(
+        invariant.len() <= 2048,
+        &format!(
+            "recipe design invariant byte budget 2048; observed {}",
+            invariant.len()
+        ),
+    )?;
+    let limitations = design["limitations"]
+        .as_array()
+        .ok_or("recipe design limitations must be an array")?;
+    need(
+        (2..=8).contains(&limitations.len()),
+        &format!(
+            "recipe design limitations count must be 2..8; observed {}",
+            limitations.len()
+        ),
+    )?;
+    for (index, limitation) in limitations.iter().enumerate() {
+        need(
+            limitation
+                .as_str()
+                .is_some_and(|s| !s.is_empty() && s.len() <= 1024),
+            &format!(
+                "recipe design limitations item {index} must be nonempty text within 1024 bytes"
+            ),
+        )?;
+    }
     let scenarios = design["scenarios"]
         .as_array()
         .filter(|a| (1..=8).contains(&a.len()))

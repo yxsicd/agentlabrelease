@@ -23,6 +23,33 @@ pub fn batch(candidates_bytes: &[u8], plans_bytes: &[u8]) -> Result<Value, Strin
     }
     let mut parents = BTreeSet::new();
     for row in candidates.values() {
+        let lineage = &row["lineage"];
+        if lineage.get("parentProposalId").is_some() {
+            text(lineage, "parentProposalId")?;
+            require(
+                lineage.get("parentCandidateId").is_none(),
+                "downstream proposal and candidate parent roles conflict",
+            )?;
+            for key in [
+                "operationInputsSha256",
+                "parentRequestSha256",
+                "parentProposalSha256",
+                "reviewSha256",
+                "contextSha256",
+                "editBoundarySha256",
+                "shadowRequestValueSha256",
+            ] {
+                sha(lineage, key)?;
+            }
+            require(
+                matches!(
+                    lineage["runtimeTarget"].as_str(),
+                    Some("harmony-emulator" | "repository-test")
+                ),
+                "downstream proposal runtime missing",
+            )?;
+            // Draft provenance never suppresses a stored candidate's scheduling.
+        }
         if let Some(id) = row["lineage"]["parentCandidateId"].as_str() {
             let parent = candidates.get(id).ok_or("downstream parent absent")?;
             require(

@@ -120,7 +120,7 @@ jobs:
             --receipt "$RUNNER_TEMP/recipe-author/authority-preflight.json"
       - name: Build native producer and isolated runtime
         run: |
-          cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
+          cargo build --locked --release -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
           mkdir -p "$RUNNER_TEMP/recipe-pi" "$RUNNER_TEMP/recipe-compiler"
           cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/recipe-pi/"
           cp examples/knowledge-seed/subject/runtime/package*.json "$RUNNER_TEMP/recipe-compiler/"
@@ -134,7 +134,7 @@ jobs:
           from pathlib import Path
           root=Path(os.environ['RUNNER_TEMP']);knowledge=Path(os.environ['KNOWLEDGE']).resolve()
           output=root/'recipe-author';source=root/'recipe-source'
-          gate=Path('target/debug/agentlab-maintainer-skill-flywheel').resolve()
+          gate=Path('target/release/agentlab-maintainer-skill-flywheel').resolve()
           def run(*args): subprocess.run([str(gate),*map(str,args)],check=True)
           run('--resolve-latest-assessment','--base',knowledge,'--output',output/'durable.json')
           baseline=json.loads(Path(json.loads((output/'durable.json').read_bytes())['assessmentPath']).read_bytes())
@@ -173,7 +173,7 @@ jobs:
           assert not (parent/'agent/revision-request.json').exists(),'Only one revision from an original construction is supported'
           review=output/'review-feedback.json'
           with review.open('x') as f:f.write(os.environ['REVISION_FEEDBACK'])
-          subprocess.run(['target/debug/agentlab-maintainer-skill-flywheel','--prepare-source-recipe-revision',
+          subprocess.run(['target/release/agentlab-maintainer-skill-flywheel','--prepare-source-recipe-revision',
               '--author-request',str(output/'request.json'),'--parent-author-request',str(parent/'request.json'),
               '--proposal',str(parent/'agent/proposal.json'),'--review-feedback',str(review),
               '--output',str(output/'revision-request.json')],check=True)
@@ -207,7 +207,7 @@ jobs:
             revision_args+=(--design-first)
           fi
           python3 scripts/run-source-recipe-author.py --request "$RUNNER_TEMP/recipe-author/request.json" \
-            --output "$RUNNER_TEMP/recipe-author/agent" --gate target/debug/agentlab-maintainer-skill-flywheel \
+            --output "$RUNNER_TEMP/recipe-author/agent" --gate target/release/agentlab-maintainer-skill-flywheel \
             --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py" \
             --reasoning-effort "$CONSTRUCTION_REASONING_EFFORT" \
             --gateway-timeout-seconds "$CONSTRUCTION_GATEWAY_TIMEOUT" \

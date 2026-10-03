@@ -587,7 +587,7 @@ def resolve(handoff_path: Path, profile_path: Path, host_root: Path, output: Pat
         "sourceExecutor": {"path": str(source_executor), "sha256": sha256(source_executor)},
         "configuration": dict(standard_configuration),
     }
-    for key, label in (("hvigorw", "hvigorw"), ("hdc", "hdc")):
+    for key, label in (("hvigorw", "hvigorw"), ("hdc", "hdc"), ("buildPlanner", "native build planner")):
         binding_value = standard_configuration.get(key)
         if binding_value is not None:
             standard_test["configuration"][key] = str(

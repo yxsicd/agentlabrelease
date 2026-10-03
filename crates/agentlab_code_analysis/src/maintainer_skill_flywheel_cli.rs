@@ -24,6 +24,195 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| {
+        a == "--reconcile-control-declarations" || a == "--validate-control-declaration-reference"
+    }) {
+        let profile = fs::read(value(&args, "--profile")?)?;
+        let reference = fs::read(value(&args, "--control-reference")?)?;
+        let report = agentlab_code_analysis::maintainer_control_declarations::reconcile(
+            &profile,
+            &reference,
+            &fs::read(value(&args, "--source-bytes")?)?,
+        )?;
+        if args
+            .iter()
+            .any(|a| a == "--validate-control-declaration-reference")
+        {
+            let parsed: serde_json::Value = serde_json::from_slice(&profile)?;
+            if parsed["controlDeclarationReference"]["sha256"]
+                != agentlab_code_analysis::digest(&reference)
+                || !report["corrections"].as_array().unwrap().is_empty()
+            {
+                return Err("control declaration reference differs from profile".into());
+            }
+            let parent = fs::read(value(&args, "--parent-profile")?)?;
+            if parsed["controlDeclarationReference"]["parentProfile"]["sha256"]
+                != agentlab_code_analysis::digest(&parent)
+            {
+                return Err("control declaration parent profile differs".into());
+            }
+            let proposal = agentlab_code_analysis::maintainer_control_declarations::reconcile(
+                &parent,
+                &reference,
+                &fs::read(value(&args, "--source-bytes")?)?,
+            )?;
+            let mut projection = parsed.clone();
+            projection
+                .as_object_mut()
+                .unwrap()
+                .remove("controlDeclarationReference");
+            projection["reviewed"] = serde_json::json!(false);
+            if projection != proposal["proposedProfile"] {
+                return Err("control declaration successor changed other profile fields".into());
+            }
+        }
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"correctionCount":report["corrections"].as_array().unwrap().len(),"qualified":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|a| {
+        a == "--prepare-operation-case-successor" || a == "--validate-operation-case-successor"
+    }) {
+        let base = PathBuf::from(value(&args, "--knowledge")?);
+        let source = PathBuf::from(value(&args, "--source-worktree")?);
+        let inputs = fs::read(value(&args, "--operation-inputs")?)?;
+        let report = if args
+            .iter()
+            .any(|a| a == "--validate-operation-case-successor")
+        {
+            agentlab_code_analysis::maintainer_operation_case::validate_successor_request(
+                &base,
+                &source,
+                &inputs,
+                &fs::read(value(&args, "--shadow-request")?)?,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_operation_case::successor_request(
+                &base,
+                &source,
+                &inputs,
+                &value(&args, "--runtime-target")?,
+                &fs::read(value(&args, "--parent-request")?)?,
+                &fs::read(value(&args, "--parent-proposal")?)?,
+                &fs::read(value(&args, "--review-feedback")?)?,
+                &fs::read(value(&args, "--construction-context")?)?,
+                &fs::read(value(&args, "--edit-boundary")?)?,
+            )?
+        };
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"schema":report["schema"],"candidateId":report["candidateId"],"qualified":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|a| {
+        a == "--prepare-construction-edit-boundary" || a == "--validate-construction-edit-boundary"
+    }) {
+        let report = if args
+            .iter()
+            .any(|a| a == "--validate-construction-edit-boundary")
+        {
+            agentlab_code_analysis::maintainer_construction_context::validate_edit_boundary(
+                &PathBuf::from(value(&args, "--knowledge")?),
+                &PathBuf::from(value(&args, "--source-worktree")?),
+                &fs::read(value(&args, "--edit-boundary")?)?,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_construction_context::prepare_edit_boundary(
+                &PathBuf::from(value(&args, "--knowledge")?),
+                &PathBuf::from(value(&args, "--source-worktree")?),
+                &value(&args, "--repository")?,
+                &fs::read(value(&args, "--edit-selection")?)?,
+            )?
+        };
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"schema":report["schema"],"qualified":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--prepare-harmony-build-plan") {
+        let module = value(&args, "--build-module")?;
+        let report = agentlab_code_analysis::harmony_build_plan::prepare(
+            &PathBuf::from(value(&args, "--project-root")?),
+            &module,
+            &optional(&args, "--host-module").unwrap_or(module.clone()),
+            &value(&args, "--product")?,
+            &value(&args, "--build-mode")?,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"schema":report["schema"],"outputType":report["outputType"],"qualified":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--prepare-construction-context") {
+        let paths = args
+            .windows(2)
+            .filter(|w| w[0] == "--context-path")
+            .map(|w| w[1].clone())
+            .collect::<Vec<_>>();
+        let report = agentlab_code_analysis::maintainer_construction_context::prepare(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &value(&args, "--repository")?,
+            &paths,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"schema":report["schema"],
+            "selectedFileCount":report["selectedFiles"].as_array().unwrap().len(),
+            "analysisFactCount":report["ownerKnowledge"].as_array().unwrap().iter()
+                .map(|owner| owner["analysisFacts"].as_array().unwrap().len()).sum::<usize>(),
+            "ownerScopeSkillIds":report["ownerScopeSkillIds"],"qualified":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--bind-construction-paths") {
+        let report = agentlab_code_analysis::maintainer_construction_context::bind_candidate_paths(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &fs::read(value(&args, "--edit-boundary")?)?,
+            &fs::read(value(&args, "--candidate")?)?,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"schema":report["schema"],"qualified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--feedback-partial-calibration") {
         let previous = optional(&args, "--previous-feedback-plan")
             .map(fs::read)
@@ -77,6 +266,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args
+        .iter()
+        .any(|a| a == "--prepare-shadow-case-revision" || a == "--validate-shadow-case-revision")
+    {
+        let base = PathBuf::from(value(&args, "--knowledge")?);
+        let inputs = fs::read(value(&args, "--operation-inputs")?)?;
+        let current = fs::read(value(&args, "--shadow-request")?)?;
+        let result = if args.iter().any(|a| a == "--validate-shadow-case-revision") {
+            agentlab_code_analysis::maintainer_operation_case::validate_revision_request(
+                &base,
+                &inputs,
+                &current,
+                &fs::read(value(&args, "--revision-request")?)?,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_operation_case::revision_request(
+                &base,
+                &inputs,
+                &current,
+                &fs::read(value(&args, "--parent-request")?)?,
+                &fs::read(value(&args, "--parent-proposal")?)?,
+                &fs::read(value(&args, "--review-feedback")?)?,
+            )?
+        };
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&result)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"schema":result["schema"],"qualified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--prepare-operation-case-shadow") {
         let request = agentlab_code_analysis::maintainer_operation_case::shadow_request(
             &PathBuf::from(value(&args, "--knowledge")?),
@@ -110,6 +334,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "{}",
             serde_json::json!({"id":packet["id"],"formalCaseQualified":false})
         );
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--validate-source-design-review") {
+        let receipt = agentlab_code_analysis::maintainer_source_recipe_author::design_review(
+            &fs::read(value(&args, "--author-request")?)?,
+            &fs::read(value(&args, "--design")?)?,
+            &fs::read(value(&args, "--review-feedback")?)?,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&receipt)?)?;
+        println!("{}", serde_json::to_string(&receipt)?);
         return Ok(());
     }
     if args.iter().any(|a| a == "--validate-source-recipe-design") {
@@ -340,6 +578,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!(
             "{}",
             serde_json::json!({"assetClass":manifest["assetClass"],"authorityWritePerformed":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|arg| {
+        arg == "--execute-behavior-calibration" || arg == "--execute-calibrated-behavior-loop"
+    }) {
+        let contract = fs::read(value(&args, "--contract")?)?;
+        let recipe = fs::read(value(&args, "--calibration-recipe")?)?;
+        let result = if args
+            .iter()
+            .any(|arg| arg == "--execute-calibrated-behavior-loop")
+        {
+            agentlab_code_analysis::maintainer_behavior_calibration::execute_cycle(
+                &contract,
+                &recipe,
+                &fs::read(value(&args, "--loop-template")?)?,
+                &output,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_behavior_calibration::execute(
+                &contract, &recipe, &output,
+            )?
+        };
+        println!(
+            "{}",
+            serde_json::json!({"status":result["status"],"qualified":false})
         );
         return Ok(());
     }

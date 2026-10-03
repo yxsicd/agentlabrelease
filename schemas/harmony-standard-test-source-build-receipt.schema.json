@@ -23,10 +23,16 @@
         "module": {"type": "string", "minLength": 1},
         "testTarget": {"type": "string", "minLength": 1},
         "product": {"type": "string", "minLength": 1},
-        "buildMode": {"type": "string", "minLength": 1}
+        "buildMode": {"type": "string", "minLength": 1},
+        "outputType": {"enum": ["hap", "har", "hsp"]},
+        "hostModule": {"type": "string", "minLength": 1},
+        "task": {"enum": ["assembleHap", "genOnDeviceTestHap"]}
       }
     },
     "buildTool": {"$ref": "#/$defs/fileBinding"},
+    "buildPlan": {"$ref": "#/$defs/fileBinding"},
+    "buildPlanner": {"$ref": "#/$defs/fileBinding"},
+    "buildPlanLog": {"$ref": "#/$defs/fileBinding"},
     "sourceContract": {"$ref": "#/$defs/fileBinding"},
     "sourceIntegrityPreserved": {"type": "boolean"},
     "packages": {

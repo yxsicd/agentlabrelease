@@ -1,0 +1,57 @@
+{
+  "schema": "agentlab.dialog_shadow_revision_summary.v1",
+  "producerBaseRevision": "5977228502124c98f92c7c4c8433801bf51fa1c9",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "knowledgeRevision": "da9a10a8049b138738d05aae9b2d47710b6b9a7d",
+  "currentRequestSha256": "a6c04cd28ed3a615dd59ec973bbac9890028533fd9837acbbf2827ceda8cb028",
+  "parentProposalSha256": "aa8acd81a1f000d12dc19e769335c09585f1846595223b65c958f2bfa1766602",
+  "reviewSha256": "b3afc551d42cc1317cc5f714246cdf63664a39adebda03f35a40a5c7b7a8c43b",
+  "revisionRequestSha256": "184888d475041e6119f2596b6eb4a19ed22e2f912b24e2ded3de5a6f6327a356",
+  "proposalSha256": "538019384c08d0af509dfb846deb54f33adfe72dc1d65ddf670584618aececc4",
+  "constructorExitCode": 0,
+  "finalGatewayExchange": {"index": 14, "outcome": "completed", "semanticComplete": true, "upstreamEof": true, "streamError": null},
+  "originalParentAndReviewUnchanged": true,
+  "finalCapturedRequestIncludesOriginalParentAndReview": true,
+  "finalCapturedProviderOptions": {"reasoningEffort":"low","maxCompletionTokens":8192},
+  "proposalShapePassed": true,
+  "isolation": {"filesystemQualified": true, "externalCredentialQualified": true, "networkEgressQualified": true},
+  "observedDraftChanges": [
+    "Unsupported old-instance resource-leak claim removed",
+    "Wrong variants separated by intended semantic cause",
+    "Three cumulative staged demands replace independent smoke tests",
+    "Explicit ohosTest framework matches the current request"
+  ],
+  "sourceReviewVerdict": "focused-knowledge-refresh-required",
+  "reviewerAuthenticationVerified": false,
+  "sourceEvidence": [
+    {"path":"build-profile.json5","gitBlobOid":"03ada1b33bb56a68ee5243c459638fe3154523c5","sha256":"32cd807327fe607c27da50110ce39ad0efd1a4892a9a71fa762c5263b1672f4f","bytes":6545,"ownerScopeSkillId":"skill-scope-code-workshop-root"},
+    {"path":"features/componentlibrary/src/main/module.json5","gitBlobOid":"0026348e0ec5d455849ad062078864f5b8d5ed1d","sha256":"3ec2bf69f926e01e460714783b0c834daa3fefd03c312949db3d0d10e911579c","bytes":186,"ownerScopeSkillId":"skill-scope-code-workshop-componentlibrary-framework"},
+    {"path":"features/componentlibrary/build-profile.json5","gitBlobOid":"697dff23e224373edb713dc2b8a08ed7341d5b4c","sha256":"575937fc1d9ebef997fc92a6a3b21e836d5670fa37badf05ec8b9e621dce529e","bytes":499,"ownerScopeSkillId":"skill-scope-code-workshop-componentlibrary-framework"},
+    {"path":"features/componentlibrary/src/ohosTest/module.json5","gitBlobOid":"1fda2d887a06ee9bc44f1035799678aa6db0ad21","sha256":"53302293da448dc5e7defcbdaf9bd0af228f3694f777b3797f7c1cc823c83ff6","bytes":218,"ownerScopeSkillId":"skill-scope-code-workshop-componentlibrary-verification"},
+    {"path":"features/componentlibrary/src/ohosTest/ets/test/List.test.ets","gitBlobOid":"794c7dc4ed66bd98fa3865e07922906e2fcef545","sha256":"c2300b6cb78c4e2469e72ce7d0d79f5207bc5004f14cdac0bbf859da248dad15","bytes":99,"ownerScopeSkillId":"skill-scope-code-workshop-componentlibrary-verification"},
+    {"path":"features/componentlibrary/src/ohosTest/ets/test/Ability.test.ets","gitBlobOid":"85c78f67579d6e31b5f5aeea463e216b9b141048","sha256":"8600c6681413e2ee3283671c6a67c2bb1421726559163aca8596ff17d2a389d6","bytes":1734,"ownerScopeSkillId":"skill-scope-code-workshop-componentlibrary-verification"},
+    {"path":"features/componentlibrary/Index.ets","gitBlobOid":"f83f2a1fa0a9e8acec79c87afd27221f4d468b40","sha256":"f06ee2feb7b52579f3cf00977986dbaba2f5e8a11c6d47c1336c9bcc8d0ceba2","bytes":861,"ownerScopeSkillId":"skill-scope-code-workshop-componentlibrary-framework"},
+    {"path":"products/phone/src/main/module.json5","gitBlobOid":"d3933d02ff8774cd4dd8d5a043cfef56aadecdbe","sha256":"034fa20a58f564d61df3a9912825b7501a46a227a86d235ba315d5f9bb298c40","bytes":2679,"ownerScopeSkillId":"skill-scope-code-workshop-products-phone"},
+    {"path":"products/phone/oh-package.json5","gitBlobOid":"0d5b378c1ff1722c5a107e39aaafaf9c58781920","sha256":"e6fa9d7ff9f982f37c2288bcbbdb356bda6074f92c4ef8090f08133528f46246","bytes":406,"ownerScopeSkillId":"skill-scope-code-workshop-products-phone"}
+  ],
+  "findings": [
+    {"id":"library-not-installable-host","observation":"The main module is har, while the draft requests building that module directly as a debug-signed HAP. The separate ohosTest module declares feature. Output and host wiring must be resolved independently."},
+    {"id":"scope-zero-not-module-zero","observation":"The dialog scope has no test entrypoints, but the enclosing componentlibrary module contains an ohosTest List that registers Ability.test. The observed assertion tests string containment/equality, not dialogs. New behavioral tests are needed, not an inference that all test infrastructure is absent."},
+    {"id":"sdk-floor-unbound","observation":"Root product configuration declares compatibleSdkVersion 6.1.0(23) and targetSdkVersion 6.1.1(24). The draft minimum API12+ is insufficient as a build/runtime qualification; installed SDK and emulator compatibility remain unverified."},
+    {"id":"host-and-edit-boundaries-unbound","observation":"Demands require a new host page and tests, but editable paths contain only two existing dialog implementation files. The public Index exports neither implementation. A phone entry module exists, but the inspected phone package does not directly depend on componentlibrary; transitive host wiring remains unverified."},
+    {"id":"negative-control-discrimination-unverified","observation":"Outside-dismissal and transition controls have not been executed. autoCancel may confound dismissal observations, and visual transition assertions need an independent observable. Single-change prose does not establish discriminating controls."}
+  ],
+  "nextActions": [
+    {"stage":"knowledge-refresh","scopeSkillIds":["skill-scope-code-workshop-root","skill-scope-code-workshop-componentlibrary-framework","skill-scope-code-workshop-componentlibrary-verification"],"objective":"Bind SDK/build targets, library exports, actual test registration and the absent behavioral Oracle to exact source facts; retain existing operation evidence."},
+    {"stage":"construction","objective":"Resolve and independently verify an installable test host and dependency path. Declare test/host changes in successor inputs with explicit ownership; do not widen the original candidate."},
+    {"stage":"calibration","objective":"Execute unchanged/reference baselines and single-change negative controls with ohosTest on the qualified emulator; capture build, installation, test output and exit status."}
+  ],
+  "formalCaseQualified": false,
+  "emulatorExecuted": false,
+  "feedbackBenefitMeasured": false,
+  "automaticPromotion": false,
+  "authorityWritePerformed": false,
+  "completeAutomaticBusinessLoops": 0,
+  "overallMaturityEstimatePercent": 68,
+  "verificationBoundary":"This operator summary binds retained local Agent capture and newly inspected source Blobs. It is not a TableGit analysis row, authenticated independent approval, executable case, complete raw archive, or full-loop receipt. Source context outside the original three-Blob request requires later knowledge admission and successor lineage; it cannot be retroactively attributed to the constructor."
+}

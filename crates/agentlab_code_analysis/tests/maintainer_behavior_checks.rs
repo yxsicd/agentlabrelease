@@ -50,6 +50,43 @@ fn reconstructs_mixed_json_checks_without_trusting_producer_boolean_or_expected(
 }
 
 #[test]
+fn killed_wrong_control_with_extra_failure_blocks_automatic_attempt_dispatch() {
+    let (contract, mut capture) = fixture();
+    modify(&mut capture, 3, |raw| {
+        raw["observations"][1]["actual"] = json!({"cleared":false});
+    });
+    let feedback = check(&contract, &capture).unwrap();
+    assert_eq!(
+        feedback["controls"][3]["failedCheckIds"],
+        json!(["preserve", "success"])
+    );
+    assert_eq!(feedback["calibrationRecordedContentPassed"], false);
+    assert_eq!(feedback["nextAction"], "review-unexpected-control-failures");
+    assert_eq!(feedback["qualified"], false);
+    // The existing ordinary controller must stop before reading a recipe or
+    // creating a dispatch directory, not merely report an informational flag.
+    let out = loop_output_for_adapter();
+    let error = agentlab_code_analysis::maintainer_behavior_loop::execute(
+        &serde_json::to_vec(&contract).unwrap(),
+        &serde_json::to_vec(&capture).unwrap(),
+        b"{}",
+        &out,
+    )
+    .unwrap_err();
+    assert!(error.contains("calibration not ready"));
+    assert!(!out.exists());
+    // Do not silently redefine the expected failures from observed output.
+    // An explicitly frozen multi-failure control is still supported.
+    let mut successor = contract.clone();
+    successor["controls"][3]["expectedFailedCheckIds"] = json!(["preserve", "success"]);
+    capture["contractSha256"] = json!(digest(&serde_json::to_vec(&successor).unwrap()));
+    assert_eq!(
+        check(&successor, &capture).unwrap()["nextAction"],
+        "execute-agent-attempt"
+    );
+}
+
+#[test]
 fn operational_observations_do_not_invent_review_or_drop_failed_calibration() {
     let (mut contract, mut capture) = fixture();
     let candidate = json!({"id":"generic-task","repositoryId":"unrelated-library","sourceRevision":"b".repeat(40)});
@@ -331,6 +368,15 @@ fn behavior_lesson_requires_bound_review_and_independent_positive_negative_contr
     let bytes = serde_json::to_vec(&surviving).unwrap();
     let mut revised = review.clone();
     revised["captureSha256"] = json!(digest(&bytes));
+    assert!(build(&candidate_bytes, &bytes, &revised).is_err());
+    let mut contaminated = capture.clone();
+    modify(&mut contaminated, 3, |raw| {
+        raw["observations"][1]["actual"] = json!({"cleared":false});
+    });
+    let bytes = serde_json::to_vec(&contaminated).unwrap();
+    revised["captureSha256"] = json!(digest(&bytes));
+    // An otherwise complete, digest-bound review cannot promote a killed
+    // control with unaccounted extra failures into maintained knowledge.
     assert!(build(&candidate_bytes, &bytes, &revised).is_err());
 }
 

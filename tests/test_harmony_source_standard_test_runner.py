@@ -46,12 +46,18 @@ class HarmonySourceStandardTestRunnerTests(unittest.TestCase):
             "export default class OpenHarmonyTestRunner extends HypiumTestRunner {}\n"
         )
         (self.project / "entry/build-profile.json5").write_text(
-            "{ targets: [{ name: 'ohosTest' }] }\n"
+            "{ targets: [{ name: 'default' }, { name: 'ohosTest' }] }\n"
         )
         (self.project / "oh-package.json5").write_text(
             "{ devDependencies: { '@ohos/hypium': '1.0.21' } }\n"
         )
         (self.project / "entry/src/main.ets").write_text("export const value = 1\n")
+        (self.project / "entry/src/main").mkdir()
+        (self.project / "entry/src/main/module.json5").write_text("{module:{name:'entry',type:'entry'}}")
+        (self.project / "build-profile.json5").write_text(
+            "{app:{products:[{name:'default'}],buildModeSet:[{name:'debug'}]},"
+            "modules:[{name:'entry',srcPath:'./entry'}]}"
+        )
         self.hvigorw = self.executable(
             "hvigorw",
             "#!/usr/bin/env python3\n"
@@ -59,7 +65,7 @@ class HarmonySourceStandardTestRunnerTests(unittest.TestCase):
             "root=pathlib.Path.cwd(); mode=os.environ.get('FAKE_HVIGOR_MODE', 'pass')\n"
             "if mode == 'fail': raise SystemExit(7)\n"
             "if mode == 'mutate': (root/'entry/src/main.ets').write_text('changed\\n')\n"
-            "out=root/'build'; out.mkdir(exist_ok=True)\n"
+            "out=root/'entry/build'; out.mkdir(exist_ok=True)\n"
             "(out/'app.hap').write_bytes(b'app-hap')\n"
             "(out/'app-ohosTest.hap').write_bytes(b'test-hap')\n",
         )
@@ -86,10 +92,12 @@ class HarmonySourceStandardTestRunnerTests(unittest.TestCase):
             source_set_sha256="a" * 64,
             hvigorw=self.hvigorw,
             build_module="entry",
+            host_module=None,
+            build_planner=Path(os.environ.get("AGENTLAB_BUILD_PLANNER", ROOT / "target/debug/agentlab-maintainer-skill-flywheel")),
             product="default",
             build_mode="debug",
-            app_hap="build/app.hap",
-            test_hap="build/app-ohosTest.hap",
+            app_hap="entry/build/app.hap",
+            test_hap="entry/build/app-ohosTest.hap",
             build_timeout_seconds=30,
             hdc=str(self.hdc),
             target="emulator-1",
@@ -116,6 +124,68 @@ class HarmonySourceStandardTestRunnerTests(unittest.TestCase):
         self.assertEqual(build["packages"]["test"]["sha256"], execution["packages"]["test"]["sha256"])
         command = json.loads((path.parent / "build-command.json").read_text())["command"]
         self.assertIn("module=entry@ohosTest", command)
+        self.assertEqual(build["buildTarget"]["outputType"], "hap")
+        steps = json.loads((path.parent / "build-command.json").read_text())["steps"]
+        self.assertEqual(len(steps), 2)
+        self.assertIn("module=entry@default", steps[0]["command"])
+
+    def test_library_requires_an_installable_host_before_any_build(self) -> None:
+        (self.project / "entry/src/main/module.json5").write_text("{module:{type:'har'}}")
+        with self.assertRaisesRegex(RUNNER.SourceStandardTestError, "planning failed"):
+            RUNNER.execute(self.args())
+        self.assertFalse((self.project / "entry/build").exists())
+
+    def test_output_from_another_module_is_rejected_before_build(self) -> None:
+        args = self.args()
+        args.app_hap = "unrelated/build/stale.hap"
+        with self.assertRaisesRegex(RUNNER.SourceStandardTestError, "outside its planned module"):
+            RUNNER.execute(args)
+        self.assertFalse((self.project / "entry/build").exists())
+
+    def test_sibling_tests_do_not_qualify_the_selected_module(self) -> None:
+        (self.project / "untested/src/main").mkdir(parents=True)
+        (self.project / "untested/src/main/module.json5").write_text("{module:{type:'entry'}}")
+        (self.project / "untested/build-profile.json5").write_text(
+            "{targets:[{name:'default'},{name:'ohosTest'}]}"
+        )
+        (self.project / "build-profile.json5").write_text(
+            "{app:{products:[{name:'default'}],buildModeSet:[{name:'debug'}]},"
+            "modules:[{name:'entry',srcPath:'entry'},{name:'untested',srcPath:'untested'}]}"
+        )
+        args = self.args()
+        args.build_module = "untested"
+        args.app_hap = "untested/build/app.hap"
+        args.test_hap = "untested/build/test.hap"
+        with self.assertRaisesRegex(RUNNER.SourceStandardTestError, "selected module lacks"):
+            RUNNER.execute(args)
+        self.assertFalse((self.project / "entry/build").exists())
+
+    def test_library_build_uses_native_plan_and_fresh_host_step(self) -> None:
+        (self.project / "entry/src/main/module.json5").write_text("{module:{type:'har'}}")
+        (self.project / "host/src/main").mkdir(parents=True)
+        (self.project / "host/src/main/module.json5").write_text("{module:{type:'entry'}}")
+        (self.project / "host/build-profile.json5").write_text("{targets:[{name:'default'}]}")
+        (self.project / "build-profile.json5").write_text(
+            "{app:{products:[{name:'default'}],buildModeSet:[{name:'debug'}]},"
+            "modules:[{name:'entry',srcPath:'entry'},{name:'host',srcPath:'host'}]}"
+        )
+        self.hvigorw = self.executable("hvigorw", "#!/usr/bin/env python3\n"
+            "import pathlib,sys\n"
+            "root=pathlib.Path.cwd()\n"
+            "assert ('genOnDeviceTestHap' in sys.argv) == ('module=entry@ohosTest' in sys.argv)\n"
+            "out=root/('entry/build' if 'genOnDeviceTestHap' in sys.argv else 'host/build')\n"
+            "out.mkdir(exist_ok=True)\n"
+            "(out/'package.hap').write_bytes(b'fresh-hap')\n")
+        args = self.args()
+        args.host_module = "host"
+        args.app_hap = "host/build/package.hap"
+        args.test_hap = "entry/build/package.hap"
+        receipt, path = RUNNER.execute(args)
+        self.assertTrue(receipt["passed"])
+        build = json.loads((path.parent / "build-receipt.json").read_text())
+        self.assertEqual(build["buildTarget"]["task"], "genOnDeviceTestHap")
+        self.assertEqual(build["buildTarget"]["hostModule"], "host")
+        self.assertTrue(build["buildPlan"]["sha256"])
 
     def test_repeated_build_ignores_prior_generated_outputs(self) -> None:
         first, _ = RUNNER.execute(self.args())
@@ -135,6 +205,7 @@ class HarmonySourceStandardTestRunnerTests(unittest.TestCase):
         build = json.loads((path.parent / "build-receipt.json").read_text())
         self.assertIn("hvigor-build-nonzero", build["failureReasons"])
         self.assertFalse((path.parent / "execution").exists())
+        self.assertEqual(len(json.loads((path.parent / "build-command.json").read_text())["steps"]), 1)
 
     def test_build_cannot_silently_modify_preexisting_source(self) -> None:
         with mock.patch.dict(os.environ, {"FAKE_HVIGOR_MODE": "mutate"}):

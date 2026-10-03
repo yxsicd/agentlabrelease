@@ -62,7 +62,7 @@ class HarmonyInstrumentTestRunnerTests(unittest.TestCase):
             "    else: print('emulator-1')\n"
             "    raise SystemExit(0)\n"
             "if 'install' in sys.argv:\n"
-            "    if mode == 'install-fail': raise SystemExit(1)\n"
+            "    if mode == 'install-fail' or (mode == 'second-install-fail' and sys.argv[-1].endswith('app-ohosTest.hap')): raise SystemExit(1)\n"
             "    print('Install successfully')\n"
             "    raise SystemExit(0)\n"
             "if mode == 'pass':\n"
@@ -109,6 +109,7 @@ class HarmonyInstrumentTestRunnerTests(unittest.TestCase):
         receipt, path = self.run_mode("pass")
         self.assertTrue(receipt["passed"])
         self.assertEqual(receipt["status"], "passed")
+        self.assertTrue(receipt["packagesInstalled"])
         report = json.loads((path.parent / "native-report.json").read_text())
         self.assertEqual(report["counts"]["total"], 2)
         self.assertEqual(report["nativeFinalCode"], 0)
@@ -132,8 +133,21 @@ class HarmonyInstrumentTestRunnerTests(unittest.TestCase):
         receipt, path = self.run_mode("missing-target")
         self.assertFalse(receipt["passed"])
         self.assertEqual(receipt["status"], "infrastructure-error")
+        self.assertFalse(receipt["packagesInstalled"])
+        self.assertEqual(len(receipt["logs"]), 1)
         report = json.loads((path.parent / "native-report.json").read_text())
         self.assertEqual(report["failureReasons"], ["target-preflight-failed"])
+
+    def test_incomplete_installation_cannot_claim_packages_installed(self) -> None:
+        for mode, log_count in (("install-fail", 2), ("second-install-fail", 3)):
+            with self.subTest(mode=mode):
+                receipt, path = self.run_mode(mode)
+                self.assertFalse(receipt["packagesInstalled"])
+                self.assertFalse(receipt["passed"])
+                self.assertEqual(receipt["status"], "infrastructure-error")
+                self.assertEqual(len(receipt["logs"]), log_count)
+                report = json.loads((path.parent / "native-report.json").read_text())
+                self.assertEqual(report["failureReasons"], ["hap-install-failed"])
 
     def test_summary_count_mismatch_cannot_pass(self) -> None:
         report = RUNNER.parse_native_report(
