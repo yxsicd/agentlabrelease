@@ -269,3 +269,23 @@ Manual review and operator transport are not an automatic five-stage loop.
 Maturity remains 74%, accepted complete automatic business loops zero. The next
 priority is publishing this exact cut and executing a fresh consuming round with
 an independent quality rubric, not adding more retained-capture replays.
+
+## Versioned successor consumer publication
+
+The exact portable 4bba501a1dffbdbeef05b759584fef70b090f292 cut is published under
+examples/maintainer-knowledge-gate/cuts/4bba501a1dffbdbeef05b759584fef70b090f292.
+Its files are byte-identical to the independently verified portable export. The
+historical first-four b5 snapshot and old guidance selections remain unchanged.
+Use reviewed-guidance/rating-convert-source-recipe-selection-4bba501a.json with
+that successor cut; it selects the newly admitted eight-scenario lesson, not the
+older four-scenario lesson. Native binding rejects use with the historical cut.
+
+The source constructor Action accepts knowledge_directory, a checked-in relative
+directory with a regular cut manifest and no traversal or repository escape.
+The default remains historical first-four for compatibility. For the next run,
+explicitly select the versioned successor directory and matching selection above.
+The same directory feeds live authority preflight, planner, author request and
+guidance binding. This does not silently update frozen experiments or bypass
+exact live-revision admission. Publication on a branch is not main availability;
+only dispatch after its CI-gated merge. No model was run by publication validation,
+and neither benefit nor a complete automatic round is claimed. Maturity remains 74%.

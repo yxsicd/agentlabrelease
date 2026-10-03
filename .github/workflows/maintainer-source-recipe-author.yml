@@ -11,6 +11,11 @@ on:
         default: glm-5.3-flash
         required: true
         type: string
+      knowledge_directory:
+        description: Checked-in fixed committed knowledge cut; exact live revision preflight remains required
+        default: examples/maintainer-knowledge-gate/first-four
+        required: true
+        type: string
       guidance_selection:
         description: Optional checked-in exact-cut calibration selection with sourceRecipeTarget; no external URL
         default: ''
@@ -107,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: ${{ inputs.code_gateway_timeout_seconds == '240' && 25 || 20 }}
     env:
-      KNOWLEDGE: examples/maintainer-knowledge-gate/first-four
+      KNOWLEDGE: ${{ inputs.knowledge_directory }}
       AGENTLAB_SOURCE_GUIDANCE_SELECTION: ${{ inputs.guidance_selection }}
       AGENTLAB_SOURCE_GUIDANCE_MODE: ${{ inputs.guidance_mode }}
       REPOSITORY_SELECTOR: ${{ inputs.repository }}
@@ -134,6 +139,14 @@ jobs:
         run: |
           python3 - <<'PY'
           import json,os
+          from pathlib import Path
+          knowledge=os.environ['KNOWLEDGE']
+          assert knowledge and not knowledge.startswith('/') and chr(92) not in knowledge
+          assert all(p not in ('','.','..') for p in knowledge.split('/'))
+          cut=Path(knowledge);root=Path.cwd().resolve()
+          assert cut.is_dir() and not cut.is_symlink() and cut.resolve().is_relative_to(root)
+          manifest=cut/'maintainer-knowledge-cut.json'
+          assert manifest.is_file() and not manifest.is_symlink() and manifest.resolve().is_relative_to(root)
           run=os.environ['REVISION_PARENT_RUN'];feedback=os.environ['REVISION_FEEDBACK']
           assert bool(run)==bool(feedback),'Revision parent and review must be supplied together'
           repairs=int(os.environ['CONSTRUCTION_CODE_REVISIONS'])

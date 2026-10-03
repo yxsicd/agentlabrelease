@@ -1,0 +1,19 @@
+{
+  "schema": "agentlab.maintainer_guidance_selection.v1",
+  "automaticPromotion": false,
+  "knowledgeCutSha256": "96f18ce8243cf200fb8ec21a79e91c2f035cc60b217d1c4f08e27cc06851e328",
+  "knowledgeRevision": "4bba501a1dffbdbeef05b759584fef70b090f292",
+  "stage": "calibration",
+  "sources": [{"repositoryId": "code-workshop", "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"}],
+  "skills": [{
+    "id": "skill-rating-convert-string-corpus-37156735569",
+    "objectId": "lesson-rating-convert-string-corpus-37156735569",
+    "rowSha256": "ce524981b3179cc19689668ad955430b73bad9daf765b4dbf5e86631d655b9e7",
+    "applicabilityReason": "This explicitly reviewed successor task targets the same frozen convert body covered by the newly admitted eight-scenario string corpus. Retain fixed-import/source-characterization limits; no automatic Oracle approval or learning-benefit claim."
+  }],
+  "sourceRecipeTarget": {
+    "scopeSkillId": "skill-scope-code-workshop-componentlibrary-input-display",
+    "sourcePaths": ["features/componentlibrary/src/main/ets/componentdetailview/rating/viewmodel/RatingDescriptor.ets"],
+    "demand": "Construct a bounded source-grounded calibration exercise for RatingDescriptor.convert, with source-derived behavior and distinct behavior-preserving and meaningful wrong controls."
+  }
+}
