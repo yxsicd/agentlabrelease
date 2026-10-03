@@ -178,6 +178,12 @@ Validate positive acceptance through the actual business return as well as the
 standalone admission CLI, using the same committed reviewed suite. A planner pass
 does not establish integration; operational persistence/repeat and full knowledge
 staging remain separate from active knowledge admission and next-round benefit.
+Before authority admission, compare the declared method Git Blob to the proposed
+methodDigest and retained original method bytes. An older built binary can embed
+an earlier Skill even when GITHUB_SHA names current HEAD; hash reconstruction does
+not authenticate that claim. Retain the first candidate and create a correctly
+bound successor, passing explicit historical methodSource rather than rewriting
+old receipts or treating current validator revision as the method recipe revision.
 
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.

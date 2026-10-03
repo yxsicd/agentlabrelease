@@ -219,3 +219,17 @@ advancement, new participant/worker execution, automatic review or guidance bene
 is claimed. Maturity remains 74%, accepted complete automatic business loops zero.
 Next: revision-fenced knowledge admission/readback, exact-cut publication, then
 later-round consumption and independent quality comparison/cross-repository runs.
+
+Before authority admission, Git Blob comparison exposed that the first promotion
+declared methodRevision=f618d4d while its existing binary embedded the method Skill
+from 3a2e650. The native hash gate passed because methodCommitAuthenticated=false;
+it cannot authenticate that revision. The original promotion-candidate/admission
+and business receipts remain retained but are retired for authority writes.
+Fresh promotion-candidate-v2 declares the actual 3a2e65094a1d70dfff0314b4d74df3b661099070
+method and binds archived method-experiment-learning-3a2e650.md SHA256
+7485a75d3f5d431b5a51a0630d5eb33580df27ff24f7e1d351f5fadb59ed4c92.
+Git show of that exact Blob independently matches those bytes. The fresh
+reviewed-business-admission-v2 uses an explicit methodSource reference, reconstructs
+the unchanged committed suite, exits 0 and reaches the same atomic/readback boundary.
+Use only that successor staged cut for later knowledge admission. Method recipe
+revision and current business-validator revision are separate identities.
