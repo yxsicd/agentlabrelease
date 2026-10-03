@@ -185,6 +185,17 @@ not authenticate that claim. Retain the first candidate and create a correctly
 bound successor, passing explicit historical methodSource rather than rewriting
 old receipts or treating current validator revision as the method recipe revision.
 
+Review quotation-to-claim support, not only source substring membership. Two real
+boolean-field review records cited a different numeric assignment: their stated
+interpretation matched source, but those quotations did not support it. Preserve
+the original review and report a separate finding; historical corrections require
+a reviewed successor, never edits to committed evidence. Also distinguish observed
+outputs from frozen scoring checks. A real verifier observed undefined return but
+did not grade it, so returning variants could pass. Disclose that coverage limit
+before promotion or benefit comparison. A completed feedback-guided successor with
+fewer scenarios/checks is neither automatically better nor worse; apply a frozen
+independent rubric and keep missing provenance evidence unverified.
+
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.
 Reconstruct all rows from the retained suite and optional review, preserving the
