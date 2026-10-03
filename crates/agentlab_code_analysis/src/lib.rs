@@ -7,6 +7,7 @@ pub mod asset_exchange;
 pub mod knowledge_gate;
 pub mod harmony_build_plan;
 pub mod maintainer_behavior_checks;
+pub mod maintainer_behavior_calibration;
 pub mod maintainer_behavior_loop;
 pub mod maintainer_construction_context;
 pub mod maintainer_downstream;

@@ -478,6 +478,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args.iter().any(|arg| arg == "--execute-behavior-calibration" || arg == "--execute-calibrated-behavior-loop") {
+        let contract = fs::read(value(&args, "--contract")?)?;
+        let recipe = fs::read(value(&args, "--calibration-recipe")?)?;
+        let result = if args.iter().any(|arg| arg == "--execute-calibrated-behavior-loop") {
+            agentlab_code_analysis::maintainer_behavior_calibration::execute_cycle(
+                &contract, &recipe, &fs::read(value(&args, "--loop-template")?)?, &output,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_behavior_calibration::execute(&contract, &recipe, &output)?
+        };
+        println!("{}", serde_json::json!({"status":result["status"],"qualified":false}));
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--execute-behavior-loop") {
         let result = agentlab_code_analysis::maintainer_behavior_loop::execute(
             &fs::read(value(&args, "--contract")?)?,

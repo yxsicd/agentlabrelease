@@ -25,6 +25,15 @@ assuming whether their cause is cleanup, another defect or an incomplete design.
 Do not expand expectations after observing a failure merely to pass this gate.
 A genuinely intended multi-failure control needs an explicit frozen declaration.
 
+Use the [native control producer](../../docs/flywheel-native-behavior-calibration-20261003.md)
+to execute reviewed source variants through the existing behavior-executor
+protocol before bounded repair. Reuse one executor for calibration and attempts;
+require fresh accepted-reference recovery under unchanged predicates, without
+counting that rerun as another distinct valid implementation. Preserve the
+original control declarations when a real run exposes additional failures and
+review attribution before issuing a successor contract. A successful host seam
+does not restore or qualify a Git workspace, UI state or emulator runtime.
+
 Inspect the installed framework's failure-path hook order, not just hook names.
 The retained Hypium 1.0.19 async runner calls afterEach in the same try block as
 the test body; a thrown assertion can skip it. For independent UI test scenarios,

@@ -80,7 +80,7 @@ jobs:
           npm ci --prefix "$RUNNER_TEMP/behavior-pi" --no-audit --no-fund
           docker pull node:24.19.0-bookworm-slim
           echo "WORKER_IMAGE_ID=$(docker image inspect node:24.19.0-bookworm-slim --format '{{.Id}}')" >> "$GITHUB_ENV"
-      - name: Freeze source and independently execute contained controls
+      - name: Freeze source and execute Rust-controlled calibration and recovery
         run: |
           set -euo pipefail
           git ls-files --error-unmatch -- "$PROFILE"
@@ -98,6 +98,7 @@ jobs:
             --candidates "$CANDIDATE_CORPUS" \
             --compiler "$RUNNER_TEMP/behavior-compiler/node_modules/typescript/lib/typescript.js" \
             --image-id "$WORKER_IMAGE_ID" --python "$(command -v python3)" \
+            --flywheel-tool "$GITHUB_WORKSPACE/target/debug/agentlab-maintainer-skill-flywheel" \
             --maximum-attempts "$MAXIMUM_ATTEMPTS" --output "$EVIDENCE_ROOT" "${guidance_args[@]}"
           target/debug/agentlab-maintainer-skill-flywheel --verify-behavior-checks \
             --contract "$EVIDENCE_ROOT/frozen-checks.json" --capture "$EVIDENCE_ROOT/worker-capture.json" \

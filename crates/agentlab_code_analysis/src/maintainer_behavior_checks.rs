@@ -318,22 +318,17 @@ fn hex(value: &Value, key: &str, length: usize) -> Result<(), String> {
     )
 }
 
-pub fn verify(contract_bytes: &[u8], capture_bytes: &[u8]) -> Result<Value, String> {
+/// Validate frozen predicates and control identities before any adapter dispatch.
+pub(crate) fn validate_contract(contract_bytes: &[u8]) -> Result<Value, String> {
     require(
-        contract_bytes.len() <= 256 * 1024 && capture_bytes.len() <= 4 * 1024 * 1024,
+        contract_bytes.len() <= 256 * 1024,
         "behavior input budget exceeded",
     )?;
     let contract: Value = serde_json::from_slice(contract_bytes).map_err(|e| e.to_string())?;
-    let capture: Value = serde_json::from_slice(capture_bytes).map_err(|e| e.to_string())?;
     require(
         contract["schema"] == "agentlab.frozen_behavior_checks.v1"
             && contract["automaticPromotion"] == false,
         "behavior contract schema or promotion differs",
-    )?;
-    require(
-        capture["schema"] == "agentlab.behavior_worker_capture.v1"
-            && capture["contractSha256"] == digest(contract_bytes),
-        "behavior capture contract differs",
     )?;
     text(&contract, "candidateId")?;
     for key in [
@@ -346,20 +341,7 @@ pub fn verify(contract_bytes: &[u8], capture_bytes: &[u8]) -> Result<Value, Stri
     }
     hex(&contract, "sourceRevision", 40)?;
     text(&contract, "runtime")?;
-    for key in [
-        "candidateId",
-        "candidateSha256",
-        "sourceRevision",
-        "methodSha256",
-        "compilerSha256",
-        "runtime",
-    ] {
-        require(
-            capture[key] == contract[key],
-            "behavior execution identity differs",
-        )?;
-    }
-    let deadline = contract["workerDeadlineMs"]
+    let _deadline = contract["workerDeadlineMs"]
         .as_u64()
         .filter(|n| *n > 0 && *n <= 60_000)
         .ok_or("behavior deadline invalid")?;
@@ -383,13 +365,6 @@ pub fn verify(contract_bytes: &[u8], capture_bytes: &[u8]) -> Result<Value, Stri
         .as_array()
         .filter(|a| a.len() >= 5 && a.len() <= 32)
         .ok_or("behavior controls absent or excessive")?;
-    let workers = capture["workers"]
-        .as_array()
-        .ok_or("behavior workers absent")?;
-    require(
-        workers.len() == manifests.len(),
-        "behavior workers incomplete",
-    )?;
     let mut declarations = BTreeMap::new();
     let mut roles = BTreeMap::<String, usize>::new();
     let mut source_digests = BTreeSet::new();
@@ -442,6 +417,54 @@ pub fn verify(contract_bytes: &[u8], capture_bytes: &[u8]) -> Result<Value, Stri
             && roles.get("accepted").copied().unwrap_or(0) >= 2
             && roles.get("wrong").copied().unwrap_or(0) >= 2,
         "behavior calibration roles incomplete",
+    )?;
+    Ok(contract)
+}
+
+pub fn verify(contract_bytes: &[u8], capture_bytes: &[u8]) -> Result<Value, String> {
+    require(
+        capture_bytes.len() <= 4 * 1024 * 1024,
+        "behavior input budget exceeded",
+    )?;
+    let contract = validate_contract(contract_bytes)?;
+    let capture: Value = serde_json::from_slice(capture_bytes).map_err(|e| e.to_string())?;
+    require(
+        capture["schema"] == "agentlab.behavior_worker_capture.v1"
+            && capture["contractSha256"] == digest(contract_bytes),
+        "behavior capture contract differs",
+    )?;
+    for key in [
+        "candidateId",
+        "candidateSha256",
+        "sourceRevision",
+        "methodSha256",
+        "compilerSha256",
+        "runtime",
+    ] {
+        require(
+            capture[key] == contract[key],
+            "behavior execution identity differs",
+        )?;
+    }
+    let deadline = contract["workerDeadlineMs"].as_u64().unwrap();
+    let expected: BTreeMap<_, _> = contract["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| (c["id"].as_str().unwrap(), c))
+        .collect();
+    let declarations: BTreeMap<_, _> = contract["controls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| (c["id"].as_str().unwrap(), c))
+        .collect();
+    let workers = capture["workers"]
+        .as_array()
+        .ok_or("behavior workers absent")?;
+    require(
+        workers.len() == declarations.len(),
+        "behavior workers incomplete",
     )?;
     let mut seen = BTreeSet::new();
     let mut results = Vec::new();
