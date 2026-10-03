@@ -6,6 +6,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 
 
@@ -68,8 +69,30 @@ def require_pi_retry_policy(state, workspace, expected):
         raise ValueError('Constructor native retry policy drift or project override')
 
 
+def guidance_prompt(prompt, packet, mode, evidence, label, effort, budget):
+    if packet is None:
+        return prompt
+    target = packet['sourceRecipeBinding']['target']
+    prompt += '\nREVIEWED CONSTRUCTION TARGET (same task in both treatments):\n' + json.dumps(target, ensure_ascii=False)
+    if mode == 'guided':
+        prompt += '\nBOUND MAINTAINER GUIDANCE (scope-limited evidence, not approval or scoring):\n' + json.dumps(packet, ensure_ascii=False, separators=(',', ':'))
+    intent = dict(schema='agentlab.maintainer_guidance_prompt_intent.v1',
+        guidanceMode=mode, promptSha256=hashlib.sha256(prompt.encode()).hexdigest(),
+        authorRequestSha256=packet['sourceRecipeBinding']['authorRequestSha256'],
+        knowledgeAuthority=packet['knowledgeAuthority'],
+        selectedSkills=[dict(id=r['skill']['id'], rowSha256=r['rowSha256'], bodySha256=r['bodySha256'])
+                        for r in packet['guidance']] if mode == 'guided' else [],
+        participantIdentity=dict(model=os.environ['AGENTLAB_MODEL'],
+            providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'], providerReasoningEffort=effort),
+        participantBudgetSeconds=budget, transportRetryLimit=0,
+        agentConsumptionVerified=False, learningBenefitVerified=False, automaticPromotion=False)
+    with (evidence/(label+'-guidance-consumption-intent.json')).open('x') as stream:
+        json.dump(intent, stream)
+    return prompt
+
+
 def construct_design(participant, workspace, evidence, output, request, gate, prompt, effort, revisions,
-                     retry_policy=None, revision_request=None, design_review=None):
+                     retry_policy=None, revision_request=None, design_review=None, guidance=None, guidance_mode='guided'):
     if type(revisions) is not int or not 0 <= revisions <= 2:
         raise ValueError('Design revision budget must be 0..2')
     attempts = []
@@ -78,7 +101,8 @@ def construct_design(participant, workspace, evidence, output, request, gate, pr
         label = 'source-recipe-design' if index == 0 else f'source-recipe-design-revision-{index}'
         if retry_policy is not None:
             require_pi_retry_policy(output / 'participant-state', workspace, retry_policy)
-        result = participant.turn(label, workspace, prompt=next_prompt,
+        turn_prompt = guidance_prompt(next_prompt, guidance, guidance_mode, evidence, label, effort, 240)
+        result = participant.turn(label, workspace, prompt=turn_prompt,
             wall_time_limit_seconds=240, tool_call_limit=1, transport_retry_limit=0,
             require_completed_tool_call=False, reasoning_effort=effort)
         # Transport/budget failures cannot use the design correction loop.
@@ -162,7 +186,8 @@ def construct_design(participant, workspace, evidence, output, request, gate, pr
             'verbatim from loaded source, including exact whitespace.\n')
 
 
-def construct_proposal(participant, workspace, evidence, output, prompt, effort, revisions, retry_policy):
+def construct_proposal(participant, workspace, evidence, output, prompt, effort, revisions, retry_policy,
+                       guidance=None, guidance_mode='guided'):
     """One explicit protocol correction, never a transport or semantic retry."""
     if type(revisions) is not int or not 0 <= revisions <= 1:
         raise ValueError('Proposal format revision budget must be 0..1')
@@ -171,7 +196,9 @@ def construct_proposal(participant, workspace, evidence, output, prompt, effort,
     for index in range(revisions + 1):
         label = 'source-recipe-author' if index == 0 else 'source-recipe-author-format-revision-1'
         require_pi_retry_policy(output / 'participant-state', workspace, retry_policy)
-        result = participant.turn(label, workspace, prompt=next_prompt,
+        turn_prompt = guidance_prompt(next_prompt, guidance, guidance_mode, evidence, label, effort,
+                                     max(240, getattr(participant, 'gateway_timeout_seconds', 180)+60))
+        result = participant.turn(label, workspace, prompt=turn_prompt,
             wall_time_limit_seconds=max(240, getattr(participant, 'gateway_timeout_seconds', 180)+60), tool_call_limit=1, transport_retry_limit=0,
             require_completed_tool_call=False, reasoning_effort=effort)
         require_complete_gateway_capture(evidence)
@@ -218,6 +245,9 @@ def main():
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--gate', type=Path, required=True)
     p.add_argument('--pi', type=Path, required=True)
+    p.add_argument('--guidance-knowledge', type=Path, default=os.environ.get('AGENTLAB_SOURCE_GUIDANCE_KNOWLEDGE') or None)
+    p.add_argument('--guidance-selection', type=Path, default=os.environ.get('AGENTLAB_SOURCE_GUIDANCE_SELECTION') or None)
+    p.add_argument('--guidance-mode', choices=('guided','unguided'), default=os.environ.get('AGENTLAB_SOURCE_GUIDANCE_MODE','guided'))
     p.add_argument('--reasoning-effort', choices=('default', 'none', 'low', 'medium', 'high', 'max'), default='low',
                    help='default omits reasoning_effort; it does not request disabled thinking')
     p.add_argument('--gateway-timeout-seconds', type=int, choices=range(30, 181), default=180)
@@ -253,6 +283,10 @@ def main():
     p.add_argument('--proposal-format-revisions', type=int, choices=range(2), default=0,
                    help='0..1 same-session strict JSON corrections after complete generation; no semantic retries')
     args = p.parse_args()
+    if bool(args.guidance_knowledge) != bool(args.guidance_selection):
+        p.error('--guidance-knowledge and --guidance-selection must be paired')
+    if args.guidance_selection and args.api != 'openai-completions':
+        p.error('Source guidance consumption currently requires openai-completions capture; no model dispatch')
     if args.diagnostic_repair and (not args.frozen_design or args.revision_request):
         p.error('Diagnostic repair requires frozen design and cannot mix reviewed revision')
     if args.diagnostic_loop_intent and (not args.design_first or args.revision_request or args.diagnostic_repair):
@@ -280,6 +314,29 @@ def main():
     evidence = args.output / 'evidence'
     workspace.mkdir()
     evidence.mkdir()
+    guidance = None
+    if args.guidance_selection:
+        retained = evidence/'source-guidance-knowledge'
+        retained.mkdir()
+        for name in ('maintainer-knowledge-cut.json','maintainer_skills.jsonl','program_facts.jsonl',
+                     'maintainer_scope_skills.jsonl','maintainer_skill_refresh_rounds.jsonl','evaluation_cases.jsonl'):
+            source = args.guidance_knowledge/name
+            if not source.is_file() or source.is_symlink():
+                raise ValueError('Guidance cut requires regular original files')
+            shutil.copy2(source, retained/name)
+        with (evidence/'source-guidance-author-request.json').open('xb') as stream:
+            stream.write(request_bytes)
+        with (evidence/'source-guidance-selection.json').open('xb') as stream:
+            stream.write(args.guidance_selection.read_bytes())
+        checked = subprocess.run([str(args.gate.resolve()), '--bind-source-recipe-guidance',
+            '--knowledge', str(retained.resolve()),
+            '--author-request', str((evidence/'source-guidance-author-request.json').resolve()),
+            '--guidance-request', str((evidence/'source-guidance-selection.json').resolve()),
+            '--output', str((args.output/'source-guidance.json').resolve())], capture_output=True, timeout=60)
+        (evidence/'guidance-binding-stdout.log').write_bytes(checked.stdout)
+        (evidence/'guidance-binding-stderr.log').write_bytes(checked.stderr)
+        checked.check_returncode()
+        guidance = json.loads((args.output/'source-guidance.json').read_bytes())
     revision_context = None
     diagnostic_context = None
     if args.diagnostic_loop_intent:
@@ -561,7 +618,7 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                     None if args.reasoning_effort == 'default' else args.reasoning_effort, args.design_revisions,
                     retry_policy=retry_policy, revision_request=args.revision_request,
                     design_review=((args.output/'parent-design.json', args.output/'design-review-feedback.json')
-                                   if args.parent_design else None))
+                                   if args.parent_design else None), guidance=guidance, guidance_mode=args.guidance_mode)
                 # Pi must retain the design session before code may reuse its
                 # original source context. Participant.turn independently checks
                 # the session identity/append-only bytes before and after dispatch.
@@ -682,9 +739,16 @@ exports and require are reserved. The helper is not a sandbox or oracle approval
         participant.gateway_timeout_seconds = code_deadline
         proposal = construct_proposal(participant, workspace, evidence, args.output, prompt,
             None if args.reasoning_effort == 'default' else args.reasoning_effort,
-            args.proposal_format_revisions, retry_policy)
+            args.proposal_format_revisions, retry_policy, guidance=guidance, guidance_mode=args.guidance_mode)
     finally:
         participant.close()
+    if guidance is not None:
+        checked = subprocess.run([str(args.gate.resolve()), '--verify-source-recipe-completion',
+            '--participant-evidence', str(evidence.resolve()), '--guidance-packet', str((args.output/'source-guidance.json').resolve()),
+            '--output', str((args.output/'guidance-consumption.json').resolve())], capture_output=True, timeout=60)
+        (evidence/'guidance-consumption-stdout.log').write_bytes(checked.stdout)
+        (evidence/'guidance-consumption-stderr.log').write_bytes(checked.stderr)
+        checked.check_returncode()
     proposal_path = args.output / 'proposal.json'
     with proposal_path.open('x') as stream:
         json.dump(proposal, stream, ensure_ascii=False, indent=2)
@@ -692,6 +756,10 @@ exports and require are reserved. The helper is not a sandbox or oracle approval
     command = [str(args.gate.resolve()), '--stage-source-recipe-proposal',
                '--author-request', str(args.request.resolve()), '--proposal', str(proposal_path),
                '--output', str((args.output / 'proposal-stage').resolve())]
+    if guidance is not None:
+        command += ['--source-guidance', str((args.output/'source-guidance.json').resolve()),
+            '--source-guidance-knowledge', str((evidence/'source-guidance-knowledge').resolve()),
+            '--source-guidance-selection', str((evidence/'source-guidance-selection.json').resolve())]
     if design_path is not None:
         command += ['--design', str(design_path.resolve())]
     if args.revision_request:

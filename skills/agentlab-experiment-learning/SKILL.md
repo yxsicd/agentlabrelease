@@ -320,6 +320,21 @@ flywheel rounds are different units; report which boundary actually ran without
 operator coordination. Preserve review and fixed-baseline admission even when a
 coordinator automates transport between those boundaries.
 
+For source-recipe construction, use the existing constructor's optional
+guidance-knowledge/selection/mode inputs and the
+[source-guidance adapter](../../docs/flywheel-source-guidance-consumption-20261004.md).
+Bind one reviewed sourceRecipeTarget to the author cut, loaded source bytes and
+scope before inference; both treatments receive the same target and budget.
+Retain all five knowledge tables, selection and original request. Native staging
+rejects changed bindings or omitted target paths; it does not prove the method
+was exercised or the generated Oracle is correct. Reconstruct retained inputs
+and verify original source-author prompt/lifecycle/upstream bytes for both modes.
+Reject selected guidance in unguided message history. Completion is not benefit;
+freeze an independent common quality/check rubric before comparative dispatch,
+not each constructor's self-generated checks as its own benefit score.
+Do not rename these captures to the legacy stage-author layout or use an
+unsupported wire protocol after spending model budget.
+
 For bounded cross-stage scheduling, the Rust `--execute-flywheel-cycles` command
 uses the [cycle adapter protocol](../../docs/flywheel-bounded-cycles-20261002.md).
 Connect existing independent gates through reviewed, dependency-pinned adapters;
