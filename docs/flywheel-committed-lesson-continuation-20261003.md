@@ -45,8 +45,10 @@ Rows must be complete, untruncated, uniquely keyed and at the exact revision.
 Knowledge uses the existing payload envelope; operational rows are direct.
 All committed knowledge rows must equal the reconstructed stage, with exact
 assessed JSONL bytes, source inventory, assessment and inherited operation
-evidence in the next cut. The source readback must reproduce all exported lesson
-rows. No status-only PASS, missing sidecar, dirty bracket, borrowed source or
+evidence in the next cut. The complete source readback must contain every exported
+lesson row exactly; unrelated earlier rounds may coexist in the same operational
+tables. This is selected-row containment after full-table validation, not a partial
+remote query. No status-only PASS, missing sidecar, dirty bracket, borrowed source or
 unchanged knowledge revision can advance state. Captures remain unauthenticated
 at this byte-level gate; the operator owns live transport capture.
 

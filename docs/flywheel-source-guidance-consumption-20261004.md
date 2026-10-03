@@ -237,3 +237,35 @@ After rebuilding the native validator with the updated method Skill,
 reviewed-business-admission-v3 replays the same v2 request with explicit historical
 bytes. It exits 0 and reproduces the exact v2 report digest
 6a7a60e2055950361c8ebf4cb98cd83f7e7200c55e37d75473d298aa46aa0bdd.
+
+## Confirmed knowledge admission and multi-round business return
+
+The v3 successor was applied as one insert-only transaction against the exact b5
+baseline. The confirmed receipt advances agentlabtablegit to
+4bba501a1dffbdbeef05b759584fef70b090f292, with no conflicts. A subsequent readback
+transport failure did not undo that commit. A separate read-only recovery forbade
+all authority writes, bracketed complete paged reads at that exact clean revision,
+and verified the committed export against the staged cut. The writer was not rerun.
+The original export lacks source-set.txt; a fresh portable copy supplies only the
+exact staged inventory matching sourceSetSha256, preserving the original export.
+
+Shared operational tables contain both earlier and selected rounds. Native return
+now validates the complete revision-bound table before requiring exact containment
+of every selected export row; it does not require the whole history to equal one
+round. All five knowledge tables still require exact whole-table equality. Rust
+regressions reject changed/missing selected rows, truncation and duplicate keys.
+
+The actual business evidence-return exits 0 and emits
+agentlab.flywheel_committed_lesson_return.v1: committedReadbackVerified=true,
+sourceReadbackVerified=true, guidanceBoundForNextRound=true. Its next cut SHA256 is
+96f18ce8243cf200fb8ec21a79e91c2f035cc60b217d1c4f08e27cc06851e328,
+with 17 Skills, 70 facts, 48 refresh rows, 489 scopes and zero formal cases.
+External committed-business-return/business/report.json SHA256 is
+d23ae5205a8e3b0ed68e88eca6877d60502d2917328d60edae4f3b8f91fa3560.
+The returned state selects the newly admitted Skill for future work; it does not
+claim fresh consumption. guidanceConsumed, learningBenefitVerified,
+formalCaseQualified, qualified and remoteCaptureAuthenticated remain false.
+Manual review and operator transport are not an automatic five-stage loop.
+Maturity remains 74%, accepted complete automatic business loops zero. The next
+priority is publishing this exact cut and executing a fresh consuming round with
+an independent quality rubric, not adding more retained-capture replays.

@@ -233,9 +233,15 @@ pub(crate) fn verify(
         "lesson return source table set differs",
     )?;
     for name in source_tables.keys() {
+        // Operational tables are append-only shared history. Reconstruct the
+        // complete committed table, then require every selected export row;
+        // unrelated earlier rounds must not masquerade as missing evidence.
+        let committed = remote(&source_evidence["tables"][name], &export["revision"], false)?;
+        let selected = rows(&read(source, &format!("{name}.jsonl"))?)?;
         need(
-            remote(&source_evidence["tables"][name], &export["revision"], false)?
-                == rows(&read(source, &format!("{name}.jsonl"))?)?,
+            selected
+                .iter()
+                .all(|(id, row)| committed.get(id) == Some(row)),
             "lesson return committed lesson rows differ",
         )?;
     }
@@ -332,6 +338,54 @@ mod tests {
             "qualified",
         ] {
             assert_eq!(result[key], false);
+        }
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn complete_operational_history_keeps_other_rounds_without_weakening_selected_rows() {
+        let (root, mut evidence) = fixture();
+        let table = &mut evidence["lessonSource"]["tables"]["experiment_lessons"];
+        table["rows"].as_array_mut().unwrap().push(
+            json!({"key":"earlier-lesson", "row":{"id":"earlier-lesson","status":"observed"}}),
+        );
+        table["row_count"] = json!(2);
+        table["returned_count"] = json!(2);
+        assert!(verify(
+            &root.join("stage"),
+            &root.join("source"),
+            &root.join("next"),
+            &serde_json::to_vec(&evidence).unwrap()
+        )
+        .is_ok());
+        for change in ["missing", "changed", "partial", "duplicate"] {
+            let mut bad = evidence.clone();
+            let table = &mut bad["lessonSource"]["tables"]["experiment_lessons"];
+            match change {
+                "missing" => {
+                    table["rows"].as_array_mut().unwrap().remove(0);
+                    table["row_count"] = json!(1);
+                    table["returned_count"] = json!(1);
+                }
+                "changed" => table["rows"][0]["row"]["status"] = json!("observed"),
+                "partial" => table["truncated"] = json!(true),
+                "duplicate" => {
+                    let row = table["rows"][0].clone();
+                    table["rows"].as_array_mut().unwrap().push(row);
+                    table["row_count"] = json!(3);
+                    table["returned_count"] = json!(3);
+                }
+                _ => unreachable!(),
+            }
+            assert!(
+                verify(
+                    &root.join("stage"),
+                    &root.join("source"),
+                    &root.join("next"),
+                    &serde_json::to_vec(&bad).unwrap()
+                )
+                .is_err(),
+                "{change}"
+            );
         }
         fs::remove_dir_all(root).unwrap();
     }
