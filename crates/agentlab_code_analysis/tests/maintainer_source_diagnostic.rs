@@ -387,6 +387,126 @@ fn suite_lesson_review(export: &Path) -> Value {
 }
 
 #[test]
+fn source_suite_import_reconstructs_observations_lessons_and_historical_projection() {
+    use agentlab_code_analysis::{
+        maintainer_observation_store as store, maintainer_source_suite_lesson as lesson,
+    };
+    let base = suite_fixture_with_wrong_count(2);
+    let observation = base.join("import-observation");
+    lesson::export(&base.join("stage"), &base.join("suite"), None, &observation).unwrap();
+    let review = serde_json::to_vec(&suite_lesson_review(&observation)).unwrap();
+    let reviewed = base.join("import-reviewed");
+    lesson::export(
+        &base.join("stage"),
+        &base.join("suite"),
+        Some(&review),
+        &reviewed,
+    )
+    .unwrap();
+    // Model an older analyzer without changing any original capture bytes.
+    let historical = lesson::assets(&reviewed, Some(&review), Some(&"c".repeat(64))).unwrap();
+    agentlab_code_analysis::asset_exchange::export(&reviewed, "evaluation-instance", &historical);
+    let destination = json!({"schema":"agentlab.observation_store_destination.v1","reviewed":true,
+        "automaticPromotion":false,"repository":"operation","knowledgeRepository":"knowledge",
+        "expectedRevision":"a".repeat(40),"tablePrefix":"data/","transactionId":"a1122026-1003-4a11-8811-221190128101"});
+    for (export, has_lesson) in [(&observation, false), (&reviewed, true)] {
+        let manifest: Value =
+            serde_json::from_slice(&fs::read(export.join("export.json")).unwrap()).unwrap();
+        let tables: serde_json::Map<String, Value> = manifest["tables"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(|name| {
+                (
+                    name.clone(),
+                    json!({"revision":"a".repeat(40),"dirty":false,"truncated":false,"rows":[]}),
+                )
+            })
+            .collect();
+        let baseline = json!({"schema":"agentlab.observation_store_snapshot.v1","repository":"operation",
+            "revision":"a".repeat(40),"tablePrefix":"data/","tables":tables});
+        let encode = |v: &Value| serde_json::to_vec(v).unwrap();
+        let planned = store::plan(export, &encode(&baseline), &encode(&destination)).unwrap();
+        assert_eq!(planned["source"]["captureKind"], "source-suite");
+        assert_eq!(
+            planned["expectedTables"]
+                .get("experiment_lessons")
+                .is_some(),
+            has_lesson
+        );
+        if has_lesson {
+            assert_eq!(
+                planned["source"]["projectionRevalidation"]["declaredOriginalConsumerSha256"],
+                "c".repeat(64)
+            );
+            assert_eq!(
+                planned["expectedTables"]["analysis_records"],
+                serde_json::to_value(&historical["analysis_records"]).unwrap()
+            );
+        }
+        let after_tables: serde_json::Map<String, Value> = planned["expectedTables"].as_object().unwrap().iter()
+            .map(|(name, rows)| (name.clone(), json!({"revision":"e".repeat(40),"dirty":false,"truncated":false,
+                "rows":rows.as_object().unwrap().iter().map(|(key,row)|json!({"key":key,"row":row})).collect::<Vec<_>>()}))).collect();
+        let after = json!({"schema":"agentlab.observation_store_snapshot.v1","repository":"operation",
+            "revision":"e".repeat(40),"tablePrefix":"data/","tables":after_tables});
+        let receipt = json!({"repo":"operation","revision":"e".repeat(40),"previous_revision":"a".repeat(40),"outcome":"applied","conflicts":[]});
+        let verified = store::verify(
+            export,
+            &encode(&planned),
+            &encode(&receipt),
+            &encode(&after),
+            &encode(&baseline),
+        )
+        .unwrap();
+        assert_eq!(verified["allRowsExact"], true);
+        assert_eq!(verified["remoteRawBytesPreserved"], false);
+        let mut next = destination.clone();
+        next["expectedRevision"] = receipt["revision"].clone();
+        assert!(
+            store::plan(export, &encode(&after), &encode(&next)).unwrap()["transaction"].is_null()
+        );
+        // Even rehashed rows must match reconstruction of original evidence.
+        let row_path = export.join("runs.jsonl");
+        let original = fs::read(&row_path).unwrap();
+        let mut row: Value = serde_json::from_slice(&original).unwrap();
+        row["qualified"] = json!(true);
+        let forged = encode(&row);
+        fs::write(&row_path, &forged).unwrap();
+        let mut rehashed = manifest.clone();
+        rehashed["tables"]["runs"]["sha256"] = json!(digest(&forged));
+        file(&export.join("export.json"), &rehashed);
+        assert!(
+            store::plan(export, &encode(&baseline), &encode(&destination))
+                .unwrap_err()
+                .contains("raw reconstruction")
+        );
+        fs::write(&row_path, &original).unwrap();
+        file(&export.join("export.json"), &manifest);
+        if has_lesson {
+            let review_path = export.join("lesson-review.json");
+            let retained = fs::read(&review_path).unwrap();
+            fs::remove_file(&review_path).unwrap();
+            assert!(store::plan(export, &encode(&baseline), &encode(&destination)).is_err());
+            let mut unresolved: Value = serde_json::from_slice(&retained).unwrap();
+            unresolved["unresolvedFindings"] = json!(["remaining semantic gap"]);
+            file(&review_path, &unresolved);
+            assert!(store::plan(export, &encode(&baseline), &encode(&destination)).is_err());
+            fs::write(&review_path, &retained).unwrap();
+        }
+        fs::write(export.join("behavior-contract.json"), b"{}").unwrap();
+        assert!(
+            store::plan(export, &encode(&baseline), &encode(&destination))
+                .unwrap_err()
+                .contains("formats ambiguous")
+        );
+        fs::remove_file(export.join("behavior-contract.json")).unwrap();
+        let raw = export.join("source-stage/controls.cjs");
+        fs::write(&raw, b"forged verifier").unwrap();
+        assert!(store::plan(export, &encode(&baseline), &encode(&destination)).is_err());
+    }
+}
+
+#[test]
 fn source_suite_observation_and_reviewed_lesson_preserve_original_evidence() {
     use agentlab_code_analysis::maintainer_source_suite_lesson as lesson;
     let base = suite_fixture_with_wrong_count(2);
