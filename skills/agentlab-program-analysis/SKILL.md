@@ -58,6 +58,15 @@ semantic-ready counts, grant operation readiness, execute the Oracle, or mutate
 the frozen candidate. Persist the enhanced fact as one revision-fenced TableGit
 transaction; regenerate the downstream candidate only from the later cut.
 
+Distinguish inventoried paths from loaded implementation context when constructing
+source-maintenance verifiers. For a small responsibility whose complete UTF-8
+source fits the author context budget, include its owned implementation bodies
+with exact Blob/digest identities rather than only anchor files; this can expose
+real mapping/helper behavior without guessing dependencies. Larger responsibilities
+retain bounded anchor context and require explicit decomposition or context refresh.
+Binary bodies remain unloaded. Additional context is not semantic verification,
+permission to modify another responsibility, or evidence of platform execution.
+
 Separate modification ownership from read-only source context. A construction
 Oracle may inspect a path outside its editable responsibility only when the
 candidate explicitly lists it as context, a bound fact cites its exact Blob,

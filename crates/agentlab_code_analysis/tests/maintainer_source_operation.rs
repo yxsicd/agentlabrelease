@@ -998,12 +998,17 @@ fn loop_fixture() -> (PathBuf, Value) {
 }
 
 fn loop_fixture_with_extra_source(extra: bool) -> (PathBuf, Value) {
+    loop_fixture_with_source_context(extra.then_some(b"{\"metadata\":true}".as_slice()))
+}
+
+fn loop_fixture_with_source_context(context: Option<&[u8]>) -> (PathBuf, Value) {
+    let extra = context.is_some();
     let (dir, mut first, _, mut recipe) = fixture();
     let source = dir.join("source");
     fs::create_dir(source.join("other")).unwrap();
     fs::write(source.join("other/state.json"), b"{\"value\":1}").unwrap();
-    if extra {
-        fs::write(source.join("src/unloaded.json"), b"{\"metadata\":true}").unwrap();
+    if let Some(bytes) = context {
+        fs::write(source.join("src/unloaded.json"), bytes).unwrap();
     }
     for args in [
         vec!["add", "other/state.json", "src"],
@@ -1133,6 +1138,36 @@ fn loop_fixture_with_extra_source(extra: bool) -> (PathBuf, Value) {
 }
 
 #[test]
+fn source_author_context_keeps_large_scopes_bounded_and_binary_files_unloaded() {
+    for bytes in [vec![b'x'; 129 * 1024], vec![0xff, 0xfe]] {
+        let (dir, _) = loop_fixture_with_source_context(Some(&bytes));
+        let original: Value =
+            serde_json::from_slice(&fs::read(dir.join("recipe-0.json")).unwrap()).unwrap();
+        let node = fs::canonicalize(
+            original["controls"][0]["command"]["program"]
+                .as_str()
+                .unwrap(),
+        )
+        .unwrap();
+        let policy = json!({"schema":"agentlab.source_recipe_author_policy.v1","automaticPromotion":false,
+            "program":node,"programSha256":digest(&fs::read(&node).unwrap()),"methodDependencies":[]});
+        let request = agentlab_code_analysis::maintainer_source_recipe_author::prepare(
+            &dir.join("knowledge"),
+            &dir.join("source"),
+            "arbitrary",
+            &serde_json::to_vec(&policy).unwrap(),
+        )
+        .unwrap();
+        assert!(request["sourceFiles"][0]["content"].is_string());
+        assert!(request["sourceFiles"][1]["content"].is_null());
+        assert_eq!(request["sourceFiles"][1]["sha256"], digest(&bytes));
+        assert_eq!(request["reviewed"], false);
+        assert_eq!(request["closedLoopQualified"], false);
+        fs::remove_dir_all(dir).unwrap();
+    }
+}
+
+#[test]
 fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_review() {
     use agentlab_code_analysis::maintainer_source_recipe_author as author;
     let (dir, catalog) = loop_fixture_with_extra_source(true);
@@ -1156,7 +1191,7 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     assert_eq!(request["scope"]["id"], "scope-arbitrary");
     assert_eq!(request["sourceFiles"].as_array().unwrap().len(), 2);
     assert_eq!(request["sourceFiles"][0]["path"], "src/state.json");
-    assert_eq!(request["sourceFiles"][1]["content"], Value::Null);
+    assert_eq!(request["sourceFiles"][1]["content"], "{\"metadata\":true}");
     let proposal = json!({"schema":"agentlab.source_recipe_author_proposal.v1","scopeSkillId":"scope-arbitrary",
         "sourcePaths":["src/state.json"],"verifierSource":"const fs=require('fs'),path=require('path');const n=JSON.parse(fs.readFileSync(path.join(process.argv[2],'src/state.json'))).value; console.log(JSON.stringify({value:process.argv[3]==='wrong'?0:n}));",
         "rationale":"Exercise actual source state and independent wrong output.","limitations":["No platform runtime","One scoped contract only"],
@@ -1473,7 +1508,7 @@ const runtime=require(process.argv[1])(process.argv[2],'baseline',null);
         )
         .is_err());
     }
-    for path in ["other/state.json", "src/unloaded.json", "../src/state.json"] {
+    for path in ["other/state.json", "src/missing.json", "../src/state.json"] {
         let mut bad = feedback.clone();
         bad["findings"][0]["sourcePaths"] = json!([path]);
         assert!(author::revision(
@@ -1646,8 +1681,10 @@ const runtime=require(process.argv[1])(process.argv[2],'baseline',null);
     .is_err());
     let mut bad = proposal.clone();
     bad["sourcePaths"] = json!(["src/unloaded.json"]);
+    let mut anchor_only = request.clone();
+    anchor_only["sourceFiles"][1]["content"] = Value::Null;
     assert!(author::stage(
-        &request_bytes,
+        &serde_json::to_vec(&anchor_only).unwrap(),
         &serde_json::to_vec(&bad).unwrap(),
         &dir.join("unloaded-stage")
     )

@@ -225,6 +225,7 @@ pub fn prepare(
     )?;
     let mut files = Vec::new();
     let mut remaining: usize = 128 * 1024;
+    let mut text_bytes: usize = 0;
     for entry in result.stdout.split(|b| *b == 0).filter(|b| !b.is_empty()) {
         let entry = std::str::from_utf8(entry).map_err(|e| e.to_string())?;
         let (meta, path) = entry.split_once('\t').ok_or("recipe author tree entry")?;
@@ -237,6 +238,11 @@ pub fn prepare(
             "recipe author unsupported owned file",
         )?;
         let bytes = read(&source.join(path), 4 * 1024 * 1024)?;
+        if std::str::from_utf8(&bytes).is_ok() {
+            text_bytes = text_bytes
+                .checked_add(bytes.len())
+                .ok_or("recipe author text context size overflow")?;
+        }
         let content = if anchors.contains(path) {
             remaining = remaining
                 .checked_sub(bytes.len())
@@ -246,6 +252,23 @@ pub fn prepare(
             Value::Null
         };
         files.push(json!({"path":path,"gitBlobOid":parts[2],"sha256":digest(&bytes),"byteCount":bytes.len(),"content":content}));
+    }
+    // Small responsibilities can supply actual dependency implementations, not
+    // just anchor bodies and filenames. Larger ones retain the bounded anchor
+    // cut rather than silently providing a partial arbitrary dependency set.
+    if text_bytes <= 128 * 1024 {
+        for file in &mut files {
+            if file["content"].is_null() {
+                let bytes = read(&source.join(text(file, "path")?), 4 * 1024 * 1024)?;
+                need(
+                    file["sha256"] == digest(&bytes),
+                    "recipe author context changed during preparation",
+                )?;
+                if let Ok(content) = std::str::from_utf8(&bytes) {
+                    file["content"] = json!(content);
+                }
+            }
+        }
     }
     need(
         files.len() <= 80 && skill["trackedFileCount"] == files.len(),
