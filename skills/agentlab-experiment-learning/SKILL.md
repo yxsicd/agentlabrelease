@@ -155,6 +155,14 @@ unexercised controls or swallowed dependency validation cannot be promoted by
 manufacturing accept records. Keep the existing operational persistence, committed
 readback, explicit promotion and fixed-baseline knowledge admission boundaries.
 
+The full source-control-suite runner exports original observations after native
+suite reconstruction, including complete declaration disagreements before its
+failure exit. Incomplete/infrastructure failures do not export semantic outcomes.
+Export failure preserves the completed suite; do not restart workers to recover
+publication. This automatic operational handoff neither creates a lesson nor
+admits knowledge. A cloud run on an older method needs a separate retained-byte
+export; local replay is not proof the cloud producer performed that handoff.
+
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.
 Reconstruct all rows from the retained suite and optional review, preserving the
