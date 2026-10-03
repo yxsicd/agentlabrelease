@@ -441,6 +441,15 @@ pub fn recover(plan_bytes: &[u8], remote_bytes: &[u8], out: &Path) -> Result<Val
             .get("raw_archive_chunks")
             .ok_or("archive table absent")?,
     )?;
+    write_files(&files, out)?;
+    Ok(
+        json!({"schema":"agentlab.observation_export_recovery.v1","repository":remote["repository"],"revision":remote["revision"],
+        "archiveId":plan["source"]["rawArchive"]["archiveId"],"fileCount":files.len(),"allFileBytesVerified":true,
+        "remoteAuthenticated":false,"qualified":false,"automaticPromotion":false}),
+    )
+}
+
+fn write_files(files: &BTreeMap<String, Vec<u8>>, out: &Path) -> Result<(), String> {
     for parent in out
         .parent()
         .ok_or("archive output parent absent")?
@@ -457,7 +466,7 @@ pub fn recover(plan_bytes: &[u8], remote_bytes: &[u8], out: &Path) -> Result<Val
         }
     }
     fs::create_dir(out).map_err(|e| e.to_string())?;
-    for (name, bytes) in &files {
+    for (name, bytes) in files {
         let target = out.join(name);
         fs::create_dir_all(target.parent().unwrap()).map_err(|e| e.to_string())?;
         std::fs::OpenOptions::new()
@@ -468,9 +477,74 @@ pub fn recover(plan_bytes: &[u8], remote_bytes: &[u8], out: &Path) -> Result<Val
             .write_all(bytes)
             .map_err(|e| e.to_string())?;
     }
+    Ok(())
+}
+
+/// Bind publication metadata only after original reconstruction and full committed
+/// transaction readback. Preserve the byte-exact original manifest separately.
+pub fn bind_committed_export(
+    root: &Path,
+    plan_bytes: &[u8],
+    receipt_bytes: &[u8],
+    remote_bytes: &[u8],
+    baseline_bytes: &[u8],
+    out: &Path,
+) -> Result<Value, String> {
+    let verification = verify(
+        root,
+        plan_bytes,
+        receipt_bytes,
+        remote_bytes,
+        baseline_bytes,
+    )?;
+    need(
+        verification["remoteRawBytesPreserved"] == true,
+        "committed export requires complete raw preservation",
+    )?;
+    let plan: Value = serde_json::from_slice(plan_bytes).map_err(|e| e.to_string())?;
+    let remote: Value = serde_json::from_slice(remote_bytes).map_err(|e| e.to_string())?;
+    let rows: Tables =
+        serde_json::from_value(plan["expectedTables"].clone()).map_err(|e| e.to_string())?;
+    // verify above has already compared every remote row at receipt.revision.
+    let observed = snapshot(
+        &remote,
+        &remote["repository"],
+        &remote["revision"],
+        &remote["tablePrefix"],
+        &rows,
+    )?;
+    let mut files = archive::reconstruct(
+        &plan["source"]["rawArchive"],
+        &observed["raw_archive_chunks"],
+    )?;
+    let original = files
+        .get("export.json")
+        .ok_or("committed original manifest absent")?
+        .clone();
+    need(
+        !files.contains_key("original-export.json"),
+        "committed original manifest name collision",
+    )?;
+    let mut manifest: Value = serde_json::from_slice(&original).map_err(|e| e.to_string())?;
+    manifest["repository"] = remote["repository"].clone();
+    manifest["revision"] = remote["revision"].clone();
+    manifest["tablePrefix"] = remote["tablePrefix"].clone();
+    let provenance = json!({"schema":"agentlab.observation_committed_export_binding.v1",
+        "originalManifestSha256":digest(&original),"archiveId":plan["source"]["rawArchive"]["archiveId"],
+        "planSha256":digest(plan_bytes),"commitReceiptSha256":digest(receipt_bytes),
+        "committedReadbackSha256":digest(remote_bytes),"baselineReadbackSha256":digest(baseline_bytes),
+        "allRowsExact":true,"allOriginalFileBytesPreserved":true,"remoteAuthenticated":false,
+        "qualified":false,"automaticPromotion":false});
+    manifest["committedBinding"] = provenance.clone();
+    files.insert("original-export.json".into(), original);
+    files.insert(
+        "export.json".into(),
+        serde_json::to_vec_pretty(&manifest).map_err(|e| e.to_string())?,
+    );
+    write_files(&files, out)?;
     Ok(
-        json!({"schema":"agentlab.observation_export_recovery.v1","repository":remote["repository"],"revision":remote["revision"],
-        "archiveId":plan["source"]["rawArchive"]["archiveId"],"fileCount":files.len(),"allFileBytesVerified":true,
-        "remoteAuthenticated":false,"qualified":false,"automaticPromotion":false}),
+        json!({"schema":"agentlab.observation_committed_export.v1","repository":remote["repository"],
+        "revision":remote["revision"],"tablePrefix":remote["tablePrefix"],"binding":provenance,
+        "activeKnowledgeChanged":false,"qualified":false,"automaticPromotion":false}),
     )
 }
