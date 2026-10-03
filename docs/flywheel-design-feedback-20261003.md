@@ -258,3 +258,82 @@ reset, and no new model turn, authority write, knowledge admission or qualified
 case occurred. Next work is Agent-owned verifier repair followed by independent
 baseline and complete control calibration. Overall maturity remains **72%**;
 accepted complete automatic business loops remain **0**.
+
+## Native baseline diagnostic continuation
+
+PR207's evidence/Skill update merged at
+`bbfa1a236f0388552297610b624ef82484233c68` after all applicable CI checks passed.
+The successor removes the need to rebuild a private operator bridge each round:
+
+```bash
+agentlab-maintainer-skill-flywheel --prepare-source-recipe-diagnostic \
+  --stage ORIGINAL_STAGE --typescript PINNED_COMPILER \
+  --worker scripts/source-recipe-diagnostic-worker.cjs \
+  --image-id sha256:EXACT_LOCAL_IMAGE_ID --output NEW_INPUT_DIR
+# Run from NEW_INPUT_DIR so the existing launcher owns one fresh capture.
+python3 /absolute/release/scripts/run-contained-behavior-worker.py \
+  /absolute/NEW_INPUT_DIR/descriptor.json /absolute/NEW_INPUT_DIR/request.json
+agentlab-maintainer-skill-flywheel --feedback-source-recipe-diagnostic \
+  --diagnostic-inputs NEW_INPUT_DIR --worker-capture EXACT_CAPTURE_DIR \
+  --output NEW_FEEDBACK_FILE
+```
+
+Rust binds original stage/request/proposal/design/runtime/verifier bytes,
+selected source inventory and the unique unchanged baseline. Only v2 designs
+with one pinned compiler dependency are currently supported; unsupported inputs
+reject explicitly. The worker must equal the transport bytes embedded in the
+native build. Old runner paths are not dereferenced. Source size/SHA256 and
+inventory equality are checked during preparation; Git Blob bytes are checked
+inside the worker before draft execution. This is recorded-byte reconstruction,
+not original-producer authentication or Git ancestry validation.
+
+The thin Node worker executes the unchanged verifier through the existing
+network-disabled Docker launcher. It keeps complete UTF-8 verifier stdout in the
+normal-output envelope, preserving its exact digest independently from parsed
+observations. Malformed/invalid-UTF-8 stdout and failed children retain raw bytes
+as execution failures, not behavior checks. Rust verifies the capture bindings,
+raw logs, original output and every frozen JSON-pointer comparison outside the
+container. Missing values do not satisfy expected null. The descriptor binds
+the frozen oracle digest before execution, preventing later expected-value edits.
+Baseline success remains diagnostic-only; arbitrary generated observations are
+not semantic truth or a substitute for independent full control calibration.
+
+The design-first constructor Action now prepares and executes that baseline after
+staging and independent participant isolation validation. It reconstructs feedback
+even when the contained worker fails, then fails the step on execution failure
+or rejected baseline observations. Original captures remain in the always-uploaded
+artifact. Pre-launch failures lacking a capture remain collection failures. The
+Action does not run wrong controls, change review status, write knowledge, add a
+repair allowance or automatically deliver diagnostic feedback to the constructor.
+
+Final local native replay of the unchanged original Action37112721400 verifier
+exited **1** after **486 ms**, again with the exact unbound CommonDescriptor import.
+The reconstructed result has no behavior-check verdicts, zero wrong controls and
+qualified=false. Image/compiler/source identities are the same diagnostic inputs
+described above, not the old GitHub runtime. Process SHA256:
+`d6bd91612ede3f8dc18a1971484026695f20cf78417fbeab6fe97b634195f3cd`.
+Raw evidence and both interim/final worker bytes remain outside Release under
+`.artifacts/flywheel-native-verifier-diagnostic-Fb4B4Y`; interim and final captures
+are separate, not overwritten or counted as new business loops.
+
+Two reviewed operator transport fixtures also ran in fresh containers through the
+same final worker and native comparison: observed value 7 passed frozen expected 7;
+observed value 8 exited normally but was rejected against that unchanged expected
+7. Both preserve qualified=false. This verifies the normal-output adapter and
+independent rejection path, not an Agent result, calibrated benchmark or another
+repository transfer. Their original stdout and feedback remain in the same
+external evidence root under separate operator-normal-7/operator-normal-8 roots.
+
+Seven Rust regressions cover portable preparation, original/adapter drift,
+infrastructure separation, real CLI wiring, independent normal-output comparison,
+missing-null distinction, raw-log tampering and frozen-oracle changes. The final
+full package regression and actionlint v1.7.10 completed with exit zero. An earlier
+development package run rejected worker bytes changed while tests were running;
+that run is not a pass. Freeze method inputs before qualifying later captures.
+
+This closes a local diagnostic-to-native-feedback path and wires its automatic
+Action invocation. It is not a fresh real Action constructor, Agent-owned repair,
+qualified case or knowledge feedback loop. Overall maturity remains **72%** and
+accepted complete automatic business loops remain **0**. The next high-value
+boundary is bounded Agent consumption of actual execution feedback followed by
+independent baseline/reference/wrong-control calibration under frozen demands.

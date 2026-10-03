@@ -24,6 +24,32 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args
+        .iter()
+        .any(|a| a == "--feedback-source-recipe-diagnostic")
+    {
+        let receipt = agentlab_code_analysis::maintainer_source_diagnostic::feedback(
+            &PathBuf::from(value(&args, "--diagnostic-inputs")?),
+            &PathBuf::from(value(&args, "--worker-capture")?),
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&receipt)?);
+        return Ok(());
+    }
+    if args
+        .iter()
+        .any(|a| a == "--prepare-source-recipe-diagnostic")
+    {
+        let receipt = agentlab_code_analysis::maintainer_source_diagnostic::prepare(
+            &PathBuf::from(value(&args, "--stage")?),
+            &PathBuf::from(value(&args, "--typescript")?),
+            &PathBuf::from(value(&args, "--worker")?),
+            &value(&args, "--image-id")?,
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&receipt)?);
+        return Ok(());
+    }
     if args.iter().any(|a| {
         a == "--reconcile-control-declarations" || a == "--validate-control-declaration-reference"
     }) {
