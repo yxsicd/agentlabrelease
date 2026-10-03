@@ -57,6 +57,37 @@ A borrowed older execution cannot substitute for this round's evidence return.
 Admission staging never advances active authority or schedules a fabricated new
 knowledge cut. Actual independent commit readback is still a separate integration.
 
+## Native source-suite business return (2026-10-04)
+
+The case stage additionally accepts sourceSuiteCapture with absolute
+stageDirectory/suiteDirectory and exact stageReceiptSha256/suiteResultSha256.
+It is mutually exclusive with behaviorExecution. Bind candidateId to the original
+scope and source/knowledge revision to the current fixed state; reconstruct every
+original control and recovery before emitting a source-suite case report.
+freshExecutionPerformed=false and caseGenerationPerformed=false explicitly
+identify retained evidence, not a fresh model/worker invocation or formal case.
+
+Evidence-return accepts only the same round and exact capture declaration, repeats
+native reconstruction and compares the complete readback/outcome. It exports
+the original format through the ordinary observation exporter; complete declaration
+disagreements preserve taskPassed=false. The existing observationPersistence
+adapter can consume that native export and independently reconstruct readback.
+No behavior capture wrapper, reviewed lesson, knowledge admission or automatic
+promotion is fabricated. With lessonAdmission supplied, this lane stops at
+reviewed-source-suite-admission-binding-required until the corresponding original
+reviewed-source binding is implemented.
+
+Retained real Action 37156735569 was replayed locally through both business stages
+in external flywheel-source-budget-successor-ucrL3x/business-case-replay and
+business-return-replay. Case reconstruction completed; return stopped
+review-required with operational-persistence-and-reviewed-knowledge-delta-required.
+Both commands exited 0. Native export directory comparison was byte-identical
+to independent-observation-export. No remote authority was written or model/worker
+redispatched. This validates native result handoff, not fresh automatic cycles.
+Overall maturity remains 74%; accepted complete automatic business rounds remain
+zero. Regression fixtures cover matched/disagreeing outcomes, cross-round reuse,
+scope/digest drift and ambiguous input lanes without weakening original suite gates.
+
 ## Local operational checkpoint
 
 External capture `business-gates-local-2539105-v1-capture` ran the built-in public

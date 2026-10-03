@@ -158,6 +158,31 @@ fn gap(reason: &str) -> (&'static str, Value) {
         json!({"gap":reason,"qualified":false,"automaticPromotion":false}),
     )
 }
+
+fn source_suite_capture(
+    state: &Value,
+    inputs: &Value,
+) -> Result<(PathBuf, PathBuf, Value), String> {
+    let stage = absolute(inputs, "stageDirectory")?;
+    let suite = absolute(inputs, "suiteDirectory")?;
+    need(
+        inputs["stageReceiptSha256"] == digest(&read(&stage.join("stage-receipt.json"))?)
+            && inputs["suiteResultSha256"] == digest(&read(&suite.join("result.json"))?),
+        "business source suite original binding differs",
+    )?;
+    let request: Value =
+        serde_json::from_slice(&read(&stage.join("request.json"))?).map_err(|e| e.to_string())?;
+    need(
+        request["source"]["repositoryId"] == state["repositoryId"]
+            && request["source"]["revision"] == state["sourceRevision"]
+            && request["scope"]["id"] == state["candidateId"]
+            && request["knowledgeCutSha256"] == state["knowledge"]["cutSha256"]
+            && request["authorityRevision"] == state["knowledge"]["revision"],
+        "business source suite source, scope or knowledge differs",
+    )?;
+    let report = crate::maintainer_source_diagnostic::reconstruct_suite(&stage, &suite)?;
+    Ok((stage, suite, report))
+}
 fn recorded_outcome(result: &Value) -> Result<bool, String> {
     let passed = result["status"] == "recorded-attempt-passed";
     need(
@@ -402,6 +427,23 @@ fn evaluate(
             Ok(("completed", report))
         }
         "case-execution" => {
+            if let Some(inputs) = state.get("sourceSuiteCapture") {
+                need(
+                    state.get("behaviorExecution").is_none(),
+                    "business case inputs ambiguous",
+                )?;
+                let (_, _, report) = source_suite_capture(state, inputs)?;
+                return Ok((
+                    "completed",
+                    json!({
+                        "schema":"agentlab.flywheel_source_suite_execution.v1","round":round,
+                        "sourceSuiteCapture":inputs,"readback":report,
+                        "taskPassed":report["status"]=="declarations-matched",
+                        "freshExecutionPerformed":false,"caseGenerationPerformed":false,
+                        "formalCaseQualified":false,"qualified":false
+                    }),
+                ));
+            }
             let Some(inputs) = state.get("behaviorExecution") else {
                 return Ok(gap(
                     "generated-candidate-and-reviewed-execution-inputs-required",
@@ -461,6 +503,54 @@ fn evaluate(
             }
             let case_bytes = bound(case_ref)?;
             let case: Value = serde_json::from_slice(&case_bytes).map_err(|e| e.to_string())?;
+            need(
+                state.get("sourceSuiteCapture").is_some()
+                    == (case["schema"] == "agentlab.flywheel_source_suite_execution.v1"),
+                "business case source format differs",
+            )?;
+            if case["schema"] == "agentlab.flywheel_source_suite_execution.v1" {
+                need(
+                    case["round"] == *round
+                        && state.get("behaviorExecution").is_none()
+                        && case["sourceSuiteCapture"] == state["sourceSuiteCapture"],
+                    "business source suite round or capture differs",
+                )?;
+                let (stage, suite, report) =
+                    source_suite_capture(state, &case["sourceSuiteCapture"])?;
+                need(
+                    case["readback"] == report
+                        && case["taskPassed"] == (report["status"] == "declarations-matched"),
+                    "business source suite reconstructed outcome differs",
+                )?;
+                if state.get("lessonAdmission").is_some() {
+                    return Ok(gap("reviewed-source-suite-admission-binding-required"));
+                }
+                let destination = out.join("observations");
+                let manifest = crate::maintainer_source_suite_lesson::export(
+                    &stage,
+                    &suite,
+                    None,
+                    &destination,
+                )?;
+                let persistence = if let Some(config) = state.get("observationPersistence") {
+                    persist_observations(config, &packet, &destination, out)?
+                } else {
+                    Value::Null
+                };
+                return Ok((
+                    "review-required",
+                    json!({
+                        "schema":"agentlab.flywheel_observation_return.v1",
+                        "sourceFormat":"agentlab.source_recipe_control_suite_result.v1",
+                        "export":{"directory":destination,"manifestSha256":digest(&read(&destination.join("export.json"))?)},
+                        "tables":manifest["tables"],"observationExported":true,"lessonCreated":false,
+                        "persistence":persistence,"taskPassed":case["taskPassed"],
+                        "gap":if persistence.is_null(){"operational-persistence-and-reviewed-knowledge-delta-required"}else{"reviewed-knowledge-delta-required"},
+                        "qualified":false,"authorityWritePerformed":!persistence.is_null() && persistence["noChange"]==false,
+                        "automaticPromotion":false
+                    }),
+                ));
+            }
             need(
                 case["schema"] == "agentlab.flywheel_behavior_execution.v1"
                     && case["round"] == *round
@@ -651,6 +741,7 @@ pub fn run(request_bytes: &[u8], output: &Path) -> Result<Value, String> {
             "operationCapture",
             "operationCatalog",
             "behaviorExecution",
+            "sourceSuiteCapture",
             "lessonAdmission",
             "observationPersistence",
             "candidateId",
