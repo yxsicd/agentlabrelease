@@ -196,6 +196,18 @@ before promotion or benefit comparison. A completed feedback-guided successor wi
 fewer scenarios/checks is neither automatically better nor worse; apply a frozen
 independent rubric and keep missing provenance evidence unverified.
 
+Prepare independent reviewer input with `--prepare-source-suite-review --source
+OBSERVATION_EXPORT --quality-rubric FROZEN_RUBRIC --output NEW_FILE`. It verifies
+the original suite, every analytical row and full raw inventory before packaging
+loaded source, design, verifier, runtime and raw worker evidence. It rejects
+exports already carrying a lesson review, keeps author limitations explicitly
+untrusted, and does not pass maintainer guidance or author rationale as review
+instructions. All quotations still need claim-specific support. No truncation,
+invented verdict or knowledge write is allowed. The packet's declared rubric
+freeze is not authenticated. Preparation does not execute a reviewer: require
+an independently captured reviewer turn, native response reconstruction and the
+existing lesson/admission/readback gates before counting automatic review or return.
+
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.
 Reconstruct all rows from the retained suite and optional review, preserving the

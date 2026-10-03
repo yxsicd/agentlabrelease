@@ -332,3 +332,37 @@ membership alone is not claim support. Overall maturity remains 74%, complete
 automatic five-stage business loops zero. Next: close independent review/provenance,
 persist this new operational evidence, and automate review-to-return orchestration
 rather than indefinitely repeating this successful target.
+
+## Native independent reviewer input preparation
+
+`--prepare-source-suite-review --source OBSERVATION_EXPORT --quality-rubric
+RUBRIC --output NEW_FILE` emits independent_source_suite_review_request.v1.
+The rubric is prospective_source_quality_review.v1 with repositoryAgnostic=true,
+frozenBeforeDispatch=true, pass/fail/unverified verdicts and 1..32 unique criteria
+each containing id, requirement and evidence. The declared freeze is retained,
+not authenticated by a hash or by this preparation command.
+
+The native adapter first reconstructs the original source suite and all exported
+analytical rows, retaining historical projection identity through the existing
+store verifier. Rehashed changed rows, changed raw inventory and borrowed prior
+lesson reviews cannot prepare input. It selects loaded source, full design/verifier,
+runtime and every worker stdout/stderr/process receipt through the verified
+inventory; it does not recursively scan Agent homes or credentials. Author
+limitations are marked untrusted, while maintainer guidance, author rationale and
+prior semantic review are not supplied as reviewer instructions. The request binds
+all original review hashes and the exact rubric, with an exclusive fresh output.
+The complete serialized packet must fit 2 MiB; oversized evidence stops without
+truncation. Original producer/reviewer/freeze authentication is not inferred.
+
+Actual retained 37160192475 observations prepare successfully: 49 original loaded
+source files, six frozen criteria, 21 original worker receipts, 264681 output bytes,
+SHA256 f3abe31727fe433226a1cb4d6857e547f55b5225d331d48525612464e837fd86.
+The packet remains external in flywheel-successor-consumption-9tNqvm. It declares
+reviewPreparedOnly=true, reviewerExecuted=false, semanticQualified=false and
+qualified=false. No Agent or workers were rerun and no authority was changed.
+Local validation passes 23 source diagnostic and three observation-store tests,
+including actual CLI/no-overwrite, rubric negatives and rehashed projection rejection.
+This removes manual reviewer-packet assembly; it does not implement reviewer
+inference or automatic promotion. Overall maturity remains 74%, complete automatic
+business loops zero. Next connect independent isolated reviewer execution and
+raw-wire-bound response validation, then existing native lesson export/return.
