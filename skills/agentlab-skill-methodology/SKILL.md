@@ -166,4 +166,9 @@ successor, not by expanding expectations after observing failures. Distinct
 source text is insufficient for independent valid controls when only comments,
 whitespace or erased type annotations differ. A live corrected design plus
 unreviewed staging proves bounded construction, not maintenance qualification.
+When review corrects mutation failure attribution, preserve the original baseline
+demands unless independent review explicitly rejects that oracle. A wrong-control
+exception may skip later updates; that does not mean the normal caught-exception
+path skips them. Compare parent and successor checks before execution. Prompt
+guidance is not an enforced parent-contract gate or semantic convergence proof.
 See the [design feedback checkpoint](../../docs/flywheel-design-feedback-20261003.md).

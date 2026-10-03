@@ -76,7 +76,7 @@ verifier was approved or executed, and no knowledge was admitted.
 Four exact-parent-bound findings were dispatched through the existing sole
 review-child workflow as
 [Action 37113211051](https://github.com/yxsicd/agentlabrelease/actions/runs/37113211051).
-Its result is pending at this checkpoint. Original artifacts and failed designs
+Original artifacts and failed designs
 remain unchanged. Generic construction guidance now includes downstream
 exception effects, all-scenario failure attribution, exact import mappings and
 executable rather than merely text-distinct references. This producer update
@@ -85,3 +85,24 @@ does not modify the already-dispatched child's frozen method.
 Maturity remains 72%: real static correction is now demonstrated, but semantic
 correction, fresh qualified maintenance, automatic admission/consumption and
 complete productive loops remain unproven.
+
+## Sole review child failed; parent demand must remain distinct
+
+Action 37113211051 completed with failure. The initial design exceeded the
+scenario budget; its one correction then returned ten limitations, exceeding
+the unchanged 2..8 limit. Both turns completed and independent isolation passed;
+no code turn, approved verifier or operation execution occurred. Artifact
+11271210942 is 1820565 bytes, archive SHA256
+328cfe4804e3f62c10edd893b5bb85899b46d1ae18c850e6407f08abd4330ea0.
+
+Rejected corrected-design SHA256 is
+e950f0bfe06f5a5126c9d734e89a9bcf6066a4af49bccb109b0b973302469c55.
+Source review finds corrected mutation failure declarations and executable
+references, but also an incorrect normal-path observation: after the original
+catch returns, the next attribute is still applied; the child instead expects
+the default color and an unapplied third attribute. Wrong-control behavior was
+transferred into baseline expectations. Fixing serialization budgets cannot
+qualify this design. No rejected bytes were repaired and the review-chain budget
+was not reset. Producer/Skill guidance now explicitly separates these paths;
+an enforced parent-check gate and explicit reviewed-oracle revision protocol
+remain implementation gaps, not capabilities supplied by that prose.

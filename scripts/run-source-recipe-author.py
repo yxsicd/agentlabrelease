@@ -393,6 +393,9 @@ SOURCE CONTEXT:
         prompt += '\nProduce one revised complete proposal addressing every finding. Do not merely relabel roles. '
         prompt += 'Retain the same selected source-grounded demand; explain changes in rationale and unproved claims in limitations. '
         prompt += 'This is one fresh contained revision, not a format-only repair or approval.\n'
+        prompt += 'Review of wrong-control failure sets does not authorize changing baseline expected values. '
+        prompt += 'Keep the original demanded checks unless independent review explicitly rejects that oracle. '
+        prompt += 'Do not transfer a wrong control\'s skipped operations into the accepted implementation\'s expected observations.\n'
     design_path = None
     try:
         retry_policy = freeze_pi_retry_policy(args.output / 'participant-state', workspace, evidence)
@@ -446,6 +449,9 @@ No generated code is executed or approved by design validation.
 SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
             if revision_context is not None:
                 design_prompt += '\nREVIEW DATA:\n' + json.dumps(revision_context, ensure_ascii=False)
+                design_prompt += '\nSeparate original accepted observations from wrong-control counterfactuals. '
+                design_prompt += 'Correcting a declared failure set is not permission to weaken the original demand. '
+                design_prompt += 'Preserve original check IDs, pointers and expected values unless the independent review explicitly rejects that oracle.\n'
             if args.frozen_design:
                 design_path = args.output / 'design.json'
                 design_content = design_path.read_text()
