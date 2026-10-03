@@ -2504,6 +2504,226 @@ const runtime=require(process.argv[1])(process.argv[2],'baseline',null);
 }
 
 #[test]
+fn diagnostic_code_repair_staging_and_approval_recheck_real_source_and_frozen_parent() {
+    use agentlab_code_analysis::{
+        maintainer_source_diagnostic as diagnostic, maintainer_source_recipe_author as author,
+        maintainer_source_repair as repair,
+    };
+    let (dir, _) = loop_fixture_with_extra_source(true);
+    let original: Value =
+        serde_json::from_slice(&fs::read(dir.join("recipe-0.json")).unwrap()).unwrap();
+    let node = fs::canonicalize(
+        original["controls"][0]["command"]["program"]
+            .as_str()
+            .unwrap(),
+    )
+    .unwrap();
+    let compiler = dir.join("compiler.js");
+    fs::write(&compiler, "module.exports={};").unwrap();
+    let policy = json!({"schema":"agentlab.source_recipe_author_policy.v1","automaticPromotion":false,
+        "program":node,"programSha256":digest(&fs::read(&node).unwrap()),"methodDependencies":[{"path":compiler,"sha256":digest(&fs::read(&compiler).unwrap())}]});
+    let request = author::prepare(
+        &dir.join("knowledge"),
+        &dir.join("source"),
+        "arbitrary",
+        &serde_json::to_vec(&policy).unwrap(),
+    )
+    .unwrap();
+    let request_bytes = serde_json::to_vec(&request).unwrap();
+    let body = request["sourceFiles"][0]["content"].as_str().unwrap();
+    let design = json!({"schema":"agentlab.source_recipe_design.v2","scopeSkillId":"scope-arbitrary",
+        "invariant":"Preserve the selected state value.","limitations":["Mock staging only","No semantic approval"],
+        "scenarios":[{"id":"state","initialState":{"value":1},"inputs":{"calls":[],"seams":{}},"expectedObservations":{"value":1}}],
+        "checks":[{"id":"value","pointer":"/state/value","expected":1}],"controls":[
+        {"id":"baseline","role":"baseline","expectedFailedCheckIds":[],"edits":[]},
+        {"id":"reference","role":"reference","expectedFailedCheckIds":[],"edits":[{"path":"src/state.json","before":body,"after":format!("{body}\n")}]},
+        {"id":"alternative","role":"reference","expectedFailedCheckIds":[],"edits":[{"path":"src/state.json","before":body,"after":format!("{body}\t")}]},
+        {"id":"wrong","role":"wrong","expectedFailedCheckIds":["value"],"edits":[{"path":"src/state.json","before":body,"after":"{\"value\":0}"}]}]});
+    let controls=design["controls"].as_array().unwrap().iter().map(|c|json!({"id":c["id"],"role":c["role"],"expectedFailedCheckIds":c["expectedFailedCheckIds"]})).collect::<Vec<_>>();
+    let proposal = json!({"schema":"agentlab.source_recipe_author_proposal.v1","scopeSkillId":"scope-arbitrary","sourcePaths":["src/state.json"],
+        "verifierSource":"throw new Error('explicit compiler required');","rationale":"Mock parent-bound staging exercise.","limitations":["No real Agent","No execution qualification"],
+        "contract":{"checks":design["checks"],"controls":controls}});
+    let design_bytes = serde_json::to_vec(&design).unwrap();
+    let intent_bytes =
+        serde_json::to_vec(&repair::loop_intent(&request_bytes, 1).unwrap()).unwrap();
+    let stage = dir.join("diagnostic-root-stage");
+    let receipt = author::stage_with_loop_intent(
+        &request_bytes,
+        &serde_json::to_vec(&proposal).unwrap(),
+        &design_bytes,
+        &intent_bytes,
+        &stage,
+    )
+    .unwrap();
+    assert_eq!(receipt["reviewed"], false);
+    let inputs = dir.join("diagnostic-inputs");
+    diagnostic::prepare(
+        &stage,
+        &compiler,
+        &root().join("scripts/source-recipe-diagnostic-worker.cjs"),
+        &format!("sha256:{}", "a".repeat(64)),
+        &inputs,
+    )
+    .unwrap();
+    let capture = dir.join("mock-diagnostic-capture");
+    fs::create_dir(&capture).unwrap();
+    let stderr = b"Error: explicit compiler required\n";
+    fs::copy(inputs.join("request.json"), capture.join("request.json")).unwrap();
+    fs::write(capture.join("worker-stdout.log"), b"").unwrap();
+    fs::write(capture.join("worker-stderr.log"), stderr).unwrap();
+    fs::write(capture.join("process.json"),serde_json::to_vec(&json!({"schema":"agentlab.contained_behavior_process.v1",
+        "requestSha256":digest(&fs::read(inputs.join("request.json")).unwrap()),"descriptorSha256":digest(&fs::read(inputs.join("descriptor.json")).unwrap()),
+        "imageId":format!("sha256:{}","a".repeat(64)),"exitCode":1,"timedOut":false,"logBudgetExceeded":false,"cleanupExitCode":0,
+        "network":"none","rootFilesystemReadOnly":true,"capabilitiesDropped":true,"durationMs":1,"stdoutSha256":digest(b""),"stderrSha256":digest(stderr)})).unwrap()).unwrap();
+    repair::prepare(
+        &stage,
+        &inputs,
+        &capture,
+        1,
+        &dir.join("diagnostic-repair.json"),
+    )
+    .unwrap();
+    let packet = fs::read(dir.join("diagnostic-repair.json")).unwrap();
+    let mut successor = proposal.clone();
+    successor["verifierSource"] =
+        json!("const compiler=require(process.argv[4]); throw new Error('next fixture error');");
+    let successor_bytes = serde_json::to_vec(&successor).unwrap();
+    let next = dir.join("diagnostic-repair-stage");
+    let result = author::stage_with_diagnostic_repair(
+        &request_bytes,
+        &successor_bytes,
+        &design_bytes,
+        &packet,
+        &next,
+    )
+    .unwrap();
+    assert_eq!(result["reviewed"], false);
+    assert_eq!(result["diagnosticRepairPacketSha256"], digest(&packet));
+    assert_eq!(fs::read(next.join("design.json")).unwrap(), design_bytes);
+    assert!(author::approve(
+        &next,
+        &digest(&successor_bytes),
+        false,
+        &dir.join("no-automatic-approval")
+    )
+    .is_err());
+    let mut changed = design.clone();
+    changed["scenarios"][0]["initialState"]["value"] = json!(0);
+    assert!(author::stage_with_diagnostic_repair(
+        &request_bytes,
+        &successor_bytes,
+        &serde_json::to_vec(&changed).unwrap(),
+        &packet,
+        &dir.join("changed-design")
+    )
+    .is_err());
+    assert!(!dir.join("changed-design").exists());
+    fs::write(next.join("diagnostic-repair.json"), b"{}").unwrap();
+    assert!(diagnostic::prepare(
+        &next,
+        &compiler,
+        &root().join("scripts/source-recipe-diagnostic-worker.cjs"),
+        &format!("sha256:{}", "a".repeat(64)),
+        &dir.join("tampered-diagnostic")
+    )
+    .is_err());
+    assert!(author::approve(
+        &next,
+        &digest(&successor_bytes),
+        true,
+        &dir.join("tampered-approval")
+    )
+    .is_err());
+}
+
+#[test]
+fn thin_diagnostic_loop_keeps_every_attempt_and_stops_without_hidden_model_retries() {
+    let code = r#"
+import importlib.util,json,os,subprocess,sys,tempfile
+from pathlib import Path
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('loop',os.environ['LOOP_SCRIPT'])
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+with tempfile.TemporaryDirectory() as directory:
+  for scenario in ['baseline','repair','two-repairs','exhaust','zero-budget','native-stop','partial','isolation','launcher-mismatch','prelaunch']:
+    root=Path(directory)/scenario;root.mkdir();(root/'compiler.js').write_text('trusted fixture')
+    (root/'request.json').write_text('{}');stage=root/'agent/proposal-stage';stage.mkdir(parents=True)
+    design=b'{"frozen":"complete ordered scenarios"}';(stage/'design.json').write_bytes(design)
+    maximum=0 if scenario in ['baseline','zero-budget','launcher-mismatch','prelaunch'] else 2
+    (root/'diagnostic-loop-intent.json').write_text(json.dumps({'maximumRepairs':maximum}))
+    commands=[];authors=[];diagnostics=[]
+    def run(command,**kwargs):
+      commands.append(command)
+      def output():return Path(command[command.index('--output')+1])
+      if '--prepare-source-recipe-diagnostic' in command:
+        d=output();d.mkdir();(d/'descriptor.json').write_text('{}');(d/'request.json').write_text('{}');diagnostics.append(d)
+        return subprocess.CompletedProcess(command,0)
+      if any(str(x).endswith('run-contained-behavior-worker.py') for x in command):
+        if scenario!='prelaunch':(Path(kwargs['cwd'])/'contained-input-mock').mkdir()
+        return subprocess.CompletedProcess(command,1 if scenario=='launcher-mismatch' else 0)
+      if '--feedback-source-recipe-diagnostic' in command:
+        index=len(diagnostics)-1
+        passed=scenario in ['baseline','launcher-mismatch'] or scenario=='repair' and index==1 or scenario=='two-repairs' and index==2
+        output().write_text(json.dumps({'baselinePassed':passed,'classification':'baseline-observations-passed' if passed else 'verifier-execution-infrastructure-failure'}))
+        return subprocess.CompletedProcess(command,0)
+      if '--prepare-source-recipe-diagnostic-repair' in command:
+        assert command[command.index('--maximum-repairs')+1]==str(maximum)
+        if scenario=='native-stop':raise subprocess.CalledProcessError(1,command)
+        output().write_text('{}');return subprocess.CompletedProcess(command,0)
+      if any(str(x).endswith('run-source-recipe-author.py') for x in command):
+        authors.append(command)
+        assert '--frozen-design' in command and '--diagnostic-repair' in command and '--design-first' not in command
+        assert command[command.index('--design-revisions')+1]=='0'
+        assert command[command.index('--request')+1]==str(root/'request.json')
+        assert command[command.index('--reasoning-effort')+1]=='low'
+        assert kwargs['env']['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']==str(root/f'code-repair-{len(authors)}/runtime-receipts')
+        d=output()/'proposal-stage';d.mkdir(parents=True);(d/'design.json').write_bytes(design)
+        return subprocess.CompletedProcess(command,1 if scenario=='partial' else 0)
+      if any(str(x).endswith('validate-participant-runtime.py') for x in command):
+        assert command[command.index('--label')+1]=='source-recipe-author'
+        return subprocess.CompletedProcess(command,1 if scenario=='isolation' else 0)
+      assert '--check-source-recipe-loop-intent' in command
+      output().write_text('{}');return subprocess.CompletedProcess(command,0)
+    argv=['loop','--root',str(root),'--gate','/fixture/gate','--compiler',str(root/'compiler.js'),'--image-id','sha256:'+'a'*64,'--maximum-repairs',str(maximum)]
+    env={'CONSTRUCTION_REASONING_EFFORT':'low','CONSTRUCTION_GATEWAY_TIMEOUT':'180','CONSTRUCTION_MAX_OUTPUT_TOKENS':'16384',
+      'CONSTRUCTION_THINKING_TYPE':'default','CONSTRUCTION_RESPONSE_FORMAT':'default','CONSTRUCTION_API':'openai-completions',
+      'AGENTLAB_PARTICIPANT_RUNTIME_CONFIG':'fixture'}
+    with patch.object(module.subprocess,'run',side_effect=run),patch.object(sys,'argv',argv),patch.dict(os.environ,env),patch.object(Path,'resolve',lambda p,strict=False:p):
+      try:module.main()
+      except (ValueError,subprocess.CalledProcessError):assert scenario not in ['baseline','repair','two-repairs']
+      else:assert scenario in ['baseline','repair','two-repairs']
+    expected=0 if scenario in ['baseline','zero-budget','native-stop','launcher-mismatch','prelaunch'] else 2 if scenario in ['two-repairs','exhaust'] else 1
+    assert len(authors)==expected,(scenario,len(authors))
+    if scenario!='prelaunch':
+      observations=sorted(root.glob('diagnostic-loop-observation-*.json'))
+      assert len(observations)==(3 if scenario in ['two-repairs','exhaust'] else 2 if scenario=='repair' else 1)
+      assert len(json.loads(observations[-1].read_bytes())['attempts'])==len(observations)
+    if scenario in ['baseline','repair','two-repairs']:
+      result=json.loads((root/'diagnostic-loop-result.json').read_bytes());assert result['qualified'] is False and result['semanticQualified'] is False
+    else:assert not (root/'diagnostic-loop-result.json').exists()
+    before=len(authors)
+    with patch.object(module.subprocess,'run',side_effect=run),patch.object(sys,'argv',argv),patch.dict(os.environ,env),patch.object(Path,'resolve',lambda p,strict=False:p):
+      try:module.main()
+      except FileExistsError:pass
+      else:raise AssertionError('existing loop restarted')
+    assert len(authors)==before
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "LOOP_SCRIPT",
+            root().join("scripts/run-source-recipe-diagnostic-loop.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn frozen_seams_observe_changed_source_branch_and_unchanged_earlier_exception() {
     let (dir, _) = loop_fixture();
     fs::create_dir_all(dir.join("source")).unwrap();

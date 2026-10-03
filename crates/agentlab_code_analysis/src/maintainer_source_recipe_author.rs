@@ -1113,12 +1113,22 @@ pub fn stage_with_design(
         output,
         Some((design_bytes, &validation)),
         None,
+        None,
+        None,
     )
 }
 
 /// Serialize a bounded, unreviewed proposal. No executable controls are spawned.
 pub fn stage(request_bytes: &[u8], proposal_bytes: &[u8], output: &Path) -> Result<Value, String> {
-    stage_inner(request_bytes, proposal_bytes, output, None, None)
+    stage_inner(
+        request_bytes,
+        proposal_bytes,
+        output,
+        None,
+        None,
+        None,
+        None,
+    )
 }
 
 pub fn stage_with_revision(
@@ -1137,6 +1147,59 @@ pub fn stage_with_revision(
         output,
         design_bytes.zip(validation.as_ref()),
         Some(packet_bytes),
+        None,
+        None,
+    )
+}
+
+/// Code-only diagnostic correction never grants independent review.
+pub fn stage_with_diagnostic_repair(
+    request_bytes: &[u8],
+    proposal_bytes: &[u8],
+    design_bytes: &[u8],
+    packet_bytes: &[u8],
+    output: &Path,
+) -> Result<Value, String> {
+    crate::maintainer_source_repair::check_output(
+        request_bytes,
+        packet_bytes,
+        proposal_bytes,
+        design_bytes,
+    )?;
+    let validation = check_design_proposal(request_bytes, proposal_bytes, design_bytes)?;
+    let packet: Value = serde_json::from_slice(packet_bytes).map_err(|e| e.to_string())?;
+    let loop_intent = packet["loopIntentOriginal"]
+        .as_str()
+        .ok_or("construction repair loop intent missing")?
+        .as_bytes();
+    stage_inner(
+        request_bytes,
+        proposal_bytes,
+        output,
+        Some((design_bytes, &validation)),
+        None,
+        Some(packet_bytes),
+        Some(loop_intent),
+    )
+}
+
+pub fn stage_with_loop_intent(
+    request_bytes: &[u8],
+    proposal_bytes: &[u8],
+    design_bytes: &[u8],
+    intent: &[u8],
+    output: &Path,
+) -> Result<Value, String> {
+    crate::maintainer_source_repair::check_loop_intent(request_bytes, intent)?;
+    let validation = check_design_proposal(request_bytes, proposal_bytes, design_bytes)?;
+    stage_inner(
+        request_bytes,
+        proposal_bytes,
+        output,
+        Some((design_bytes, &validation)),
+        None,
+        None,
+        Some(intent),
     )
 }
 
@@ -1177,6 +1240,8 @@ fn stage_inner(
     output: &Path,
     design: Option<(&[u8], &Value)>,
     revision: Option<&[u8]>,
+    diagnostic_repair: Option<&[u8]>,
+    loop_intent: Option<&[u8]>,
 ) -> Result<Value, String> {
     let revision_validation = revision
         .map(|packet| {
@@ -1401,6 +1466,24 @@ fn stage_inner(
         receipt["revisionPacketSha256"] = json!(digest(packet));
         receipt["revisionContractValidationSha256"] = json!(digest(&validation));
     }
+    if let Some(packet) = diagnostic_repair {
+        let validation = crate::maintainer_source_repair::check_output(
+            request_bytes,
+            packet,
+            proposal_bytes,
+            design.unwrap().0,
+        )?;
+        let bytes = pretty(&validation)?;
+        write(&output.join("diagnostic-repair.json"), packet)?;
+        write(&output.join("diagnostic-repair-output.json"), &bytes)?;
+        receipt["diagnosticRepairPacketSha256"] = json!(digest(packet));
+        receipt["diagnosticRepairOutputSha256"] = json!(digest(&bytes));
+    }
+    if let Some(intent) = loop_intent {
+        crate::maintainer_source_repair::check_loop_intent(request_bytes, intent)?;
+        write(&output.join("diagnostic-loop-intent.json"), intent)?;
+        receipt["diagnosticLoopIntentSha256"] = json!(digest(intent));
+    }
     write(&output.join("stage-receipt.json"), &pretty(&receipt)?)?;
     Ok(receipt)
 }
@@ -1484,6 +1567,28 @@ pub fn approve(
                 "recipe author reviewed runtime bytes differ",
             )?;
         }
+    }
+    if receipt.get("diagnosticRepairPacketSha256").is_some()
+        || stage.join("diagnostic-repair.json").exists()
+    {
+        let packet = read(
+            &stage.join("diagnostic-repair.json"),
+            crate::maintainer_source_repair::PACKET_LIMIT,
+        )?;
+        let design = read(&stage.join("design.json"), 64 * 1024)?;
+        let validation = crate::maintainer_source_repair::check_output(
+            &request_bytes,
+            &packet,
+            &proposal_bytes,
+            &design,
+        )?;
+        let stored = read(&stage.join("diagnostic-repair-output.json"), 64 * 1024)?;
+        need(
+            receipt["diagnosticRepairPacketSha256"] == digest(&packet)
+                && receipt["diagnosticRepairOutputSha256"] == digest(&stored)
+                && stored == pretty(&validation)?,
+            "recipe author reviewed diagnostic repair lineage differs",
+        )?;
     }
     let mut recipe: Value = serde_json::from_slice(&recipe_bytes).map_err(|e| e.to_string())?;
     need(

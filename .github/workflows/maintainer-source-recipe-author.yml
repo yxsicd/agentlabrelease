@@ -72,6 +72,12 @@ on:
         required: true
         type: choice
         options: ['0', '1', '2']
+      code_revisions:
+        description: Fresh-root only; automatic frozen-design verifier repairs after contained baseline diagnostics
+        default: '0'
+        required: true
+        type: choice
+        options: ['0', '1', '2']
 permissions:
   contents: read
   actions: read
@@ -98,6 +104,7 @@ jobs:
       REVISION_FEEDBACK: ${{ inputs.revision_feedback }}
       CONSTRUCTION_DESIGN_FIRST: ${{ inputs.design_first }}
       CONSTRUCTION_DESIGN_REVISIONS: ${{ inputs.design_revisions }}
+      CONSTRUCTION_CODE_REVISIONS: ${{ inputs.code_revisions }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
       AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
@@ -109,6 +116,9 @@ jobs:
           import json,os
           run=os.environ['REVISION_PARENT_RUN'];feedback=os.environ['REVISION_FEEDBACK']
           assert bool(run)==bool(feedback),'Revision parent and review must be supplied together'
+          repairs=int(os.environ['CONSTRUCTION_CODE_REVISIONS'])
+          assert 0<=repairs<=2
+          assert not repairs or (not run and os.environ['CONSTRUCTION_DESIGN_FIRST']=='true'),'Automatic code repair requires a fresh design-first root; old review budgets remain exhausted'
           if run:
               assert run.isascii() and run.isdigit() and 0<len(run)<=20 and int(run)>0
               assert len(feedback.encode())<=16384
@@ -195,6 +205,12 @@ jobs:
           cp "$RUNNER_TEMP/recipe-runtime.json" "$RUNNER_TEMP/recipe-author/runtime-inputs/config.json"
           cp "$RUNNER_TEMP/recipe-case/manifest.json" "$RUNNER_TEMP/recipe-author/runtime-inputs/manifest.json"
           cp "$RUNNER_TEMP/recipe-pi/package-lock.json" "$RUNNER_TEMP/recipe-author/runtime-inputs/package-lock.json"
+      - name: Freeze code repair budget before the first model turn
+        if: inputs.design_first && inputs.revision_parent_run == ''
+        run: |
+          target/release/agentlab-maintainer-skill-flywheel --prepare-source-recipe-loop-intent \
+            --author-request "$RUNNER_TEMP/recipe-author/request.json" --maximum-repairs "$CONSTRUCTION_CODE_REVISIONS" \
+            --output "$RUNNER_TEMP/recipe-author/diagnostic-loop-intent.json"
       - name: Produce captured unreviewed recipe only
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
@@ -208,6 +224,9 @@ jobs:
           fi
           if test "$CONSTRUCTION_DESIGN_FIRST" = true; then
             revision_args+=(--design-first)
+          fi
+          if test -f "$RUNNER_TEMP/recipe-author/diagnostic-loop-intent.json"; then
+            revision_args+=(--diagnostic-loop-intent "$RUNNER_TEMP/recipe-author/diagnostic-loop-intent.json")
           fi
           python3 scripts/run-source-recipe-author.py --request "$RUNNER_TEMP/recipe-author/request.json" \
             --output "$RUNNER_TEMP/recipe-author/agent" --gate target/release/agentlab-maintainer-skill-flywheel \
@@ -235,31 +254,16 @@ jobs:
             "${labels[@]}" --output "$RUNNER_TEMP/recipe-author/runtime-validation.json"
       - name: Diagnose unchanged generated verifier baseline in a separate container
         if: inputs.design_first
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+          AGENTLAB_PARTICIPANT_RUNTIME_CONFIG: ${{ runner.temp }}/recipe-runtime.json
+          DOCKER_CONFIG: ${{ runner.temp }}/recipe-docker-config
         run: |
           compiler="$RUNNER_TEMP/recipe-compiler/node_modules/typescript/lib/typescript.js"
-          diagnostic="$RUNNER_TEMP/recipe-author/baseline-diagnostic"
           image_id=$(docker image inspect node:24.19.0-bookworm-slim --format '{{.Id}}')
-          target/release/agentlab-maintainer-skill-flywheel --prepare-source-recipe-diagnostic \
-            --stage "$RUNNER_TEMP/recipe-author/agent/proposal-stage" --typescript "$compiler" \
-            --worker "$GITHUB_WORKSPACE/scripts/source-recipe-diagnostic-worker.cjs" \
-            --image-id "$image_id" --output "$diagnostic"
-          cd "$diagnostic"
-          execution_exit=0
-          python3 "$GITHUB_WORKSPACE/scripts/run-contained-behavior-worker.py" \
-            "$diagnostic/descriptor.json" "$diagnostic/request.json" \
-            > launcher-stdout.log 2> launcher-stderr.log || execution_exit=$?
-          # One fresh invocation owns exactly one capture; never pick an old/latest file.
-          captures=("$diagnostic"/contained-input-*)
-          test "${#captures[@]}" -eq 1
-          "$GITHUB_WORKSPACE/target/release/agentlab-maintainer-skill-flywheel" \
-            --feedback-source-recipe-diagnostic --diagnostic-inputs "$diagnostic" \
-            --worker-capture "${captures[0]}" --output "$diagnostic/feedback.json"
-          test "$execution_exit" -eq 0
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          assert json.loads(Path('feedback.json').read_bytes())['baselinePassed'] is True
-          PY
+          python3 scripts/run-source-recipe-diagnostic-loop.py \
+            --root "$RUNNER_TEMP/recipe-author" --gate target/release/agentlab-maintainer-skill-flywheel \
+            --compiler "$compiler" --image-id "$image_id" --maximum-repairs "$CONSTRUCTION_CODE_REVISIONS"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

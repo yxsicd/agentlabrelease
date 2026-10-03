@@ -218,3 +218,277 @@ fn frozen_oracle_cannot_be_rewritten_after_capture() {
     assert!(feedback(&base.join("inputs"), &capture, &base.join("feedback.json")).is_err());
     assert!(!base.join("feedback.json").exists());
 }
+
+fn repair_fixture(maximum: u64) -> (PathBuf, PathBuf) {
+    let base = fixture();
+    let request = fs::read(base.join("stage/request.json")).unwrap();
+    let intent =
+        agentlab_code_analysis::maintainer_source_repair::loop_intent(&request, maximum).unwrap();
+    file(&base.join("stage/diagnostic-loop-intent.json"), &intent);
+    let mut receipt: Value =
+        serde_json::from_slice(&fs::read(base.join("stage/stage-receipt.json")).unwrap()).unwrap();
+    receipt["diagnosticLoopIntentSha256"] = json!(digest(
+        &fs::read(base.join("stage/diagnostic-loop-intent.json")).unwrap()
+    ));
+    file(&base.join("stage/stage-receipt.json"), &receipt);
+    prepared(&base);
+    let capture = captured(&base, 1, json!({}));
+    let mut process: Value =
+        serde_json::from_slice(&fs::read(capture.join("process.json")).unwrap()).unwrap();
+    for (key, value) in [
+        ("cleanupExitCode", json!(0)),
+        ("network", json!("none")),
+        ("rootFilesystemReadOnly", json!(true)),
+        ("capabilitiesDropped", json!(true)),
+        ("durationMs", json!(206)),
+    ] {
+        process[key] = value;
+    }
+    file(&capture.join("process.json"), &process);
+    (base, capture)
+}
+fn repair_packet(base: &Path, capture: &Path, maximum: u64) -> Value {
+    agentlab_code_analysis::maintainer_source_repair::prepare(
+        &base.join("stage"),
+        &base.join("inputs"),
+        capture,
+        maximum,
+        &base.join("repair.json"),
+    )
+    .unwrap()
+}
+
+#[test]
+fn repair_reconstructs_failure_and_freezes_complete_design_contract_and_source_paths() {
+    use agentlab_code_analysis::maintainer_source_repair::{check, check_output};
+    let (base, capture) = repair_fixture(2);
+    let packet = repair_packet(&base, &capture, 2);
+    let request = fs::read(base.join("stage/request.json")).unwrap();
+    let bytes = fs::read(base.join("repair.json")).unwrap();
+    let admission = check(&request, &bytes).unwrap();
+    assert_eq!(admission["repairIndex"], 1);
+    assert_eq!(
+        admission["feedback"]["classification"],
+        "verifier-execution-infrastructure-failure"
+    );
+    assert_eq!(admission["feedback"]["checks"], json!([]));
+    assert_eq!(admission["semanticQualified"], false);
+    assert_eq!(
+        packet["stderrOriginal"],
+        "Error: unbound import: explicit-seam"
+    );
+    let mut successor: Value =
+        serde_json::from_slice(&fs::read(base.join("stage/proposal.json")).unwrap()).unwrap();
+    let original = successor.clone();
+    let design = fs::read(base.join("stage/design.json")).unwrap();
+    assert!(check_output(
+        &request,
+        &bytes,
+        &serde_json::to_vec(&successor).unwrap(),
+        &design
+    )
+    .is_err());
+    successor["verifierSource"] = json!("new bounded candidate code");
+    assert_eq!(
+        check_output(
+            &request,
+            &bytes,
+            &serde_json::to_vec(&successor).unwrap(),
+            &design
+        )
+        .unwrap()["semanticQualified"],
+        false
+    );
+    for change in [
+        "expected",
+        "pointer",
+        "source",
+        "controls",
+        "scenario",
+        "design-bytes",
+    ] {
+        let mut bad = successor.clone();
+        let mut bad_design: Value = serde_json::from_slice(&design).unwrap();
+        match change {
+            "expected" => bad["contract"]["checks"][0]["expected"] = json!(8),
+            "pointer" => bad["contract"]["checks"][0]["pointer"] = json!("/other"),
+            "source" => bad["sourcePaths"] = json!(["other.js"]),
+            "controls" => bad["contract"]["controls"] = json!([]),
+            "scenario" => bad_design["scenarios"][0]["initialState"] = json!({"changed":true}),
+            _ => {}
+        }
+        let changed_design = if change == "scenario" {
+            serde_json::to_vec(&bad_design).unwrap()
+        } else if change == "design-bytes" {
+            [design.as_slice(), b"\n"].concat()
+        } else {
+            design.clone()
+        };
+        assert!(
+            check_output(
+                &request,
+                &bytes,
+                &serde_json::to_vec(&bad).unwrap(),
+                &changed_design
+            )
+            .is_err(),
+            "{change}"
+        );
+    }
+    assert_eq!(
+        original["verifierSource"],
+        packet["parentProposalOriginal"]
+            .as_str()
+            .map(|s| serde_json::from_str::<Value>(s).unwrap()["verifierSource"].clone())
+            .unwrap()
+    );
+    let mut changed = request.clone();
+    changed.push(b'\n');
+    assert!(check(&changed, &bytes).is_err());
+}
+
+#[test]
+fn repair_stops_on_unfrozen_or_changed_budget_transport_cleanup_timeout_and_raw_log_drift() {
+    for damage in [
+        "timeout", "logs", "cleanup", "signal", "spawn", "budget", "legacy", "child", "stderr",
+        "nonutf8", "passed",
+    ] {
+        let (base, capture) = repair_fixture(1);
+        let path = capture.join("process.json");
+        let mut process: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        match damage {
+            "timeout" => process["timedOut"] = json!(true),
+            "logs" => process["logBudgetExceeded"] = json!(true),
+            "cleanup" => process["cleanupExitCode"] = json!(1),
+            "signal" => process["exitCode"] = json!(137),
+            "spawn" => process["exitCode"] = json!(125),
+            "legacy" => {
+                fs::remove_file(base.join("stage/diagnostic-loop-intent.json")).unwrap();
+            }
+            "child" => {
+                fs::write(base.join("stage/revision-request.json"), "{}").unwrap();
+            }
+            "stderr" => {
+                fs::write(capture.join("worker-stderr.log"), "changed").unwrap();
+            }
+            "nonutf8" => {
+                fs::write(capture.join("worker-stderr.log"), [255]).unwrap();
+                process["stderrSha256"] = json!(digest(&[255]));
+            }
+            "passed" => {
+                let request: Value =
+                    serde_json::from_slice(&fs::read(base.join("inputs/request.json")).unwrap())
+                        .unwrap();
+                let observations = json!({"scenario":{"value":7,"nullable":null}});
+                let raw = serde_json::to_string(&observations).unwrap();
+                let stdout=serde_json::to_vec(&json!({"id":request["id"],"submittedSource":request["submittedSource"],"submittedSourceSha256":request["submittedSourceSha256"],"observations":observations,"verifierStdout":raw,"verifierStdoutSha256":digest(raw.as_bytes())})).unwrap();
+                fs::write(capture.join("worker-stdout.log"), &stdout).unwrap();
+                process["exitCode"] = json!(0);
+                process["stdoutSha256"] = json!(digest(&stdout));
+            }
+            _ => {}
+        }
+        file(&path, &process);
+        let result = agentlab_code_analysis::maintainer_source_repair::prepare(
+            &base.join("stage"),
+            &base.join("inputs"),
+            &capture,
+            if damage == "budget" { 2 } else { 1 },
+            &base.join("repair.json"),
+        );
+        assert!(result.is_err(), "{damage}");
+        assert!(!base.join("repair.json").exists());
+    }
+}
+
+#[test]
+fn repair_second_round_requires_original_chain_and_cannot_reset_or_extend_budget() {
+    use agentlab_code_analysis::maintainer_source_repair::{
+        check, check_output, prepare as repair,
+    };
+    let (first, capture) = repair_fixture(2);
+    let prior = repair_packet(&first, &capture, 2);
+    let prior_bytes = fs::read(first.join("repair.json")).unwrap();
+    let second = fixture();
+    let request = fs::read(second.join("stage/request.json")).unwrap();
+    let design = fs::read(second.join("stage/design.json")).unwrap();
+    let mut proposal: Value =
+        serde_json::from_slice(&fs::read(second.join("stage/proposal.json")).unwrap()).unwrap();
+    proposal["verifierSource"] = json!("next candidate code");
+    file(&second.join("stage/proposal.json"), &proposal);
+    fs::write(second.join("stage/controls.cjs"), "next candidate code").unwrap();
+    fs::write(second.join("stage/diagnostic-repair.json"), &prior_bytes).unwrap();
+    fs::write(
+        second.join("stage/diagnostic-loop-intent.json"),
+        prior["loopIntentOriginal"].as_str().unwrap(),
+    )
+    .unwrap();
+    let result = check_output(
+        &request,
+        &prior_bytes,
+        &fs::read(second.join("stage/proposal.json")).unwrap(),
+        &design,
+    )
+    .unwrap();
+    file(&second.join("stage/diagnostic-repair-output.json"), &result);
+    let mut receipt: Value =
+        serde_json::from_slice(&fs::read(second.join("stage/stage-receipt.json")).unwrap())
+            .unwrap();
+    for (key, file_name) in [
+        ("proposalSha256", "proposal.json"),
+        ("diagnosticLoopIntentSha256", "diagnostic-loop-intent.json"),
+        ("diagnosticRepairPacketSha256", "diagnostic-repair.json"),
+        (
+            "diagnosticRepairOutputSha256",
+            "diagnostic-repair-output.json",
+        ),
+    ] {
+        receipt[key] = json!(digest(
+            &fs::read(second.join("stage").join(file_name)).unwrap()
+        ));
+    }
+    file(&second.join("stage/stage-receipt.json"), &receipt);
+    prepared(&second);
+    let capture = captured(&second, 1, json!({}));
+    let mut process: Value =
+        serde_json::from_slice(&fs::read(capture.join("process.json")).unwrap()).unwrap();
+    for (key, value) in [
+        ("cleanupExitCode", json!(0)),
+        ("network", json!("none")),
+        ("rootFilesystemReadOnly", json!(true)),
+        ("capabilitiesDropped", json!(true)),
+        ("durationMs", json!(206)),
+    ] {
+        process[key] = value;
+    }
+    file(&capture.join("process.json"), &process);
+    let packet = repair(
+        &second.join("stage"),
+        &second.join("inputs"),
+        &capture,
+        2,
+        &second.join("repair.json"),
+    )
+    .unwrap();
+    assert_eq!(packet["repairIndex"], 2);
+    for damage in ["reset", "extend", "prior-source", "third"] {
+        let mut bad = packet.clone();
+        match damage {
+            "reset" => {
+                bad["repairIndex"] = json!(1);
+                bad["previousRepairOriginal"] = Value::Null;
+            }
+            "extend" => bad["maximumRepairs"] = json!(3),
+            "third" => bad["repairIndex"] = json!(3),
+            _ => {
+                let mut previous = prior.clone();
+                previous["parentProposalOriginal"] = json!("{}");
+                bad["previousRepairOriginal"] = json!(serde_json::to_string(&previous).unwrap());
+            }
+        }
+        assert!(
+            check(&request, &serde_json::to_vec(&bad).unwrap()).is_err(),
+            "{damage}"
+        );
+    }
+}

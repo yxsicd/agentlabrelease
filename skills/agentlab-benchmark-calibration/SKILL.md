@@ -254,8 +254,17 @@ runtime equivalence. Use the Rust `--prepare-source-recipe-diagnostic` and
 `--feedback-source-recipe-diagnostic` bridge with the existing contained launcher;
 normal exit still requires independent frozen-check comparison. The constructor
 Action invokes this diagnostic after staging a design-first proposal and retains
-failures, but does not automatically feed them into another Agent turn. Baseline
-success alone leaves independent references, wrong controls and review unproved.
+failures. Its default `code_revisions=0` stops there. A fresh design-first root may
+explicitly freeze `code_revisions=1` or `2` before the first model turn to feed
+diagnostics into unreviewed code-only repairs. Rust reconstructs original captures,
+binds the complete design bytes, checks/controls/source paths and inherited budget,
+and rejects unchanged code, timeouts, log growth, uncertain cleanup and chain reset.
+Each repair uses a fresh contained participant with the same model policy and
+independent isolation validation; the frozen design is not regenerated. Review
+children and older roots without pre-generation budget receipts cannot enter this
+automatic path. Raw diagnostics are data, not trusted instructions or behavior
+verdicts. Baseline success alone leaves independent references, wrong controls,
+semantic review, knowledge admission and useful next-round consumption unproved.
 When a generated verifier fails before any observations, compare its runtime
 constructor and dependency arguments with the exact supplied adapter API before
 changing task expectations. A real author passed null despite receiving an
@@ -264,6 +273,12 @@ of compliance. Route the captured interface failure through a parent-bound revie
 revision with unchanged checks/scenarios; the Agent owns the successor code.
 Do not silently inject a missing compiler, execute repaired source on the host,
 or treat the generated verifier's startup error as an upstream product defect.
+A real reviewed child repaired the compiler binding while preserving all original
+checks/scenarios/controls, then failed at an absent decorator global. Inspect the
+whole supplied runtime interface, including dependency imports and declared
+globals, rather than assuming the first fixed error completes the environment.
+Do not remove decorators from submitted source to hide unsupported platform
+behavior; any controlled seam needs an explicit scope limitation and calibration.
 See [the original-verifier execution checkpoint](../../docs/flywheel-design-feedback-20261003.md#unchanged-original-verifier-execution)
 and its native diagnostic continuation for commands and supported boundaries.
 

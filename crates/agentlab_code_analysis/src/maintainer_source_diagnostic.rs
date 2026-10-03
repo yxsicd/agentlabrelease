@@ -10,7 +10,7 @@ fn need(ok: bool, message: &str) -> Result<(), String> {
         Err(message.into())
     }
 }
-fn read(path: &Path, limit: usize) -> Result<Vec<u8>, String> {
+pub(crate) fn read(path: &Path, limit: usize) -> Result<Vec<u8>, String> {
     let path = if path.is_absolute() {
         path.to_path_buf()
     } else {
@@ -97,6 +97,28 @@ pub fn prepare(
     let request: Value = serde_json::from_slice(&originals[0]).map_err(|e| e.to_string())?;
     let proposal: Value = serde_json::from_slice(&originals[1]).map_err(|e| e.to_string())?;
     let design: Value = serde_json::from_slice(&originals[2]).map_err(|e| e.to_string())?;
+    if receipt.get("diagnosticRepairPacketSha256").is_some()
+        || stage.join("diagnostic-repair.json").exists()
+    {
+        let packet = read(
+            &stage.join("diagnostic-repair.json"),
+            crate::maintainer_source_repair::PACKET_LIMIT,
+        )?;
+        let validation = crate::maintainer_source_repair::check_output(
+            &originals[0],
+            &packet,
+            &originals[1],
+            &originals[2],
+        )?;
+        let stored = read(&stage.join("diagnostic-repair-output.json"), 65536)?;
+        need(
+            receipt["diagnosticRepairPacketSha256"] == digest(&packet)
+                && receipt["diagnosticRepairOutputSha256"] == digest(&stored)
+                && serde_json::from_slice::<Value>(&stored).map_err(|e| e.to_string())?
+                    == validation,
+            "diagnostic repair lineage differs",
+        )?;
+    }
     need(
         request["schema"] == "agentlab.source_recipe_author_request.v1"
             && request["reviewed"] == false
@@ -231,6 +253,32 @@ pub fn prepare(
 /// Reconstruct actual output without treating launcher exit zero as a behavior verdict.
 pub fn feedback(inputs: &Path, capture: &Path, output: &Path) -> Result<Value, String> {
     let intent_bytes = read(&inputs.join("intent.json"), 128 * 1024)?;
+    let request_bytes = read(&inputs.join("request.json"), 256 * 1024)?;
+    need(
+        read(&capture.join("request.json"), 256 * 1024)? == request_bytes,
+        "diagnostic capture request differs",
+    )?;
+    let report = reconstruct(
+        &intent_bytes,
+        &request_bytes,
+        &read(&inputs.join("descriptor.json"), 65536)?,
+        &read(&capture.join("process.json"), 65536)?,
+        &read(&capture.join("worker-stdout.log"), 1024 * 1024)?,
+        &read(&capture.join("worker-stderr.log"), 1024 * 1024)?,
+    )?;
+    write(output, &report)?;
+    Ok(report)
+}
+
+/// Shared retained-byte reconstruction for diagnostics and bounded construction repair.
+pub(crate) fn reconstruct(
+    intent_bytes: &[u8],
+    request_bytes: &[u8],
+    descriptor_bytes: &[u8],
+    process_bytes: &[u8],
+    stdout: &[u8],
+    stderr: &[u8],
+) -> Result<Value, String> {
     let intent: Value = serde_json::from_slice(&intent_bytes).map_err(|e| e.to_string())?;
     need(
         intent["schema"] == "agentlab.source_recipe_diagnostic_intent.v1"
@@ -239,8 +287,6 @@ pub fn feedback(inputs: &Path, capture: &Path, output: &Path) -> Result<Value, S
             && intent["verifierReviewed"] == false,
         "diagnostic intent differs",
     )?;
-    let request_bytes = read(&inputs.join("request.json"), 256 * 1024)?;
-    let descriptor_bytes = read(&inputs.join("descriptor.json"), 65536)?;
     need(
         intent["requestSha256"] == digest(&request_bytes)
             && intent["descriptorSha256"] == digest(&descriptor_bytes),
@@ -253,18 +299,14 @@ pub fn feedback(inputs: &Path, capture: &Path, output: &Path) -> Result<Value, S
             == digest(&serde_json::to_vec(&intent["checks"]).map_err(|e| e.to_string())?),
         "diagnostic frozen oracle changed",
     )?;
-    let process_bytes = read(&capture.join("process.json"), 65536)?;
     let process: Value = serde_json::from_slice(&process_bytes).map_err(|e| e.to_string())?;
     need(
         process["schema"] == "agentlab.contained_behavior_process.v1"
             && process["requestSha256"] == intent["requestSha256"]
             && process["descriptorSha256"] == intent["descriptorSha256"]
-            && process["imageId"] == descriptor["imageId"]
-            && read(&capture.join("request.json"), 256 * 1024)? == request_bytes,
+            && process["imageId"] == descriptor["imageId"],
         "diagnostic capture binding differs",
     )?;
-    let stdout = read(&capture.join("worker-stdout.log"), 1024 * 1024)?;
-    let stderr = read(&capture.join("worker-stderr.log"), 1024 * 1024)?;
     need(
         process["stdoutSha256"] == digest(&stdout) && process["stderrSha256"] == digest(&stderr),
         "diagnostic raw logs differ",
@@ -304,6 +346,5 @@ pub fn feedback(inputs: &Path, capture: &Path, output: &Path) -> Result<Value, S
         "exitCode":process["exitCode"],"timedOut":process["timedOut"],"logBudgetExceeded":process["logBudgetExceeded"],"baselinePassed":baseline_passed,"checks":checks,
         "diagnosticOnly":true,"qualified":false,"wrongControlsExecuted":0,"formalIsolationQualified":false,"automaticPromotion":false,"authorityWritePerformed":false,
         "nextAction":if !normal {"review-verifier-execution-failure"} else if baseline_passed {"independent-semantic-review-and-complete-control-calibration"} else {"Agent-owned-baseline-observation-repair"}});
-    write(output, &report)?;
     Ok(report)
 }
