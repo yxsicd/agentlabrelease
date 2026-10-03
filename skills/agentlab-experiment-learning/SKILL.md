@@ -174,6 +174,10 @@ listed raw file plus candidate bytes against the lesson source before ordinary
 lesson staging/committed-return gates. Inventory hashes alone cannot establish
 raw identity. Missing review stops review-required; matching source bytes do not
 authenticate the reviewer, validate the Oracle or establish remote commitment.
+Validate positive acceptance through the actual business return as well as the
+standalone admission CLI, using the same committed reviewed suite. A planner pass
+does not establish integration; operational persistence/repeat and full knowledge
+staging remain separate from active knowledge admission and next-round benefit.
 
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.

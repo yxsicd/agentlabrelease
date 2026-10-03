@@ -177,3 +177,45 @@ Maturity remains 74%; complete accepted automatic five-stage business loops rema
 zero. Next: deliver the automatic observation handoff, bind the original format
 to business return/persistence, review actual scenario consumption, and freeze
 an independent common quality rubric before any guided/unguided benefit pair.
+
+## Reviewed native business staging and real operational persistence
+
+Independent source review of the unchanged 37156735569 verifier found all eight
+declared scenario IDs present, actual frozen args consumed, own constructor fields
+asserted before convert, actual post-call field/undefined-return observations and
+actual NaN tagging. Three distinct reference replacements preserve the retained
+string-input corpus; three wrong replacements were distinguished at their declared
+checks. Complete checks/scenarios/controls are covered by original-source quotes
+in external semantic-review.json. Interpretation is current-source characterization
+under fixed mapping defaults, a stub parent and identity Observed decorator, not
+intended-product correctness, arbitrary nonstring behavior or actual import/UI/
+framework/runtime qualification. Reviewer identity is declared, not authenticated.
+
+Native reviewed lesson export exited 0 for
+lesson-rating-convert-string-corpus-37156735569. The existing operational importer
+discovered current contracts and selected the private default Person, then applied
+one insert-only, revision-fenced transaction in agentlabsourcesuite-37147845918,
+assets/observations/source-suite/. Authority advanced from
+9dbe415dbfc44acedeed3b639a661c60149ac9b3 to
+b6b48e7f26afcf5dfe6e3423365cde40bfaa4fe9. Independent full-table readback verified
+230 inserted rows and preserved all prior rows. Native raw archive recovery and
+committed-export binding succeeded. An unchanged repeat verified zero inserts,
+no transaction and the same b6b48e7f revision. Credentials and full captures remain
+outside Release, under flywheel-source-budget-successor-ucrL3x.
+
+The promotion candidate derives one new Skill, fact and refresh row against exact
+knowledge baseline agentlabtablegit@b5a07f1b120555eb0a44a659b802f809ac45761e.
+Standalone full staging and the actual evidence-return business stage independently
+reconstructed the committed reviewed source, matched it to this round's complete
+suite and reproduced the unchanged scope assessment with inherited operation
+receipts. Both exited 0; the business stage emitted flywheel_lesson_staging.v1 and
+stopped review-required at atomic-admission-and-remote-committed-readback-required.
+This is a real positive integrated source-suite staging path, not only a fixture
+or an observation-only export. Operational commit is not active knowledge admission.
+
+The staged cut has 17 Skills, 70 facts and 48 refresh rows, still 489 scopes and
+zero formal cases. Active knowledge remains b5a07f1b (16/69/47); no coverage/readiness
+advancement, new participant/worker execution, automatic review or guidance benefit
+is claimed. Maturity remains 74%, accepted complete automatic business loops zero.
+Next: revision-fenced knowledge admission/readback, exact-cut publication, then
+later-round consumption and independent quality comparison/cross-repository runs.
