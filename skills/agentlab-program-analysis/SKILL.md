@@ -84,6 +84,13 @@ Feedback requests revision; it cannot approve the parent or successor. This path
 does not require inventing a completed verifier proposal after an earlier code
 generation failure. Keep design feedback separate from executable-proposal review.
 
+Keep repair feedback actionable: distinguish schema/scope mismatches from invariant
+byte limits and limitation counts, report the observed value, and retain unchanged
+acceptance limits. Draft state must use strict JSON; undefined source behavior needs
+an explicit observation representation, not an illegal literal or a source rewrite
+to null. Constructor lookup sequences and real method argument shapes are execution
+inputs, not facts established by prose descriptions of initial state.
+
 Separate modification ownership from read-only source context. A construction
 Oracle may inspect a path outside its editable responsibility only when the
 candidate explicitly lists it as context, a bound fact cites its exact Blob,

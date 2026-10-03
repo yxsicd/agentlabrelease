@@ -115,7 +115,8 @@ def construct_design(participant, workspace, evidence, output, request, gate, pr
                 except (ValueError, TypeError):
                     message = ''
                 repairable = isinstance(message, str) and message.startswith((
-                    'recipe design schema/scope', 'recipe design scenario', 'recipe design check',
+                    'recipe design schema/scope', 'recipe design invariant', 'recipe design limitations',
+                    'recipe design scenario', 'recipe design check',
                     'recipe design control', 'recipe design unknown', 'recipe design failure array',
                     'recipe design invalid reference', 'recipe design vacuous wrong',
                     'recipe design baseline edits', 'recipe design edit', 'recipe design replacement',
@@ -320,6 +321,9 @@ scopeSkillId: the selected scope id
 invariant: one source-grounded behavioral invariant, <=2048 bytes
 scenarios: 1..8 objects with exactly id, initialState, inputs, expectedObservations
 Each state/input/observation is a JSON object. inputs.seams is an object (0..32 entries).
+Use strict JSON values: no undefined literals, comments, trailing commas or fences.
+Represent absent-value observations explicitly (for example a presence flag),
+without changing the source's actual undefined behavior to null.
 Every seam ID maps to exactly {outcomes, repeatLast}; repeatLast is a boolean.
 outcomes is 1..16 objects: {kind,value} with kind return/resolve/throw/reject,
 or {kind} with kind return-undefined/resolve-undefined. Values are explicit JSON.

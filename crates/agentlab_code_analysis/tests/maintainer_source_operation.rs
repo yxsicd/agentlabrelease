@@ -1287,6 +1287,16 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     assert_eq!(checked["semanticQualified"], false);
     assert_eq!(checked["executionPerformed"], false);
     assert_eq!(checked["controls"][1]["edits"][0]["matchCount"], 1);
+    let mut oversized = design.clone();
+    oversized["limitations"] = json!(vec!["retained limitation"; 9]);
+    let error =
+        author::design(&request_bytes, &serde_json::to_vec(&oversized).unwrap()).unwrap_err();
+    assert!(error.contains("limitations count must be 2..8; observed 9"));
+    oversized = design.clone();
+    oversized["invariant"] = json!("x".repeat(2049));
+    let error =
+        author::design(&request_bytes, &serde_json::to_vec(&oversized).unwrap()).unwrap_err();
+    assert!(error.contains("invariant byte budget 2048; observed 2049"));
     let design_bytes = serde_json::to_vec(&design).unwrap();
     let review = json!({"schema":"agentlab.source_recipe_design_review.v1",
         "parentRequestSha256":digest(&request_bytes),"parentDesignSha256":digest(&design_bytes),

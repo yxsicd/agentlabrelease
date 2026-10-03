@@ -575,15 +575,40 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
                 design["schema"].as_str(),
                 Some("agentlab.source_recipe_design.v1" | "agentlab.source_recipe_design.v2")
             )
-            && design["scopeSkillId"] == request["scope"]["id"]
-            && text(&design, "invariant")?.len() <= 2048
-            && design["limitations"].as_array().is_some_and(|a| {
-                (2..=8).contains(&a.len())
-                    && a.iter()
-                        .all(|v| v.as_str().is_some_and(|s| !s.is_empty() && s.len() <= 1024))
-            }),
+            && design["scopeSkillId"] == request["scope"]["id"],
         "recipe design schema/scope",
     )?;
+    let invariant = design["invariant"]
+        .as_str()
+        .filter(|s| !s.is_empty())
+        .ok_or("recipe design invariant must be nonempty text")?;
+    need(
+        invariant.len() <= 2048,
+        &format!(
+            "recipe design invariant byte budget 2048; observed {}",
+            invariant.len()
+        ),
+    )?;
+    let limitations = design["limitations"]
+        .as_array()
+        .ok_or("recipe design limitations must be an array")?;
+    need(
+        (2..=8).contains(&limitations.len()),
+        &format!(
+            "recipe design limitations count must be 2..8; observed {}",
+            limitations.len()
+        ),
+    )?;
+    for (index, limitation) in limitations.iter().enumerate() {
+        need(
+            limitation
+                .as_str()
+                .is_some_and(|s| !s.is_empty() && s.len() <= 1024),
+            &format!(
+                "recipe design limitations item {index} must be nonempty text within 1024 bytes"
+            ),
+        )?;
+    }
     let scenarios = design["scenarios"]
         .as_array()
         .filter(|a| (1..=8).contains(&a.len()))
