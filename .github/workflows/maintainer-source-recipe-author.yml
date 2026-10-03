@@ -11,6 +11,17 @@ on:
         default: glm-5.3-flash
         required: true
         type: string
+      guidance_selection:
+        description: Optional checked-in exact-cut calibration selection with sourceRecipeTarget; no external URL
+        default: ''
+        required: false
+        type: string
+      guidance_mode:
+        description: Same reviewed construction target and budgets; only guided receives the selected knowledge body
+        default: guided
+        required: true
+        type: choice
+        options: [guided, unguided]
       provider_route:
         default: glm
         required: true
@@ -97,6 +108,8 @@ jobs:
     timeout-minutes: ${{ inputs.code_gateway_timeout_seconds == '240' && 25 || 20 }}
     env:
       KNOWLEDGE: examples/maintainer-knowledge-gate/first-four
+      AGENTLAB_SOURCE_GUIDANCE_SELECTION: ${{ inputs.guidance_selection }}
+      AGENTLAB_SOURCE_GUIDANCE_MODE: ${{ inputs.guidance_mode }}
       REPOSITORY_SELECTOR: ${{ inputs.repository }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
@@ -124,6 +137,15 @@ jobs:
           run=os.environ['REVISION_PARENT_RUN'];feedback=os.environ['REVISION_FEEDBACK']
           assert bool(run)==bool(feedback),'Revision parent and review must be supplied together'
           repairs=int(os.environ['CONSTRUCTION_CODE_REVISIONS'])
+          selection=os.environ['AGENTLAB_SOURCE_GUIDANCE_SELECTION']
+          if selection:
+              from pathlib import Path
+              assert not selection.startswith('/') and chr(92) not in selection
+              assert all(p not in ('','.','..') for p in selection.split('/'))
+              path=Path(selection)
+              assert path.is_file() and not path.is_symlink()
+              root=Path.cwd().resolve();assert path.resolve().is_relative_to(root)
+              assert len(path.read_bytes())<=2*1024*1024
           assert 0<=repairs<=2
           assert not repairs or (not run and os.environ['CONSTRUCTION_DESIGN_FIRST']=='true'),'Automatic code repair requires a fresh design-first root; old review budgets remain exhausted'
           if run:
@@ -133,6 +155,11 @@ jobs:
               if json.loads(feedback).get('schema') in ('agentlab.source_recipe_design_review.v1','agentlab.source_recipe_design_review.v2'):
                   assert os.environ['CONSTRUCTION_DESIGN_FIRST']=='true','Design review requires design-first'
           PY
+      - name: Bind optional guidance to the checked-in knowledge directory
+        run: |
+          if test -n "$AGENTLAB_SOURCE_GUIDANCE_SELECTION"; then
+            echo "AGENTLAB_SOURCE_GUIDANCE_KNOWLEDGE=$GITHUB_WORKSPACE/$KNOWLEDGE" >> "$GITHUB_ENV"
+          fi
       - name: Exact live knowledge admission before model budget
         run: |
           mkdir -p "$RUNNER_TEMP/recipe-author"

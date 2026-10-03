@@ -650,6 +650,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.iter().any(|a| a == "--stage-source-recipe-proposal") {
         let request = fs::read(value(&args, "--author-request")?)?;
         let proposal = fs::read(value(&args, "--proposal")?)?;
+        if let Some(packet_path) = optional(&args, "--source-guidance") {
+            let packet = agentlab_code_analysis::maintainer_guidance::bind_source_recipe(
+                &PathBuf::from(value(&args, "--source-guidance-knowledge")?),
+                &request,
+                &fs::read(value(&args, "--source-guidance-selection")?)?,
+            )?;
+            let retained: serde_json::Value = serde_json::from_slice(&fs::read(packet_path)?)?;
+            if packet != retained {
+                return Err("source proposal guidance binding changed".into());
+            }
+            agentlab_code_analysis::maintainer_guidance::source_recipe_target(&packet, &proposal)?;
+        } else if optional(&args, "--source-guidance-knowledge").is_some()
+            || optional(&args, "--source-guidance-selection").is_some()
+        {
+            return Err("source proposal requires complete guidance inputs".into());
+        }
         let parent = optional(&args, "--parent-design");
         let review = optional(&args, "--design-review-feedback");
         if parent.is_some() != review.is_some() {
@@ -1001,6 +1017,54 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!(
             "{}",
             serde_json::json!({"agentConsumptionVerified":true,"learningBenefitVerified":false})
+        );
+        return Ok(());
+    }
+    if args
+        .iter()
+        .any(|arg| arg == "--bind-source-recipe-guidance")
+    {
+        let packet = agentlab_code_analysis::maintainer_guidance::bind_source_recipe(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &fs::read(value(&args, "--author-request")?)?,
+            &fs::read(value(&args, "--guidance-request")?)?,
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&packet)?)?;
+        file.write_all(b"\n")?;
+        println!(
+            "{}",
+            serde_json::json!({"sourceGuidanceBound":true,"agentConsumptionVerified":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|arg| {
+        arg == "--verify-source-recipe-guidance-consumption"
+            || arg == "--verify-source-recipe-completion"
+    }) {
+        let receipt = agentlab_code_analysis::maintainer_guidance::source_recipe_completion(
+            &PathBuf::from(value(&args, "--participant-evidence")?),
+            &fs::read(value(&args, "--guidance-packet")?)?,
+        )?;
+        if args
+            .iter()
+            .any(|arg| arg == "--verify-source-recipe-guidance-consumption")
+            && receipt["agentConsumptionVerified"] != true
+        {
+            return Err("source consumption requires guided treatment".into());
+        }
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&receipt)?)?;
+        file.write_all(b"\n")?;
+        println!(
+            "{}",
+            serde_json::json!({"authorCompletionVerified":true,"agentConsumptionVerified":receipt["agentConsumptionVerified"],"learningBenefitVerified":false})
         );
         return Ok(());
     }

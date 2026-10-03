@@ -189,6 +189,105 @@ pub fn bind(knowledge: &Path, request_bytes: &[u8]) -> Result<Value, String> {
         "agentConsumptionVerified":false,"learningBenefitVerified":false}))
 }
 
+/// Bind selected calibration knowledge to a source-recipe author's exact cut
+/// and an explicit construction target. This is applicability review, not
+/// semantic approval, model transmission or automatic task selection.
+pub fn bind_source_recipe(
+    knowledge: &Path,
+    request_bytes: &[u8],
+    selection_bytes: &[u8],
+) -> Result<Value, String> {
+    need(
+        request_bytes.len() <= 512 * 1024,
+        "source guidance request budget",
+    )?;
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    let selection: Value = serde_json::from_slice(selection_bytes).map_err(|e| e.to_string())?;
+    let mut packet = bind(knowledge, selection_bytes)?;
+    need(
+        request["schema"] == "agentlab.source_recipe_author_request.v1"
+            && request["reviewed"] == false
+            && request["automaticPromotion"] == false
+            && packet["stage"] == "calibration"
+            && packet["knowledgeCutSha256"] == request["knowledgeCutSha256"]
+            && packet["knowledgeAuthority"]["revision"] == request["authorityRevision"]
+            && packet["sources"]
+                == json!([{"repositoryId":request["source"]["repositoryId"],
+                "sourceRevision":request["source"]["revision"]}])
+            && request["scope"]["repositoryId"] == request["source"]["repositoryId"]
+            && request["scope"]["sourceRevision"] == request["source"]["revision"],
+        "source guidance author cut, stage or source differs",
+    )?;
+    let target = &selection["sourceRecipeTarget"];
+    let scope_id = text(&request["scope"], "id")?;
+    need(
+        target.as_object().is_some_and(|o| o.len() == 3)
+            && !scope_id.trim().is_empty()
+            && text(target, "scopeSkillId")? == scope_id
+            && !text(target, "demand")?.trim().is_empty()
+            && text(target, "demand")?.len() <= 2048,
+        "source guidance construction target differs",
+    )?;
+    let paths = target["sourcePaths"]
+        .as_array()
+        .filter(|p| !p.is_empty() && p.len() <= 16)
+        .ok_or("source guidance target paths absent")?;
+    let files = request["sourceFiles"]
+        .as_array()
+        .ok_or("source guidance files absent")?;
+    let mut seen = BTreeSet::new();
+    for path in paths {
+        let path = path.as_str().ok_or("source guidance target path invalid")?;
+        need(
+            !path.is_empty()
+                && !path.starts_with('/')
+                && !path.contains('\\')
+                && path
+                    .split('/')
+                    .all(|p| !p.is_empty() && p != "." && p != "..")
+                && seen.insert(path),
+            "source guidance target path duplicate or unsafe",
+        )?;
+        let matches: Vec<_> = files.iter().filter(|f| f["path"] == path).collect();
+        need(
+            matches.len() == 1,
+            "source guidance target is not uniquely loaded",
+        )?;
+        let content = matches[0]["content"]
+            .as_str()
+            .ok_or("source guidance target not loaded")?;
+        need(
+            matches[0]["sha256"] == digest(content.as_bytes()),
+            "source guidance target bytes differ",
+        )?;
+    }
+    packet["sourceRecipeBinding"] = json!({"authorRequestSha256":digest(request_bytes),
+        "target":target,"reviewerAuthenticated":false,"semanticQualified":false});
+    Ok(packet)
+}
+
+/// A named target must survive generated-proposal staging. Path inclusion is
+/// not proof of actual source execution or of a correct semantic invariant.
+pub fn source_recipe_target(packet: &Value, proposal_bytes: &[u8]) -> Result<(), String> {
+    let proposal: Value = serde_json::from_slice(proposal_bytes).map_err(|e| e.to_string())?;
+    let target = &packet["sourceRecipeBinding"]["target"];
+    need(
+        text(&proposal, "scopeSkillId")? == text(target, "scopeSkillId")?,
+        "source guidance proposal changed scope",
+    )?;
+    let paths = proposal["sourcePaths"]
+        .as_array()
+        .ok_or("source guidance proposal paths absent")?;
+    let expected = target["sourcePaths"]
+        .as_array()
+        .filter(|a| !a.is_empty())
+        .ok_or("source guidance target absent")?;
+    need(
+        expected.iter().all(|p| paths.contains(p)),
+        "source guidance proposal omitted target source",
+    )
+}
+
 /// Validate an unreviewed author's source-bound proposal without executing it.
 pub fn stage_proposal(
     workspace: &Path,
@@ -395,13 +494,114 @@ pub fn stage_proposal(
 /// Independently check the complete guidance-bearing operator proxy exchange.
 /// This proves recorded transmission/completion, not producer authenticity or benefit.
 pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String> {
+    consumption_for_turn(evidence, packet_bytes, "author-calibration")
+}
+
+/// Source construction keeps its original label and capture files. Never rename
+/// source evidence into the stage-author layout to obtain a passing receipt.
+pub fn source_recipe_consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String> {
+    let receipt = source_recipe_completion(evidence, packet_bytes)?;
+    need(
+        receipt["agentConsumptionVerified"] == true,
+        "source consumption requires guided treatment",
+    )?;
+    Ok(receipt)
+}
+
+/// Both treatments must complete the original source-author lifecycle and
+/// transmit the same explicitly selected task. Unguided is not consumption.
+pub fn source_recipe_completion(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String> {
+    let revision_label = "source-recipe-author-format-revision-1";
+    let revision_present = fs::read_dir(evidence)
+        .map_err(|e| e.to_string())?
+        .try_fold(false, |present, entry| {
+            let entry = entry.map_err(|e| e.to_string())?;
+            Ok::<_, String>(
+                present
+                    || entry
+                        .file_name()
+                        .to_string_lossy()
+                        .starts_with(revision_label),
+            )
+        })?;
+    // Any partial revision capture is terminal until independently completed;
+    // never borrow the earlier turn's passing lifecycle after a correction.
+    let label = if revision_present {
+        revision_label
+    } else {
+        "source-recipe-author"
+    };
+    let packet: Value = serde_json::from_slice(packet_bytes).map_err(|e| e.to_string())?;
+    let rebound = bind_source_recipe(
+        &evidence.join("source-guidance-knowledge"),
+        &read(evidence, "source-guidance-author-request.json")?,
+        &read(evidence, "source-guidance-selection.json")?,
+    )?;
+    need(
+        packet == rebound,
+        "source consumption retained guidance binding differs",
+    )?;
+    let final_message: Value = serde_json::from_slice(&read(
+        evidence,
+        &format!("{label}-final-assistant-message.json"),
+    )?)
+    .map_err(|e| e.to_string())?;
+    need(
+        final_message["stopReason"] == "stop",
+        "source construction generation did not complete normally",
+    )?;
+    let intent = serde_json::from_slice::<Value>(&read(
+        evidence,
+        &format!("{label}-guidance-consumption-intent.json"),
+    )?)
+    .map_err(|e| e.to_string())?;
+    need(
+        intent["participantBudgetSeconds"]
+            .as_u64()
+            .is_some_and(|n| n > 0)
+            && intent["transportRetryLimit"] == 0,
+        "source consumption complete budget and retry policy required",
+    )?;
+    need(
+        packet["sourceRecipeBinding"]["authorRequestSha256"]
+            .as_str()
+            .is_some_and(|s| hex(s, 64)),
+        "source consumption author binding absent",
+    )?;
+    let mut receipt = consumption_for_turn(evidence, packet_bytes, label)?;
+    receipt["schema"] = json!("agentlab.source_recipe_guidance_completion.v1");
+    receipt["authorCompletionVerified"] = json!(true);
+    receipt["completedTurnLabel"] = json!(label);
+    receipt["guidanceMode"] = intent["guidanceMode"].clone();
+    receipt["authorRequestSha256"] = packet["sourceRecipeBinding"]["authorRequestSha256"].clone();
+    Ok(receipt)
+}
+
+fn consumption_for_turn(
+    evidence: &Path,
+    packet_bytes: &[u8],
+    label: &str,
+) -> Result<Value, String> {
     let packet: Value = serde_json::from_slice(packet_bytes).map_err(|e| e.to_string())?;
     need(
         packet["schema"] == "agentlab.maintainer_guidance_packet.v1"
             && packet["automaticPromotion"] == false,
         "consumption packet invalid",
     )?;
-    let prompt_bytes = read(evidence, "guidance-prompt.txt")?;
+    let prefix = if label == "author-calibration" {
+        "guidance"
+    } else {
+        label
+    };
+    let prompt_bytes = read(evidence, &format!("{prefix}-prompt.txt"))?;
+    let intent_name = if label == "author-calibration" {
+        "guidance-consumption-intent.json".to_owned()
+    } else {
+        format!("{label}-guidance-consumption-intent.json")
+    };
+    let intent_bytes = read(evidence, &intent_name)?;
+    let intent: Value = serde_json::from_slice(&intent_bytes).map_err(|e| e.to_string())?;
+    let unguided = label != "author-calibration" && intent["guidanceMode"] == "unguided";
     let prompt = std::str::from_utf8(&prompt_bytes).map_err(|e| e.to_string())?;
     let last = prompt
         .lines()
@@ -411,19 +611,26 @@ pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String
     let included: Value =
         serde_json::from_str(last).map_err(|_| "consumption prompt packet absent")?;
     need(
-        included == packet,
+        included
+            == if unguided {
+                packet["sourceRecipeBinding"]["target"].clone()
+            } else {
+                packet.clone()
+            },
         "consumption prompt omitted or changed the selected packet",
     )?;
     need(
-        read(evidence, "author-calibration-prompt.txt")? == prompt_bytes,
+        read(evidence, &format!("{label}-prompt.txt"))? == prompt_bytes,
         "consumption actual turn prompt differs",
     )?;
-    let intent_bytes = read(evidence, "guidance-consumption-intent.json")?;
-    let intent: Value = serde_json::from_slice(&intent_bytes).map_err(|e| e.to_string())?;
     need(
         intent["schema"] == "agentlab.maintainer_guidance_prompt_intent.v1"
             && intent["promptSha256"] == digest(&prompt_bytes)
-            && intent["knowledgeAuthority"] == packet["knowledgeAuthority"],
+            && intent["knowledgeAuthority"] == packet["knowledgeAuthority"]
+            && (label == "author-calibration"
+                || (intent["authorRequestSha256"]
+                    == packet["sourceRecipeBinding"]["authorRequestSha256"]
+                    && (intent["guidanceMode"] == "guided" || unguided))),
         "consumption intent binding differs",
     )?;
     let expected_skills = packet["guidance"]
@@ -442,11 +649,23 @@ pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String
             json!({"id":skill["id"],"rowSha256":row["rowSha256"],"bodySha256":row["bodySha256"]}),
         );
     }
+    if unguided {
+        selected.clear();
+    }
     need(
         intent["selectedSkills"] == json!(selected),
         "consumption selection differs",
     )?;
-    let (completed, lifecycle_bytes) = recorded_exchanges(evidence, &prompt_bytes, &intent)?;
+    let excluded_bodies = if unguided {
+        expected_skills
+            .iter()
+            .map(|r| text(&r["skill"], "body").map(str::to_owned))
+            .collect::<Result<Vec<_>, _>>()?
+    } else {
+        Vec::new()
+    };
+    let (completed, lifecycle_bytes) =
+        recorded_exchanges_for_turn(evidence, &prompt_bytes, &intent, label, &excluded_bodies)?;
     Ok(
         json!({"schema":"agentlab.maintainer_guidance_consumption.v1",
         "packetSha256":digest(packet_bytes),"promptSha256":digest(&prompt_bytes),
@@ -455,7 +674,7 @@ pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String
         "participantBudgetSeconds":intent["participantBudgetSeconds"],
         "transportRetryLimit":intent["transportRetryLimit"],
         "implicitTransportRetryDisabledVerified":intent["transportRetryLimit"] == 0,
-        "completedGuidanceExchanges":completed,"agentConsumptionVerified":true,
+        "completedGuidanceExchanges":completed,"agentConsumptionVerified":!unguided,
         "producerAuthenticated":false,"learningBenefitVerified":false,"caseQualified":false,
         "authorityWritePerformed":false,"automaticPromotion":false}),
     )
@@ -534,15 +753,25 @@ fn recorded_exchanges(
     prompt_bytes: &[u8],
     intent: &Value,
 ) -> Result<(Vec<Value>, Vec<u8>), String> {
+    recorded_exchanges_for_turn(evidence, prompt_bytes, intent, "author-calibration", &[])
+}
+
+fn recorded_exchanges_for_turn(
+    evidence: &Path,
+    prompt_bytes: &[u8],
+    intent: &Value,
+    label: &str,
+    excluded_bodies: &[String],
+) -> Result<(Vec<Value>, Vec<u8>), String> {
     text(&intent["participantIdentity"], "model")?;
     text(&intent["participantIdentity"], "providerRoute")?;
     let prompt = std::str::from_utf8(prompt_bytes).map_err(|e| e.to_string())?;
     need(
         !prompt.trim().is_empty()
-            && read(evidence, "author-calibration-prompt.txt")? == prompt_bytes,
+            && read(evidence, &format!("{label}-prompt.txt"))? == prompt_bytes,
         "consumption actual turn prompt differs",
     )?;
-    let lifecycle_bytes = read(evidence, "author-calibration-lifecycle.json")?;
+    let lifecycle_bytes = read(evidence, &format!("{label}-lifecycle.json"))?;
     let lifecycle: Value = serde_json::from_slice(&lifecycle_bytes).map_err(|e| e.to_string())?;
     if let Some(budget) = intent.get("participantBudgetSeconds") {
         need(
@@ -554,7 +783,7 @@ fn recorded_exchanges(
     }
     if let Some(limit) = intent.get("transportRetryLimit") {
         let retry_absent = matches!(
-            fs::symlink_metadata(evidence.join("author-calibration-transport-retry.json")),
+            fs::symlink_metadata(evidence.join(format!("{label}-transport-retry.json"))),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound
         );
         need(
@@ -563,14 +792,14 @@ fn recorded_exchanges(
         )?;
     }
     need(
-        lifecycle["label"] == "author-calibration"
+        lifecycle["label"] == label
             && lifecycle["captureAuthority"] == "operator"
             && lifecycle["exitCode"] == 0
             && lifecycle["timedOut"] == false
             && lifecycle["finalAssistantMessagePresent"] == true,
         "consumption participant did not complete",
     )?;
-    let final_bytes = read(evidence, "author-calibration-final-assistant-message.json")?;
+    let final_bytes = read(evidence, &format!("{label}-final-assistant-message.json"))?;
     let final_message: Value = serde_json::from_slice(&final_bytes).map_err(|e| e.to_string())?;
     need(
         lifecycle["finalAssistantMessageSha256"] == digest(&final_bytes)
@@ -608,6 +837,29 @@ fn recorded_exchanges(
         }
         let wire_bytes = read(&gateway, &name)?;
         let wire: Value = serde_json::from_slice(&wire_bytes).map_err(|e| e.to_string())?;
+        if !excluded_bodies.is_empty() {
+            for message in wire["messages"]
+                .as_array()
+                .ok_or("unguided wire messages absent")?
+            {
+                let mut contents = Vec::new();
+                if let Some(text) = message["content"].as_str() {
+                    contents.push(text);
+                }
+                if let Some(parts) = message["content"].as_array() {
+                    contents.extend(parts.iter().filter_map(|p| p["text"].as_str()));
+                }
+                for body in excluded_bodies {
+                    let encoded = serde_json::to_string(body).map_err(|e| e.to_string())?;
+                    need(
+                        !contents.iter().any(|text| {
+                            text.contains(body.as_str()) || text.contains(encoded.as_str())
+                        }),
+                        "unguided wire carries selected guidance body",
+                    )?;
+                }
+            }
+        }
         let carries_prompt = wire["messages"].as_array().is_some_and(|messages| {
             messages.iter().any(|m| {
                 m["role"] == "user"

@@ -1,6 +1,9 @@
 use agentlab_code_analysis::{
     digest,
-    maintainer_guidance::{bind, consumption, stage_proposal},
+    maintainer_guidance::{
+        bind, bind_source_recipe, consumption, source_recipe_completion, source_recipe_consumption,
+        source_recipe_target, stage_proposal,
+    },
 };
 use serde_json::{json, Value};
 use std::{
@@ -16,6 +19,367 @@ struct Fixture {
     selection: Value,
 }
 static FIXTURE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+fn source_request(f: &Fixture, repo: &str) -> (Value, Value) {
+    let mut selection = f.selection.clone();
+    selection["sourceRecipeTarget"] = json!({"scopeSkillId":"scope-source","sourcePaths":["src/Thing.ets"],
+        "demand":"Calibrate one source-grounded mechanism with valid and wrong controls."});
+    let content = "export class Thing { value=0; }";
+    let request = json!({"schema":"agentlab.source_recipe_author_request.v1","automaticPromotion":false,"reviewed":false,
+        "knowledgeCutSha256":selection["knowledgeCutSha256"],"authorityRevision":selection["knowledgeRevision"],
+        "source":{"repositoryId":repo,"revision":"a".repeat(40)},
+        "scope":{"id":"scope-source","repositoryId":repo,"sourceRevision":"a".repeat(40)},
+        "sourceFiles":[{"path":"src/Thing.ets","content":content,"sha256":digest(content.as_bytes())}]});
+    (request, selection)
+}
+
+#[test]
+fn source_guidance_is_cut_and_target_bound_for_two_unrelated_repositories() {
+    for repo in ["portable-source-one", "independent-source-two"] {
+        let f = Fixture::new(repo);
+        let (request, selection) = source_request(&f, repo);
+        let checked = |r: &Value, s: &Value| {
+            bind_source_recipe(
+                &f.root,
+                &serde_json::to_vec(r).unwrap(),
+                &serde_json::to_vec(s).unwrap(),
+            )
+        };
+        let packet = checked(&request, &selection).unwrap();
+        assert_eq!(
+            packet["sourceRecipeBinding"]["target"],
+            selection["sourceRecipeTarget"]
+        );
+        assert_eq!(packet["agentConsumptionVerified"], false);
+        let proposal = json!({"scopeSkillId":"scope-source","sourcePaths":["src/Thing.ets"]});
+        assert!(source_recipe_target(&packet, &serde_json::to_vec(&proposal).unwrap()).is_ok());
+        let omitted = json!({"scopeSkillId":"scope-source","sourcePaths":["src/Other.ets"]});
+        assert!(source_recipe_target(&packet, &serde_json::to_vec(&omitted).unwrap()).is_err());
+        let mut moved = proposal.clone();
+        moved["scopeSkillId"] = json!("other-scope");
+        assert!(source_recipe_target(&packet, &serde_json::to_vec(&moved).unwrap()).is_err());
+        for (pointer, value) in [
+            ("/authorityRevision", json!("0".repeat(40))),
+            ("/knowledgeCutSha256", json!("0".repeat(64))),
+            ("/source/repositoryId", json!("borrowed-repository")),
+            ("/scope/id", json!("other-scope")),
+            ("/sourceFiles/0/content", Value::Null),
+            ("/sourceFiles/0/sha256", json!("0".repeat(64))),
+        ] {
+            let mut changed = request.clone();
+            *changed.pointer_mut(pointer).unwrap() = value;
+            assert!(checked(&changed, &selection).is_err());
+        }
+        for paths in [
+            json!([]),
+            json!(["../Thing.ets"]),
+            json!(["src/Unknown.ets"]),
+            json!(["src/Thing.ets", "src/Thing.ets"]),
+        ] {
+            let mut changed = selection.clone();
+            changed["sourceRecipeTarget"]["sourcePaths"] = paths;
+            assert!(checked(&request, &changed).is_err());
+        }
+        let mut changed = selection.clone();
+        changed["sourceRecipeTarget"]["demand"] = json!("");
+        assert!(checked(&request, &changed).is_err());
+    }
+}
+
+#[test]
+fn source_guidance_consumption_rebinds_inputs_and_preserves_original_capture_layout() {
+    let f = Fixture::new("source-wire-fixture");
+    let (request, selection) = source_request(&f, "source-wire-fixture");
+    let request_bytes = serde_json::to_vec(&request).unwrap();
+    let selection_bytes = serde_json::to_vec(&selection).unwrap();
+    let packet = bind_source_recipe(&f.root, &request_bytes, &selection_bytes).unwrap();
+    let packet_bytes = serde_json::to_vec(&packet).unwrap();
+    let evidence = f.root.join("source-evidence");
+    fs::create_dir(&evidence).unwrap();
+    let retained = evidence.join("source-guidance-knowledge");
+    fs::create_dir(&retained).unwrap();
+    for name in [
+        "maintainer-knowledge-cut.json",
+        "maintainer_skills.jsonl",
+        "program_facts.jsonl",
+        "maintainer_scope_skills.jsonl",
+        "maintainer_skill_refresh_rounds.jsonl",
+        "evaluation_cases.jsonl",
+    ] {
+        fs::copy(f.root.join(name), retained.join(name)).unwrap();
+    }
+    fs::write(
+        evidence.join("source-guidance-author-request.json"),
+        &request_bytes,
+    )
+    .unwrap();
+    fs::write(
+        evidence.join("source-guidance-selection.json"),
+        &selection_bytes,
+    )
+    .unwrap();
+    let prompt = format!("Source constructor instructions\n{packet}\n");
+    fs::write(evidence.join("source-recipe-author-prompt.txt"), &prompt).unwrap();
+    let row = &packet["guidance"][0];
+    let intent = json!({"schema":"agentlab.maintainer_guidance_prompt_intent.v1","guidanceMode":"guided",
+        "authorRequestSha256":digest(&request_bytes),"promptSha256":digest(prompt.as_bytes()),
+        "knowledgeAuthority":packet["knowledgeAuthority"],"participantBudgetSeconds":240,"transportRetryLimit":0,
+        "participantIdentity":{"model":"fixture-model","providerRoute":"fixture-route"},
+        "selectedSkills":[{"id":row["skill"]["id"],"rowSha256":row["rowSha256"],"bodySha256":row["bodySha256"]}]});
+    fs::write(
+        evidence.join("source-recipe-author-guidance-consumption-intent.json"),
+        serde_json::to_vec(&intent).unwrap(),
+    )
+    .unwrap();
+    let final_bytes = serde_json::to_vec(&json!({"role":"assistant","stopReason":"stop"})).unwrap();
+    fs::write(
+        evidence.join("source-recipe-author-final-assistant-message.json"),
+        &final_bytes,
+    )
+    .unwrap();
+    let lifecycle = json!({"label":"source-recipe-author","captureAuthority":"operator","exitCode":0,"timedOut":false,
+        "finalAssistantMessagePresent":true,"finalAssistantMessageSha256":digest(&final_bytes),
+        "participantBudgetSeconds":240,"participantBudgetScope":"native-process-watchdog","transportRetryLimit":0});
+    fs::write(
+        evidence.join("source-recipe-author-lifecycle.json"),
+        serde_json::to_vec(&lifecycle).unwrap(),
+    )
+    .unwrap();
+    let gateway = evidence.join("gateway");
+    fs::create_dir(&gateway).unwrap();
+    let wire = json!({"model":"fixture-model","providerId":"fixture-route","stream":true,
+        "messages":[{"role":"user","content":prompt}]});
+    fs::write(
+        gateway.join("0001.upstream-request.json"),
+        serde_json::to_vec(&wire).unwrap(),
+    )
+    .unwrap();
+    let response = b"data: {\"choices\":[{\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n";
+    fs::write(gateway.join("0001.response"), response).unwrap();
+    let status = json!({"exchangeId":"0001","status":200,"durationMs":1,"upstreamEof":true,"semanticComplete":true,
+        "outcome":"completed","streamError":null,"responseBytes":response.len()});
+    fs::write(
+        gateway.join("0001.status.json"),
+        serde_json::to_vec(&status).unwrap(),
+    )
+    .unwrap();
+    let receipt = source_recipe_consumption(&evidence, &packet_bytes).unwrap();
+    assert_eq!(receipt["agentConsumptionVerified"], true);
+    assert_eq!(receipt["learningBenefitVerified"], false);
+    assert!(!evidence.join("author-calibration-lifecycle.json").exists());
+    let incomplete_final =
+        serde_json::to_vec(&json!({"role":"assistant","stopReason":"length"})).unwrap();
+    let mut rehashed_lifecycle = lifecycle.clone();
+    rehashed_lifecycle["finalAssistantMessageSha256"] = json!(digest(&incomplete_final));
+    fs::write(
+        evidence.join("source-recipe-author-final-assistant-message.json"),
+        &incomplete_final,
+    )
+    .unwrap();
+    fs::write(
+        evidence.join("source-recipe-author-lifecycle.json"),
+        serde_json::to_vec(&rehashed_lifecycle).unwrap(),
+    )
+    .unwrap();
+    assert!(source_recipe_completion(&evidence, &packet_bytes)
+        .unwrap_err()
+        .contains("normally"));
+    fs::write(
+        evidence.join("source-recipe-author-final-assistant-message.json"),
+        &final_bytes,
+    )
+    .unwrap();
+    fs::write(
+        evidence.join("source-recipe-author-lifecycle.json"),
+        serde_json::to_vec(&lifecycle).unwrap(),
+    )
+    .unwrap();
+    let revision_label = "source-recipe-author-format-revision-1";
+    fs::write(
+        evidence.join(format!("{revision_label}-guidance-consumption-intent.json")),
+        serde_json::to_vec(&intent).unwrap(),
+    )
+    .unwrap();
+    assert!(
+        source_recipe_completion(&evidence, &packet_bytes).is_err(),
+        "partial revision cannot borrow the completed first turn"
+    );
+    fs::write(
+        evidence.join(format!("{revision_label}-prompt.txt")),
+        &prompt,
+    )
+    .unwrap();
+    fs::write(
+        evidence.join(format!("{revision_label}-final-assistant-message.json")),
+        &final_bytes,
+    )
+    .unwrap();
+    let mut revision_lifecycle = lifecycle.clone();
+    revision_lifecycle["label"] = json!(revision_label);
+    fs::write(
+        evidence.join(format!("{revision_label}-lifecycle.json")),
+        serde_json::to_vec(&revision_lifecycle).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        source_recipe_completion(&evidence, &packet_bytes).unwrap()["completedTurnLabel"],
+        revision_label
+    );
+    for suffix in [
+        "guidance-consumption-intent.json",
+        "prompt.txt",
+        "final-assistant-message.json",
+        "lifecycle.json",
+    ] {
+        fs::remove_file(evidence.join(format!("{revision_label}-{suffix}"))).unwrap();
+    }
+    let unguided_prompt = format!(
+        "Same source instructions\n{}",
+        packet["sourceRecipeBinding"]["target"]
+    );
+    let mut unguided_intent = intent.clone();
+    unguided_intent["guidanceMode"] = json!("unguided");
+    unguided_intent["promptSha256"] = json!(digest(unguided_prompt.as_bytes()));
+    unguided_intent["selectedSkills"] = json!([]);
+    fs::write(
+        evidence.join("source-recipe-author-prompt.txt"),
+        &unguided_prompt,
+    )
+    .unwrap();
+    fs::write(
+        evidence.join("source-recipe-author-guidance-consumption-intent.json"),
+        serde_json::to_vec(&unguided_intent).unwrap(),
+    )
+    .unwrap();
+    let mut unguided_wire = wire.clone();
+    unguided_wire["messages"][0]["content"] = json!(unguided_prompt);
+    fs::write(
+        gateway.join("0001.upstream-request.json"),
+        serde_json::to_vec(&unguided_wire).unwrap(),
+    )
+    .unwrap();
+    let baseline = source_recipe_completion(&evidence, &packet_bytes).unwrap();
+    assert_eq!(baseline["authorCompletionVerified"], true);
+    assert_eq!(baseline["agentConsumptionVerified"], false);
+    assert!(source_recipe_consumption(&evidence, &packet_bytes).is_err());
+    unguided_wire["messages"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"role":"user","content":packet.to_string()}));
+    fs::write(
+        gateway.join("0001.upstream-request.json"),
+        serde_json::to_vec(&unguided_wire).unwrap(),
+    )
+    .unwrap();
+    assert!(source_recipe_completion(&evidence, &packet_bytes).is_err());
+    fs::write(evidence.join("source-recipe-author-prompt.txt"), &prompt).unwrap();
+    fs::write(
+        evidence.join("source-recipe-author-guidance-consumption-intent.json"),
+        serde_json::to_vec(&intent).unwrap(),
+    )
+    .unwrap();
+    let mut changed = wire.clone();
+    changed["messages"][0]["content"] = json!("only a Skill hash");
+    fs::write(
+        gateway.join("0001.upstream-request.json"),
+        serde_json::to_vec(&changed).unwrap(),
+    )
+    .unwrap();
+    assert!(source_recipe_consumption(&evidence, &packet_bytes).is_err());
+    fs::write(
+        gateway.join("0001.upstream-request.json"),
+        serde_json::to_vec(&wire).unwrap(),
+    )
+    .unwrap();
+    fs::write(gateway.join("0001.response"), b"data: {}\n\n").unwrap();
+    assert!(source_recipe_consumption(&evidence, &packet_bytes).is_err());
+    fs::write(gateway.join("0001.response"), response).unwrap();
+    let mut changed = request.clone();
+    changed["scope"]["id"] = json!("borrowed-scope");
+    fs::write(
+        evidence.join("source-guidance-author-request.json"),
+        serde_json::to_vec(&changed).unwrap(),
+    )
+    .unwrap();
+    assert!(source_recipe_consumption(&evidence, &packet_bytes).is_err());
+    // All exchanges in this test are fixtures, not real model consumption.
+}
+
+#[test]
+fn source_constructor_cli_and_real_prompt_helper_keep_equal_task_and_private_free_treatments() {
+    let f = Fixture::new("source-prompt-producer");
+    let (request, selection) = source_request(&f, "source-prompt-producer");
+    fs::write(
+        f.root.join("request.json"),
+        serde_json::to_vec(&request).unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        f.root.join("selection.json"),
+        serde_json::to_vec(&selection).unwrap(),
+    )
+    .unwrap();
+    let output = f.root.join("source-packet.json");
+    let run = || {
+        Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--bind-source-recipe-guidance")
+            .arg("--knowledge")
+            .arg(&f.root)
+            .arg("--author-request")
+            .arg(f.root.join("request.json"))
+            .arg("--guidance-request")
+            .arg(f.root.join("selection.json"))
+            .arg("--output")
+            .arg(&output)
+            .output()
+            .unwrap()
+    };
+    assert!(run().status.success());
+    let original = fs::read(&output).unwrap();
+    assert!(!run().status.success());
+    assert_eq!(fs::read(&output).unwrap(), original);
+    let code = r#"
+import importlib.util,json,os,sys,hashlib
+from pathlib import Path
+spec=importlib.util.spec_from_file_location('source_author',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+root=Path(sys.argv[2]);packet=json.loads((root/'source-packet.json').read_bytes())
+guided=root/'guided';unguided=root/'unguided';guided.mkdir();unguided.mkdir()
+g=m.guidance_prompt('fixed complete source context',packet,'guided',guided,'source-recipe-author',None,240)
+u=m.guidance_prompt('fixed complete source context',packet,'unguided',unguided,'source-recipe-author',None,240)
+target=packet['sourceRecipeBinding']['target'];body=packet['guidance'][0]['skill']['body']
+assert json.dumps(target,ensure_ascii=False) in g and json.dumps(target,ensure_ascii=False) in u
+assert body in g and body not in u
+assert json.loads(g.splitlines()[-1])==packet
+for directory,prompt,mode in [(guided,g,'guided'),(unguided,u,'unguided')]:
+ intent=json.loads((directory/'source-recipe-author-guidance-consumption-intent.json').read_bytes())
+ assert intent['promptSha256']==hashlib.sha256(prompt.encode()).hexdigest()
+ assert intent['guidanceMode']==mode and intent['participantBudgetSeconds']==240 and intent['transportRetryLimit']==0
+ assert intent['agentConsumptionVerified'] is False and intent['learningBenefitVerified'] is False
+ assert bool(intent['selectedSkills'])==(mode=='guided')
+ assert intent['authorRequestSha256']==packet['sourceRecipeBinding']['authorRequestSha256']
+assert m.guidance_prompt('ordinary unmodified path',None,'guided',guided,'unused',None,240)=='ordinary unmodified path'
+try:m.guidance_prompt('must-not-overwrite',packet,'guided',guided,'source-recipe-author',None,240)
+except FileExistsError:pass
+else:raise AssertionError('existing intent overwritten')
+"#;
+    let result = Command::new("python3")
+        .arg("-c")
+        .arg(code)
+        .arg(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../scripts/run-source-recipe-author.py"),
+        )
+        .arg(&f.root)
+        .env("AGENTLAB_MODEL", "fixture-model")
+        .env("AGENTLAB_PROVIDER_ROUTE", "fixture-route")
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
 
 #[test]
 fn published_rating_guidance_rebinds_committed_rows_without_claiming_consumption() {
