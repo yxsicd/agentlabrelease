@@ -538,3 +538,38 @@ This is a context transport optimization, not proven latency reduction or
 successful generation. Retaining a validated design for an explicitly separate
 future code-generation attempt remains a useful next capability, not implemented
 by this change. Maturity remains **72%**, complete automatic business loops zero.
+
+## Omitted-effort cohort and precise check diagnostics
+
+Action37123378402 ended at the initial design response-body deadline (180029ms),
+with 34861 reasoning characters and zero content. It never reached the new
+source-context reuse path. Response SHA256 is
+`2955207f3c0e2c00a4720df73664db712df59a65b26aa06708e9c72f8d87715b`.
+Action37123774417 kept the same `2efaeea` source/model/budgets and explicitly
+omitted reasoning_effort while retaining thinking.type=disabled. Both actual
+requests confirm that policy, and both completed with semantic terminal frames:
+initial generation in 138566ms and correction in 45472ms. This one cohort does
+not prove causality or provider mode effectiveness.
+
+The Action failed its unchanged static design gate, not transport. Both drafts
+use check pointers such as `/s1/descriptorIsOn`, while actual scenario IDs include
+`s1-default-switch-valid-false`. Every check pointer uses an abbreviated missing
+root. After generic feedback `recipe design checks differ from scenario
+observations`, the Agent revised semantic expectations without fixing pointers.
+Original draft SHA256s are
+`fd359f809cda895312e07b7fd595e5c6a2766a961a21e648eff3f647cd5ce969`
+and `4fdc3fce57413d7265c385bdbea7aa94fb5ed1d28f580f9d71a974e12d20dc60`.
+Independent isolation passed; no code was generated, baseline diagnosed or repair
+budget exercised. This does not establish source-context reuse benefit.
+
+The native validator now separates malformed/duplicate check fields, unresolved
+JSON pointers and resolved value mismatches. It reports the exact `/checks/N`
+field, check ID, pointer and available scenario IDs; value diagnostics render at
+most 256 characters per value with disclosed truncation. It does not repair drafts,
+rename IDs, change expectations or relax any acceptance condition. Regression
+coverage distinguishes absent pointers from present null, accepts standard escaped
+JSON-pointer keys, rejects mismatches and bounds Unicode diagnostic values. These
+errors retain the existing repairable design-check prefix and original captures.
+The generic lesson is maintained in the methodology Skill, not hardcoded to a
+repository. Maturity remains **72%**, complete automatic business loops **zero**;
+fresh Agent correction and subsequent business acceptance remain required.
