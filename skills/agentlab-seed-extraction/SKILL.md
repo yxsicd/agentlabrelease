@@ -61,6 +61,16 @@ leak claims, single-change negative controls from confounded mutations, and an
 evolving implementation task from several unrelated smoke tests. Shape validity
 and isolated Agent completion do not establish these semantic properties.
 
+Before implementing an Oracle, reconcile the demands with the pinned module
+kind, supported SDK, registered tests, installable host and permitted edits.
+Framework selection does not establish any of these. If a demand needs a new
+host page, test registration or cross-scope dependency absent from the bound
+evidence, return a focused knowledge/construction gap with the owning scopes;
+do not invent installation commands or silently grant those paths for editing.
+After refreshing the supporting facts, create separate successor inputs and
+calibrate the actual host/test combination. Keep a passing proposal-shape check
+separate from this source review and from baseline/wrong-variant execution.
+
 For a rejected, unpublished operation-origin draft, prepare
 `--prepare-shadow-case-revision` with the committed knowledge, operation inputs,
 current shadow request, original parent request/proposal and source-review feedback.

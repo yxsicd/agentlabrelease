@@ -23,6 +23,17 @@ no candidate may enter semantic review without a passing candidate-stage receipt
 
 Every claim needs a source location or analysis record. Distinguish observed behavior from inferred intent. Use program facts to support the semantic model; do not manufacture dependency edges from prose. Preserve unresolved questions as gaps.
 
+Scope-local build/test counts do not describe the enclosing module or repository.
+Before declaring a missing harness, inspect the pinned owning module, its test
+registration and the installable host separately. Record existing entrypoints
+independently from behavioral coverage: a registered template assertion is not
+an Oracle for the selected responsibility. Library output, test output and host
+application output may have different build contracts. Bind SDK requirements,
+exports and host dependencies to their actual configuration Blobs; a sibling
+application is only a host candidate until its connection is verified. Refresh
+the relevant configuration/test-owner Skills rather than broadening a behavior
+scope's ownership or treating uninspected paths as absent.
+
 Build knowledge through repeated evidence rounds, not a single repository read.
 First freeze the structural scope catalog, then bind revision-matched program
 facts, assess universal evidence dimensions, and use the resulting gap queue to
