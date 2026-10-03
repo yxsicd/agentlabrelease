@@ -137,3 +137,43 @@ zero accepted complete automatic business loops.
 Correction validation passed 90 Rust tests across the same five suites, transport
 syntax, Skill validation, formatting and Release checksum/link checks. The native
 budget-mismatch regression still rejects drift; the old real capture still fails.
+
+## Fresh guided construction and native observation return (37156735569)
+
+PR238 merged as 47be11e8c28790b7c410dff215f9a7bc07823dc7. Fresh main Action
+37156735569 completed successfully at that exact method with the original b5
+selection, GLM-5.3-FLASH/default effort, zero transport retries and 420-second
+native process budgets. The pre-dispatch enrollment remains unchanged; this
+integration run was not enrolled as a guidance-benefit comparison.
+
+Original artifact 11285878640 is 2984313 bytes; downloaded ZIP SHA256 is
+a69217d6d86a2b099dc4bd0e8d58f4e9f4b92b30deec1e6708dfb498fb266067.
+Full bytes are retained outside Release at
+flywheel-source-budget-successor-ucrL3x/capture. Local native completion replay
+on those unchanged inputs exited 0 with agentConsumptionVerified=true and
+authorCompletionVerified=true, learningBenefitVerified=false. It independently
+rebound the retained knowledge/request/selection and original upstream bytes.
+
+The cloud diagnostic baseline passed on the first attempt without verifier repair.
+Its complete suite executed baseline, three reference controls, three wrong
+controls and one fresh reference recovery: all eight declarations matched.
+Local --export-source-suite-observation reconstructed the original staged suite
+and exited 0, producing evaluation-instance rows without lesson creation,
+qualification, authority writes or automatic promotion. This replay does not
+establish scenario consumption, source-semantic correctness or formal runtime
+qualification; those need independent review. No model/worker was redispatched.
+
+The full suite runner now invokes that existing native observation exporter after
+its independent suite readback. Complete disagreements are preserved before
+the existing failure exit; incomplete workers stop before export. Export errors
+retain complete controls and do not reopen the exclusive suite invocation.
+Rust transport regressions cover success, mismatch, export failure, infrastructure,
+prelaunch, rejected baseline, binding drift and unchanged-repeat refusal; the
+independent native diagnostic suite checks real reconstruction/export boundaries.
+All 50 Rust source-operation/diagnostic tests passed. The real cloud run predates
+this automatic export change; only its separate local export has been verified.
+
+Maturity remains 74%; complete accepted automatic five-stage business loops remain
+zero. Next: deliver the automatic observation handoff, bind the original format
+to business return/persistence, review actual scenario consumption, and freeze
+an independent common quality rubric before any guided/unguided benefit pair.

@@ -111,6 +111,11 @@ def main():
     subprocess.run([str(gate), '--validate-source-recipe-control-suite', '--stage', str(stage),
         '--suite', str(suite), '--output', str(suite/'readback.json')],
         check=True, timeout=60, stdout=subprocess.DEVNULL)
+    # Preserve complete diagnostic disagreements too; observation is not review,
+    # knowledge admission or permission to restart an existing suite.
+    subprocess.run([str(gate), '--export-source-suite-observation', '--stage', str(stage),
+        '--suite', str(suite), '--output', str(root/'observation-export')],
+        check=True, timeout=60, stdout=subprocess.DEVNULL)
     if not matched:
         raise ValueError('Frozen declaration mismatch; review without rewriting expectations')
 

@@ -3413,7 +3413,7 @@ from unittest.mock import patch
 spec=importlib.util.spec_from_file_location('suite',os.environ['SUITE_SCRIPT'])
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 with tempfile.TemporaryDirectory() as directory:
-  for mode in ['pass','mismatch','infra','prelaunch','baseline-rejected','stage-drift','request-drift','traversal']:
+  for mode in ['pass','mismatch','export-failed','infra','prelaunch','baseline-rejected','stage-drift','request-drift','traversal']:
     root=(Path(directory)/mode).resolve();root.mkdir();stage=root/'agent/proposal-stage';stage.mkdir(parents=True)
     (root/'gate').write_text('fixture');(root/'compiler').write_text('fixture')
     (root/'request.json').write_text('{}');(stage/'request.json').write_text('{}')
@@ -3445,6 +3445,14 @@ with tempfile.TemporaryDirectory() as directory:
       elif '--validate-source-recipe-control-suite' in command:
         assert command[command.index('--suite')+1]==str(root/'control-suite')
         output().write_text(json.dumps({'diagnosticOnly':True,'qualified':False}))
+      elif '--export-source-suite-observation' in command:
+        assert '--lesson-review' not in command
+        assert command[command.index('--stage')+1]==str(stage)
+        assert command[command.index('--suite')+1]==str(root/'control-suite')
+        assert output()==root/'observation-export'
+        assert '--validate-source-recipe-control-suite' in calls[-2]
+        if mode=='export-failed':raise subprocess.CalledProcessError(1,command)
+        output().mkdir();(output()/'export.json').write_text(json.dumps({'assetClass':'evaluation-instance'}))
       else:
         assert '--feedback-source-recipe-diagnostic' in command
         if output().name=='baseline-admission.json':output().write_text(json.dumps({'baselinePassed':mode!='baseline-rejected'}))
@@ -3454,16 +3462,18 @@ with tempfile.TemporaryDirectory() as directory:
     argv=['suite','--root',str(root),'--gate',str(root/'gate'),'--compiler',str(root/'compiler'),'--image-id','sha256:'+'a'*64]
     with patch.object(m.subprocess,'run',side_effect=run),patch.object(sys,'argv',argv):
       try:m.main()
-      except (ValueError,FileExistsError):assert mode!='pass'
+      except (ValueError,FileExistsError,subprocess.CalledProcessError):assert mode!='pass'
       else:assert mode=='pass'
-    if mode in ['pass','mismatch']:
+    if mode in ['pass','mismatch','export-failed']:
       assert selected==['base','valid-one','valid-two','wrong','valid-one']
       final=json.loads((root/'control-suite/result.json').read_bytes())
       assert final['qualified'] is False and final['semanticQualified'] is False
       assert final['attempts'][-1]['recovery'] is True
-      assert final['status']==('declarations-matched' if mode=='pass' else 'review-declaration-mismatch')
+      assert final['status']==('review-declaration-mismatch' if mode=='mismatch' else 'declarations-matched')
+      assert (root/'observation-export/export.json').exists()==(mode!='export-failed')
     else:
       assert not (root/'control-suite/result.json').exists()
+      assert not any('--export-source-suite-observation' in call for call in calls)
       assert len(selected)==(1 if mode in ['infra','prelaunch'] else 0)
     if (root/'control-suite').exists():
       before=len(calls)
