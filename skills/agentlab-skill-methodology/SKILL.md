@@ -120,3 +120,10 @@ evidence after a tool upgrade. Record the current validator separately and compa
 all reconstructed semantic results; do not rewrite historical rows to match current
 IDs or substitute the current method for a frozen historical one. Hash agreement
 does not authenticate the declared Git revision or original producer.
+
+For integration delivery, reproduce the workflow's actual preflight gates, not
+only its downstream tests. Build native planners before integration tests that
+invoke them; an existing local target directory can hide a clean-runner dependency
+failure. Preserve those real planner checks rather than skipping them or replacing
+them with success fixtures. Formatting and dependency-order repairs improve
+delivery reliability, not semantic coverage or completed flywheel-round counts.
