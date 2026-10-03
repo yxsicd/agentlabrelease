@@ -37,7 +37,7 @@ fn fixture() -> PathBuf {
     let controls =
         json!([{"id":"baseline","role":"baseline","edits":[],"expectedFailedCheckIds":[]}]);
     let scenarios = json!([{"id":"scenario","initialState":{},"inputs":{},"expectedObservations":{"value":7,"nullable":null}}]);
-    let request = json!({"schema":"agentlab.source_recipe_author_request.v1","reviewed":false,"automaticPromotion":false,"scope":{"id":"scope"},"source":{"revision":"1".repeat(40)},"sourceFiles":[source_file],"policy":{"methodDependencies":[{"path":"/missing/original/compiler.js","sha256":digest(b"module.exports={};")}]}});
+    let request = json!({"schema":"agentlab.source_recipe_author_request.v1","reviewed":false,"automaticPromotion":false,"scope":{"id":"scope","repositoryId":"generic-fixture","sourceRevision":"1".repeat(40)},"source":{"repositoryId":"generic-fixture","revision":"1".repeat(40)},"sourceFiles":[source_file],"policy":{"methodDependencies":[{"path":"/missing/original/compiler.js","sha256":digest(b"module.exports={};")}]}});
     let verifier = "process.stdout.write(JSON.stringify({scenario:{value:7,nullable:null}}));";
     let proposal = json!({"schema":"agentlab.source_recipe_author_proposal.v1","scopeSkillId":"scope","verifierSource":verifier,"sourcePaths":["unit.js"],"contract":{"checks":checks}});
     let design = json!({"schema":"agentlab.source_recipe_design.v2","scopeSkillId":"scope","checks":checks,"controls":controls,"scenarios":scenarios});
@@ -258,14 +258,21 @@ fn captured_inputs(inputs: &Path, capture: &Path, code: i32, observations: Value
 }
 
 fn suite_fixture() -> PathBuf {
+    suite_fixture_with_wrong_count(1)
+}
+
+fn suite_fixture_with_wrong_count(wrongs: usize) -> PathBuf {
     let base = fixture();
     let stage = base.join("stage");
-    let controls = json!([
+    let mut controls = json!([
         {"id":"baseline","role":"baseline","edits":[],"expectedFailedCheckIds":[]},
         {"id":"valid-a","role":"reference","edits":[{"path":"unit.js","before":"{}","after":"{a:1}"}],"expectedFailedCheckIds":[]},
         {"id":"valid-b","role":"reference","edits":[{"path":"unit.js","before":"{}","after":"{b:1}"}],"expectedFailedCheckIds":[]},
         {"id":"wrong","role":"wrong","edits":[{"path":"unit.js","before":"{}","after":"{wrong:1}"}],"expectedFailedCheckIds":["answer"]}
     ]);
+    if wrongs >= 2 {
+        controls.as_array_mut().unwrap().push(json!({"id":"wrong-b","role":"wrong","edits":[{"path":"unit.js","before":"{}","after":if wrongs==3 {"{wrong:1}"} else {"{wrong:2}"}}],"expectedFailedCheckIds":["answer"]}));
+    }
     let mut design: Value =
         serde_json::from_slice(&fs::read(stage.join("design.json")).unwrap()).unwrap();
     design["controls"] = controls.clone();
@@ -300,10 +307,12 @@ fn suite_fixture() -> PathBuf {
     let suite = base.join("suite");
     fs::create_dir(&suite).unwrap();
     let mut rows = Vec::new();
-    for (index, id) in ["baseline", "valid-a", "valid-b", "wrong", "valid-a"]
-        .iter()
-        .enumerate()
-    {
+    let mut ids = vec!["baseline", "valid-a", "valid-b", "wrong"];
+    if wrongs >= 2 {
+        ids.push("wrong-b");
+    }
+    ids.push("valid-a");
+    for (index, id) in ids.iter().enumerate() {
         let inputs = suite.join(format!("control-{index}"));
         agentlab_code_analysis::maintainer_source_diagnostic::prepare_control(
             &stage,
@@ -314,10 +323,11 @@ fn suite_fixture() -> PathBuf {
             id,
         )
         .unwrap();
-        let actual = json!({"scenario":{"value":if *id=="wrong" {8} else {7},"nullable":null}});
+        let actual =
+            json!({"scenario":{"value":if id.starts_with("wrong") {8} else {7},"nullable":null}});
         let capture = captured_inputs(&inputs, &inputs.join("contained-input-fixture"), 0, actual);
         let report = feedback(&inputs, &capture, &inputs.join("feedback.json")).unwrap();
-        rows.push(json!({"controlId":id,"role":if index==0 {"baseline"} else if *id=="wrong" {"wrong"} else {"reference"},"recovery":index==4,
+        rows.push(json!({"controlId":id,"role":if index==0 {"baseline"} else if id.starts_with("wrong") {"wrong"} else {"reference"},"recovery":index==ids.len()-1,
             "feedbackSha256":digest(&fs::read(inputs.join("feedback.json")).unwrap()),"classification":report["classification"],"declarationMatched":report["declarationMatched"]}));
     }
     file(
@@ -344,6 +354,280 @@ fn suite_readback_reconstructs_every_control_and_recovery_without_approval() {
     assert_eq!(result["acceptedReferenceRecoveryReconstructed"], true);
     assert_eq!(result["qualified"], false);
     assert_eq!(result["producerAuthenticated"], false);
+}
+
+fn suite_lesson_review(export: &Path) -> Value {
+    let request: Value =
+        serde_json::from_slice(&fs::read(export.join("source-stage/request.json")).unwrap())
+            .unwrap();
+    let design: Value =
+        serde_json::from_slice(&fs::read(export.join("source-stage/design.json")).unwrap())
+            .unwrap();
+    let mut review = json!({"schema":"agentlab.source_suite_lesson_review.v1","reviewed":true,"verdict":"accept",
+        "automaticPromotion":false,"unresolvedFindings":[],"id":"suite-lesson","scope":"fixture source seam",
+        "reviewerId":"fixture-review","phenomenon":"Frozen checks distinguish controls","cause":"Explicit source variants change behavior",
+        "change":"Reconstruct all observations before promotion","factId":"suite-fact","skillId":"suite-skill",
+        "body":"Review original source and all controls before admission.","skillStage":"calibration",
+        "scopeSha256":digest(&serde_json::to_vec(&request["scope"]).unwrap()),
+        "requestSha256":digest(&fs::read(export.join("source-stage/request.json")).unwrap()),
+        "designSha256":digest(&fs::read(export.join("source-stage/design.json")).unwrap()),
+        "proposalSha256":digest(&fs::read(export.join("source-stage/proposal.json")).unwrap()),
+        "suiteResultSha256":digest(&fs::read(export.join("source-suite/result.json")).unwrap()),
+        "inputInventorySha256":digest(&fs::read(export.join("source-suite-inputs.json")).unwrap())});
+    for (key, rows) in [
+        ("checkReviews", &design["checks"]),
+        ("scenarioReviews", &design["scenarios"]),
+        ("controlReviews", &design["controls"]),
+    ] {
+        review[key] = json!(rows.as_array().unwrap().iter().map(|r| json!({"id":r["id"],"accepted":true,
+            "rationale":"Synthetic review tests bindings, not semantic truth.","exercisedByScenarioIds":["scenario"],
+            "sourceEvidence":[{"path":"unit.js","quote":"module.exports"}]})).collect::<Vec<_>>());
+    }
+    review
+}
+
+#[test]
+fn source_suite_observation_and_reviewed_lesson_preserve_original_evidence() {
+    use agentlab_code_analysis::maintainer_source_suite_lesson as lesson;
+    let base = suite_fixture_with_wrong_count(2);
+    let observation = base.join("observation");
+    lesson::export(&base.join("stage"), &base.join("suite"), None, &observation).unwrap();
+    assert!(!observation.join("experiment_lessons.jsonl").exists());
+    assert_eq!(
+        fs::read(observation.join("source-stage/controls.cjs")).unwrap(),
+        fs::read(base.join("stage/controls.cjs")).unwrap()
+    );
+    let review = suite_lesson_review(&observation);
+    let review_bytes = serde_json::to_vec(&review).unwrap();
+    file(&base.join("review.json"), &review);
+    let exported = base.join("lesson");
+    let result = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+        .arg("--export-source-suite-lesson")
+        .arg("--stage")
+        .arg(base.join("stage"))
+        .arg("--suite")
+        .arg(base.join("suite"))
+        .arg("--lesson-review")
+        .arg(base.join("review.json"))
+        .arg("--output")
+        .arg(&exported)
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let tables = lesson::assets(&exported, Some(&review_bytes), None).unwrap();
+    assert_eq!(tables["calibration_controls"].len(), 6);
+    assert_eq!(tables["checks"].len(), 12);
+    assert_eq!(
+        tables["experiment_lessons"]["suite-lesson"]["promotionContract"]["qualification"]
+            ["learningBenefitVerified"],
+        false
+    );
+    assert_eq!(
+        tables["experiment_lessons"]["suite-lesson"]["promotionContract"]["qualification"]
+            ["caseQualified"],
+        false
+    );
+    assert_eq!(
+        lesson::assets(
+            &exported,
+            Some(&review_bytes),
+            Some(&lesson::current_consumer_digest())
+        )
+        .unwrap(),
+        tables
+    );
+    assert!(lesson::export(
+        &base.join("stage"),
+        &base.join("suite"),
+        Some(&review_bytes),
+        &exported
+    )
+    .is_err());
+    for change in [
+        "unresolved",
+        "omission",
+        "quote",
+        "exercise",
+        "binding",
+        "rejected",
+        "promotion",
+    ] {
+        let mut bad = review.clone();
+        match change {
+            "unresolved" => bad["unresolvedFindings"] = json!(["unexercised branch"]),
+            "omission" => {
+                bad["checkReviews"].as_array_mut().unwrap().pop();
+            }
+            "quote" => {
+                bad["controlReviews"][0]["sourceEvidence"][0]["quote"] = json!("invented source")
+            }
+            "exercise" => bad["controlReviews"][1]["exercisedByScenarioIds"] = json!([]),
+            "binding" => bad["proposalSha256"] = json!("f".repeat(64)),
+            "rejected" => bad["scenarioReviews"][0]["accepted"] = json!(false),
+            "promotion" => bad["automaticPromotion"] = json!(true),
+            _ => unreachable!(),
+        }
+        assert!(
+            lesson::assets(&exported, Some(&serde_json::to_vec(&bad).unwrap()), None).is_err(),
+            "{change}"
+        );
+    }
+    let capture = exported.join("source-suite/control-0/contained-input-fixture/worker-stdout.log");
+    fs::write(capture, b"{}").unwrap();
+    assert!(lesson::assets(&exported, Some(&review_bytes), None).is_err());
+    let one = suite_fixture();
+    let one_out = one.join("observation");
+    lesson::export(&one.join("stage"), &one.join("suite"), None, &one_out).unwrap();
+    assert!(lesson::assets(
+        &one_out,
+        Some(&serde_json::to_vec(&suite_lesson_review(&one_out)).unwrap()),
+        None
+    )
+    .is_err());
+    let duplicate = suite_fixture_with_wrong_count(3);
+    let duplicate_out = duplicate.join("observation");
+    lesson::export(
+        &duplicate.join("stage"),
+        &duplicate.join("suite"),
+        None,
+        &duplicate_out,
+    )
+    .unwrap();
+    assert!(lesson::assets(
+        &duplicate_out,
+        Some(&serde_json::to_vec(&suite_lesson_review(&duplicate_out)).unwrap()),
+        None
+    )
+    .unwrap_err()
+    .contains("duplicate source variant"));
+    #[cfg(unix)]
+    {
+        let alias = base.join("output-alias");
+        std::os::unix::fs::symlink(&base, &alias).unwrap();
+        assert!(lesson::export(
+            &base.join("stage"),
+            &base.join("suite"),
+            None,
+            &alias.join("must-not-exist")
+        )
+        .is_err());
+        assert!(!base.join("must-not-exist").exists());
+    }
+}
+
+#[test]
+fn source_suite_lesson_uses_existing_promotion_and_native_admission_without_authority_write() {
+    use agentlab_code_analysis::maintainer_source_suite_lesson as lesson;
+    let base = suite_fixture_with_wrong_count(2);
+    let observation = base.join("observation");
+    lesson::export(&base.join("stage"), &base.join("suite"), None, &observation).unwrap();
+    let review = suite_lesson_review(&observation);
+    let exported = base.join("lesson");
+    lesson::export(
+        &base.join("stage"),
+        &base.join("suite"),
+        Some(&serde_json::to_vec(&review).unwrap()),
+        &exported,
+    )
+    .unwrap();
+    // Synthetic committed metadata exercises reconstruction, not a remote write.
+    let mut export: Value =
+        serde_json::from_slice(&fs::read(exported.join("export.json")).unwrap()).unwrap();
+    export["repository"] = json!("fixture-operation");
+    export["revision"] = json!("e".repeat(40));
+    export["tablePrefix"] = json!("data/");
+    file(&exported.join("export.json"), &export);
+    let knowledge = base.join("knowledge");
+    fs::create_dir(&knowledge).unwrap();
+    for name in ["maintainer_skills", "program_facts", "evaluation_cases"] {
+        fs::write(knowledge.join(format!("{name}.jsonl")), b"").unwrap();
+    }
+    let promoted = base.join("promoted");
+    let output = Command::new(env!("CARGO_BIN_EXE_agentlab-experience"))
+        .env("GITHUB_SHA", "e".repeat(40))
+        .arg("promote")
+        .arg(&exported)
+        .arg(&knowledge)
+        .arg(&promoted)
+        .arg("suite-lesson")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(fs::read(promoted.join("evaluation_cases.jsonl"))
+        .unwrap()
+        .is_empty());
+    let baseline = base.join("baseline");
+    fs::create_dir(&baseline).unwrap();
+    let mut cut = json!({"schema":"agentlab.maintainer_knowledge_cut.v1","tableGitAuthority":{"repo":"fixture-knowledge","revision":"a".repeat(40)},"tables":{}});
+    let mut round = json!({"id":"initial","roundIndex":1,"ownershipPlane":"target-operations","automaticPromotion":false,
+        "coverage":{"processSkillCount":0},"tables":{},"assessment":{"path":"fixture-assessment.json","sha256":"d".repeat(64)}});
+    for (key, table, round_key) in [
+        (
+            "maintainerSkills",
+            "maintainer_skills",
+            "processSkillsSha256",
+        ),
+        ("programFacts", "program_facts", "programFactsSha256"),
+        (
+            "maintainerScopeSkills",
+            "maintainer_scope_skills",
+            "scopeSkillsSha256",
+        ),
+        ("evaluationCases", "evaluation_cases", ""),
+    ] {
+        let bytes = if table == "maintainer_scope_skills" {
+            fs::read(exported.join("candidate.json")).unwrap()
+        } else {
+            Vec::new()
+        };
+        fs::write(baseline.join(format!("{table}.jsonl")), &bytes).unwrap();
+        cut["tables"][key] = json!({"path":format!("{table}.jsonl"),"sha256":digest(&bytes)});
+        if !round_key.is_empty() {
+            round["tables"][round_key] = json!(digest(&bytes));
+        }
+    }
+    let history = serde_json::to_vec(&round).unwrap();
+    fs::write(
+        baseline.join("maintainer_skill_refresh_rounds.jsonl"),
+        &history,
+    )
+    .unwrap();
+    cut["tables"]["maintainerSkillRefreshRounds"] =
+        json!({"path":"maintainer_skill_refresh_rounds.jsonl","sha256":digest(&history)});
+    file(&baseline.join("maintainer-knowledge-cut.json"), &cut);
+    let prepare = || {
+        agentlab_code_analysis::maintainer_lesson_admission::prepare(
+            &baseline,
+            &promoted,
+            &exported,
+            "suite-lesson",
+            &"a".repeat(40),
+        )
+    };
+    let plan = prepare().unwrap();
+    assert_eq!(plan["authorityWritePerformed"], false);
+    assert_eq!(
+        plan["projectionRevalidation"]["currentSemanticReconstructionRequired"],
+        true
+    );
+    assert_eq!(
+        plan["tables"]["maintainer_skills"]["row"]["stage"],
+        "calibration"
+    );
+    assert_eq!(plan["tables"].as_object().unwrap().len(), 3);
+    let review_path = exported.join("lesson-review.json");
+    let mut bad = review;
+    bad["unresolvedFindings"] = json!(["unexercised reference"]);
+    file(&review_path, &bad);
+    assert!(prepare().is_err());
 }
 
 #[test]

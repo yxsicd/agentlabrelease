@@ -142,6 +142,19 @@ from committed readback, actual next-round consumption and measured benefit.
 Keep task extensions distinct from upstream defect claims, and controls-only
 calibration distinct from real participant failure/repair evidence.
 
+For complete original source-control suites, use the
+[source-suite experience adapter](../../docs/flywheel-source-suite-lessons-20261003.md).
+`--export-source-suite-observation` preserves raw operational evidence without
+inventing a lesson; `--export-source-suite-lesson` requires a byte-bound independent
+review covering every check, scenario and control, original-source quotes and
+declared exercise scenarios with no unresolved findings. Reconstruct the original
+suite format again at normal lesson admission rather than wrapping it as an older
+stage/behavior capture. Review declarations are maintained judgments, not automatic
+semantic truth or authenticated reviewer identity. A matching suite with known
+unexercised controls or swallowed dependency validation cannot be promoted by
+manufacturing accept records. Keep the existing operational persistence, committed
+readback, explicit promotion and fixed-baseline knowledge admission boundaries.
+
 Before admission, require nonempty passing validations belonging to the selected
 lesson, and reject target identities already present in the baseline. Existing
 guidance updates need a separate reviewed delta, never implicit replacement by

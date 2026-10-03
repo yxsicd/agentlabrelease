@@ -703,6 +703,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args.iter().any(|arg| {
+        arg == "--export-source-suite-lesson" || arg == "--export-source-suite-observation"
+    }) {
+        let observation = args
+            .iter()
+            .any(|a| a == "--export-source-suite-observation");
+        if observation
+            && args
+                .iter()
+                .any(|a| a == "--lesson-review" || a == "--export-source-suite-lesson")
+        {
+            return Err("source suite observation cannot include lesson review".into());
+        }
+        let review = if observation {
+            None
+        } else {
+            Some(fs::read(value(&args, "--lesson-review")?)?)
+        };
+        let manifest = agentlab_code_analysis::maintainer_source_suite_lesson::export(
+            &PathBuf::from(value(&args, "--stage")?),
+            &PathBuf::from(value(&args, "--suite")?),
+            review.as_deref(),
+            &output,
+        )?;
+        println!(
+            "{}",
+            serde_json::json!({"assetClass":manifest["assetClass"],"lessonCreated":!observation,
+            "authorityWritePerformed":false,"qualified":false,"automaticPromotion":false})
+        );
+        return Ok(());
+    }
     if args
         .iter()
         .any(|arg| arg == "--export-behavior-lesson" || arg == "--export-behavior-observation")
