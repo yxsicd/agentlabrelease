@@ -367,7 +367,7 @@ section=workflow.split('      - name: Bind one reviewed revision to original con
 body=section.split('        run: |\n',1)[1].split('      - name:',1)[0]
 script=textwrap.dedent(body).split("python3 - <<'PY'\n",1)[1].rsplit('\nPY',1)[0]
 with tempfile.TemporaryDirectory() as directory:
-    for mode,has_design in [('legacy-no-design',False),('legacy-design',True),('design-review',True)]:
+    for mode,has_design in [('legacy-no-design',False),('legacy-design',True),('design-review',True),('design-review-v2',True)]:
         root=Path(directory)/mode;(root/'recipe-author').mkdir(parents=True)
         commands=[]
         def run(command,**kwargs):
@@ -377,13 +377,13 @@ with tempfile.TemporaryDirectory() as directory:
                 if has_design:(parent/'agent/design.json').write_text('original-parent-design')
             return subprocess.CompletedProcess(command,0)
         info=json.dumps(dict(workflowName='Maintainer source recipe construction',event='workflow_dispatch',status='completed')).encode()
-        feedback=json.dumps({'schema':'agentlab.source_recipe_design_review.v1' if mode=='design-review' else 'fixture-proposal-review'})
+        feedback=json.dumps({'schema':'agentlab.source_recipe_design_review.v2' if mode=='design-review-v2' else 'agentlab.source_recipe_design_review.v1' if mode=='design-review' else 'fixture-proposal-review'})
         env=dict(RUNNER_TEMP=str(root),REVISION_PARENT_RUN='123',GITHUB_REPOSITORY='arbitrary/repo',REVISION_FEEDBACK=feedback)
         with patch.dict(os.environ,env),patch.object(subprocess,'check_output',return_value=info),patch.object(subprocess,'run',side_effect=run):
             try:exec(compile(script,'workflow-revision-step','exec'),{})
-            except SystemExit as e:assert mode=='design-review' and e.code==0
+            except SystemExit as e:assert mode.startswith('design-review') and e.code==0
         command=commands[-1]
-        if mode=='design-review':
+        if mode.startswith('design-review'):
             assert command[:2]==['python3','scripts/prepare-source-design-review.py']
             assert command[command.index('--parent')+1]==str(root/'recipe-parent')
             assert '--prepare-source-recipe-revision' not in command
@@ -428,29 +428,33 @@ class Participant:
         return {'content':'x'*65537 if self.oversized else json.dumps({'schema':'agentlab.source_recipe_design.v1' if scenario=='legacy' else 'agentlab.source_recipe_design.v2','iteration':len(self.labels)}),'message':{'stopReason':self.stop}}
 with tempfile.TemporaryDirectory() as directory:
     root=Path(directory)
-    for scenario in ['recover','exhaust','parent-recover','parent-exhaust','drift','partial','truncated','oversized','legacy']:
+    for scenario in ['recover','exhaust','parent-recover','parent-exhaust','review-recover','review-exhaust','drift','partial','truncated','oversized','legacy']:
         output=root/scenario;output.mkdir();evidence=output/'evidence';evidence.mkdir()
         participant=Participant(evidence,complete=scenario!='partial',stop='length' if scenario=='truncated' else 'stop',oversized=scenario=='oversized')
         commands=[]
         def gate(command,**kwargs):
             commands.append(command)
-            if scenario=='parent-recover' and len(commands)>1 or scenario=='recover' and len(commands)==2:
+            if scenario in ('parent-recover','review-recover') and len(commands)>1 or scenario=='recover' and len(commands)==2:
                 Path(command[command.index('--output')+1]).write_text('{"semanticQualified":false}')
                 return subprocess.CompletedProcess(command,0,b'',b'')
-            error='recipe design checks differ from reviewed parent contract at check value; retain exact id/pointer/expected' if scenario.startswith('parent-') else 'recipe design request no longer reproduces' if scenario=='drift' else 'recipe design edit in control ref at arbitrary/source must match exactly once; observed 0'
+            error='recipe design scenario differs from exact design review at scenario state; require scenarioChanges before/after/findingId' if scenario.startswith('review-') else 'recipe design checks differ from reviewed parent contract at check value; retain exact id/pointer/expected' if scenario.startswith('parent-') else 'recipe design request no longer reproduces' if scenario=='drift' else 'recipe design edit in control ref at arbitrary/source must match exactly once; observed 0'
             return subprocess.CompletedProcess(command,1,b'',('Error: '+json.dumps(error)).encode())
         with patch.object(module.subprocess,'run',side_effect=gate):
             try:
-                selected,content=module.construct_design(participant,output,evidence,output,root/'request.json',Path('/fixture/gate'),'original bounded prompt','none',1,revision_request=root/'revision.json' if scenario.startswith('parent-') else None)
+                selected,content=module.construct_design(participant,output,evidence,output,root/'request.json',Path('/fixture/gate'),'original bounded prompt','none',1,revision_request=root/'revision.json' if scenario.startswith('parent-') else None,design_review=(root/'parent.json',root/'review.json') if scenario.startswith('review-') else None)
             except ValueError:
-                assert scenario not in ('recover','parent-recover')
+                assert scenario not in ('recover','parent-recover','review-recover')
             else:
-                assert scenario in ('recover','parent-recover')
+                assert scenario in ('recover','parent-recover','review-recover')
                 assert selected.read_text()==content and json.loads(content)['iteration']==2
-        expected=2 if scenario in ('recover','exhaust','parent-recover','parent-exhaust','legacy') else 1
+        expected=2 if scenario in ('recover','exhaust','parent-recover','parent-exhaust','review-recover','review-exhaust','legacy') else 1
         assert len(participant.labels)==expected
-        assert len(commands)==(0 if scenario in ('partial','truncated','oversized','legacy') else 3 if scenario=='parent-recover' else expected)
-        assert not (output/'design.json').exists() or scenario in ('recover','parent-recover')
+        assert len(commands)==(0 if scenario in ('partial','truncated','oversized','legacy') else 3 if scenario in ('parent-recover','review-recover') else expected)
+        assert not (output/'design.json').exists() or scenario in ('recover','parent-recover','review-recover')
+        if scenario.startswith('review-'):
+            assert '--validate-source-design-review-output' in commands[0]
+            assert (evidence/'design-0-review-stderr.log').exists()
+            assert not (evidence/'design-0-design-stdout.log').exists()
         if scenario.startswith('parent-'):
             assert '--validate-source-recipe-revision-output' in commands[0]
             assert (evidence/'design-0-parent-stderr.log').exists()
@@ -598,7 +602,7 @@ with tempfile.TemporaryDirectory() as d:
         if index==15:
             assert seen['deadlines']==[180,240]
             assert seen['turn']['wall_time_limit_seconds']==300
-        assert stage.call_count == (4 if index in (11,12,13) else 2 if index in (5,6,9,10,15,16) else 1)
+        assert stage.call_count == (4 if index in (11,12,13) else 3 if index==9 else 2 if index in (5,6,10,15,16) else 1)
         if index==16:
             assert 'createRuntime.fromCompilerInvocation(process.argv)' in seen['turn']['prompt']
             assert 'compilerOrNull' not in seen['turn']['prompt']
@@ -620,6 +624,8 @@ with tempfile.TemporaryDirectory() as d:
             assert '--validate-source-recipe-design' in stage.call_args[0][0]
             if index==9:
                 assert '--validate-source-design-review' in stage.call_args_list[0][0][0]
+                assert '--validate-source-design-review-output' in stage.call_args_list[1][0][0]
+                assert '--parent-design' in stage.call_args_list[1][0][0]
                 assert 'grounded-design-review' in seen['turn']['prompt']
                 assert json.loads((root/str(index)/'parent-design.json').read_bytes())==json.loads(parent_design.read_bytes())
             continue
@@ -1723,6 +1729,188 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     .unwrap();
     assert_eq!(admission["semanticQualified"], false);
     assert_eq!(admission["revisionRequested"], true);
+    // The legacy prose lane is not exact contract protection. New v2 uses the
+    // same before/after/finding admission as proposal revisions.
+    let mut exact = review.clone();
+    exact["schema"] = json!("agentlab.source_recipe_design_review.v2");
+    exact["checkChanges"] = json!([]);
+    exact["scenarioChanges"] = json!([]);
+    let exact_bytes = serde_json::to_vec(&exact).unwrap();
+    let mut check_drift = design.clone();
+    check_drift["checks"][0]["expected"] = json!(2);
+    assert!(author::check_design_review_output(
+        &request_bytes,
+        &design_bytes,
+        &exact_bytes,
+        &serde_json::to_vec(&check_drift).unwrap()
+    )
+    .unwrap_err()
+    .contains("at check value"));
+    let mut exact_check = exact.clone();
+    exact_check["checkChanges"] = json!([{"id":"value","before":design["checks"][0],
+        "after":check_drift["checks"][0],"findingId":"source-shape"}]);
+    author::check_design_review_output(
+        &request_bytes,
+        &design_bytes,
+        &serde_json::to_vec(&exact_check).unwrap(),
+        &serde_json::to_vec(&check_drift).unwrap(),
+    )
+    .unwrap();
+    let mut added = design.clone();
+    let mut second = design["scenarios"][0].clone();
+    second["id"] = json!("second");
+    added["scenarios"]
+        .as_array_mut()
+        .unwrap()
+        .push(second.clone());
+    let mut append_review = exact.clone();
+    append_review["scenarioChanges"] = json!([{"id":"second","before":null,
+        "after":second,"findingId":"source-shape"}]);
+    let append_bytes = serde_json::to_vec(&append_review).unwrap();
+    author::check_design_review_output(
+        &request_bytes,
+        &design_bytes,
+        &append_bytes,
+        &serde_json::to_vec(&added).unwrap(),
+    )
+    .unwrap();
+    added["scenarios"].as_array_mut().unwrap().reverse();
+    assert!(author::check_design_review_output(
+        &request_bytes,
+        &design_bytes,
+        &append_bytes,
+        &serde_json::to_vec(&added).unwrap()
+    )
+    .unwrap_err()
+    .contains("sequence"));
+    assert_eq!(
+        author::check_design_review_output(
+            &request_bytes,
+            &design_bytes,
+            &exact_bytes,
+            &design_bytes
+        )
+        .unwrap()["exactContractProtected"],
+        true
+    );
+    for field in ["initialState", "inputs", "expectedObservations"] {
+        let mut drift = design.clone();
+        drift["scenarios"][0][field]["unauthorized"] = json!(true);
+        let bytes = serde_json::to_vec(&drift).unwrap();
+        assert!(author::check_design_review_output(
+            &request_bytes,
+            &design_bytes,
+            &exact_bytes,
+            &bytes
+        )
+        .unwrap_err()
+        .contains("at scenario state"));
+        assert_eq!(
+            author::check_design_review_output(
+                &request_bytes,
+                &design_bytes,
+                &serde_json::to_vec(&review).unwrap(),
+                &bytes
+            )
+            .unwrap()["exactContractProtected"],
+            false
+        );
+    }
+    let mut successor = design.clone();
+    successor["scenarios"][0]["inputs"]["actions"] = json!([{"operation":"read"}]);
+    exact["scenarioChanges"] = json!([{"id":"state", "before":design["scenarios"][0],
+        "after":successor["scenarios"][0],"findingId":"source-shape"}]);
+    let authorized = serde_json::to_vec(&exact).unwrap();
+    let successor_bytes = serde_json::to_vec(&successor).unwrap();
+    author::design_review(&request_bytes, &design_bytes, &authorized).unwrap();
+    author::check_design_review_output(
+        &request_bytes,
+        &design_bytes,
+        &authorized,
+        &successor_bytes,
+    )
+    .unwrap();
+    for field in ["before", "findingId"] {
+        let mut invalid = exact.clone();
+        invalid["scenarioChanges"][0][field] = json!("borrowed");
+        assert!(author::design_review(
+            &request_bytes,
+            &design_bytes,
+            &serde_json::to_vec(&invalid).unwrap()
+        )
+        .is_err());
+    }
+    let mut revised_proposal = proposal.clone();
+    revised_proposal["contract"]["checks"] = successor["checks"].clone();
+    let revised_proposal_bytes = serde_json::to_vec(&revised_proposal).unwrap();
+    let exact_stage = dir.join("exact-review-stage");
+    let staged = author::stage_with_design_review(
+        &request_bytes,
+        &revised_proposal_bytes,
+        &successor_bytes,
+        &design_bytes,
+        &authorized,
+        None,
+        &exact_stage,
+    )
+    .unwrap();
+    author::check_staged_design_review(&exact_stage, &staged, &request_bytes, &successor_bytes)
+        .unwrap();
+    author::approve(
+        &exact_stage,
+        &digest(&revised_proposal_bytes),
+        true,
+        &dir.join("exact-review-approved.json"),
+    )
+    .unwrap();
+    let mut drift = successor.clone();
+    drift["scenarios"][0]["initialState"]["value"] = json!(99);
+    let drift_bytes = serde_json::to_vec(&drift).unwrap();
+    let rejected = dir.join("exact-review-rejected");
+    assert!(author::stage_with_design_review(
+        &request_bytes,
+        &revised_proposal_bytes,
+        &drift_bytes,
+        &design_bytes,
+        &authorized,
+        None,
+        &rejected
+    )
+    .is_err());
+    assert!(!rejected.exists());
+    // Tampering with retained originals cannot be hidden by successful staging.
+    fs::write(
+        exact_stage.join("design-review-feedback.json"),
+        &exact_bytes,
+    )
+    .unwrap();
+    assert!(author::check_staged_design_review(
+        &exact_stage,
+        &staged,
+        &request_bytes,
+        &successor_bytes
+    )
+    .is_err());
+    assert!(author::approve(
+        &exact_stage,
+        &digest(&revised_proposal_bytes),
+        true,
+        &dir.join("tampered-review-approved.json")
+    )
+    .is_err());
+    // Portable comparison does not reopen unavailable old runner paths.
+    let mut portable_request = request.clone();
+    portable_request["sourceWorktree"] = json!("/unavailable/original-source");
+    portable_request["knowledgeDirectory"] = json!("/unavailable/original-knowledge");
+    let portable_request_bytes = serde_json::to_vec(&portable_request).unwrap();
+    exact["parentRequestSha256"] = json!(digest(&portable_request_bytes));
+    author::check_design_review_output(
+        &portable_request_bytes,
+        &design_bytes,
+        &serde_json::to_vec(&exact).unwrap(),
+        &successor_bytes,
+    )
+    .unwrap();
     for field in [
         "parentRequestSha256",
         "parentDesignSha256",

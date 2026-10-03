@@ -472,6 +472,7 @@ fn reviewed_checks(proposal: &Value, review: &Value) -> Result<Value, String> {
         Some(
             "agentlab.source_recipe_review_feedback.v2"
                 | "agentlab.source_recipe_review_feedback.v3"
+                | "agentlab.source_recipe_design_review.v2"
         )
     ) {
         let changes = review["checkChanges"]
@@ -479,6 +480,7 @@ fn reviewed_checks(proposal: &Value, review: &Value) -> Result<Value, String> {
             .filter(|a| {
                 a.len() <= 64
                     && (review["schema"] == "agentlab.source_recipe_review_feedback.v3"
+                        || review["schema"] == "agentlab.source_recipe_design_review.v2"
                         || !a.is_empty())
             })
             .ok_or("recipe revision explicit check changes budget")?;
@@ -710,10 +712,32 @@ pub fn design_review(
         "design review request no longer reproduces",
     )?;
     design(request_bytes, design_bytes)?;
-    let review: Value = serde_json::from_slice(review_bytes).map_err(|e| e.to_string())?;
+    design_review_contract(request_bytes, design_bytes, review_bytes)
+}
+
+// Portable byte-bound review validation: no historical runner paths are opened.
+fn design_review_contract(
+    request_bytes: &[u8],
+    design_bytes: &[u8],
+    review_bytes: &[u8],
+) -> Result<Value, String> {
     need(
-        review.as_object().is_some_and(|o| o.len() == 8)
-            && review["schema"] == "agentlab.source_recipe_design_review.v1"
+        request_bytes.len() <= 512 * 1024
+            && design_bytes.len() <= 64 * 1024
+            && review_bytes.len() <= 16 * 1024,
+        "design review input budget",
+    )?;
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    let parent: Value = serde_json::from_slice(design_bytes).map_err(|e| e.to_string())?;
+    let review: Value = serde_json::from_slice(review_bytes).map_err(|e| e.to_string())?;
+    let exact = review["schema"] == "agentlab.source_recipe_design_review.v2";
+    need(
+        review
+            .as_object()
+            .is_some_and(|o| o.len() == if exact { 10 } else { 8 })
+            && (exact || review["schema"] == "agentlab.source_recipe_design_review.v1")
+            && request["schema"] == "agentlab.source_recipe_author_request.v1"
+            && parent["scopeSkillId"] == request["scope"]["id"]
             && review["parentRequestSha256"] == digest(request_bytes)
             && review["parentDesignSha256"] == digest(design_bytes)
             && review["reviewed"] == true
@@ -751,10 +775,73 @@ pub fn design_review(
             "design review finding requires loaded owned source",
         )?;
     }
+    if exact {
+        reviewed_checks(&json!({"contract":{"checks":parent["checks"]}}), &review)?;
+        reviewed_scenarios(&parent, &review)?;
+    }
     Ok(
-        json!({"schema":"agentlab.source_recipe_design_review_admission.v1",
+        json!({"schema":if exact {"agentlab.source_recipe_design_review_admission.v2"} else {"agentlab.source_recipe_design_review_admission.v1"},
         "authorRequestSha256":digest(request_bytes),"parentDesignSha256":digest(design_bytes),
         "reviewSha256":digest(review_bytes),"revisionRequested":true,"semanticQualified":false,
+        "executionPerformed":false,"authorityWritePerformed":false,"automaticPromotion":false}),
+    )
+}
+
+/// Exact successor protection, shared by authoring, approval and portable readback.
+/// It proves declared changes only, not semantic truth or actual verifier consumption.
+pub fn check_design_review_output(
+    request: &[u8],
+    parent: &[u8],
+    review: &[u8],
+    successor: &[u8],
+) -> Result<Value, String> {
+    let admission = design_review_contract(request, parent, review)?;
+    need(
+        successor.len() <= 64 * 1024,
+        "design review successor budget",
+    )?;
+    let p: Value = serde_json::from_slice(parent).map_err(|e| e.to_string())?;
+    let r: Value = serde_json::from_slice(review).map_err(|e| e.to_string())?;
+    let s: Value = serde_json::from_slice(successor).map_err(|e| e.to_string())?;
+    let exact = r["schema"] == "agentlab.source_recipe_design_review.v2";
+    if exact {
+        need(
+            s["schema"] == p["schema"] && s["scopeSkillId"] == p["scopeSkillId"],
+            "recipe design schema/scope differs from reviewed parent",
+        )?;
+        let expected = check_map(&reviewed_checks(
+            &json!({"contract":{"checks":p["checks"]}}),
+            &r,
+        )?)?;
+        let actual = check_map(&s["checks"])?;
+        for id in expected
+            .keys()
+            .chain(actual.keys())
+            .collect::<BTreeSet<_>>()
+        {
+            need(expected.get(id) == actual.get(id), &format!("recipe design checks differ from exact design review at check {id}; require checkChanges before/after/findingId"))?;
+        }
+        let scenarios = reviewed_scenarios(&p, &r)?;
+        let expected = scenario_map(&scenarios)?;
+        let actual = scenario_map(&s["scenarios"])?;
+        for id in expected
+            .keys()
+            .chain(actual.keys())
+            .collect::<BTreeSet<_>>()
+        {
+            need(expected.get(id) == actual.get(id), &format!("recipe design scenario differs from exact design review at scenario {id}; require scenarioChanges before/after/findingId"))?;
+        }
+        need(
+            s["scenarios"] == scenarios,
+            "recipe design scenario sequence differs from exact design review",
+        )?;
+    }
+    Ok(
+        json!({"schema":"agentlab.source_recipe_design_review_output.v1",
+        "authorRequestSha256":admission["authorRequestSha256"],
+        "parentDesignSha256":admission["parentDesignSha256"],"reviewSha256":admission["reviewSha256"],
+        "successorDesignSha256":digest(successor),"exactContractProtected":exact,
+        "semanticQualified":false,"reviewerIdentityAuthenticated":false,
         "executionPerformed":false,"authorityWritePerformed":false,"automaticPromotion":false}),
     )
 }
@@ -1133,6 +1220,33 @@ pub fn stage_with_design(
         None,
         None,
         None,
+        None,
+    )
+}
+
+pub fn stage_with_design_review(
+    request: &[u8],
+    proposal: &[u8],
+    design: &[u8],
+    parent: &[u8],
+    review: &[u8],
+    intent: Option<&[u8]>,
+    output: &Path,
+) -> Result<Value, String> {
+    design_review(request, parent, review)?;
+    let validation = check_design_proposal(request, proposal, design)?;
+    if let Some(intent) = intent {
+        crate::maintainer_source_repair::check_loop_intent(request, intent)?;
+    }
+    stage_inner(
+        request,
+        proposal,
+        output,
+        Some((design, &validation)),
+        None,
+        None,
+        intent,
+        Some((parent, review)),
     )
 }
 
@@ -1142,6 +1256,7 @@ pub fn stage(request_bytes: &[u8], proposal_bytes: &[u8], output: &Path) -> Resu
         request_bytes,
         proposal_bytes,
         output,
+        None,
         None,
         None,
         None,
@@ -1165,6 +1280,7 @@ pub fn stage_with_revision(
         output,
         design_bytes.zip(validation.as_ref()),
         Some(packet_bytes),
+        None,
         None,
         None,
     )
@@ -1198,6 +1314,7 @@ pub fn stage_with_diagnostic_repair(
         None,
         Some(packet_bytes),
         Some(loop_intent),
+        None,
     )
 }
 
@@ -1218,6 +1335,7 @@ pub fn stage_with_loop_intent(
         None,
         None,
         Some(intent),
+        None,
     )
 }
 
@@ -1260,7 +1378,18 @@ fn stage_inner(
     revision: Option<&[u8]>,
     diagnostic_repair: Option<&[u8]>,
     loop_intent: Option<&[u8]>,
+    design_review: Option<(&[u8], &[u8])>,
 ) -> Result<Value, String> {
+    let review_validation = design_review
+        .map(|(parent, review)| {
+            check_design_review_output(
+                request_bytes,
+                parent,
+                review,
+                design.ok_or("design review requires successor design")?.0,
+            )
+        })
+        .transpose()?;
     let revision_validation = revision
         .map(|packet| {
             need(
@@ -1502,6 +1631,15 @@ fn stage_inner(
         write(&output.join("diagnostic-loop-intent.json"), intent)?;
         receipt["diagnosticLoopIntentSha256"] = json!(digest(intent));
     }
+    if let Some((parent, review)) = design_review {
+        let validation = pretty(review_validation.as_ref().unwrap())?;
+        write(&output.join("parent-design.json"), parent)?;
+        write(&output.join("design-review-feedback.json"), review)?;
+        write(&output.join("design-review-output.json"), &validation)?;
+        receipt["reviewParentDesignSha256"] = json!(digest(parent));
+        receipt["designReviewSha256"] = json!(digest(review));
+        receipt["designReviewOutputSha256"] = json!(digest(&validation));
+    }
     write(&output.join("stage-receipt.json"), &pretty(&receipt)?)?;
     Ok(receipt)
 }
@@ -1586,6 +1724,7 @@ pub fn approve(
             )?;
         }
     }
+    check_staged_design_review(stage, &receipt, &request_bytes, &[])?;
     if receipt.get("diagnosticRepairPacketSha256").is_some()
         || stage.join("diagnostic-repair.json").exists()
     {
@@ -1623,5 +1762,44 @@ pub fn approve(
     Ok(
         json!({"schema":"agentlab.source_recipe_author_review.v1","proposalSha256":proposal_sha,"recipeSha256":digest(&pretty(&recipe)?),
         "reviewed":true,"reviewerIdentityAuthenticated":false,"executionPerformed":false,"authorityWritePerformed":false,"automaticPromotion":false}),
+    )
+}
+
+/// Reconsume retained review originals without dereferencing source/knowledge paths.
+pub fn check_staged_design_review(
+    stage: &Path,
+    receipt: &Value,
+    request: &[u8],
+    design: &[u8],
+) -> Result<(), String> {
+    let names = [
+        "parent-design.json",
+        "design-review-feedback.json",
+        "design-review-output.json",
+    ];
+    if receipt.get("designReviewSha256").is_none()
+        && receipt.get("reviewParentDesignSha256").is_none()
+        && receipt.get("designReviewOutputSha256").is_none()
+        && !names.iter().any(|name| stage.join(name).exists())
+    {
+        return Ok(());
+    }
+    let parent = read(&stage.join(names[0]), 64 * 1024)?;
+    let review = read(&stage.join(names[1]), 16 * 1024)?;
+    let stored = read(&stage.join(names[2]), 64 * 1024)?;
+    let retained;
+    let design = if design.is_empty() {
+        retained = read(&stage.join("design.json"), 64 * 1024)?;
+        retained.as_slice()
+    } else {
+        design
+    };
+    let validation = check_design_review_output(request, &parent, &review, design)?;
+    need(
+        receipt["reviewParentDesignSha256"] == digest(&parent)
+            && receipt["designReviewSha256"] == digest(&review)
+            && receipt["designReviewOutputSha256"] == digest(&stored)
+            && stored == pretty(&validation)?,
+        "recipe design review retained bytes differ",
     )
 }

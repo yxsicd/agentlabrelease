@@ -196,6 +196,7 @@ fn check_depth(request_bytes: &[u8], packet_bytes: &[u8], depth: usize) -> Resul
             && stage["proposalSha256"] == digest(proposal_bytes)
             && stage["designSha256"] == digest(design_bytes)
             && stage.get("revisionPacketSha256").is_none()
+            && stage.get("designReviewSha256").is_none()
             && request["schema"] == "agentlab.source_recipe_author_request.v1"
             && request["reviewed"] == false
             && request["automaticPromotion"] == false

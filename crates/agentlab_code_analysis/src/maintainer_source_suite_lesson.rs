@@ -56,6 +56,18 @@ fn inputs(stage: &Path, suite: &Path) -> Result<BTreeMap<String, Vec<u8>>, Strin
         "source-suite/result.json".into(),
         diagnostic::read(&suite.join("result.json"), 128 * 1024)?,
     );
+    for name in [
+        "parent-design.json",
+        "design-review-feedback.json",
+        "design-review-output.json",
+    ] {
+        if stage.join(name).exists() {
+            files.insert(
+                format!("source-stage/{name}"),
+                diagnostic::read(&stage.join(name), 64 * 1024)?,
+            );
+        }
+    }
     for i in 0..report["controls"].as_array().unwrap().len() {
         let directory = suite.join(format!("control-{i}"));
         for name in [
