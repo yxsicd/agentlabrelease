@@ -170,5 +170,11 @@ When review corrects mutation failure attribution, preserve the original baselin
 demands unless independent review explicitly rejects that oracle. A wrong-control
 exception may skip later updates; that does not mean the normal caught-exception
 path skips them. Compare parent and successor checks before execution. Prompt
-guidance is not an enforced parent-contract gate or semantic convergence proof.
+guidance alone is not an enforced parent-contract gate or semantic convergence proof.
+For proposal-review revisions, use the native parent-check admission in the
+linked checkpoint: v1 protects all parent checks; v2 permits only explicitly
+reviewed exact before/after changes tied to source-grounded findings. Revalidate
+the retained parent packet and admission on final staging and operator approval.
+This protects check identity/values, not scenario input equivalence, reviewer
+authentication or the correctness of a deliberately reviewed Oracle change.
 See the [design feedback checkpoint](../../docs/flywheel-design-feedback-20261003.md).

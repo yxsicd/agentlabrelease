@@ -336,34 +336,39 @@ class Participant:
         return {'content':'x'*65537 if self.oversized else json.dumps({'schema':'agentlab.source_recipe_design.v1' if scenario=='legacy' else 'agentlab.source_recipe_design.v2','iteration':len(self.labels)}),'message':{'stopReason':self.stop}}
 with tempfile.TemporaryDirectory() as directory:
     root=Path(directory)
-    for scenario in ['recover','exhaust','drift','partial','truncated','oversized','legacy']:
+    for scenario in ['recover','exhaust','parent-recover','parent-exhaust','drift','partial','truncated','oversized','legacy']:
         output=root/scenario;output.mkdir();evidence=output/'evidence';evidence.mkdir()
         participant=Participant(evidence,complete=scenario!='partial',stop='length' if scenario=='truncated' else 'stop',oversized=scenario=='oversized')
         commands=[]
         def gate(command,**kwargs):
             commands.append(command)
-            if scenario=='recover' and len(commands)==2:
+            if scenario=='parent-recover' and len(commands)>1 or scenario=='recover' and len(commands)==2:
                 Path(command[command.index('--output')+1]).write_text('{"semanticQualified":false}')
                 return subprocess.CompletedProcess(command,0,b'',b'')
-            error='recipe design request no longer reproduces' if scenario=='drift' else 'recipe design edit in control ref at arbitrary/source must match exactly once; observed 0'
+            error='recipe design checks differ from reviewed parent contract at check value; retain exact id/pointer/expected' if scenario.startswith('parent-') else 'recipe design request no longer reproduces' if scenario=='drift' else 'recipe design edit in control ref at arbitrary/source must match exactly once; observed 0'
             return subprocess.CompletedProcess(command,1,b'',('Error: '+json.dumps(error)).encode())
         with patch.object(module.subprocess,'run',side_effect=gate):
             try:
-                selected,content=module.construct_design(participant,output,evidence,output,root/'request.json',Path('/fixture/gate'),'original bounded prompt','none',1)
+                selected,content=module.construct_design(participant,output,evidence,output,root/'request.json',Path('/fixture/gate'),'original bounded prompt','none',1,revision_request=root/'revision.json' if scenario.startswith('parent-') else None)
             except ValueError:
-                assert scenario!='recover'
+                assert scenario not in ('recover','parent-recover')
             else:
-                assert scenario=='recover'
+                assert scenario in ('recover','parent-recover')
                 assert selected.read_text()==content and json.loads(content)['iteration']==2
-        expected=2 if scenario in ('recover','exhaust','legacy') else 1
+        expected=2 if scenario in ('recover','exhaust','parent-recover','parent-exhaust','legacy') else 1
         assert len(participant.labels)==expected
-        assert len(commands)==(0 if scenario in ('partial','truncated','oversized','legacy') else expected)
-        assert not (output/'design.json').exists() or scenario=='recover'
+        assert len(commands)==(0 if scenario in ('partial','truncated','oversized','legacy') else 3 if scenario=='parent-recover' else expected)
+        assert not (output/'design.json').exists() or scenario in ('recover','parent-recover')
+        if scenario.startswith('parent-'):
+            assert '--validate-source-recipe-revision-output' in commands[0]
+            assert (evidence/'design-0-parent-stderr.log').exists()
+            assert not (evidence/'design-0-design-stdout.log').exists()
+            if scenario=='parent-recover':assert '--validate-source-recipe-design' in commands[-1]
         if scenario not in ('partial','truncated','oversized'):
             report=json.loads((output/'design-attempts.json').read_bytes())
             assert len(report['attempts'])==expected and report['attempts'][0]['accepted'] is False
             assert (output/'design-attempt-0.json').exists()
-            if scenario=='recover':assert report['attempts'][1]['accepted'] is True
+            if scenario in ('recover','parent-recover'):assert report['attempts'][1]['accepted'] is True
         assert 'source-recipe-author' not in participant.labels
 "#;
     let result = Command::new("python3")
@@ -465,7 +470,7 @@ with tempfile.TemporaryDirectory() as d:
         assert seen['turn']['reasoning_effort'] == effort
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
-        assert stage.call_count == (3 if index==11 else 2 if index in (5,6,9,10) else 1)
+        assert stage.call_count == (4 if index==11 else 2 if index in (5,6,9,10) else 1)
         if index in (8,9):
             assert seen['labels']==['source-recipe-design']
             receipt=json.loads((root/str(index)/'design-capture.json').read_bytes())
@@ -494,6 +499,8 @@ with tempfile.TemporaryDirectory() as d:
             assert receipt['designSha256']==hashlib.sha256(parent_design.read_bytes()).hexdigest()
             if index==11:
                 assert '--check-source-recipe-revision' in stage.call_args_list[1][0][0]
+                assert '--validate-source-recipe-revision-output' in stage.call_args_list[2][0][0]
+                assert '--revision-request' in stage.call_args[0][0]
                 assert 'grounded-feedback' in seen['turn']['prompt']
                 assert (root/str(index)/'revision-request.json').read_bytes()==revision_path.read_bytes()
         if index==5:
@@ -1696,6 +1703,216 @@ const runtime=require(process.argv[1])(process.argv[2],'baseline',null);
     let admitted = author::check_revision(&request_bytes, &revision_bytes).unwrap();
     assert_eq!(admitted["revisionPacketSha256"], digest(&revision_bytes));
     assert_eq!(admitted["executionPerformed"], false);
+    let output_admission =
+        author::check_revision_output(&request_bytes, &revision_bytes, &proposal_bytes, false)
+            .unwrap();
+    assert_eq!(output_admission["semanticQualified"], false);
+    let revision_stage = dir.join("parent-protected-stage");
+    let revision_receipt = author::stage_with_revision(
+        &request_bytes,
+        &proposal_bytes,
+        None,
+        &revision_bytes,
+        &revision_stage,
+    )
+    .unwrap();
+    assert_eq!(
+        revision_receipt["revisionPacketSha256"],
+        digest(&revision_bytes)
+    );
+    author::approve(
+        &revision_stage,
+        &digest(&proposal_bytes),
+        true,
+        &dir.join("parent-protected-approved.json"),
+    )
+    .unwrap();
+    fs::write(revision_stage.join("revision-request.json"), b"{}").unwrap();
+    let rejected_approval = dir.join("parent-protected-tampered-approval.json");
+    assert!(author::approve(
+        &revision_stage,
+        &digest(&proposal_bytes),
+        true,
+        &rejected_approval
+    )
+    .is_err());
+    assert!(!rejected_approval.exists());
+    for field in ["id", "pointer", "expected"] {
+        let mut drifted = proposal.clone();
+        drifted["contract"]["checks"][0][field] = json!("changed");
+        let rejected_stage = dir.join(format!("parent-drift-{field}-stage"));
+        assert!(author::stage_with_revision(
+            &request_bytes,
+            &serde_json::to_vec(&drifted).unwrap(),
+            None,
+            &revision_bytes,
+            &rejected_stage,
+        )
+        .is_err());
+        assert!(!rejected_stage.exists());
+        assert!(author::check_revision_output(
+            &request_bytes,
+            &revision_bytes,
+            &serde_json::to_vec(&drifted).unwrap(),
+            false
+        )
+        .is_err());
+    }
+    let mut draft = design.clone();
+    draft["checks"] = proposal["contract"]["checks"].clone();
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &revision_bytes,
+        &serde_json::to_vec(&draft).unwrap(),
+        true
+    )
+    .is_ok());
+    draft["checks"][0]["expected"] = json!(0);
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &revision_bytes,
+        &serde_json::to_vec(&draft).unwrap(),
+        true
+    )
+    .is_err());
+    let mut oracle_review = feedback.clone();
+    oracle_review["schema"] = json!("agentlab.source_recipe_review_feedback.v2");
+    let replacement = json!({"id":"value","pointer":"/value","expected":2});
+    oracle_review["checkChanges"] = json!([{"id":"value", "before":proposal["contract"]["checks"][0],
+        "after":replacement,"findingId":"distinct-references"}]);
+    let oracle_packet = author::revision(
+        &request_bytes,
+        &request_bytes,
+        &proposal_bytes,
+        &serde_json::to_vec(&oracle_review).unwrap(),
+    )
+    .unwrap();
+    let oracle_packet_bytes = serde_json::to_vec(&oracle_packet).unwrap();
+    let mut successor = proposal.clone();
+    successor["contract"]["checks"][0] = replacement;
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &oracle_packet_bytes,
+        &serde_json::to_vec(&successor).unwrap(),
+        false
+    )
+    .is_ok());
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &oracle_packet_bytes,
+        &proposal_bytes,
+        false
+    )
+    .is_err());
+    let mut additive_review = oracle_review.clone();
+    let additional = json!({"id":"extra","pointer":"/extra","expected":null});
+    additive_review["checkChanges"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":"extra",
+        "before":null,"after":additional,"findingId":"distinct-references"}));
+    let additive = author::revision(
+        &request_bytes,
+        &request_bytes,
+        &proposal_bytes,
+        &serde_json::to_vec(&additive_review).unwrap(),
+    )
+    .unwrap();
+    let mut additive_output = successor.clone();
+    additive_output["contract"]["checks"]
+        .as_array_mut()
+        .unwrap()
+        .push(additional);
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &serde_json::to_vec(&additive).unwrap(),
+        &serde_json::to_vec(&additive_output).unwrap(),
+        false
+    )
+    .is_ok());
+    let mut removal_parent = proposal.clone();
+    removal_parent["contract"]["checks"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":"obsolete","pointer":"/obsolete","expected":null}));
+    let removal_parent_bytes = serde_json::to_vec(&removal_parent).unwrap();
+    let mut removal_review = feedback.clone();
+    removal_review["schema"] = json!("agentlab.source_recipe_review_feedback.v2");
+    removal_review["parentProposalSha256"] = json!(digest(&removal_parent_bytes));
+    removal_review["checkChanges"] = json!([{"id":"obsolete",
+        "before":removal_parent["contract"]["checks"][1],"after":null,
+        "findingId":"distinct-references"}]);
+    let removal_packet = author::revision(
+        &request_bytes,
+        &request_bytes,
+        &removal_parent_bytes,
+        &serde_json::to_vec(&removal_review).unwrap(),
+    )
+    .unwrap();
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &serde_json::to_vec(&removal_packet).unwrap(),
+        &proposal_bytes,
+        false,
+    )
+    .is_ok());
+    let duplicate_change = additive_review["checkChanges"][0].clone();
+    additive_review["checkChanges"]
+        .as_array_mut()
+        .unwrap()
+        .push(duplicate_change);
+    assert!(author::revision(
+        &request_bytes,
+        &request_bytes,
+        &proposal_bytes,
+        &serde_json::to_vec(&additive_review).unwrap()
+    )
+    .is_err());
+    let mut removed_all = oracle_review.clone();
+    removed_all["checkChanges"][0]["after"] = Value::Null;
+    assert!(author::revision(
+        &request_bytes,
+        &request_bytes,
+        &proposal_bytes,
+        &serde_json::to_vec(&removed_all).unwrap()
+    )
+    .is_err());
+    for field in ["before", "findingId", "id"] {
+        let mut bad = oracle_review.clone();
+        bad["checkChanges"][0][field] = json!("borrowed");
+        assert!(author::revision(
+            &request_bytes,
+            &request_bytes,
+            &proposal_bytes,
+            &serde_json::to_vec(&bad).unwrap()
+        )
+        .is_err());
+        let gate_request = dir.join("parent-gate-request.json");
+        let gate_packet = dir.join("parent-gate-packet.json");
+        let gate_design = dir.join("parent-gate-design.json");
+        let gate_output = dir.join("parent-gate-rejected.json");
+        fs::write(&gate_request, &request_bytes).unwrap();
+        fs::write(&gate_packet, &revision_bytes).unwrap();
+        fs::write(&gate_design, serde_json::to_vec(&draft).unwrap()).unwrap();
+        let verdict = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .args([
+                "--validate-source-recipe-revision-output",
+                "--author-request",
+            ])
+            .arg(&gate_request)
+            .arg("--revision-request")
+            .arg(&gate_packet)
+            .arg("--design")
+            .arg(&gate_design)
+            .arg("--output")
+            .arg(&gate_output)
+            .output()
+            .unwrap();
+        assert!(!verdict.status.success());
+        assert!(String::from_utf8_lossy(&verdict.stderr)
+            .contains("reviewed parent contract at check value"));
+        assert!(!gate_output.exists());
+    }
     for field in [
         "parentRequestSha256",
         "parentProposalSha256",

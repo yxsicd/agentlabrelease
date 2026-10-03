@@ -106,3 +106,37 @@ qualify this design. No rejected bytes were repaired and the review-chain budget
 was not reset. Producer/Skill guidance now explicitly separates these paths;
 an enforced parent-check gate and explicit reviewed-oracle revision protocol
 remain implementation gaps, not capabilities supplied by that prose.
+
+## Native parent-check admission (successor implementation)
+
+Proposal-review revisions now protect the complete parent check set. Legacy v1
+feedback preserves every exact id/pointer/expected object (order is immaterial).
+The author invokes `--validate-source-recipe-revision-output --author-request
+REQUEST --revision-request PACKET --design DESIGN --output RECEIPT` before the
+ordinary static design gate on every bounded attempt. A mismatch is repairable
+within the existing budget, not silently normalized or authorized by prose.
+Frozen-design continuations receive the same gate before participant creation.
+
+The optional v2 feedback has the original eight v1 fields plus `checkChanges`.
+Each of 1..64 entries has exactly id, before, after and findingId. Before must
+equal the original parent check (null for addition); after is the same-ID exact
+check or null for removal. The finding must belong to the digest-bound reviewed
+source findings. Duplicate/no-op/borrowed changes, malformed checks and an empty
+final oracle reject. These are explicit operator assertions, not authenticated
+reviewers or proof that weakening a check is legitimate.
+
+Final proposal staging passes `--revision-request PACKET` to the native CLI.
+It rechecks both proposal and optional design before creating output, retains
+the original packet and exact contract admission, and binds both digests in the
+stage receipt. Operator approval reconstructs them again; missing, changed or
+nonreproducible parent evidence refuses approval. Non-revision constructors and
+historical stages remain supported. Design-review-only feedback is a distinct
+lane; this gate does not silently infer a proposal parent there.
+
+Regression coverage includes unauthorized id/pointer/value changes, both output
+kinds, a real CLI rejection without a receipt, staging/approval and tampered
+parent evidence, and explicit reviewed replacements/additions plus invalid
+finding/before/ID/duplicate/empty-oracle changes. Input scenarios and source
+semantics still require independent review: equal checks cannot prove equal
+scenario inputs or a useful Oracle. No new model run, control execution,
+knowledge admission or full loop follows from these native gates.

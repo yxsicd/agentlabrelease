@@ -350,6 +350,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", serde_json::to_string(&receipt)?);
         return Ok(());
     }
+    if args
+        .iter()
+        .any(|a| a == "--validate-source-recipe-revision-output")
+    {
+        let is_design = args.iter().any(|a| a == "--design");
+        let receipt =
+            agentlab_code_analysis::maintainer_source_recipe_author::check_revision_output(
+                &fs::read(value(&args, "--author-request")?)?,
+                &fs::read(value(&args, "--revision-request")?)?,
+                &fs::read(value(
+                    &args,
+                    if is_design { "--design" } else { "--proposal" },
+                )?)?,
+                is_design,
+            )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&receipt)?)?;
+        println!("{}", serde_json::to_string(&receipt)?);
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--validate-source-recipe-design") {
         let receipt = agentlab_code_analysis::maintainer_source_recipe_author::design(
             &fs::read(value(&args, "--author-request")?)?,
@@ -426,7 +449,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.iter().any(|a| a == "--stage-source-recipe-proposal") {
         let request = fs::read(value(&args, "--author-request")?)?;
         let proposal = fs::read(value(&args, "--proposal")?)?;
-        let receipt = if let Some(path) = optional(&args, "--design") {
+        let receipt = if let Some(path) = optional(&args, "--revision-request") {
+            let design = optional(&args, "--design").map(fs::read).transpose()?;
+            agentlab_code_analysis::maintainer_source_recipe_author::stage_with_revision(
+                &request,
+                &proposal,
+                design.as_deref(),
+                &fs::read(path)?,
+                &output,
+            )?
+        } else if let Some(path) = optional(&args, "--design") {
             agentlab_code_analysis::maintainer_source_recipe_author::stage_with_design(
                 &request,
                 &proposal,
