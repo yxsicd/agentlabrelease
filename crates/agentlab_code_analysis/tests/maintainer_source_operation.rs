@@ -914,6 +914,83 @@ finally:
 }
 
 #[test]
+fn participant_arrival_timings_distinguish_keepalive_reasoning_and_content() {
+    let code = r#"
+import http.server, importlib.util, json, os, tempfile, threading, time, urllib.request
+from pathlib import Path
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('participant',os.environ['PARTICIPANT_SCRIPT'])
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+packets=[]
+class Handler(http.server.BaseHTTPRequestHandler):
+    def log_message(self,*args):pass
+    def do_POST(self):
+        self.rfile.read(int(self.headers['Content-Length']))
+        self.send_response(200);self.send_header('Content-Type','text/event-stream');self.end_headers()
+        for packet in packets:
+            self.wfile.write(packet);self.wfile.flush();time.sleep(0.03)
+def event(value):return ('data: '+json.dumps(value)+'\n\n').encode()
+comment=b': keep-alive\n\n'
+reason=lambda key:event({'choices':[{'delta':{key:'reason'}}]})
+content=event({'choices':[{'delta':{'content':'text'}}]})
+stop=event({'choices':[{'delta':{},'finish_reason':'stop'}]})
+cases=[('openai-completions',[comment,reason('reasoning'),content,stop],True,True,True),
+       ('openai-completions',[comment,reason('reasoning_content')],True,False,False),
+       ('openai-completions',[comment,event({'choices':[{'delta':{'role':'assistant','content':''}}]})],False,False,False),
+       ('openai-completions',[comment,b'data: broken-json\n\n'],False,False,False),
+       ('openai-completions',[],False,False,False),
+       ('openai-responses',[comment,event({'type':'response.reasoning_summary_text.delta','delta':'reason'}),
+          event({'type':'response.output_text.delta','delta':'text'}),
+          event({'type':'response.completed','response':{'status':'completed'}})],True,True,True)]
+server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler)
+thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+try:
+    with tempfile.TemporaryDirectory() as directory:
+        root=Path(directory)
+        for index,(api,packets,has_reason,has_text,complete) in enumerate(cases):
+            evidence=root/str(index);evidence.mkdir()
+            with patch.dict(os.environ,{'AGENTLAB_LM_GATEWAY_KEY':'synthetic-only-key'}):
+                p=module.Participant(evidence,root/f'state-{index}','/bin/true',
+                    f'http://127.0.0.1:{server.server_port}','arbitrary',api=api)
+            try:
+                req=urllib.request.Request(f'http://127.0.0.1:{p.server.server_port}'+p.api_path,
+                    data=json.dumps({'stream':True}).encode())
+                with urllib.request.urlopen(req,timeout=5) as response:raw=response.read()
+            finally:p.close()
+            receipt=json.loads((evidence/'gateway/0001.status.json').read_bytes())
+            t=receipt['upstreamTimingsMs']
+            assert isinstance(t['responseHeaders'],int) and t['responseHeaders']>=0
+            assert (t['firstBodyBytes'] is not None)==bool(packets)
+            assert (t['firstReasoningDelta'] is not None)==has_reason
+            assert (t['firstContentDelta'] is not None)==has_text
+            assert (t['firstSemanticTerminal'] is not None)==complete
+            assert receipt['semanticComplete']==complete and receipt['upstreamEof']
+            assert raw==b''.join(packets)==(evidence/'gateway/0001.response').read_bytes()
+            assert receipt['responseBytes']==len(raw)
+            observed=[t[k] for k in ('responseHeaders','firstBodyBytes','firstProtocolEvent',
+                'firstReasoningDelta','firstContentDelta','firstSemanticTerminal') if t[k] is not None]
+            assert observed==sorted(observed) and observed[-1]<=receipt['durationMs']
+            if has_reason:assert t['firstProtocolEvent']>t['firstBodyBytes']
+            if has_text:assert t['firstContentDelta']>t['firstReasoningDelta']
+            if index in (3,4):assert t['firstProtocolEvent'] is None
+finally:server.shutdown();server.server_close();thread.join()
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "PARTICIPANT_SCRIPT",
+            root().join("examples/real-code-agent/participant.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn native_responses_preserves_wire_isolation_and_rejects_incomplete_or_rate_limited_streams() {
     let code = r#"
 import http.server, importlib.util, json, os, tempfile, threading, urllib.request, urllib.error
