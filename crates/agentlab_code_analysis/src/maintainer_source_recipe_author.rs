@@ -931,8 +931,16 @@ pub fn reviewed_design_target(
         feedback["schema"] == "agentlab.source_recipe_design_review.v3",
         "reviewed target requires exact checks, scenarios and controls",
     )?;
-    target["checks"] =
-        reviewed_checks(&json!({"contract":{"checks":target["checks"]}}), &feedback)?;
+    let reviewed = reviewed_checks(&json!({"contract":{"checks":target["checks"]}}), &feedback)?;
+    let mut remaining = check_map(&reviewed)?;
+    let mut ordered = Vec::new();
+    for check in target["checks"].as_array().ok_or("parent check inventory")? {
+        if let Some(replacement) = remaining.remove(text(check, "id")?) {
+            ordered.push(replacement);
+        }
+    }
+    ordered.extend(remaining.into_values());
+    target["checks"] = Value::Array(ordered);
     target["scenarios"] = reviewed_scenarios(&target, &feedback)?;
     target["controls"] = reviewed_controls(&target, &feedback)?;
     let bytes = serde_json::to_vec(&target).map_err(|error| error.to_string())?;
