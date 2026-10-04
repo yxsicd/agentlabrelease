@@ -157,6 +157,15 @@ deliberately has no inherited repair-loop intent. Preserve that lane's enrollmen
 and budget checks instead of synthesizing an old intent to satisfy a legacy
 consumer. See the [original-context checkpoint](../../docs/flywheel-original-context-20261004.md).
 
+When Docker stores disagree on image IDs, distinguish registry index, platform
+manifest and configuration digests before diagnosing content drift. Pin the
+actual local execution identity and retain the manifest-to-config mapping; a
+shared tag or version alone is insufficient. Run complete declared controls and
+a fresh valid-reference recovery after a repaired baseline. Agreement across
+those runs is behavioral calibration evidence, not independent semantic review
+or permission to commit knowledge. Preserve the original frozen checks and failed
+ancestor so the observed improvement remains attributable to the candidate.
+
 When a clean-runner gate exceeds its budget, inspect the individual test and a
 completed comparison run before calling it a hang. Repeated exact-byte executable
 hashing can dominate debug builds, especially when one platform has a small loader
