@@ -2920,6 +2920,72 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     exact["checkChanges"] = json!([]);
     exact["scenarioChanges"] = json!([]);
     let exact_bytes = serde_json::to_vec(&exact).unwrap();
+    // v3 binds exact control repairs without changing the original Oracle.
+    let mut control_parent = design.clone();
+    control_parent["checks"].as_array_mut().unwrap().push(
+        json!({"id":"also-value","pointer":"/state/value","expected":1}),
+    );
+    let control_parent_bytes = serde_json::to_vec(&control_parent).unwrap();
+    let mut control_successor = control_parent.clone();
+    control_successor["controls"][3]["expectedFailedCheckIds"] = json!(["value","also-value"]);
+    let mut control_review = exact.clone();
+    control_review["schema"] = json!("agentlab.source_recipe_design_review.v3");
+    control_review["parentDesignSha256"] = json!(digest(&control_parent_bytes));
+    control_review["controlChanges"] = json!([{"id":"wrong",
+        "before":control_parent["controls"][3],"after":control_successor["controls"][3],
+        "findingId":"source-shape"}]);
+    let control_review_bytes = serde_json::to_vec(&control_review).unwrap();
+    let control_successor_bytes = serde_json::to_vec(&control_successor).unwrap();
+    author::design_review(&request_bytes, &control_parent_bytes, &control_review_bytes).unwrap();
+    let control_receipt = author::check_design_review_output(
+        &request_bytes, &control_parent_bytes, &control_review_bytes, &control_successor_bytes,
+    ).unwrap();
+    assert_eq!(control_receipt["exactControlsProtected"], true);
+    assert_eq!(control_receipt["semanticQualified"], false);
+    assert_eq!(control_receipt["executionPerformed"], false);
+    for field in ["before", "findingId"] {
+        let mut bad = control_review.clone();
+        bad["controlChanges"][0][field] = json!("borrowed");
+        assert!(author::design_review(&request_bytes, &control_parent_bytes,
+            &serde_json::to_vec(&bad).unwrap()).is_err());
+    }
+    for field in ["id", "role", "expectedFailedCheckIds", "edits"] {
+        let mut drift = control_successor.clone();
+        drift["controls"][3][field] = json!("unreviewed");
+        assert!(author::check_design_review_output(&request_bytes, &control_parent_bytes,
+            &control_review_bytes, &serde_json::to_vec(&drift).unwrap()).is_err());
+    }
+    let mut reordered_controls = control_successor.clone();
+    reordered_controls["controls"].as_array_mut().unwrap().reverse();
+    assert!(author::check_design_review_output(&request_bytes, &control_parent_bytes,
+        &control_review_bytes, &serde_json::to_vec(&reordered_controls).unwrap()).is_err());
+    for alteration in ["unknown-check", "role", "id", "baseline", "duplicate"] {
+        let mut bad = control_review.clone();
+        match alteration {
+            "unknown-check" => bad["controlChanges"][0]["after"]["expectedFailedCheckIds"] = json!(["unknown"]),
+            "role" => bad["controlChanges"][0]["after"]["role"] = json!("reference"),
+            "id" => bad["controlChanges"][0]["after"]["id"] = json!("other"),
+            "baseline" => {
+                bad["controlChanges"][0]["id"] = json!("baseline");
+                bad["controlChanges"][0]["before"] = control_parent["controls"][0].clone();
+                bad["controlChanges"][0]["after"] = control_parent["controls"][0].clone();
+                bad["controlChanges"][0]["after"]["expectedFailedCheckIds"] = json!(["value"]);
+            }
+            _ => {
+                let duplicate = bad["controlChanges"][0].clone();
+                bad["controlChanges"].as_array_mut().unwrap().push(duplicate);
+            }
+        }
+        assert!(author::design_review(&request_bytes, &control_parent_bytes,
+            &serde_json::to_vec(&bad).unwrap()).is_err(), "{alteration}");
+    }
+    let mut oracle_drift = control_successor.clone();
+    oracle_drift["checks"][0]["expected"] = json!(0);
+    assert!(author::check_design_review_output(&request_bytes, &control_parent_bytes,
+        &control_review_bytes, &serde_json::to_vec(&oracle_drift).unwrap()).is_err());
+    // Preserve old portable receipt bytes; legacy modes do not acquire new flags.
+    assert!(author::check_design_review_output(&request_bytes, &design_bytes,
+        &exact_bytes, &design_bytes).unwrap().get("exactControlsProtected").is_none());
     let mut check_drift = design.clone();
     check_drift["checks"][0]["expected"] = json!(2);
     assert!(author::check_design_review_output(

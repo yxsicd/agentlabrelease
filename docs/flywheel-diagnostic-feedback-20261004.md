@@ -49,6 +49,23 @@ explicit permitted design changes, lineage and the fresh next-attempt budget.
 It must retain original failed outcomes and all ordinary source, control, review
 and admission gates. This capability is not implemented by this checkpoint.
 
+## Exact control-change prerequisite
+
+The proposed native design_review.v3 contract extends v2 with controlChanges.
+Each replacement names an existing control, exact before/after objects and an
+existing findingId. Control identity, role, baseline and order are protected.
+The complete reconstructed design still passes ordinary validation, including
+known check IDs, source edit applicability and control inventories. Unlisted
+control changes, duplicated replacements, changed identities/roles and unknown
+failure IDs reject. Checks/scenarios retain their exact reviewed-change gates.
+Existing v1/v2 receipt bytes are preserved for historical replay.
+
+Rust regression coverage exercises a declared failure-set replacement without
+changing the Oracle, plus the rejection paths above. The constructor workflow
+recognizes v3 and exposes its constraints to the author. This is a prerequisite
+for a future versioned successor, not an implementation of multi-round scheduling,
+captured-review admission, semantic truth or fresh execution. Validation is pending.
+
 Overall maturity remains 75%; accepted complete automatic five-stage rounds remain
 zero. Multi-round productive closure, cross-repository transfer, measured guidance
 benefit and Harmony/ohosTest runtime qualification remain unproved.
