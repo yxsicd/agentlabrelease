@@ -40,6 +40,14 @@ jobs:
           cd crates/agentlab_code_analysis/grammar
           NODE_PATH="$RUNNER_TEMP/parser-tools/node_modules" "$RUNNER_TEMP/parser-tools/node_modules/.bin/tree-sitter" generate
           git diff --exit-code -- src
+      - name: Verify source compiler evidence with the locked real compiler
+        run: |
+          mkdir -p "$RUNNER_TEMP/compiler-evidence-tools"
+          cp examples/knowledge-seed/subject/runtime/package*.json "$RUNNER_TEMP/compiler-evidence-tools/"
+          npm ci --prefix "$RUNNER_TEMP/compiler-evidence-tools" --no-audit --no-fund
+          AGENTLAB_TEST_NODE="$(node -p 'require("fs").realpathSync(process.execPath)')" \
+          AGENTLAB_TEST_TYPESCRIPT="$RUNNER_TEMP/compiler-evidence-tools/node_modules/typescript/lib/typescript.js" \
+            cargo test --locked -p agentlab_code_analysis --lib real_pinned_compiler -- --ignored
       - name: Read pinned public semantic export for operation replay
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
