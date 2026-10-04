@@ -84,6 +84,13 @@ knowledge, rather than trusting embedded hashes or text. A passing receipt grant
 neither edits nor runtime imports. Inspect module initialization and required
 globals as well as named exports: loaded dependency text alone cannot establish
 an executable dependency contract.
+In partial clones, a known Tree entry does not prove the Blob is locally available.
+Separate explicit bounded dependency-object acquisition from offline context
+validation: bind selected paths to the exact revision, regular Blob and unique
+owner before acquiring objects, then revalidate their bytes. Preserve the
+consumer's no-lazy-fetch boundary; a missing promised object is infrastructure
+evidence, not source absence or Agent failure. Cached/full-clone success alone
+does not qualify the fresh partial-clone workflow.
 
 For proposed cross-scope host/test changes, prepare a separate Rust
 `--prepare-construction-edit-boundary` packet with the same knowledge/source/repository
