@@ -649,7 +649,10 @@ class FixtureParticipant:
         assert label=='source-suite-review' and not list(workspace.iterdir())
         assert kwargs['transport_retry_limit']==0 and not kwargs['require_completed_tool_call']
         prompt=kwargs['prompt'];assert 'fixture-external-secret' not in prompt
-        text=(base/'fixture-response.json').read_text() if mode=='valid' else 'not JSON'
+        text=(base/'fixture-response.json').read_text() if mode in ('valid','citations') else 'not JSON'
+        if mode=='citations':
+            bad=json.loads(text);bad['checkReviews'][0]['sourceEvidence']=[dict(path='rawWorkerEvidence/2/content',quote='observed')]
+            text=json.dumps(bad)
         (self.evidence/(label+'-prompt.txt')).write_text(prompt)
         put(self.evidence/'gateway/1.upstream-request.json',dict(model=self.model,providerId=self.route,stream=False,
             messages=[dict(role='user',content=prompt)]))
@@ -732,6 +735,15 @@ module.run(args,participant_class=FixtureParticipant)
     assert_eq!(failed["completed"], false);
     assert!(!base.join("review-invalid/validation.json").exists());
     assert!(!base.join("review-valid/lesson.json").exists());
+    assert!(!invoke("citations").status.success());
+    let diagnostic: Value = serde_json::from_slice(
+        &fs::read(base.join("review-citations/citation-diagnostic.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(diagnostic["citationFindingCount"], 1);
+    assert_eq!(diagnostic["diagnosticOnly"], true);
+    assert_eq!(diagnostic["responseContentAccepted"], false);
+    assert!(!base.join("review-citations/validation.json").exists());
     fs::remove_dir_all(base).unwrap();
 }
 
@@ -768,6 +780,15 @@ fn independent_review_response_retains_negative_feedback_without_promoting() {
     assert_eq!(accepted["reviewerExecuted"], false);
     assert_eq!(accepted["quotationClaimSupportVerified"], false);
     assert_eq!(accepted["qualified"], false);
+    let clean_diagnostic = reviewer::diagnose_citations(
+        &observation,
+        &rubric_bytes,
+        &serde_json::to_vec(&response).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(clean_diagnostic["citationFindingCount"], 0);
+    assert_eq!(clean_diagnostic["responseContentAccepted"], false);
+    assert_eq!(clean_diagnostic["fullResponseValidationPerformed"], false);
     let prompt = String::from_utf8(reviewer::prompt(&observation, &rubric_bytes).unwrap()).unwrap();
     let catalog: Value = serde_json::from_str(
         prompt
@@ -796,6 +817,33 @@ fn independent_review_response_retains_negative_feedback_without_promoting() {
         error.contains("/criterionReviews/0/evidence/0")
             && error.contains("/rubricFreezeAuthenticated")
     );
+    nonstring["checkReviews"][0]["sourceEvidence"][0]["path"] =
+        json!("rawWorkerEvidence/2/content");
+    let diagnosed = reviewer::diagnose_citations(
+        &observation,
+        &rubric_bytes,
+        &serde_json::to_vec(&nonstring).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(diagnosed["citationFindingCount"], 2);
+    assert_eq!(
+        diagnosed["citationFindings"][0]["responsePointer"],
+        "/criterionReviews/0/evidence/0"
+    );
+    assert_eq!(
+        diagnosed["citationFindings"][1]["responsePointer"],
+        "/checkReviews/0/sourceEvidence/0"
+    );
+    assert_eq!(diagnosed["fullResponseValidationPerformed"], false);
+    assert_eq!(diagnosed["qualified"], false);
+    let mut drifted = nonstring.clone();
+    drifted["reviewRequestSha256"] = json!("different");
+    assert!(reviewer::diagnose_citations(
+        &observation,
+        &rubric_bytes,
+        &serde_json::to_vec(&drifted).unwrap()
+    )
+    .is_err());
     for change in [
         "binding",
         "rubric",

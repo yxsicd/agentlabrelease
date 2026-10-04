@@ -242,6 +242,17 @@ it is not a reason to serialize a boolean as quoted evidence. Preserve the faile
 reply and exhausted enrollment. Index guidance is not semantic approval, an
 operator correction, relaxed membership validation or permission to rerun it.
 
+Keep item sourceEvidence distinct from criterion execution evidence: scenario,
+check and control reviews cite exact loaded repository-relative source paths and
+verbatim source quotes, not worker logs or JSON pointers. Runtime observations
+can support criterion evidence but cannot replace source-semantic support.
+After a bound response fails, use `--diagnose-source-suite-review-citations` with
+the same source export, frozen rubric and unchanged response to collect citation
+errors together. Preserve its exact response pointers and both gate logs. This
+diagnostic checks citations only: zero findings is not full response validation,
+completed review, promotion or permission to reset an exhausted attempt budget.
+Require the ordinary content/completion and admission gates independently.
+
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.
 Reconstruct all rows from the retained suite and optional review, preserving the
