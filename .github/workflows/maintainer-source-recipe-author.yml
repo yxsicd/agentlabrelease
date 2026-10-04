@@ -263,7 +263,7 @@ jobs:
               assert not rubric and not digest and repairs==0,'Review inputs require independent_review'
               raise SystemExit(0)
           assert os.environ['GITHUB_RUN_ATTEMPT']=='1','Automatic review enrollment cannot reopen a rerun budget'
-          assert os.environ['CONSTRUCTION_DESIGN_FIRST']=='true','Automatic review requires a complete design/control suite'
+          assert os.environ['CONSTRUCTION_DESIGN_FIRST']=='true' or os.environ.get('REVIEWED_SUCCESSOR'), 'Automatic review requires a fresh design or admitted frozen-design successor'
           assert rubric and not rubric.startswith('/') and chr(92) not in rubric
           assert all(p not in ('','.','..') for p in rubric.split('/'))
           path=Path(rubric);workspace=Path.cwd().resolve()

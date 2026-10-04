@@ -218,3 +218,29 @@ the crate locally failed identically. The test command now explicitly uses the
 Release root, matching Action execution without removing its manifest/path gate.
 Workflow lint passed in job 111426646683 before this fix; final-head full Rust and
 cloud qualification still need fresh verification. Original failed runs remain.
+
+## First real successor Action preflight
+
+PR #283 final head cbade57dc008d85c63a236d254b43dbef37a4b89 passed Rust/Harmony
+37199250406, component 37199250572 and public validation 37199250486. Exact new
+transport/action/portability test stdout confirmed their success. It merged as
+0ba3412ef6ff27e3ee357e6fe7776b7b597aa2ea; no formal release was published.
+
+One retained-reject enrollment was dispatched at that exact main revision and
+uniquely reconciled as run 37199642632, job 111428500226. ZIP and common rubric
+digests were independently checked before the single POST. The new Action passed
+method/input and actual remote fixed-knowledge preflight, but failed reviewer
+enrollment: its older guard required design_first=true while the successor lane
+intentionally consumes a reconstructed frozen design with design_first=false.
+The original failure is retained; native build, artifact admission, containment,
+durable claim and participant/model steps were skipped. No model budget was spent.
+
+The guard now permits a schema-routed frozen-design successor as well as a fresh
+design. It does not skip native source/review reconstruction, live target validation,
+current runtime isolation or the full baseline/control suite before independent
+review. Regression executes both actual workflow Python blocks and accepts fresh
+design/frozen successor while rejecting no-design, mixed enrollment and rerun.
+Repair preserves the original failed run; a changed method needs a fresh dispatch,
+not a rerun or deletion of evidence. Cloud validation of this correction and real
+post-admission successor execution are pending. Maturity remains 75%; automatic
+complete five-stage rounds remain zero.
