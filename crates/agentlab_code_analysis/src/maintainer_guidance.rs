@@ -751,7 +751,8 @@ pub fn source_recipe_unguided_completion(
             && serde_json::from_str::<Value>(&text).map_err(|e| e.to_string())? == proposal,
         "source completion proposal differs from original upstream text",
     )?;
-    Ok(json!({"schema":"agentlab.source_recipe_unguided_completion.v1",
+    Ok(
+        json!({"schema":"agentlab.source_recipe_unguided_completion.v1",
         "authorRequestSha256":digest(request_bytes),"proposalSha256":digest(proposal_bytes),
         "promptSha256":digest(&prompt),"intentSha256":digest(&intent_bytes),
         "lifecycleSha256":digest(&lifecycle_bytes),"finalAssistantMessageSha256":digest(&final_bytes),
@@ -759,7 +760,8 @@ pub fn source_recipe_unguided_completion(
         "authorCompletionVerified":true,"proposalOriginalWireVerified":true,
         "guidanceProvided":false,"guidanceAbsenceVerified":false,"agentConsumptionVerified":false,
         "producerAuthenticated":false,"learningBenefitVerified":false,"caseQualified":false,
-        "authorityWritePerformed":false,"automaticPromotion":false}))
+        "authorityWritePerformed":false,"automaticPromotion":false}),
+    )
 }
 
 fn consumption_for_turn(

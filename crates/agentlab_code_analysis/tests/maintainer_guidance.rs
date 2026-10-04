@@ -51,8 +51,10 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
             fs::create_dir(&evidence).unwrap();
             let gateway = evidence.join("gateway");
             fs::create_dir(&gateway).unwrap();
-            let request = serde_json::to_vec(&json!({"schema":"agentlab.source_recipe_author_request.v1",
-                "source":{"repositoryId":repository},"automaticPromotion":false})).unwrap();
+            let request =
+                serde_json::to_vec(&json!({"schema":"agentlab.source_recipe_author_request.v1",
+                "source":{"repositoryId":repository},"automaticPromotion":false}))
+                .unwrap();
             let proposal =
                 serde_json::to_vec(&json!({"schema":"fixture-proposal","value":7})).unwrap();
             let label = "source-recipe-author";

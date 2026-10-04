@@ -36,8 +36,7 @@ print('one-shot constructor normalized prompt and native budget intent retained 
         .args(["-c", code])
         .env(
             "AUTHOR_SCRIPT",
-            Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../scripts/run-source-recipe-author.py"),
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/run-source-recipe-author.py"),
         )
         .output()
         .unwrap();

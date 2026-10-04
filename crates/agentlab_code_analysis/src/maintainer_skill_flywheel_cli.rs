@@ -1379,11 +1379,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .any(|arg| arg == "--verify-unguided-source-recipe-completion")
     {
-        let receipt = agentlab_code_analysis::maintainer_guidance::source_recipe_unguided_completion(
-            &PathBuf::from(value(&args, "--participant-evidence")?),
-            &fs::read(value(&args, "--author-request")?)?,
-            &fs::read(value(&args, "--proposal")?)?,
-        )?;
+        let receipt =
+            agentlab_code_analysis::maintainer_guidance::source_recipe_unguided_completion(
+                &PathBuf::from(value(&args, "--participant-evidence")?),
+                &fs::read(value(&args, "--author-request")?)?,
+                &fs::read(value(&args, "--proposal")?)?,
+            )?;
         let mut file = OpenOptions::new()
             .write(true)
             .create_new(true)
