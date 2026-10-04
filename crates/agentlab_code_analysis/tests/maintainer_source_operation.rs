@@ -617,7 +617,9 @@ fn standalone_review_forwards_exact_optional_coordinator_identity() {
         let stdout = String::from_utf8(output.stdout).unwrap();
         let args: Vec<_> = stdout.lines().collect();
         assert_eq!(args[0], "scripts/acquire-source-suite-review-input.py");
-        let position = args.iter().position(|arg| *arg == "--coordinator-request-id");
+        let position = args
+            .iter()
+            .position(|arg| *arg == "--coordinator-request-id");
         if identity.is_empty() {
             assert!(position.is_none());
         } else {
