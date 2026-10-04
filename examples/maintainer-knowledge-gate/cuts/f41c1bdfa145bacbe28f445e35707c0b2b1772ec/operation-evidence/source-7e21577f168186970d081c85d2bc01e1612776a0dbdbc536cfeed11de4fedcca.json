@@ -1,0 +1,453 @@
+{
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "execution": {
+    "authorityWritePerformed": false,
+    "automaticPromotion": false,
+    "beforeAssessmentSha256": "2263d0669ada552e2310bf5bb2450d1522a2b6279298218c80031eec10f630d8",
+    "captures": [
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs",
+            "/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003",
+            "baseline-unmodified",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node",
+          "programSha256": "b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba",
+          "timeoutMs": 30000
+        },
+        "durationMs": 184,
+        "exitCode": 0,
+        "label": "baseline-unmodified",
+        "pid": 88047,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "baseline-unmodified.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 7869,
+          "complete": true,
+          "path": "baseline-unmodified.stdout",
+          "sha256": "d8bd8805fd0edd2d7a0a63a63a4c601d6cdf6d7ae5e42b56077a583951596fff"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs",
+            "/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003",
+            "ref-const-context",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node",
+          "programSha256": "b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba",
+          "timeoutMs": 30000
+        },
+        "durationMs": 176,
+        "exitCode": 0,
+        "label": "ref-const-context",
+        "pid": 88093,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "ref-const-context.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 7869,
+          "complete": true,
+          "path": "ref-const-context.stdout",
+          "sha256": "d8bd8805fd0edd2d7a0a63a63a4c601d6cdf6d7ae5e42b56077a583951596fff"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs",
+            "/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003",
+            "ref-rename-width-local",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node",
+          "programSha256": "b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba",
+          "timeoutMs": 30000
+        },
+        "durationMs": 184,
+        "exitCode": 0,
+        "label": "ref-rename-width-local",
+        "pid": 88138,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "ref-rename-width-local.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 7869,
+          "complete": true,
+          "path": "ref-rename-width-local.stdout",
+          "sha256": "d8bd8805fd0edd2d7a0a63a63a4c601d6cdf6d7ae5e42b56077a583951596fff"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs",
+            "/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003",
+            "wrong-hardcode-convert-type",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node",
+          "programSha256": "b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba",
+          "timeoutMs": 30000
+        },
+        "durationMs": 173,
+        "exitCode": 0,
+        "label": "wrong-hardcode-convert-type",
+        "pid": 88182,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "wrong-hardcode-convert-type.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 7703,
+          "complete": true,
+          "path": "wrong-hardcode-convert-type.stdout",
+          "sha256": "90ea58c0130643824c5e018e7f9343977c611a7e332a2796e6722fa65589f59d"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs",
+            "/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003",
+            "wrong-skip-width-line",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node",
+          "programSha256": "b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba",
+          "timeoutMs": 30000
+        },
+        "durationMs": 211,
+        "exitCode": 0,
+        "label": "wrong-skip-width-line",
+        "pid": 88226,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "wrong-skip-width-line.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 7817,
+          "complete": true,
+          "path": "wrong-skip-width-line.stdout",
+          "sha256": "f1bea9b3ecc12a3899349eb90081fa9c7284adb28e119fa1f90a978b9ce0daaa"
+        },
+        "termination": "completed"
+      }
+    ],
+    "error": null,
+    "qualified": false,
+    "recipeSha256": "5faec6eb111f2fd727f3c963aa3b75856398bbd907fdce59d450469ab79ba790",
+    "schema": "agentlab.maintainer_source_operation_execution.v1",
+    "scopeSha256": "5c25af0a990892a776ad3db954da4f839aaf236498b6d8ad1c2d4a3a08fa1a6f",
+    "scopeSkillId": "skill-scope-code-workshop-componentlibrary-dialog-overlays",
+    "source": {
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "repositoryId": "code-workshop",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    "status": "successful"
+  },
+  "executionOriginal": "{\n  \"authorityWritePerformed\": false,\n  \"automaticPromotion\": false,\n  \"beforeAssessmentSha256\": \"2263d0669ada552e2310bf5bb2450d1522a2b6279298218c80031eec10f630d8\",\n  \"captures\": [\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs\",\n          \"/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003\",\n          \"baseline-unmodified\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node\",\n        \"programSha256\": \"b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 184,\n      \"exitCode\": 0,\n      \"label\": \"baseline-unmodified\",\n      \"pid\": 88047,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"baseline-unmodified.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 7869,\n        \"complete\": true,\n        \"path\": \"baseline-unmodified.stdout\",\n        \"sha256\": \"d8bd8805fd0edd2d7a0a63a63a4c601d6cdf6d7ae5e42b56077a583951596fff\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs\",\n          \"/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003\",\n          \"ref-const-context\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node\",\n        \"programSha256\": \"b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 176,\n      \"exitCode\": 0,\n      \"label\": \"ref-const-context\",\n      \"pid\": 88093,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"ref-const-context.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 7869,\n        \"complete\": true,\n        \"path\": \"ref-const-context.stdout\",\n        \"sha256\": \"d8bd8805fd0edd2d7a0a63a63a4c601d6cdf6d7ae5e42b56077a583951596fff\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs\",\n          \"/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003\",\n          \"ref-rename-width-local\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node\",\n        \"programSha256\": \"b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 184,\n      \"exitCode\": 0,\n      \"label\": \"ref-rename-width-local\",\n      \"pid\": 88138,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"ref-rename-width-local.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 7869,\n        \"complete\": true,\n        \"path\": \"ref-rename-width-local.stdout\",\n        \"sha256\": \"d8bd8805fd0edd2d7a0a63a63a4c601d6cdf6d7ae5e42b56077a583951596fff\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs\",\n          \"/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003\",\n          \"wrong-hardcode-convert-type\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node\",\n        \"programSha256\": \"b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 173,\n      \"exitCode\": 0,\n      \"label\": \"wrong-hardcode-convert-type\",\n      \"pid\": 88182,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"wrong-hardcode-convert-type.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 7703,\n        \"complete\": true,\n        \"path\": \"wrong-hardcode-convert-type.stdout\",\n        \"sha256\": \"90ea58c0130643824c5e018e7f9343977c611a7e332a2796e6722fa65589f59d\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs\",\n          \"/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003\",\n          \"wrong-skip-width-line\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node\",\n        \"programSha256\": \"b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 211,\n      \"exitCode\": 0,\n      \"label\": \"wrong-skip-width-line\",\n      \"pid\": 88226,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"wrong-skip-width-line.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 7817,\n        \"complete\": true,\n        \"path\": \"wrong-skip-width-line.stdout\",\n        \"sha256\": \"f1bea9b3ecc12a3899349eb90081fa9c7284adb28e119fa1f90a978b9ce0daaa\"\n      },\n      \"termination\": \"completed\"\n    }\n  ],\n  \"error\": null,\n  \"qualified\": false,\n  \"recipeSha256\": \"5faec6eb111f2fd727f3c963aa3b75856398bbd907fdce59d450469ab79ba790\",\n  \"schema\": \"agentlab.maintainer_source_operation_execution.v1\",\n  \"scopeSha256\": \"5c25af0a990892a776ad3db954da4f839aaf236498b6d8ad1c2d4a3a08fa1a6f\",\n  \"scopeSkillId\": \"skill-scope-code-workshop-componentlibrary-dialog-overlays\",\n  \"source\": {\n    \"repository\": \"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\n    \"repositoryId\": \"code-workshop\",\n    \"revision\": \"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\"\n  },\n  \"status\": \"successful\"\n}",
+  "executionReceiptSha256": "0eaa11f6c0d879055d38e9e0191f57a8d179cfc52968428ede9e0724a6794ac6",
+  "qualificationScope": {
+    "build": false,
+    "performance": false,
+    "runtime": false,
+    "sourceMaintenance": true,
+    "tests": false
+  },
+  "recipe": {
+    "automaticPromotion": false,
+    "checks": [
+      {
+        "expected": {
+          "descriptorPlacement": "Left",
+          "descriptorType": 2
+        },
+        "id": "check-sc1-convert",
+        "pointer": "/popup-recognized-attrs/convert"
+      },
+      {
+        "expected": {
+          "buttonLabel": "点击弹出气泡",
+          "buttonLabelPresent": true,
+          "containsPlacementCode": "Placement.Left",
+          "containsWidthLine": false,
+          "popupBtnTextMapGetCallCount": 0,
+          "styleCodeToken": "POPUP_STYLE_CODE_TEXT"
+        },
+        "id": "check-sc1-generate",
+        "pointer": "/popup-recognized-attrs/generate"
+      },
+      {
+        "expected": {
+          "descriptorPlacement": "Bottom",
+          "descriptorType": 1
+        },
+        "id": "check-sc2-convert",
+        "pointer": "/popup-unknown-type-fallback/convert"
+      },
+      {
+        "expected": {
+          "buttonLabel": "点击弹出气泡",
+          "buttonLabelPresent": true,
+          "containsPlacementCode": "Placement.Bottom",
+          "containsWidthLine": true,
+          "popupBtnTextMapGetCallCount": 0,
+          "styleCodeToken": "POPUP_STYLE_CODE_BUTTON"
+        },
+        "id": "check-sc2-generate",
+        "pointer": "/popup-unknown-type-fallback/generate"
+      },
+      {
+        "expected": {
+          "descriptorPlacement": "Bottom",
+          "descriptorType": 1
+        },
+        "id": "check-sc3-convert",
+        "pointer": "/popup-unknown-placement-fallback/convert"
+      },
+      {
+        "expected": {
+          "buttonLabel": "点击弹出气泡",
+          "buttonLabelPresent": true,
+          "containsPlacementCode": "Placement.Bottom",
+          "containsWidthLine": false,
+          "popupBtnTextMapGetCallCount": 0,
+          "styleCodeToken": "POPUP_STYLE_CODE_BUTTON"
+        },
+        "id": "check-sc3-generate",
+        "pointer": "/popup-unknown-placement-fallback/generate"
+      },
+      {
+        "expected": {
+          "descriptorPlacement": "Bottom",
+          "descriptorType": 3
+        },
+        "id": "check-sc4-convert",
+        "pointer": "/popup-style-code-miss/convert"
+      },
+      {
+        "expected": {
+          "buttonLabel": "点击弹出气泡",
+          "buttonLabelPresent": true,
+          "containsPlacementCode": "Placement.Bottom",
+          "containsWidthLine": true,
+          "popupBtnTextMapGetCallCount": 0,
+          "styleCodeToken": "POPUP_STYLE_CODE_BUTTON"
+        },
+        "id": "check-sc4-generate",
+        "pointer": "/popup-style-code-miss/generate"
+      }
+    ],
+    "controls": [
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs",
+            "/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003",
+            "baseline-unmodified",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node",
+          "programSha256": "b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [],
+        "id": "baseline-unmodified",
+        "role": "baseline"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs",
+            "/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003",
+            "ref-const-context",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node",
+          "programSha256": "b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [],
+        "id": "ref-const-context",
+        "role": "reference"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs",
+            "/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003",
+            "ref-rename-width-local",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node",
+          "programSha256": "b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [],
+        "id": "ref-rename-width-local",
+        "role": "reference"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs",
+            "/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003",
+            "wrong-hardcode-convert-type",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node",
+          "programSha256": "b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [
+          "check-sc1-convert",
+          "check-sc4-convert"
+        ],
+        "id": "wrong-hardcode-convert-type",
+        "role": "wrong"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs",
+            "/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003",
+            "wrong-skip-width-line",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node",
+          "programSha256": "b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [
+          "check-sc2-generate",
+          "check-sc4-generate"
+        ],
+        "id": "wrong-skip-width-line",
+        "role": "wrong"
+      }
+    ],
+    "methodInputs": [
+      {
+        "path": "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs",
+        "sha256": "9f83d5b2b98a51e93b0af0d3316b4b051aab84088fac8ca463bbe717541f6c9f"
+      },
+      {
+        "path": "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+        "sha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+      },
+      {
+        "path": "/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs",
+        "sha256": "989997efce226c320f9e557a640e2d61b1eedce7c6b957e30e2e991fa69090e4"
+      }
+    ],
+    "operationKind": "source-only",
+    "reviewed": true,
+    "schema": "agentlab.maintainer_source_operation_recipe.v1",
+    "scopeSkillId": "skill-scope-code-workshop-componentlibrary-dialog-overlays",
+    "source": {
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "repositoryId": "code-workshop",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    "sourceInputs": [
+      {
+        "gitBlobOid": "cbdd91dc322bdb6a850f9af8a17c795a9594513f",
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/popup/entity/PopupMapping.ets",
+        "sha256": "f2da49240d286b04e8a169693c73bd671fbe29b3b3e619139e3087afbcefa39c"
+      },
+      {
+        "gitBlobOid": "c21626a7c1954feba198b724ff6e2dc516050f7d",
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/popup/viewmodel/PopupDescriptor.ets",
+        "sha256": "3015bfa736664d9afc0b0d554585640ff5ffec4f78291b3740a18ecb75bec33e"
+      },
+      {
+        "gitBlobOid": "f6a9972be13f4c78b461500e3dbec992ad0d8d12",
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/popup/viewmodel/PopupCodeGenerator.ets",
+        "sha256": "9737175e70d65699354959c0e9b9dc984c630951cc388a32e727396dfa4ebad4"
+      }
+    ]
+  },
+  "recipeOriginal": "{\n  \"automaticPromotion\": false,\n  \"checks\": [\n    {\n      \"expected\": {\n        \"descriptorPlacement\": \"Left\",\n        \"descriptorType\": 2\n      },\n      \"id\": \"check-sc1-convert\",\n      \"pointer\": \"/popup-recognized-attrs/convert\"\n    },\n    {\n      \"expected\": {\n        \"buttonLabel\": \"点击弹出气泡\",\n        \"buttonLabelPresent\": true,\n        \"containsPlacementCode\": \"Placement.Left\",\n        \"containsWidthLine\": false,\n        \"popupBtnTextMapGetCallCount\": 0,\n        \"styleCodeToken\": \"POPUP_STYLE_CODE_TEXT\"\n      },\n      \"id\": \"check-sc1-generate\",\n      \"pointer\": \"/popup-recognized-attrs/generate\"\n    },\n    {\n      \"expected\": {\n        \"descriptorPlacement\": \"Bottom\",\n        \"descriptorType\": 1\n      },\n      \"id\": \"check-sc2-convert\",\n      \"pointer\": \"/popup-unknown-type-fallback/convert\"\n    },\n    {\n      \"expected\": {\n        \"buttonLabel\": \"点击弹出气泡\",\n        \"buttonLabelPresent\": true,\n        \"containsPlacementCode\": \"Placement.Bottom\",\n        \"containsWidthLine\": true,\n        \"popupBtnTextMapGetCallCount\": 0,\n        \"styleCodeToken\": \"POPUP_STYLE_CODE_BUTTON\"\n      },\n      \"id\": \"check-sc2-generate\",\n      \"pointer\": \"/popup-unknown-type-fallback/generate\"\n    },\n    {\n      \"expected\": {\n        \"descriptorPlacement\": \"Bottom\",\n        \"descriptorType\": 1\n      },\n      \"id\": \"check-sc3-convert\",\n      \"pointer\": \"/popup-unknown-placement-fallback/convert\"\n    },\n    {\n      \"expected\": {\n        \"buttonLabel\": \"点击弹出气泡\",\n        \"buttonLabelPresent\": true,\n        \"containsPlacementCode\": \"Placement.Bottom\",\n        \"containsWidthLine\": false,\n        \"popupBtnTextMapGetCallCount\": 0,\n        \"styleCodeToken\": \"POPUP_STYLE_CODE_BUTTON\"\n      },\n      \"id\": \"check-sc3-generate\",\n      \"pointer\": \"/popup-unknown-placement-fallback/generate\"\n    },\n    {\n      \"expected\": {\n        \"descriptorPlacement\": \"Bottom\",\n        \"descriptorType\": 3\n      },\n      \"id\": \"check-sc4-convert\",\n      \"pointer\": \"/popup-style-code-miss/convert\"\n    },\n    {\n      \"expected\": {\n        \"buttonLabel\": \"点击弹出气泡\",\n        \"buttonLabelPresent\": true,\n        \"containsPlacementCode\": \"Placement.Bottom\",\n        \"containsWidthLine\": true,\n        \"popupBtnTextMapGetCallCount\": 0,\n        \"styleCodeToken\": \"POPUP_STYLE_CODE_BUTTON\"\n      },\n      \"id\": \"check-sc4-generate\",\n      \"pointer\": \"/popup-style-code-miss/generate\"\n    }\n  ],\n  \"controls\": [\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs\",\n          \"/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003\",\n          \"baseline-unmodified\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node\",\n        \"programSha256\": \"b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": [],\n      \"id\": \"baseline-unmodified\",\n      \"role\": \"baseline\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs\",\n          \"/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003\",\n          \"ref-const-context\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node\",\n        \"programSha256\": \"b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": [],\n      \"id\": \"ref-const-context\",\n      \"role\": \"reference\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs\",\n          \"/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003\",\n          \"ref-rename-width-local\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node\",\n        \"programSha256\": \"b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": [],\n      \"id\": \"ref-rename-width-local\",\n      \"role\": \"reference\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs\",\n          \"/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003\",\n          \"wrong-hardcode-convert-type\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node\",\n        \"programSha256\": \"b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": [\n        \"check-sc1-convert\",\n        \"check-sc4-convert\"\n      ],\n      \"id\": \"wrong-hardcode-convert-type\",\n      \"role\": \"wrong\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs\",\n          \"/Users/youxianshi/code/.worktrees/code-workshop/dialog-operation-20261003\",\n          \"wrong-skip-width-line\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/Users/youxianshi/.nvm/versions/node/v25.6.0/bin/node\",\n        \"programSha256\": \"b7512d27cbbe6127b514d9993280a628bf7c56f963fd1cf3be8020b888e0dfba\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": [\n        \"check-sc2-generate\",\n        \"check-sc4-generate\"\n      ],\n      \"id\": \"wrong-skip-width-line\",\n      \"role\": \"wrong\"\n    }\n  ],\n  \"methodInputs\": [\n    {\n      \"path\": \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/controls.cjs\",\n      \"sha256\": \"9f83d5b2b98a51e93b0af0d3316b4b051aab84088fac8ca463bbe717541f6c9f\"\n    },\n    {\n      \"path\": \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n      \"sha256\": \"3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675\"\n    },\n    {\n      \"path\": \"/Users/youxianshi/code/.artifacts/flywheel-next-gap-xp0KUfNf/verifier-design-4-reviewed-revision/proposal-stage-recovery/design-runtime.cjs\",\n      \"sha256\": \"989997efce226c320f9e557a640e2d61b1eedce7c6b957e30e2e991fa69090e4\"\n    }\n  ],\n  \"operationKind\": \"source-only\",\n  \"reviewed\": true,\n  \"schema\": \"agentlab.maintainer_source_operation_recipe.v1\",\n  \"scopeSkillId\": \"skill-scope-code-workshop-componentlibrary-dialog-overlays\",\n  \"source\": {\n    \"repository\": \"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\n    \"repositoryId\": \"code-workshop\",\n    \"revision\": \"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\"\n  },\n  \"sourceInputs\": [\n    {\n      \"gitBlobOid\": \"cbdd91dc322bdb6a850f9af8a17c795a9594513f\",\n      \"path\": \"features/componentlibrary/src/main/ets/componentdetailview/popup/entity/PopupMapping.ets\",\n      \"sha256\": \"f2da49240d286b04e8a169693c73bd671fbe29b3b3e619139e3087afbcefa39c\"\n    },\n    {\n      \"gitBlobOid\": \"c21626a7c1954feba198b724ff6e2dc516050f7d\",\n      \"path\": \"features/componentlibrary/src/main/ets/componentdetailview/popup/viewmodel/PopupDescriptor.ets\",\n      \"sha256\": \"3015bfa736664d9afc0b0d554585640ff5ffec4f78291b3740a18ecb75bec33e\"\n    },\n    {\n      \"gitBlobOid\": \"f6a9972be13f4c78b461500e3dbec992ad0d8d12\",\n      \"path\": \"features/componentlibrary/src/main/ets/componentdetailview/popup/viewmodel/PopupCodeGenerator.ets\",\n      \"sha256\": \"9737175e70d65699354959c0e9b9dc984c630951cc388a32e727396dfa4ebad4\"\n    }\n  ]\n}\n",
+  "schema": "agentlab.maintainer_scope_source_qualification.v1",
+  "scopeOriginal": "{\"assetClass\":\"reusable-knowledge\",\"automaticPromotion\":false,\"buildEntrypoints\":[],\"codeLineCount\":1715,\"coverage\":\"all tracked files selected by this scope are assigned exactly once\",\"documentedPurpose\":null,\"documentedTitle\":null,\"evidence\":[{\"gitBlobOid\":\"6e937d9b422732ad1f205bf33a7bece6680aa737\",\"path\":\"features/componentlibrary/src/main/ets/componentdetailview/actionsheetview/component/ActionSheetBuilder.ets\"},{\"gitBlobOid\":\"c21626a7c1954feba198b724ff6e2dc516050f7d\",\"path\":\"features/componentlibrary/src/main/ets/componentdetailview/popup/viewmodel/PopupDescriptor.ets\"}],\"externalDependencies\":[\",built_in:\",\"@kit.AbilityKit\",\"@kit.ArkData\",\"@kit.ArkGraphics2D\",\"@kit.ArkUI\",\"@kit.BasicServicesKit\",\"@kit.CameraKit\",\"@kit.CoreFileKit\",\"@kit.CoreSpeechKit\",\"@kit.ImageKit\",\"@kit.MediaLibraryKit\",\"@kit.Penkit\",\"@kit.PerformanceAnalysisKit\",\"@kit.SpeechKit\",\"@kit.TelephonyKit\",\"@kit.UIDesignKit\",\"@ohos/common\",\"@ohos/commonbusiness\",\"@ohos/hvigor-ohos-plugin\",\"@ohos/hypium\"],\"externalDependencyCount\":20,\"id\":\"skill-scope-code-workshop-componentlibrary-dialog-overlays\",\"kind\":\"composite-responsibility\",\"languages\":{\"ets\":21},\"ownershipPlane\":\"target-operations\",\"ownershipSelectors\":[{\"path\":\"features/componentlibrary/src/main/ets/componentdetailview/actionsheetview\",\"type\":\"prefix\"},{\"path\":\"features/componentlibrary/src/main/ets/componentdetailview/alertdialogview\",\"type\":\"prefix\"},{\"path\":\"features/componentlibrary/src/main/ets/componentdetailview/customdialog\",\"type\":\"prefix\"},{\"path\":\"features/componentlibrary/src/main/ets/componentdetailview/popup\",\"type\":\"prefix\"},{\"path\":\"features/componentlibrary/src/main/ets/componentdetailview/textpickerdialogview\",\"type\":\"prefix\"}],\"pathBoundary\":\"features/componentlibrary\",\"repository\":\"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\"repositoryId\":\"code-workshop\",\"responsibility\":\"Maintain action-sheet, alert-dialog, custom-dialog, popup, and text-picker-dialog interactive overlay examples.\",\"schema\":\"agentlab.maintainer_scope_skill.v1\",\"skillLayer\":\"instance\",\"sourceFileCount\":21,\"sourceRevision\":\"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\",\"sourceTreeOid\":\"ab156e6aa2fc9c64f400ee119e142fded5573271\",\"stage\":\"repository-scope\",\"status\":\"source-supported\",\"strategy\":\"harmony-multi-product-modules\",\"testEntrypoints\":[],\"testFileCount\":0,\"trackedFileCount\":21}",
+  "scopeSkillId": "skill-scope-code-workshop-componentlibrary-dialog-overlays",
+  "source": {
+    "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+    "repositoryId": "code-workshop",
+    "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+  },
+  "status": "qualified",
+  "streams": [
+    {
+      "stderr": "",
+      "stdout": "{\"controlledInputs\":{\"defaultKey\":\"DEFAULT_KEY\",\"storageKeyUiContext\":\"UI_CONTEXT\"},\"popup-recognized-attrs\":{\"convert\":{\"descriptorType\":2,\"descriptorPlacement\":\"Left\"},\"generate\":{\"containsPlacementCode\":\"Placement.Left\",\"styleCodeToken\":\"POPUP_STYLE_CODE_TEXT\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":false,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"popup-style-map-get\",\"args\":[\"文字气泡\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Left\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Left\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"文字气泡\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[2]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_TEXT\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Left,\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-unknown-type-fallback\":{\"convert\":{\"descriptorType\":1,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":true,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"popup-style-map-get\",\"args\":[\"no-such-style\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"no-such-style\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          width: '300vp',\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-unknown-placement-fallback\":{\"convert\":{\"descriptorType\":1,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":false,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"placement-map-get\",\"args\":[\"Nope\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Nope\"]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-style-code-miss\":{\"convert\":{\"descriptorType\":3,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":true,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"popup-style-map-get\",\"args\":[\"图文气泡\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"图文气泡\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[3]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          width: '300vp',\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"}}"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"controlledInputs\":{\"defaultKey\":\"DEFAULT_KEY\",\"storageKeyUiContext\":\"UI_CONTEXT\"},\"popup-recognized-attrs\":{\"convert\":{\"descriptorType\":2,\"descriptorPlacement\":\"Left\"},\"generate\":{\"containsPlacementCode\":\"Placement.Left\",\"styleCodeToken\":\"POPUP_STYLE_CODE_TEXT\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":false,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"popup-style-map-get\",\"args\":[\"文字气泡\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Left\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Left\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"文字气泡\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[2]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_TEXT\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Left,\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-unknown-type-fallback\":{\"convert\":{\"descriptorType\":1,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":true,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"popup-style-map-get\",\"args\":[\"no-such-style\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"no-such-style\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          width: '300vp',\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-unknown-placement-fallback\":{\"convert\":{\"descriptorType\":1,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":false,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"placement-map-get\",\"args\":[\"Nope\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Nope\"]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-style-code-miss\":{\"convert\":{\"descriptorType\":3,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":true,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"popup-style-map-get\",\"args\":[\"图文气泡\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"图文气泡\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[3]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          width: '300vp',\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"}}"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"controlledInputs\":{\"defaultKey\":\"DEFAULT_KEY\",\"storageKeyUiContext\":\"UI_CONTEXT\"},\"popup-recognized-attrs\":{\"convert\":{\"descriptorType\":2,\"descriptorPlacement\":\"Left\"},\"generate\":{\"containsPlacementCode\":\"Placement.Left\",\"styleCodeToken\":\"POPUP_STYLE_CODE_TEXT\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":false,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"popup-style-map-get\",\"args\":[\"文字气泡\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Left\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Left\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"文字气泡\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[2]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_TEXT\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Left,\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-unknown-type-fallback\":{\"convert\":{\"descriptorType\":1,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":true,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"popup-style-map-get\",\"args\":[\"no-such-style\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"no-such-style\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          width: '300vp',\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-unknown-placement-fallback\":{\"convert\":{\"descriptorType\":1,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":false,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"placement-map-get\",\"args\":[\"Nope\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Nope\"]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-style-code-miss\":{\"convert\":{\"descriptorType\":3,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":true,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"popup-style-map-get\",\"args\":[\"图文气泡\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"图文气泡\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[3]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          width: '300vp',\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"}}"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"controlledInputs\":{\"defaultKey\":\"DEFAULT_KEY\",\"storageKeyUiContext\":\"UI_CONTEXT\"},\"popup-recognized-attrs\":{\"convert\":{\"descriptorType\":1,\"descriptorPlacement\":\"Left\"},\"generate\":{\"containsPlacementCode\":\"Placement.Left\",\"styleCodeToken\":\"POPUP_STYLE_CODE_TEXT\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":false,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"placement-map-get\",\"args\":[\"Left\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Left\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"文字气泡\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[2]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_TEXT\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Left,\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-unknown-type-fallback\":{\"convert\":{\"descriptorType\":1,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":true,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"no-such-style\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          width: '300vp',\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-unknown-placement-fallback\":{\"convert\":{\"descriptorType\":1,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":false,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"placement-map-get\",\"args\":[\"Nope\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Nope\"]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-style-code-miss\":{\"convert\":{\"descriptorType\":1,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":true,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"图文气泡\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[3]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          width: '300vp',\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"}}"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"controlledInputs\":{\"defaultKey\":\"DEFAULT_KEY\",\"storageKeyUiContext\":\"UI_CONTEXT\"},\"popup-recognized-attrs\":{\"convert\":{\"descriptorType\":2,\"descriptorPlacement\":\"Left\"},\"generate\":{\"containsPlacementCode\":\"Placement.Left\",\"styleCodeToken\":\"POPUP_STYLE_CODE_TEXT\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":false,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"popup-style-map-get\",\"args\":[\"文字气泡\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Left\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Left\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"文字气泡\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[2]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_TEXT\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Left,\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-unknown-type-fallback\":{\"convert\":{\"descriptorType\":1,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":false,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"popup-style-map-get\",\"args\":[\"no-such-style\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"no-such-style\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-unknown-placement-fallback\":{\"convert\":{\"descriptorType\":1,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":false,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"placement-map-get\",\"args\":[\"Nope\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"placement-map-get\",\"args\":[\"Nope\"]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"},\"popup-style-code-miss\":{\"convert\":{\"descriptorType\":3,\"descriptorPlacement\":\"Bottom\"},\"generate\":{\"containsPlacementCode\":\"Placement.Bottom\",\"styleCodeToken\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonLabel\":\"点击弹出气泡\",\"buttonLabelPresent\":true,\"containsWidthLine\":false,\"popupBtnTextMapGetCallCount\":0},\"initialState\":{\"descriptor\":{\"type\":1,\"placement\":\"Bottom\"},\"generator\":{\"placement\":\"Placement.Bottom\",\"type\":1,\"styleCode\":\"POPUP_STYLE_CODE_BUTTON\",\"buttonTxtMarker\":\"undefined\"}},\"seamCalls\":[{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"placement-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"DEFAULT_KEY\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[1]},{\"seam\":\"popup-style-map-get\",\"args\":[\"图文气泡\"]},{\"seam\":\"appstorage-get-ui-context\",\"args\":[\"UI_CONTEXT\"]},{\"seam\":\"popup-style-map-get\",\"args\":[\"图文气泡\"]},{\"seam\":\"popup-style-code-map-get\",\"args\":[3]}],\"emittedText\":\"import { Popup } from '@kit.ArkUI';\\n\\n@Component\\nstruct PopupComponent {\\n  @State handlePopup: boolean = false;\\n\\n  @Builder\\n  popupWithButtonBuilder() {\\n    Row() {\\n      POPUP_STYLE_CODE_BUTTON\\n    }\\n  }\\n\\n  build() {\\n    Column() {\\n      Button('点击弹出气泡')\\n        .backgroundColor($r('sys.color.background_secondary'))\\n        .fontColor($r('sys.color.font_emphasize'))\\n        .fontWeight(FontWeight.Medium)\\n        .fontSize($r('sys.float.Body_L'))\\n        .onClick(() => {\\n          this.handlePopup = true;\\n        })\\n        .bindPopup(this.handlePopup, {\\n          builder: this.popupWithButtonBuilder(),\\n          placement: Placement.Bottom,\\n          onStateChange: (e) => {\\n            if (!e.isVisible) {\\n              this.handlePopup = false;\\n            }\\n          }\\n        })\\n    }\\n    .width('100%')\\n    .height('100%')\\n    .justifyContent(FlexAlign.Center)\\n  }\\n}\"}}"
+    }
+  ],
+  "verificationBoundary": "Reviewed source-maintenance controls and retained bytes; no authenticated producer, full scope coverage, formal tests, framework runtime or Agent qualification."
+}

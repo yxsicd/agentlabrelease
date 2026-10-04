@@ -957,3 +957,8 @@ automatic five-stage loops remain **zero**: operator scheduling connected these
 boundaries. Missing evidence is automatic knowledge admission/readback and next-round
 scheduling/consumption, repeated productive rounds, measurable benefit and transfer
 to another repository. Host-seam evidence does not qualify Harmony or ohosTest.
+
+The follow-up [knowledge-return checkpoint](flywheel-accepted-review-knowledge-return-20261004.md)
+records the actual fixed-baseline knowledge transaction, complete committed
+readback and read-only consumer publication. These later results do not rewrite
+the operational checkpoint above or claim that a downstream Agent consumed them.

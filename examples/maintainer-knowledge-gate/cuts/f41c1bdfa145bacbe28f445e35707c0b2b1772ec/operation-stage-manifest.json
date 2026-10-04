@@ -1,0 +1,69 @@
+{
+  "acceptedFactIds": [
+    "fact-source-suite-fa345f866f5bd480ceacac93157aefa424bbadf7a755160c998fdd3246c26059"
+  ],
+  "assessment": "assessments/lesson-lesson-admission-921b4d3befa22716fd5467f4d81ed861c029e3c09c461769b57294d82ae2aa6f.json",
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "operationEvidence": {
+    "coverage": "verified-child-operation-facts-only",
+    "inheritedReceipts": [
+      {
+        "factId": "operation-build-7d4692e7baccc428c6aa94cf8f2a7ea4a9c94813783d2f93d3ccef8e8427a21e",
+        "path": "operation-evidence/common-capture.json",
+        "sha256": "027868459b1691fcceccc1cf70ab69e847cb0c68b130f2073f979d0b638d1b7d"
+      },
+      {
+        "factId": "operation-build-ba2fd5204b013e40b09f63c6f360fd0750aefabbe7e56eefad180ba43361814f",
+        "path": "operation-evidence/release/qualifications/code-workshop-7aa95cac-componentlibrary-build/build-qualification.json",
+        "sha256": "de1f82800dd7680242948d77d6c2416c5d97319f72d2d876cbca194a82ddeba7"
+      },
+      {
+        "factId": "operation-source-1ce5172adaf6d9ad277154a6b3b8175102619cd7869012cd30a1da3a6370d5d7",
+        "path": "operation-evidence/platform-services-source.json",
+        "sha256": "8996264f78328962f8c21a644ec3afa23e37e9627c718da021db53c997a96e0d"
+      },
+      {
+        "factId": "operation-source-4b2cb3be35f734969ccb5cb151ceaa2f4465c5cb4a93d4059b84cb5fe54a5bc5",
+        "path": "operation-evidence/source-7e21577f168186970d081c85d2bc01e1612776a0dbdbc536cfeed11de4fedcca.json",
+        "sha256": "7e21577f168186970d081c85d2bc01e1612776a0dbdbc536cfeed11de4fedcca"
+      },
+      {
+        "factId": "operation-source-59ec37d6a455b3d674aa971f90316b5967297dace95ef17d3655860275be9956",
+        "path": "operation-evidence/source-f74bf8a6beb80e7002505bd9151cf193809484d8ea3fe69e0849a572ea2049ed.json",
+        "sha256": "f74bf8a6beb80e7002505bd9151cf193809484d8ea3fe69e0849a572ea2049ed"
+      },
+      {
+        "factId": "operation-source-f1ff4b0290f15e89fe7ee26a8332b179a510ae6769e91869cf9ec00842f98354",
+        "path": "operation-evidence/source-ui-state.json",
+        "sha256": "17aa31b70e5c310e267c67cd157e00042af4777f017b5fdb690da5691303703f"
+      }
+    ],
+    "receiptRoot": "operation-evidence",
+    "receipts": []
+  },
+  "schema": "agentlab.maintainer_skill_tablegit_stage.v1",
+  "stageKind": "reviewed-lesson",
+  "tables": {
+    "evaluation_cases": {
+      "path": "evaluation_cases.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "maintainer_scope_skills": {
+      "path": "maintainer_scope_skills.jsonl",
+      "sha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953"
+    },
+    "maintainer_skill_refresh_rounds": {
+      "path": "maintainer_skill_refresh_rounds.jsonl",
+      "sha256": "a29f508e1245c6183f76fb4bc210c0cb08d2a0db5c2197bb20fd8088f7a3b648"
+    },
+    "maintainer_skills": {
+      "path": "maintainer_skills.jsonl",
+      "sha256": "add6739fdfd3046580a206e34cda6e925058e6b1c64a3bf1362a40d5a4a36b69"
+    },
+    "program_facts": {
+      "path": "program_facts.jsonl",
+      "sha256": "8180a03cbe0858e3dd844735b7752a8f4138f0707d047d18ecf6b4d31d4276c9"
+    }
+  }
+}
