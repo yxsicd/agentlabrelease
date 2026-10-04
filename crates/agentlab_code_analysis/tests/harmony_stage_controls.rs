@@ -42,7 +42,7 @@ fn run(root: &Path, contract: &Value, label: &str) -> (bool, Value) {
 #[test]
 fn actual_stage_methods_discriminate_semantic_mutations_without_repository_constants() {
     for repository in ["arbitrary-owner-one", "different-owner-two"] {
-        let root = std::env::temp_dir().join(format!(
+        let root = std::env::temp_dir().canonicalize().unwrap().join(format!(
             "{repository}-{}-{}",
             std::process::id(),
             SystemTime::now()

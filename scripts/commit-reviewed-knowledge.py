@@ -89,7 +89,10 @@ class StrictTransport:
     def rpc(self, name, arguments):
         self.counter += 1
         body = {'jsonrpc': '2.0', 'id': self.counter, 'method': 'tools/call',
-                'params': {'name': name, 'arguments': arguments}}
+                'params': {'name': name, 'arguments': arguments,
+                           '_meta': {
+                               'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+                               'io.modelcontextprotocol/clientCapabilities': {}}}}
         request = urllib.request.Request(self.request['endpoint'], json.dumps(body).encode(),
             headers={'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream',
                      'MCP-Protocol-Version': '2026-07-28', 'Mcp-Method': 'tools/call', 'Mcp-Name': name})

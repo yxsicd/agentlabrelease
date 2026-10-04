@@ -8,6 +8,27 @@ import importlib.util,json,os,tempfile,threading
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('transport',os.environ['TRANSPORT'])
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+# Exercise the actual request builder, not the transaction method's fake RPC.
+# Sessionless MCP requires protocol metadata in the envelope as well as headers.
+from unittest.mock import patch
+import io
+c=module.StrictTransport.__new__(module.StrictTransport)
+c.counter=0;c.request=dict(endpoint='https://example.invalid/mcp')
+calls=[]
+def urlopen(request,timeout):
+    calls.append(request)
+    packet=json.loads(request.data)
+    assert packet['params']['_meta']=={
+        'io.modelcontextprotocol/protocolVersion':'2026-07-28',
+        'io.modelcontextprotocol/clientCapabilities':{}}
+    assert request.get_header('Mcp-protocol-version')=='2026-07-28'
+    assert packet['params']['name']=='service_metadata'
+    assert packet['params']['arguments']=={}
+    assert timeout==30
+    return io.BytesIO(json.dumps({'result':{'structuredContent':{'ready':True}}}).encode())
+with patch.object(module.urllib.request,'urlopen',urlopen):
+    assert c.rpc('service_metadata',{})=={'ready':True}
+assert len(calls)==1 and c.counter==1
 old,new='a'*40,'b'*40
 def client(root):
     c=module.StrictTransport.__new__(module.StrictTransport)
