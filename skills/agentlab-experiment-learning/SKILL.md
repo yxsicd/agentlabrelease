@@ -205,6 +205,20 @@ Preparation performs no dispatch, authority write or promotion. Require independ
 runtime isolation, durable scheduler budget enforcement and the ordinary source,
 control, review and return gates before treating this as a real multi-round loop.
 
+The thin `scripts/run-reviewed-source-successor.py` bridge reconsumes those original
+inputs, requires an exact Git checkout and reproduces the target through live author
+preflight. It launches the existing frozen-design constructor once with zero design
+or proposal-format repairs, retaining separate runtime receipts and partial failures.
+Use an existing operator-owned persistent claim directory: the same enrolled source,
+parent, target, response and policy cannot launch twice within that directory, even
+after failure or an uncertain timeout. Changing claim directories defeats that local
+fence; it is not global exactly-once scheduling or authenticated historical budget
+ownership. After construction, reconstruct original feedback again and validate the
+actual staged design, not merely the file supplied to the constructor. This bridge
+does not run the source-control suite, independent reviewer or knowledge writer.
+Its process/staging result does not prove native author capture or runtime isolation;
+require those separate receipts and ordinary downstream gates before advancement.
+
 Business cycles accept sourceSuiteCapture directly rather than manufacturing
 legacy behavior files. Bind original stage/suite digests, source/scope/knowledge
 and current round, then reconstruct again at return. Retained capture replay is
