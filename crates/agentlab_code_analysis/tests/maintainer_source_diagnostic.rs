@@ -325,6 +325,14 @@ fn suite_fixture_with_wrong_count(wrongs: usize) -> PathBuf {
 }
 
 fn suite_fixture_with_binding(wrongs: usize, binding: Option<&Value>) -> PathBuf {
+    suite_fixture_with_outcome(
+        wrongs,
+        binding,
+        binding.is_some_and(|b| b["fixtureDisagreement"] == true),
+    )
+}
+
+fn suite_fixture_with_outcome(wrongs: usize, binding: Option<&Value>, disagrees: bool) -> PathBuf {
     let base = fixture();
     let stage = base.join("stage");
     if let Some(binding) = binding {
@@ -406,7 +414,6 @@ fn suite_fixture_with_binding(wrongs: usize, binding: Option<&Value>) -> PathBuf
             id,
         )
         .unwrap();
-        let disagrees = binding.is_some_and(|b| b["fixtureDisagreement"] == true);
         let actual = json!({"scenario":{"value":if id.starts_with("wrong") && !disagrees {8} else {7},"nullable":null}});
         let capture = captured_inputs(&inputs, &inputs.join("contained-input-fixture"), 0, actual);
         let report = feedback(&inputs, &capture, &inputs.join("feedback.json")).unwrap();
@@ -2044,6 +2051,46 @@ fn independent_review_response_retains_negative_feedback_without_promoting() {
         }
     }
     assert!(complete().is_ok());
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
+fn complete_failed_suite_is_reviewable_but_cannot_be_promoted_or_rehashed() {
+    use agentlab_code_analysis::{
+        maintainer_source_review as reviewer, maintainer_source_suite_lesson as lesson,
+    };
+    let base = suite_fixture_with_outcome(2, None, true);
+    let observation = base.join("failed-observations");
+    lesson::export(&base.join("stage"), &base.join("suite"), None, &observation).unwrap();
+    let rubric =
+        fs::read(root().join("examples/maintainer-knowledge-gate/source-quality-rubric.json"))
+            .unwrap();
+    let packet = reviewer::prepare(&observation, &rubric).unwrap();
+    assert_eq!(
+        packet["reconstructedSuite"]["status"],
+        "review-declaration-mismatch"
+    );
+    assert_eq!(
+        packet["reconstructedSuite"]["completeInventoryReconstructed"],
+        true
+    );
+    assert_eq!(
+        packet["reconstructedSuite"]["acceptedReferenceRecoveryReconstructed"],
+        true
+    );
+    assert_eq!(packet["reviewerExecuted"], false);
+    assert_eq!(packet["authorityWritePerformed"], false);
+    let review = suite_lesson_review(&observation);
+    assert!(lesson::export(
+        &base.join("stage"),
+        &base.join("suite"),
+        Some(&serde_json::to_vec(&review).unwrap()),
+        &base.join("forged-acceptance"),
+    )
+    .is_err());
+    assert!(!base.join("forged-acceptance").exists());
+    fs::write(observation.join("source-stage/controls.cjs"), "changed observer").unwrap();
+    assert!(reviewer::prepare(&observation, &rubric).is_err());
     fs::remove_dir_all(base).unwrap();
 }
 

@@ -576,6 +576,35 @@ from unittest.mock import patch
 workflow=Path(os.environ['WORKFLOW']).read_text()
 def step(name):
     return workflow.split('      - name: '+name+'\n')[1].split('      - ')[0].split('        run: |\n')[1]
+def enabled(name, outcomes, cancelled=False, review=True):
+    header=workflow.split('      - name: '+name+'\n')[1].split('        run: |\n')[0]
+    condition=next(line.strip()[4:] for line in header.splitlines() if line.strip().startswith('if: '))
+    assert condition.startswith('${{ ') and condition.endswith(' }}')
+    expression=condition[4:-3]
+    import re
+    expression=expression.replace('!cancelled()',repr(not cancelled))
+    expression=expression.replace('inputs.independent_review',repr(review))
+    expression=re.sub(r'steps\.([a-z_]+)\.outcome',lambda m:repr(outcomes.get(m[1],'skipped')),expression)
+    return eval(expression.replace('&&',' and '),{'__builtins__':{}},{})
+prepare_name='Prepare independent reviewer on the same original suite'
+capture_name='Automatically capture a fresh independent reviewer'
+export_name='Automatically export and independently receive accepted feedback'
+for suite in ('success','failure'):
+    outcomes=dict(author_isolation='success',baseline_diagnostic='success',control_suite=suite)
+    assert enabled(prepare_name,outcomes)
+    assert not enabled(prepare_name,outcomes,cancelled=True)
+    assert not enabled(prepare_name,outcomes,review=False)
+    for boundary in ('author_isolation','baseline_diagnostic'):
+        bad=dict(outcomes);bad[boundary]='failure'
+        assert not enabled(prepare_name,bad)
+for outcome in ('success','failure','skipped','cancelled'):
+    assert enabled(capture_name,dict(review_contain=outcome))==(outcome=='success')
+    assert not enabled(capture_name,dict(review_contain=outcome),cancelled=True)
+for capture in ('success','failure','skipped'):
+    for isolation in ('success','failure','skipped'):
+        assert enabled(export_name,dict(review_capture=capture,review_isolation=isolation))==(capture==isolation=='success')
+suite_header=workflow.split('      - name: Diagnose complete frozen control suite and fresh accepted-reference recovery\n')[1].split('        run: |\n')[0]
+assert 'continue-on-error' not in suite_header  # Diagnostic review must not turn the failed task green.
 freeze=step('Freeze optional independent review before construction budget')
 freeze=textwrap.dedent(freeze.split("python3 - <<'PY'\n")[1].split('          PY')[0])
 export=textwrap.dedent(step('Automatically export and independently receive accepted feedback'))
