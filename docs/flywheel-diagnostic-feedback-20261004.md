@@ -329,3 +329,45 @@ need their separate implementation/execution evidence. In particular, a new
 enrollment ID is not global budget ownership or authentication of the original
 reviewed design lineage. The original reviewed-successor envelope remains retained
 separately and must be bound by the eventual transport, not discarded as optional.
+
+## Baseline continuation transport (development)
+
+PR #286 final head 251d5f8ebca8604e4d3c6d82feb2be32e7ee7502 passed Rust/Harmony
+37205901707, component 37205901738 and public 37205901709. Native job 111446901919
+confirmed the actual CLI, exclusive-output and original-preservation regression
+plus all legacy repair regressions. It merged as
+1aa2c2f00864a16fb799f7261e160a3016f9a060. No formal release or model execution follows.
+
+`scripts/run-baseline-continuation.py` binds the v2 packet to an exact original
+GitHub main constructor run/artifact/method/archive. It verifies completed first
+workflow attempt, artifact relationship/digest/size and exact selected archive
+members without executing or extracting downloaded code. The original successor
+packet and reviewed enrollment must match the archive. Existing review acquisition
+reconstructs historical reviewer isolation, exact source Git and original rejected
+review again; native successor admission binds the failed design to its reviewed
+target. Native diagnostic admission and current live design validation precede
+all claims and model budget.
+
+A local exclusive claim plus one nonretried GitHub ref creation reserves
+`agentlab-baseline-continuation-claims/<original-run-artifact-archive-identity>/1`.
+New enrollment IDs and policy bytes deliberately do not change that slot. The
+fresh constructor consumes the native diagnostic packet and byte-frozen design
+with zero revisions. GitHub credentials are removed from its environment.
+Partial output, timeout and failed claims remain retained. Live isolation is
+attempted even after constructor failure. Original inputs, output contract and
+original reviewed successor are checked again after construction.
+
+The Rust-hosted extracted transport regression passed locally for normal transport,
+producer/archive/native/review/live pre-budget rejection, remote slot refusal,
+author failure, timeout, isolation rejection and post-review drift. A changed
+enrollment with a fresh local claim root attempted the same mocked remote slot and
+could not launch again. These are mocked transport checks, not actual GitHub
+reservation, native wire completion or successful model correction. Full cloud
+validation and constructor-Action integration remain pending.
+
+The bridge reports recordedAuthorCompletionVerified=false; construction/staging
+and isolation are distinct from independent original-wire completion. It does not
+run the complete source-control suite, independent reviewer or knowledge writer.
+It is scoped reservation, not authenticated reviewer identity or global exactly-once
+business writes. Complete downstream gates, next-round benefit and cross-repository
+reuse remain outstanding. Overall maturity remains 75%, complete automatic rounds zero.

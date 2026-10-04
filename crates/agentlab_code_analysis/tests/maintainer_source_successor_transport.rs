@@ -2,6 +2,124 @@ use std::path::Path;
 use std::process::Command;
 
 #[test]
+fn baseline_continuation_transport_reserves_original_failure_not_enrollment_id() {
+    let code = r#"
+import argparse,hashlib,importlib.util,json,os,subprocess,tempfile,zipfile
+from pathlib import Path
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('transport',os.environ['CONTINUATION_SCRIPT'])
+transport=importlib.util.module_from_spec(spec);spec.loader.exec_module(transport)
+with tempfile.TemporaryDirectory() as temporary:
+  for scenario in ['pass','producer-drift','archive-drift','native-stop','review-stop','live-stop','remote-refusal','author-failure','timeout','isolation-stop','post-stop']:
+    root=Path(temporary)/scenario;root.mkdir();(root/'claims').mkdir();(root/'git').mkdir()
+    for name in ['gate','pi','request','review-enrollment','config']:(root/name).write_text('{}')
+    successor=dict(authorRequestOriginal='{}',targetDesignOriginal='{}')
+    (root/'successor').write_text(json.dumps(successor))
+    packet=dict(schema='agentlab.source_recipe_diagnostic_repair.v2',continuationEnrollmentOriginal='{"id":"first"}')
+    members={
+      'parentRequestOriginal':'agent/proposal-stage/request.json',
+      'parentProposalOriginal':'agent/proposal-stage/proposal.json',
+      'parentDesignOriginal':'agent/proposal-stage/design.json',
+      'parentStageReceiptOriginal':'agent/proposal-stage/stage-receipt.json',
+      'intentOriginal':'baseline-diagnostic/intent.json','executionRequestOriginal':'baseline-diagnostic/request.json',
+      'descriptorOriginal':'baseline-diagnostic/descriptor.json','supportOriginal':'baseline-diagnostic/support.json',
+      'processOriginal':'baseline-diagnostic/contained-input-fixture/process.json',
+      'stdoutOriginal':'baseline-diagnostic/contained-input-fixture/worker-stdout.log',
+      'stderrOriginal':'baseline-diagnostic/contained-input-fixture/worker-stderr.log'}
+    for key in members:packet[key]='{}'
+    with zipfile.ZipFile(root/'original.zip','w') as archive:
+      for key,name in members.items():archive.writestr(name,packet[key])
+      archive.writestr('successor-request.json',(root/'successor').read_bytes())
+      archive.writestr('successor-enrollment.json',b'{}')
+    original=(root/'original.zip').read_bytes();sha=hashlib.sha256(original).hexdigest()
+    (root/'repair').write_text(json.dumps(packet))
+    args=argparse.Namespace(output=root/'output',gate=root/'gate',pi=root/'pi',request=root/'request',
+      diagnostic_repair=root/'repair',successor_request=root/'successor',review_enrollment=root/'review-enrollment',
+      parent_archive=root/'original.zip',source_git_checkout=root/'git',claim_root=root/'claims',
+      repository='owner/repo',method_revision='b'*40,parent_method_revision='a'*40,parent_run='1',
+      parent_artifact='2',parent_archive_sha256=sha,reasoning_effort='low')
+    if scenario=='archive-drift':(root/'original.zip').write_bytes(original+b'changed')
+    authors=[];reserved=set();posts=[];isolations=[]
+    def run(command,**kwargs):
+      if command[0]=='gh':
+        if '/actions/runs/' in command[-1]:
+          value=dict(id=1,status='completed',run_attempt=1,event='workflow_dispatch',head_branch='main',
+            path='.github/workflows/maintainer-source-recipe-author.yml',head_sha='c'*40 if scenario=='producer-drift' else 'a'*40)
+        elif '/actions/artifacts/' in command[-1]:
+          value=dict(id=2,expired=False,name='unreviewed-source-recipe-1',workflow_run=dict(id=1),
+            digest='sha256:'+sha,size_in_bytes=len(original))
+        else:
+          assert command[1:4]==['api','--method','POST']
+          ref=next(x[4:] for x in command if x.startswith('ref='));posts.append(ref)
+          if ref in reserved or scenario=='remote-refusal':return subprocess.CompletedProcess(command,1,b'',b'existing durable slot')
+          reserved.add(ref);value=dict(ref=ref,object=dict(sha='b'*40))
+        return subprocess.CompletedProcess(command,0,json.dumps(value).encode(),b'')
+      out=Path(command[command.index('--output')+1])
+      if any(str(x).endswith('prepare-reviewed-successor-action.py') for x in command):
+        if scenario=='review-stop':return subprocess.CompletedProcess(command,1,b'',b'original review reject')
+        out.mkdir();(out/'bridge-inputs.json').write_text(json.dumps({key:str(root/key) for key in
+          ['source','quality_rubric','participant_evidence','review_response','review_feedback','successor_policy','source_git_checkout']}))
+      elif '--check-source-recipe-diagnostic-repair' in command and scenario=='native-stop':
+        return subprocess.CompletedProcess(command,1,b'',b'original diagnostic reject')
+      elif '--validate-source-recipe-design' in command and scenario=='live-stop':
+        return subprocess.CompletedProcess(command,1,b'',b'live source drift')
+      elif '--check-source-reviewed-successor' in command and authors and scenario=='post-stop':
+        return subprocess.CompletedProcess(command,1,b'',b'original review changed')
+      elif any(str(x).endswith('run-source-recipe-author.py') for x in command):
+        authors.append(command);assert kwargs['timeout']==600
+        assert 'GH_TOKEN' not in kwargs['env'] and 'GITHUB_TOKEN' not in kwargs['env']
+        assert command[command.index('--design-revisions')+1]=='0'
+        assert command[command.index('--proposal-format-revisions')+1]=='0'
+        assert '--diagnostic-repair' in command
+        if scenario=='timeout':raise subprocess.TimeoutExpired(command,600,output=b'partial bytes',stderr=b'original timeout')
+        if scenario=='author-failure':return subprocess.CompletedProcess(command,1,b'partial bytes',b'original failure')
+        stage=out/'proposal-stage';stage.mkdir(parents=True)
+        for name in ['request.json','proposal.json','design.json']:(stage/name).write_text('{}')
+      elif any(str(x).endswith('validate-participant-runtime.py') for x in command):
+        isolations.append(command)
+        assert '--recorded-paths' not in command
+        if scenario=='isolation-stop':return subprocess.CompletedProcess(command,1,b'',b'fresh isolation reject')
+        out.write_text('{}')
+      else:out.write_text('{}')
+      return subprocess.CompletedProcess(command,0,b'original stdout',b'original stderr')
+    with patch.dict(os.environ,AGENTLAB_PARTICIPANT_RUNTIME_CONFIG=str(root/'config'),GH_TOKEN='operator-only',GITHUB_TOKEN='operator-only'),patch.object(transport.subprocess,'run',side_effect=run):
+      try:result=transport.execute(args)
+      except Exception:assert scenario!='pass'
+      else:assert scenario=='pass' and result['constructionCompleted'] is True and result['runtimeIsolationVerified'] is True
+      if scenario=='pass':
+        # Different new enrollment plus fresh local claim root cannot reuse the remote parent slot.
+        packet['continuationEnrollmentOriginal']='{"id":"second"}';(root/'repair').write_text(json.dumps(packet))
+        args.output=root/'second';args.claim_root=root/'new-claims';args.claim_root.mkdir()
+        try:transport.execute(args)
+        except subprocess.CalledProcessError:pass
+        else:raise AssertionError('changed enrollment redispatched original failure')
+        assert len(authors)==1 and len(posts)==2 and posts[0]==posts[1]
+        assert len(reserved)==1
+    terminal=json.loads((root/'output/transport-terminal.json').read_bytes())
+    assert terminal['oldBudgetReopened'] is False and terminal['knowledgeWritePerformed'] is False
+    assert terminal['recordedAuthorCompletionVerified'] is False and terminal['qualified'] is False
+    if scenario in ['producer-drift','archive-drift','native-stop','review-stop','live-stop']:
+      assert authors==[] and posts==[]
+    if scenario in ['author-failure','timeout']:assert len(isolations)==1 and len(list((root/'claims').iterdir()))==1
+    if scenario=='timeout':assert (root/'output/constructor-stdout.log').read_bytes()==b'partial bytes'
+print('baseline transport identity, native stops, durable slot and failure preservation passed')
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "CONTINUATION_SCRIPT",
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/run-baseline-continuation.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn successor_transport_preserves_claims_and_stops_on_original_gate_failures() {
     // This mocks process transport only. Native capture/design semantics are
     // independently exercised by maintainer_source_diagnostic/operation tests.
