@@ -2081,14 +2081,22 @@ fn complete_failed_suite_is_reviewable_but_cannot_be_promoted_or_rehashed() {
     assert_eq!(packet["reviewerExecuted"], false);
     assert_eq!(packet["authorityWritePerformed"], false);
     let review = suite_lesson_review(&observation);
-    assert!(lesson::export(
+    let rejected = base.join("forged-acceptance");
+    let error = lesson::export(
         &base.join("stage"),
         &base.join("suite"),
         Some(&serde_json::to_vec(&review).unwrap()),
-        &base.join("forged-acceptance"),
+        &rejected,
     )
-    .is_err());
-    assert!(!base.join("forged-acceptance").exists());
+    .unwrap_err();
+    assert!(error.contains("matched complete controls"), "{error}");
+    assert_eq!(
+        fs::read(rejected.join("source-suite/result.json")).unwrap(),
+        fs::read(base.join("suite/result.json")).unwrap()
+    );
+    assert!(!rejected.join("export.json").exists());
+    assert!(!rejected.join("experiment_lessons.jsonl").exists());
+    assert!(!rejected.join("lesson_validations.jsonl").exists());
     fs::write(
         observation.join("source-stage/controls.cjs"),
         "changed observer",
