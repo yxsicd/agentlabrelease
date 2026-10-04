@@ -544,6 +544,12 @@ request capture and measure the next outcome before claiming consumption or
 learning benefit. Knowledge admission uses one fixed-baseline atomic delta; on
 authority drift, stop and reassess rather than adopting a newer revision through
 a generic retry path.
+For coordinator transport, use `scripts/commit-reviewed-knowledge.py` with an
+explicit reviewed request and separately supplied private credentials. Rust
+reconstructs the lesson stage before the existing writer is restricted to one
+insert-only transaction. Preserve complete serial page captures and uncertainty
+after intent; never fall back to bootstrap, updates or conflict rebasing. This
+adapter alone does not publish a consumer cut or schedule the next round.
 
 For a single-source stage calibration, use the main-only Maintainer guidance real
 consumption Action rather than adding unrelated repositories to a multi-repo
