@@ -164,6 +164,7 @@ jobs:
             --reasoning-effort "$REVIEW_REASONING_EFFORT" --thinking-type "$REVIEW_THINKING_TYPE" \
             --gateway-timeout-seconds "$REVIEW_GATEWAY_TIMEOUT" --max-output-tokens "$REVIEW_MAX_OUTPUT_TOKENS"
       - name: Independently validate recorded reviewer isolation
+        id: isolation
         if: always() && steps.contain.outcome == 'success'
         run: |
           cmp "$RUNNER_TEMP/review-runtime.json" "$RUNNER_TEMP/source-suite-review/runtime-inputs/config.json"
@@ -172,6 +173,22 @@ jobs:
             --workspace "$RUNNER_TEMP/source-suite-review/agent/workspace" \
             --participant-state "$RUNNER_TEMP/source-suite-review/agent/participant-state" \
             --label source-suite-review --output "$RUNNER_TEMP/source-suite-review/runtime-validation.json"
+      - name: Export accepted original review through native lesson gates
+        if: success() && steps.isolation.outcome == 'success'
+        run: |
+          verdict=$(jq -er '.verdict' "$RUNNER_TEMP/source-suite-review/agent/validation.json")
+          case "$verdict" in
+            reject|unverified) echo "Completed feedback has no accepted lesson; nothing exported."; exit 0 ;;
+            accept) ;;
+            *) echo "Unexpected native review verdict" >&2; exit 1 ;;
+          esac
+          target/release/agentlab-maintainer-skill-flywheel --export-source-suite-review-feedback \
+            --source "$RUNNER_TEMP/source-suite-review/source/observations" \
+            --quality-rubric "$RUNNER_TEMP/source-suite-review/rubric.json" \
+            --participant-evidence "$RUNNER_TEMP/source-suite-review/agent/evidence" \
+            --review-response "$RUNNER_TEMP/source-suite-review/agent/response.json" \
+            --source-git-checkout "$RUNNER_TEMP/review-source-git" \
+            --output "$RUNNER_TEMP/source-suite-review/feedback"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

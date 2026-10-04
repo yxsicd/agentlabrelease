@@ -791,6 +791,73 @@ pub fn verify_completion_with_git(
     Ok(report)
 }
 
+/// Hand an accepted original recorded review to the existing operational exporter.
+/// This creates a candidate export, never a knowledge write or automatic promotion.
+pub fn export_accepted_feedback(
+    root: &Path,
+    rubric: &[u8],
+    evidence: &Path,
+    response: &[u8],
+    checkout: Option<&Path>,
+    output: &Path,
+) -> Result<Value, String> {
+    let completion = verify_completion_with_git(root, rubric, evidence, response, checkout)?;
+    need(
+        completion["verdict"] == "accept",
+        "review feedback lesson export requires accepted recorded completion",
+    )?;
+    let review =
+        serde_json::to_vec(&parse(response)?["lessonReview"]).map_err(|e| e.to_string())?;
+    // All native lesson/content/wire gates precede output creation. Reserve a fresh
+    // envelope; preserve partial exports on filesystem failure, never overwrite.
+    for parent in output
+        .parent()
+        .ok_or("review feedback parent absent")?
+        .ancestors()
+    {
+        if !parent.as_os_str().is_empty() {
+            need(
+                !std::fs::symlink_metadata(parent)
+                    .map_err(|e| e.to_string())?
+                    .file_type()
+                    .is_symlink(),
+                "review feedback output symlink",
+            )?;
+        }
+    }
+    std::fs::create_dir(output).map_err(|e| e.to_string())?;
+    let manifest = crate::maintainer_source_suite_lesson::export(
+        &root.join("source-stage"),
+        &root.join("source-suite"),
+        Some(&review),
+        &output.join("lesson-export"),
+    )?;
+    // Keep these siblings outside the exact native operational export inventory.
+    std::fs::write(output.join("original-response.json"), response).map_err(|e| e.to_string())?;
+    let completion_bytes = serde_json::to_vec(&completion).map_err(|e| e.to_string())?;
+    std::fs::write(output.join("completion.json"), &completion_bytes).map_err(|e| e.to_string())?;
+    let receipt = json!({
+        "schema":"agentlab.independent_review_feedback_export.v1",
+        "reviewRequestSha256":completion["reviewRequestSha256"],
+        "qualityRubricSha256":completion["qualityRubricSha256"],
+        "originalResponseSha256":digest(response),"lessonReviewSha256":digest(&review),
+        "completionSha256":digest(&completion_bytes),"lessonExport":manifest,
+        "responseContentVerified":true,"recordedCompletionVerified":true,
+        "runtimeIsolationVerified":false,
+        "sourceGitBindingVerified":checkout.is_some(),
+        "reviewerAuthenticated":false,"quotationClaimSupportVerified":false,
+        "lessonCreated":true,"candidateExportOnly":true,
+        "authorityWritePerformed":false,"committedReadbackVerified":false,
+        "automaticPromotion":false,"learningBenefitVerified":false,"qualified":false
+    });
+    std::fs::write(
+        output.join("receipt.json"),
+        serde_json::to_vec_pretty(&receipt).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(receipt)
+}
+
 #[cfg(test)]
 mod git_identity_tests {
     use super::*;

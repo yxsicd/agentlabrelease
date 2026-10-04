@@ -631,6 +631,15 @@ fn isolated_review_transport_uses_native_gates_and_preserves_original_rejections
             .collect::<Vec<_>>());
     }
     file(&base.join("fixture-response.json"), &response);
+    let review = suite_lesson_review(&observation);
+    let accepted = json!({"schema":"agentlab.independent_source_suite_review_response.v1",
+        "reviewerId":review["reviewerId"],"reviewRequestSha256":response["reviewRequestSha256"],
+        "qualityRubricSha256":packet["qualityRubricSha256"],"reviewBindings":packet["reviewBindings"],
+        "automaticPromotion":false,"verdict":"accept","unresolvedFindings":[],"lessonReview":review,
+        "scenarioReviews":review["scenarioReviews"],"checkReviews":review["checkReviews"],"controlReviews":review["controlReviews"],
+        "criterionReviews":[{"id":"provenance","verdict":"pass","rationale":"Synthetic fixture membership, not source authentication.",
+            "evidence":[{"pointer":"/originalSourceFiles/0/content","quote":"module.exports"}]}]});
+    file(&base.join("fixture-accepted-response.json"), &accepted);
     let fixture = base.join("review-transport-fixture.py");
     fs::write(&fixture, r#"
 import argparse,hashlib,importlib.util,json,os,sys
@@ -650,6 +659,11 @@ class FixtureParticipant:
         assert kwargs['transport_retry_limit']==0 and not kwargs['require_completed_tool_call']
         prompt=kwargs['prompt'];assert 'fixture-external-secret' not in prompt
         text=(base/'fixture-response.json').read_text() if mode in ('valid','citations') else 'not JSON'
+        if mode=='accept':text=(base/'fixture-accepted-response.json').read_text()
+        if mode=='reject':
+            bad=json.loads((base/'fixture-response.json').read_text());bad['verdict']='reject'
+            bad['criterionReviews'][0].update(verdict='fail',evidence=[dict(pointer='/originalSourceFiles/0/content',quote='module.exports')])
+            text=json.dumps(bad)
         if mode=='citations':
             bad=json.loads(text);bad['checkReviews'][0]['sourceEvidence']=[dict(path='rawWorkerEvidence/2/content',quote='observed')]
             text=json.dumps(bad)
@@ -744,6 +758,114 @@ module.run(args,participant_class=FixtureParticipant)
     assert_eq!(diagnostic["diagnosticOnly"], true);
     assert_eq!(diagnostic["responseContentAccepted"], false);
     assert!(!base.join("review-citations/validation.json").exists());
+    let export = |mode: &str, name: &str| {
+        Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--export-source-suite-review-feedback")
+            .arg("--source")
+            .arg(&observation)
+            .arg("--quality-rubric")
+            .arg(&rubric_path)
+            .arg("--review-response")
+            .arg(base.join(format!("review-{mode}/response.json")))
+            .arg("--participant-evidence")
+            .arg(base.join(format!("review-{mode}/evidence")))
+            .arg("--output")
+            .arg(base.join(name))
+            .output()
+            .unwrap()
+    };
+    for mode in ["valid", "invalid", "citations", "reject"] {
+        if mode == "reject" {
+            let rejected = invoke(mode);
+            assert!(
+                rejected.status.success(),
+                "{}",
+                String::from_utf8_lossy(&rejected.stderr)
+            );
+        }
+        let name = format!("feedback-{mode}");
+        assert!(!export(mode, &name).status.success());
+        assert!(!base.join(name).exists());
+    }
+    let accepted_run = invoke("accept");
+    assert!(
+        accepted_run.status.success(),
+        "{}",
+        String::from_utf8_lossy(&accepted_run.stderr)
+    );
+    let exported = export("accept", "accepted-feedback");
+    assert!(
+        exported.status.success(),
+        "{}",
+        String::from_utf8_lossy(&exported.stderr)
+    );
+    let envelope = base.join("accepted-feedback");
+    let original_accepted = fs::read(base.join("review-accept/response.json")).unwrap();
+    assert_eq!(
+        fs::read(envelope.join("original-response.json")).unwrap(),
+        original_accepted
+    );
+    let receipt: Value =
+        serde_json::from_slice(&fs::read(envelope.join("receipt.json")).unwrap()).unwrap();
+    assert_eq!(
+        receipt["originalResponseSha256"],
+        digest(&original_accepted)
+    );
+    assert_eq!(
+        receipt["completionSha256"],
+        digest(&fs::read(envelope.join("completion.json")).unwrap())
+    );
+    assert_eq!(receipt["lessonCreated"], true);
+    for key in [
+        "qualified",
+        "authorityWritePerformed",
+        "automaticPromotion",
+        "runtimeIsolationVerified",
+        "learningBenefitVerified",
+    ] {
+        assert_eq!(receipt[key], false);
+    }
+    let lesson_bytes = fs::read(envelope.join("lesson-export/lesson-review.json")).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<Value>(&lesson_bytes).unwrap(),
+        accepted["lessonReview"]
+    );
+    assert_eq!(receipt["lessonReviewSha256"], digest(&lesson_bytes));
+    // The ordinary downstream consumer reconstructs the same native format.
+    agentlab_code_analysis::maintainer_observation_store::reconstructed_source_binding(
+        &envelope.join("lesson-export"),
+    )
+    .unwrap();
+    assert!(!export("accept", "accepted-feedback").status.success());
+    assert_eq!(
+        fs::read(envelope.join("original-response.json")).unwrap(),
+        original_accepted
+    );
+    assert!(reviewer::export_accepted_feedback(
+        &observation,
+        &fs::read(&rubric_path).unwrap(),
+        &base.join("review-accept/evidence"),
+        &original_accepted,
+        Some(&base),
+        &base.join("unverified-git-feedback"),
+    )
+    .is_err());
+    assert!(!base.join("unverified-git-feedback").exists());
+    // An accepted content verdict cannot bypass changed wire or lifecycle gates.
+    let status = base.join("review-accept/evidence/gateway/1.status.json");
+    let original_status = fs::read(&status).unwrap();
+    let mut changed: Value = serde_json::from_slice(&original_status).unwrap();
+    changed["semanticComplete"] = json!(false);
+    file(&status, &changed);
+    assert!(!export("accept", "changed-wire-feedback").status.success());
+    assert!(!base.join("changed-wire-feedback").exists());
+    fs::write(&status, original_status).unwrap();
+    let lifecycle = base.join("review-accept/evidence/source-suite-review-lifecycle.json");
+    let mut changed: Value = serde_json::from_slice(&fs::read(&lifecycle).unwrap()).unwrap();
+    changed["participantBudgetSeconds"] = json!(421);
+    file(&lifecycle, &changed);
+    assert!(!export("accept", "changed-budget-feedback").status.success());
+    assert!(!base.join("changed-budget-feedback").exists());
     fs::remove_dir_all(base).unwrap();
 }
 

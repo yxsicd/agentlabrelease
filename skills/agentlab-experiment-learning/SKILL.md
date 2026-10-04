@@ -231,7 +231,19 @@ original response on schema/capture rejection; do not restart an exhausted revie
 or infer acceptance from workflow success. A valid reject/unverified verdict is
 completed feedback with no lesson or knowledge write. Require the separate native
 completion and runtime-isolation receipts before reporting actual independent
-execution. The Action does not perform lesson admission or schedule a next round.
+execution. After both gates pass, the Action exports an accepted review through
+`--export-source-suite-review-feedback`; reject/unverified remain feedback only.
+The Rust handoff reconsumes the original response, source, rubric and complete
+wire capture before invoking the existing source-suite lesson exporter. It keeps
+the unchanged response and completion receipt beside the exact `lesson-export`
+inventory, not inside its operational tables. Nested lesson JSON serialization
+does not authorize operator correction of IDs, judgments or evidence. The export
+requires a fresh directory and does not overwrite failed or partial handoffs.
+Standalone export does not validate runtime isolation: require the Action's
+separate isolation receipt. Persist/read back this ordinary operational export
+before explicit promotion and knowledge admission. Candidate export is neither
+remote commitment, demonstrated benefit nor a next-round scheduling receipt.
+The Action does not perform lesson admission or schedule a next round.
 
 A real isolated reviewer completed but miscounted source/log array indices and
 quoted arrays/booleans where the contract permits original string substrings.
