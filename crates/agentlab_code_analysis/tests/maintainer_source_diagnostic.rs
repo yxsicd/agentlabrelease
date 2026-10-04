@@ -633,6 +633,18 @@ reviewer=dict(constructor,name='Maintainer independent source suite review',path
 assert module.validate_run_identity(constructor,args,True) is True
 assert module.validate_run_identity(constructor,args,False) is False
 assert module.validate_run_identity(reviewer,args,True) is False
+args.coordinator_request_id='c'*64
+tagged=dict(constructor,name='AgentLab gap '+'c'*64,display_title='AgentLab gap '+'c'*64)
+assert module.validate_run_identity(tagged,args,True) is True
+for row in [constructor,dict(tagged,name='AgentLab gap '+'d'*64),dict(tagged,display_title='wrong'),
+            dict(tagged,path=reviewer['path'])]:
+    try:module.validate_run_identity(row,args,True)
+    except ValueError:pass
+    else:raise AssertionError('Coordinator identity mismatch accepted')
+args.coordinator_request_id=None
+try:module.validate_run_identity(tagged,args,True)
+except ValueError:pass
+else:raise AssertionError('Undeclared coordinator run accepted')
 for row,feedback in [(reviewer,False),(dict(constructor,status='in_progress'),True),
                      (dict(constructor,event='pull_request'),True),(dict(constructor,head_branch='fork'),True),
                      (dict(constructor,head_sha='b'*40),True),(dict(constructor,path='.github/workflows/arbitrary.yml'),True)]:

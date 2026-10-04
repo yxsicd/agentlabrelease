@@ -23,6 +23,129 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn original_review_collection_waits_without_artifact_calls_and_requires_native_reception() {
+    use std::os::unix::fs::PermissionsExt;
+    let base = std::env::temp_dir().join(format!(
+        "agentlab-collect-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&base).unwrap();
+    let id = "c".repeat(64);
+    let method = "d".repeat(40);
+    fs::write(
+        base.join("dispatch-intent.json"),
+        serde_json::to_vec(&json!({"requestId":id,
+        "repository":"fixture/project","workflow":"maintainer-source-recipe-author.yml",
+        "methodRevision":method,"createdAt":"2026-10-04T00:00:00Z"}))
+        .unwrap(),
+    )
+    .unwrap();
+    let response = base.join("runs.json");
+    let gh = base.join("gh");
+    fs::write(&gh, r#"#!/bin/bash
+set -eu
+if [[ $2 == *artifacts* ]]; then
+  printf called >> "$COLLECT_ARTIFACT_LOG"
+  jq -n '{total_count:1,artifacts:[{id:456,name:"independent-source-suite-review-123",expired:false,digest:("sha256:"+("a"*64))}]}'
+else cat "$COLLECT_RUNS"; fi
+"#).unwrap();
+    let python = base.join("python3");
+    fs::write(&python, r#"#!/bin/bash
+set -eu
+while [[ $# -gt 0 ]]; do if [[ $1 == --output ]]; then output=$2; fi; shift; done
+mkdir -p "$output/review-inputs/agent"
+printf '{}' > "$output/review-inputs/agent/response.json"
+jq -n --argjson completed "$COLLECT_COMPLETED" '{completed:$completed,selectedAttempt:"."}' > "$output/review-inputs/agent/attempt-coordinator.json"
+jq -n --arg verdict "$COLLECT_VERDICT" '{verdict:$verdict}' > "$output/review-inputs/agent/validation.json"
+"#).unwrap();
+    let gate = base.join("gate");
+    fs::write(
+        &gate,
+        r#"#!/bin/bash
+set -eu
+printf called >> "$COLLECT_GATE_LOG"
+if [[ $COLLECT_GATE_EXIT == empty ]]; then exit 0; fi
+if [[ $COLLECT_GATE_EXIT != 0 ]]; then exit "$COLLECT_GATE_EXIT"; fi
+while [[ $# -gt 0 ]]; do
+  if [[ $1 == --output ]]; then output=$2; fi
+  if [[ $1 == --review-response ]]; then response=$2; fi
+  shift
+done
+sha=$(shasum -a 256 "$response" | cut -d ' ' -f1)
+jq -n --arg sha "$sha" '{schema:"agentlab.independent_review_feedback_reception.v1",originalResponseSha256:$sha,
+  originalResponseBytesVerified:true,responseContentVerified:true,recordedCompletionVerified:true,
+  originalRawSourceBytesVerified:true,nativeOperationalExportReconstructed:true,sourceGitBindingVerified:true,
+  candidateReadyForObservationImport:true,authorityWritePerformed:false}' | tee "$output"
+"#,
+    )
+    .unwrap();
+    for file in [&gh, &python, &gate] {
+        fs::set_permissions(file, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    let artifacts = base.join("artifact.log");
+    let gates = base.join("gate.log");
+    let run = |name: &str, status: &str, completed: &str, verdict: &str, exit: &str| {
+        fs::write(&response, serde_json::to_vec(&json!({"workflow_runs":[{"id":123,
+            "display_title":format!("AgentLab gap {id}"),"head_sha":method,"head_branch":"main",
+            "event":"workflow_dispatch","repository":{"full_name":"fixture/project"},"status":status,"conclusion":null}]})).unwrap()).unwrap();
+        Command::new("bash")
+            .arg(root().join("scripts/collect-maintainer-flywheel-review.sh"))
+            .arg(&base)
+            .arg(base.join(name))
+            .arg(&base)
+            .current_dir(root())
+            .env("COLLECT_RUNS", &response)
+            .env("COLLECT_ARTIFACT_LOG", &artifacts)
+            .env("COLLECT_GATE_LOG", &gates)
+            .env("COLLECT_GATE_EXIT", exit)
+            .env("COLLECT_COMPLETED", completed)
+            .env("COLLECT_VERDICT", verdict)
+            .env("AGENTLAB_FLYWHEEL_GATE", &gate)
+            .env(
+                "PATH",
+                format!("{}:{}", base.display(), std::env::var("PATH").unwrap()),
+            )
+            .output()
+            .unwrap()
+    };
+    assert!(run("running", "in_progress", "false", "reject", "0")
+        .status
+        .success());
+    assert!(!artifacts.exists());
+    assert!(!gates.exists());
+    assert!(run("incomplete", "completed", "false", "reject", "0")
+        .status
+        .success());
+    assert!(!gates.exists());
+    assert!(run("rejected", "completed", "true", "reject", "0")
+        .status
+        .success());
+    assert!(!gates.exists());
+    assert!(!run("native-failed", "completed", "true", "accept", "7")
+        .status
+        .success());
+    assert!(!base.join("native-failed/result.json").exists());
+    assert!(!run("empty-native", "completed", "true", "accept", "empty")
+        .status
+        .success());
+    assert!(!base.join("empty-native/result.json").exists());
+    assert!(run("received", "completed", "true", "accept", "0")
+        .status
+        .success());
+    let result: Value =
+        serde_json::from_slice(&fs::read(base.join("received/result.json")).unwrap()).unwrap();
+    assert_eq!(result["nativeReceptionVerified"], true);
+    assert_eq!(result["knowledgeAdmissionAllowed"], false);
+    assert_eq!(result["authorityWritePerformed"], false);
+    assert_eq!(fs::read_to_string(gates).unwrap(), "calledcalledcalled");
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn gap_run_recovery_retains_originals_and_rejects_ambiguity_and_identity_drift() {
     use std::os::unix::fs::PermissionsExt;
     let base = std::env::temp_dir().join(format!(
