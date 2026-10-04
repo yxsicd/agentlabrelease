@@ -75,6 +75,13 @@ def prepare(args):
     command += ['--output', str(root / 'native-preview.json')]
     subprocess.run(command, check=True, timeout=60)
     packet = json.loads((root / 'native-preview.json').read_bytes())
+    original_request = retained / 'source/observations/source-stage/request.json'
+    if 'sourceRecipeTarget' in json.loads(packet['authorRequestOriginal']):
+        restored = root / 'restored-parent-request.json'
+        subprocess.run([str(args.gate.resolve()), '--restore-source-recipe-author-target',
+            '--author-request', str(args.request), '--parent-author-request', str(original_request),
+            '--output', str(restored)], check=True, timeout=60)
+        restored.replace(args.request)
     acquisition.require(args.request.read_bytes() == packet['authorRequestOriginal'].encode(),
                         'Current Action request differs from original successor enrollment')
     # The bridge performs mandatory live target validation before durable claims

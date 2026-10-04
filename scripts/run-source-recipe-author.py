@@ -92,6 +92,17 @@ def observation_contract_guide(design):
                  shape=shape(check['expected'])) for check in design['checks']]
 
 
+def source_context(request):
+    context = {key: request[key] for key in (
+        'scope', 'source', 'sourceFiles', 'semanticFacts', 'selectedGap')}
+    for key in ('sourceDependencyInventory', 'sourceRecipeTarget'):
+        if key in request:
+            context[key] = request[key]
+    if 'readOnlySourceContext' in request:
+        context['readOnlySourceContext'] = request['readOnlySourceContext']['packet']
+    return context
+
+
 def guidance_prompt(prompt, packet, mode, evidence, label, effort, budget):
     if packet is None:
         return prompt
@@ -528,12 +539,7 @@ def main():
             codeNativeProcessBudgetSeconds=participant.process_budget_seconds(max(240, code_deadline+60)) if guidance is not None else None,
             transportRetryLimit=0, semanticQualified=False,
             automaticPromotion=False, authorityWritePerformed=False), stream)
-    context = {key: request[key] for key in (
-        'scope', 'source', 'sourceFiles', 'semanticFacts', 'selectedGap')}
-    if 'sourceDependencyInventory' in request:
-        context['sourceDependencyInventory'] = request['sourceDependencyInventory']
-    if 'readOnlySourceContext' in request:
-        context['readOnlySourceContext'] = request['readOnlySourceContext']['packet']
+    context = source_context(request)
     dependency_count = len(request['policy']['methodDependencies'])
     transformation_policy = (
         'The operator frozen runtime selects and applies every control transformation. '
