@@ -2,6 +2,33 @@
 
 ## Retained real early-review failure
 
+Fresh policy follow-up [37241175488](https://github.com/yxsicd/agentlabrelease/actions/runs/37241175488)
+at method `2dd9f18448fdb3f588ceb60c5750dc63ad1cba29` is terminal failure.
+Source artifact 11317423358 has verified SHA256
+`9ca9a13d11d8ae8b281ea2b428abf7b227077969c0458fc2edbc6a0151844e49`.
+One design and one reviewer generation completed. Original reviewer settings
+disable compaction, the archive contains one upstream exchange, and criterion
+evidence uses arrays. These observations support the prospective policy/shape
+fixes but do not establish native full completion or semantic approval.
+The original response added top-level reviewRequestSha256; native admission
+rejected `design quality response fields/schema`. Its control-discrimination
+failure and runtime-closure unverified opinions remain unadmitted, not verified
+findings. No code generation, workers, final review or knowledge commit followed.
+Preserve this closed root and all original bytes. A prospective prompt now states
+the exact seven response fields and explicitly excludes operator capture digests;
+the same strict gate rejects such extra metadata in a Rust regression. Do not
+strip the historical field or retry the consumed reviewer to manufacture admission.
+
+The root-shape follow-up full local regression exited 101 at
+operational_observations_do_not_invent_review_or_drop_failed_calibration,
+export_observation returning File exists (os error 17). Its test output naming
+used PID and wall-clock nanoseconds without a unique sequence. A test-only
+atomic sequence removes that shared-name collision opportunity while preserving
+the exporter's exclusive-directory gate; all 20 behavior-check tests then passed.
+The exact failed collision path was not captured, so this is not proof of its
+precise cause. Preserve the failed full-run receipt; focused success does not
+replace a new full package regression or exact-head cloud qualification.
+
 Real run [37239237427](https://github.com/yxsicd/agentlabrelease/actions/runs/37239237427)
 at method `249175ebaeaac01b70192a0e8227546cf082ca1f` completed two design
 turns and one early-review generation. Native content admission failed with

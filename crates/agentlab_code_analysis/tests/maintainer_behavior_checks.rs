@@ -1126,9 +1126,11 @@ sys.argv=['adapter','request.json'];m.main()
 }
 
 fn loop_output_for_adapter() -> std::path::PathBuf {
+    static NEXT_OUTPUT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     std::env::temp_dir().join(format!(
-        "agentlab-behavior-adapter-{}-{}",
+        "agentlab-behavior-adapter-{}-{}-{}",
         std::process::id(),
+        NEXT_OUTPUT.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
