@@ -206,17 +206,28 @@ pub(crate) fn continuation(
     intent_bytes: &[u8],
     staged: bool,
 ) -> Result<Value, String> {
-    need(intent_bytes.len() <= 1024 * 1024, "guidance continuation budget")?;
+    need(
+        intent_bytes.len() <= 1024 * 1024,
+        "guidance continuation budget",
+    )?;
     let intent: Value = serde_json::from_slice(intent_bytes).map_err(|e| e.to_string())?;
-    let fields = ["schema", "reviewed", "automaticPromotion", "baselineKnowledgeCutSha256",
-        "baselineKnowledgeRevision", "stage", "sources", "skills", "sourceRecipeTarget"];
+    let fields = [
+        "schema",
+        "reviewed",
+        "automaticPromotion",
+        "baselineKnowledgeCutSha256",
+        "baselineKnowledgeRevision",
+        "stage",
+        "sources",
+        "skills",
+        "sourceRecipeTarget",
+    ];
     need(
         intent.as_object().is_some_and(|object| {
             (object.len() == 8 || object.len() == 9)
                 && object.keys().all(|key| fields.contains(&key.as_str()))
                 && fields[..8].iter().all(|key| object.contains_key(*key))
-        })
-            && intent["schema"] == "agentlab.reviewed_guidance_continuation.v1"
+        }) && intent["schema"] == "agentlab.reviewed_guidance_continuation.v1"
             && intent["reviewed"] == true
             && intent["automaticPromotion"] == false,
         "guidance continuation reviewed intent differs",
@@ -235,9 +246,9 @@ pub(crate) fn continuation(
         .map_err(|e| e.to_string())?;
     let admitted_id = text(&plan["tables"]["maintainer_skills"], "key")?;
     need(
-        intent["skills"].as_array().is_some_and(|choices| {
-            choices.iter().any(|choice| choice["id"] == admitted_id)
-        }),
+        intent["skills"]
+            .as_array()
+            .is_some_and(|choices| choices.iter().any(|choice| choice["id"] == admitted_id)),
         "guidance continuation omits admitted Skill",
     )?;
     let mut selection = json!({"schema":"agentlab.maintainer_guidance_selection.v1",
@@ -247,7 +258,11 @@ pub(crate) fn continuation(
     if let Some(target) = intent.get("sourceRecipeTarget") {
         selection["sourceRecipeTarget"] = target.clone();
     }
-    let packet = bind_inner(knowledge, &serde_json::to_vec(&selection).map_err(|e| e.to_string())?, staged)?;
+    let packet = bind_inner(
+        knowledge,
+        &serde_json::to_vec(&selection).map_err(|e| e.to_string())?,
+        staged,
+    )?;
     Ok(json!({"selection":selection,"packet":packet}))
 }
 

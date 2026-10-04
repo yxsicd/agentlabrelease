@@ -142,11 +142,11 @@ impl ReviewedReturnInputs<'_> {
             "committed readback budget",
         )?;
         self.reconstruct(output)?;
-        let mut receipt = crate::maintainer_lesson_return::verify(output, self.source, next, capture)?;
+        let mut receipt =
+            crate::maintainer_lesson_return::verify(output, self.source, next, capture)?;
         if let Some(intent) = guidance_intent {
-            receipt["nextGuidance"] = crate::maintainer_guidance::continuation(
-                next, self.base, output, intent, false,
-            )?;
+            receipt["nextGuidance"] =
+                crate::maintainer_guidance::continuation(next, self.base, output, intent, false)?;
         }
         receipt["nextGuidanceBound"] = json!(guidance_intent.is_some());
         Ok(receipt)
