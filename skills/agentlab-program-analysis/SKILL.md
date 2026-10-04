@@ -75,6 +75,20 @@ checks are not independent coverage dimensions. Keep missing dependency source
 context distinct from an omitted runtime export binding; one does not prove the
 cause or repair of the other.
 
+Separate syntactic dependency inventory, compiler-emitted runtime imports and
+executed dependency closure. When import erasure affects a runtime claim, inspect
+output from the same pinned compiler and options as the frozen evaluator; retain
+source, compiler and emitted-output digests plus diagnostics. Use language-aware
+inspection of emitted imports, not source-name matching. An erased type/interface
+reference is not an unbound runtime import, but its typing may remain unresolved.
+Transpilation is neither type checking nor module execution. Trace initialization
+through retained value dependencies and explicitly bound globals; distinguish
+executable resource calls from resource syntax inside generated string literals.
+Do not add implicit platform stubs or call a host seam platform qualification.
+Read [the retained compiler checkpoint](../../docs/flywheel-compiler-dependency-evidence-20261005.md)
+when interpreting the import-erasure finding; it does not amend a historical review
+or supply compiler evidence to an already frozen experiment.
+
 The frozen source runtime owns control transformations: source() and loadModule()
 already consume the selected edits. Do not apply the design's edits a second time
 in generated verifiers. For initialization claims, compare source-observed state
