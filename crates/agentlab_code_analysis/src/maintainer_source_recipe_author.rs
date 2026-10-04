@@ -19,6 +19,11 @@ fn text<'a>(v: &'a Value, key: &str) -> Result<&'a str, String> {
         .filter(|s| !s.is_empty())
         .ok_or_else(|| format!("recipe author {key} absent"))
 }
+fn design_text<'a>(v: &'a Value, key: &str, kind: &str, pointer: &str) -> Result<&'a str, String> {
+    text(v, key).map_err(|_| {
+        format!("recipe design {kind} field at {pointer}/{key}: required nonempty string; no automatic coercion")
+    })
+}
 fn read(p: &Path, limit: usize) -> Result<Vec<u8>, String> {
     for ancestor in p.ancestors() {
         need(
@@ -1065,7 +1070,12 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
         .ok_or("recipe design scenario budget")?;
     let mut expected = serde_json::Map::new();
     for (scenario_index, scenario) in scenarios.iter().enumerate() {
-        let id = text(scenario, "id")?;
+        let id = design_text(
+            scenario,
+            "id",
+            "scenario",
+            &format!("/scenarios/{scenario_index}"),
+        )?;
         need(
             scenario.as_object().is_some_and(|o| o.len() == 4)
                 && id.len() <= 64
@@ -1101,11 +1111,11 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
     for (check_index, check) in checks.iter().enumerate() {
         need(
             check.as_object().is_some_and(|o| o.len() == 3)
-                && check_ids.insert(text(check, "id")?)
+                && check_ids.insert(design_text(check, "id", "check", &format!("/checks/{check_index}"))?)
                 && check.get("expected").is_some(),
             &format!("recipe design check fields at /checks/{check_index}: required exactly unique id, pointer and expected"),
         )?;
-        let pointer = text(check, "pointer")?;
+        let pointer = design_text(check, "pointer", "check", &format!("/checks/{check_index}"))?;
         let actual = expected.pointer(pointer).ok_or_else(|| {
             format!("recipe design check pointer at /checks/{check_index}/pointer: check {} pointer {} does not resolve into scenario expectedObservations; available scenario IDs {}; use exact scenario IDs, not abbreviations. This is a pointer failure, not permission to change expected values.",
                 diagnostic_value(&check["id"]), diagnostic_value(&check["pointer"]),
@@ -1137,8 +1147,9 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
     let mut variants = BTreeSet::new();
     let (mut baselines, mut references, mut wrongs) = (0, 0, 0);
     let mut results = Vec::new();
-    for control in controls {
-        let id = text(control, "id")?;
+    for (control_index, control) in controls.iter().enumerate() {
+        let control_pointer = format!("/controls/{control_index}");
+        let id = design_text(control, "id", "control", &control_pointer)?;
         need(
             control.as_object().is_some_and(|o| o.len() == 4)
                 && operation::valid_control_id(id)
@@ -1183,13 +1194,14 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
         }
         let mut transformed = original.clone();
         let mut edit_receipts = Vec::new();
-        for edit in edits {
+        for (edit_index, edit) in edits.iter().enumerate() {
             need(
                 edit.as_object().is_some_and(|o| o.len() == 3),
                 "recipe design edit fields",
             )?;
-            let path = text(edit, "path")?;
-            let before = text(edit, "before")?;
+            let edit_pointer = format!("{control_pointer}/edits/{edit_index}");
+            let path = design_text(edit, "path", "edit", &edit_pointer)?;
+            let before = design_text(edit, "before", "edit", &edit_pointer)?;
             let after = edit["after"].as_str().ok_or("recipe design replacement")?;
             need(
                 before.len() <= 16384 && after.len() <= 16384 && before != after,

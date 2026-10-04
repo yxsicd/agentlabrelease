@@ -222,6 +222,12 @@ An unbound verifier import is a construction/runtime dependency-binding gap,
 not application behavior feedback. Preserve the original diagnostic, bind the
 necessary dependency explicitly in a new frozen construction, and never solve
 it by granting implicit imports or reopening an exhausted repair budget.
+Keep design-local field-shape diagnostics distinct from request identity and
+source/policy drift. Report the exact JSON pointer and required type so the
+existing bounded correction route can act on malformed IDs or edit fields;
+never coerce numeric IDs, fill missing values or whitelist every author error.
+A completed model turn with unused correction allowance can still be an
+orchestration failure. Preserve it and test the correction route separately.
 
 Route bounded work by capability: source behavior, configuration/asset, or
 repository contract. Require only evidence dimensions that the mode can prove;
