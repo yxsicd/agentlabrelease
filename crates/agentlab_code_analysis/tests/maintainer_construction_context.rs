@@ -1,8 +1,8 @@
 use agentlab_code_analysis::{
     digest,
     maintainer_construction_context::{
-        bind_candidate_paths, prepare, prepare_edit_boundary, validate_context,
-        validate_edit_boundary,
+        acquire_objects, bind_candidate_paths, prepare, prepare_edit_boundary, prepare_object_plan,
+        validate_context, validate_edit_boundary, validate_object_plan,
     },
 };
 use serde_json::{json, Value};
@@ -21,6 +21,200 @@ struct Fixture {
     revision: String,
 }
 static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(0);
+
+#[cfg(unix)]
+#[test]
+fn fresh_partial_clone_fetches_only_bound_missing_context_without_materializing_paths() {
+    let f = Fixture::new();
+    git(&f.source, &["config", "uploadpack.allowFilter", "true"]);
+    git(
+        &f.source,
+        &["config", "uploadpack.allowAnySHA1InWant", "true"],
+    );
+    let origin = format!("file://{}", f.source.display());
+    f.scopes(|rows| {
+        for row in rows {
+            row["repository"] = json!(origin);
+        }
+    });
+    let cut_path = f.knowledge.join("maintainer-knowledge-cut.json");
+    let mut cut: Value = serde_json::from_slice(&fs::read(&cut_path).unwrap()).unwrap();
+    cut["repositories"][0]["repository"] = json!(origin);
+    fs::write(&cut_path, serde_json::to_vec(&cut).unwrap()).unwrap();
+    let source = f.root.join("partial");
+    git(
+        &f.root,
+        &[
+            "clone",
+            "--filter=blob:none",
+            "--no-checkout",
+            &origin,
+            source.to_str().unwrap(),
+        ],
+    );
+    git(
+        &source,
+        &["sparse-checkout", "set", "--no-cone", "/pkg/main.rs"],
+    );
+    git(&source, &["checkout", "--detach", &f.revision]);
+    let plan =
+        prepare_object_plan(&f.knowledge, &source, "arbitrary", &["build.cfg".into()]).unwrap();
+    assert!(prepare(&f.knowledge, &source, "arbitrary", &["build.cfg".into()]).is_err());
+    assert!(!source.join("build.cfg").exists());
+    // A single failed remote fetch retains evidence and no consumable packet.
+    let parked = f.root.join("parked-origin");
+    fs::rename(&f.source, &parked).unwrap();
+    let failed = f.root.join("failed-acquisition");
+    let result = acquire_objects(
+        &f.knowledge,
+        &source,
+        &serde_json::to_vec(&plan).unwrap(),
+        Path::new("/usr/bin/git"),
+        &failed,
+    );
+    fs::rename(&parked, &f.source).unwrap();
+    assert!(result.is_err());
+    let receipt: Value =
+        serde_json::from_slice(&fs::read(failed.join("acquisition.json")).unwrap()).unwrap();
+    assert_eq!(receipt["maximumFetchAttempts"], 1);
+    assert_eq!(receipt["process"]["status"], "failed");
+    assert!(!failed.join("context.json").exists());
+    assert!(failed.join("fetch.stderr").is_file());
+    let out = f.root.join("partial-acquisition");
+    let receipt = acquire_objects(
+        &f.knowledge,
+        &source,
+        &serde_json::to_vec(&plan).unwrap(),
+        Path::new("/usr/bin/git"),
+        &out,
+    )
+    .unwrap();
+    assert_eq!(receipt["networkRequested"], true);
+    assert_eq!(receipt["process"]["exitCode"], 0);
+    assert_eq!(
+        receipt["missingBlobOids"],
+        json!([plan["selectedFiles"][0]["gitBlobOid"]])
+    );
+    assert_eq!(receipt["offlineContextReconstructed"], true);
+    assert!(!source.join("build.cfg").exists());
+    assert!(git(&source, &["status", "--porcelain"]).is_empty());
+    assert_eq!(git(&source, &["rev-parse", "HEAD"]), f.revision);
+    assert!(validate_context(
+        &f.knowledge,
+        &source,
+        &fs::read(out.join("context.json")).unwrap()
+    )
+    .is_ok());
+}
+
+#[cfg(unix)]
+#[test]
+fn acquisition_reuses_local_objects_and_retains_offline_budget_failure() {
+    let f = Fixture::new();
+    let plan =
+        prepare_object_plan(&f.knowledge, &f.source, "arbitrary", &["build.cfg".into()]).unwrap();
+    let bytes = serde_json::to_vec(&plan).unwrap();
+    let out = f.root.join("acquired");
+    let receipt = acquire_objects(
+        &f.knowledge,
+        &f.source,
+        &bytes,
+        Path::new("/usr/bin/git"),
+        &out,
+    )
+    .unwrap();
+    assert_eq!(receipt["networkRequested"], false);
+    assert_eq!(receipt["offlineContextReconstructed"], true);
+    let packet = fs::read(out.join("context.json")).unwrap();
+    assert!(validate_context(&f.knowledge, &f.source, &packet).is_ok());
+    assert!(acquire_objects(
+        &f.knowledge,
+        &f.source,
+        &bytes,
+        Path::new("/usr/bin/git"),
+        &out
+    )
+    .is_err());
+    assert_eq!(fs::read(out.join("context.json")).unwrap(), packet);
+    let mut forged = plan.clone();
+    forged["selectedFiles"][0]["gitBlobOid"] = json!("a".repeat(40));
+    let rejected = f.root.join("forged-acquisition");
+    assert!(acquire_objects(
+        &f.knowledge,
+        &f.source,
+        &serde_json::to_vec(&forged).unwrap(),
+        Path::new("/usr/bin/git"),
+        &rejected
+    )
+    .is_err());
+    assert!(!rejected.exists());
+    let large =
+        prepare_object_plan(&f.knowledge, &f.source, "arbitrary", &["large.cfg".into()]).unwrap();
+    let rejected = f.root.join("budget-acquisition");
+    assert!(acquire_objects(
+        &f.knowledge,
+        &f.source,
+        &serde_json::to_vec(&large).unwrap(),
+        Path::new("/usr/bin/git"),
+        &rejected
+    )
+    .is_err());
+    let receipt: Value =
+        serde_json::from_slice(&fs::read(rejected.join("acquisition.json")).unwrap()).unwrap();
+    assert_eq!(receipt["offlineContextReconstructed"], false);
+    assert_eq!(receipt["networkRequested"], false);
+    assert!(!rejected.join("context.json").exists());
+    assert!(git(&f.source, &["status", "--porcelain"]).is_empty());
+}
+
+#[test]
+fn object_plan_binds_tree_without_content_and_rejects_forged_authority() {
+    let f = Fixture::new();
+    let paths = vec!["build.cfg".to_owned()];
+    let plan = prepare_object_plan(&f.knowledge, &f.source, "arbitrary", &paths).unwrap();
+    let bytes = serde_json::to_vec(&plan).unwrap();
+    let validate = |bytes: &[u8]| validate_object_plan(&f.knowledge, &f.source, bytes);
+    assert_eq!(validate(&bytes).unwrap()["contentVerified"], false);
+    assert!(validate_context(&f.knowledge, &f.source, &bytes).is_err());
+    for field in ["gitBlobOid", "ownerScopeSkillId", "access"] {
+        let mut forged = plan.clone();
+        forged["selectedFiles"][0][field] = json!("forged");
+        assert!(
+            validate(&serde_json::to_vec(&forged).unwrap()).is_err(),
+            "{field}"
+        );
+    }
+    let mut forged = plan.clone();
+    forged["contentVerified"] = json!(true);
+    assert!(validate(&serde_json::to_vec(&forged).unwrap()).is_err());
+    assert!(prepare_object_plan(
+        &f.knowledge,
+        &f.source,
+        "arbitrary",
+        &["pkg/link.rs".into()]
+    )
+    .is_err());
+    // Simulate unavailable content without deleting evidence. Tree identity stays
+    // available, while the ordinary consumer must still refuse missing bytes.
+    let oid = plan["selectedFiles"][0]["gitBlobOid"].as_str().unwrap();
+    let object = f
+        .source
+        .join(".git/objects")
+        .join(&oid[..2])
+        .join(&oid[2..]);
+    let retained = f.root.join("retained-blob");
+    fs::rename(&object, &retained).unwrap();
+    assert!(prepare(&f.knowledge, &f.source, "arbitrary", &paths).is_err());
+    assert_eq!(
+        prepare_object_plan(&f.knowledge, &f.source, "arbitrary", &paths).unwrap(),
+        plan
+    );
+    assert!(validate(&bytes).is_ok());
+    fs::rename(retained, object).unwrap();
+    assert!(prepare(&f.knowledge, &f.source, "arbitrary", &paths).is_ok());
+    f.scopes(|scopes| scopes[0]["sourceRevision"] = json!("a".repeat(40)));
+    assert!(validate(&bytes).is_err());
+}
 fn edit_selection() -> Value {
     json!({"schema":"agentlab.case_edit_selection.v1","edits":[
         {"path":"pkg/main.rs","anchorPath":"pkg/main.rs","mode":"modify","ownerScopeSkillId":"implementation","reason":"implement the behavior contract"},

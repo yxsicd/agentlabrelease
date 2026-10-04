@@ -374,6 +374,184 @@ pub fn prepare(
     repository_id: &str,
     paths: &[String],
 ) -> Result<Value, String> {
+    prepare_internal(base, source, repository_id, paths, false)
+}
+
+/// Bind acquisition candidates without reading missing promised Blob contents.
+/// This is not a consumable context packet or permission for implicit fetches.
+pub fn prepare_object_plan(
+    base: &Path,
+    source: &Path,
+    repository_id: &str,
+    paths: &[String],
+) -> Result<Value, String> {
+    prepare_internal(base, source, repository_id, paths, true)
+}
+
+pub fn validate_object_plan(
+    base: &Path,
+    source: &Path,
+    plan_bytes: &[u8],
+) -> Result<Value, String> {
+    need(
+        plan_bytes.len() <= 1024 * 1024,
+        "context object plan exceeds budget",
+    )?;
+    let plan: Value = serde_json::from_slice(plan_bytes).map_err(|e| e.to_string())?;
+    let repository = plan["repository"]["id"]
+        .as_str()
+        .ok_or("object plan repository absent")?;
+    let paths = plan["selectedFiles"]
+        .as_array()
+        .ok_or("object plan files absent")?
+        .iter()
+        .map(|file| {
+            file["path"]
+                .as_str()
+                .map(str::to_owned)
+                .ok_or("object plan path absent".to_owned())
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let expected = prepare_object_plan(base, source, repository, &paths)?;
+    need(
+        plan == expected,
+        "object plan differs from reconstructed source and knowledge",
+    )?;
+    Ok(
+        json!({"schema":"agentlab.case_context_object_plan_validation.v1",
+        "planSha256":digest(plan_bytes),"repository":expected["repository"],
+        "knowledgeCutSha256":expected["knowledgeCutSha256"],"tableGitRevision":expected["tableGitRevision"],
+        "selectedFileCount":paths.len(),"sourceTreeBindingVerified":true,"knowledgeBindingVerified":true,
+        "contentVerified":false,"networkPerformed":false,"grantsEditablePaths":false,
+        "authorityWritePerformed":false,"automaticPromotion":false}),
+    )
+}
+
+/// Explicit network preparation, separate from offline context validation.
+/// Retain the original plan and bounded process capture even when acquisition fails.
+#[cfg(unix)]
+pub fn acquire_objects(
+    base: &Path,
+    source: &Path,
+    plan_bytes: &[u8],
+    git_program: &Path,
+    out: &Path,
+) -> Result<Value, String> {
+    use std::io::Write;
+    let validation = validate_object_plan(base, source, plan_bytes)?;
+    need(
+        out.is_absolute(),
+        "object acquisition output must be absolute",
+    )?;
+    need(
+        git_program.is_absolute(),
+        "object acquisition Git program must be absolute",
+    )?;
+    let program_sha = crate::maintainer_operation_exec::executable_sha(git_program)?;
+    fs::create_dir(out).map_err(|e| e.to_string())?;
+    let retain = |name: &str, bytes: &[u8]| -> Result<(), String> {
+        fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(out.join(name))
+            .map_err(|e| e.to_string())?
+            .write_all(bytes)
+            .map_err(|e| e.to_string())
+    };
+    retain("object-plan.json", plan_bytes)?;
+    retain(
+        "plan-validation.json",
+        &serde_json::to_vec_pretty(&validation).map_err(|e| e.to_string())?,
+    )?;
+    let plan: Value = serde_json::from_slice(plan_bytes).map_err(|e| e.to_string())?;
+    let mut missing = BTreeSet::new();
+    for file in plan["selectedFiles"].as_array().unwrap() {
+        let oid = file["gitBlobOid"].as_str().unwrap();
+        if git(source, &["cat-file", "-e", oid]).is_err() {
+            missing.insert(oid.to_owned());
+        }
+    }
+    let process = if missing.is_empty() {
+        Value::Null
+    } else {
+        let mut args = vec![
+            "-c",
+            "core.fsmonitor=false",
+            "-c",
+            "gc.auto=0",
+            "fetch",
+            "--no-tags",
+            "--no-write-fetch-head",
+            "--no-recurse-submodules",
+            "--depth=1",
+            "--filter=blob:none",
+            "origin",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+        args.extend(missing.iter().cloned());
+        let command = json!({"program":git_program,"programSha256":program_sha,
+            "args":args,"cwd":".","timeoutMs":60000});
+        crate::maintainer_operation_exec::capture(&command, source, out, "fetch")?
+    };
+    let outcome = (|| -> Result<Value, String> {
+        need(
+            process.is_null() || process["status"] == "successful",
+            "explicit object fetch failed",
+        )?;
+        validate_object_plan(base, source, plan_bytes)?;
+        let paths = plan["selectedFiles"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f["path"].as_str().unwrap().to_owned())
+            .collect::<Vec<_>>();
+        prepare(
+            base,
+            source,
+            plan["repository"]["id"].as_str().unwrap(),
+            &paths,
+        )
+    })();
+    let error = outcome.as_ref().err().cloned();
+    let receipt = json!({"schema":"agentlab.case_context_object_acquisition.v1",
+        "planSha256":digest(plan_bytes),"repository":plan["repository"],
+        "missingBlobOids":missing,"process":process,"networkRequested":!missing.is_empty(),
+        "offlineContextReconstructed":outcome.is_ok(),"error":error,
+        "maximumFetchAttempts":1,"maximumFetchWallMs":60000,"networkByteLimitEnforced":false,
+        "worktreeFilesMaterialized":false,"grantsEditablePaths":false,
+        "authorityWritePerformed":false,"automaticPromotion":false});
+    retain(
+        "acquisition.json",
+        &serde_json::to_vec_pretty(&receipt).map_err(|e| e.to_string())?,
+    )?;
+    let packet = outcome?;
+    retain(
+        "context.json",
+        &serde_json::to_vec_pretty(&packet).map_err(|e| e.to_string())?,
+    )?;
+    Ok(receipt)
+}
+
+#[cfg(not(unix))]
+pub fn acquire_objects(
+    _base: &Path,
+    _source: &Path,
+    _plan_bytes: &[u8],
+    _git_program: &Path,
+    _out: &Path,
+) -> Result<Value, String> {
+    Err("bounded object acquisition requires a Unix process-group adapter".into())
+}
+
+fn prepare_internal(
+    base: &Path,
+    source: &Path,
+    repository_id: &str,
+    paths: &[String],
+    object_plan: bool,
+) -> Result<Value, String> {
     need(
         source.is_absolute() && source.is_dir(),
         "context source must be an absolute checkout",
@@ -509,6 +687,17 @@ pub fn prepare(
             "context source symlink, directory or submodule rejected",
         )?;
         let oid = fields[2];
+        if object_plan {
+            owners.insert(
+                scope["id"]
+                    .as_str()
+                    .ok_or("context owning scope id absent")?
+                    .to_owned(),
+            );
+            entries.push(json!({"path":path,"gitBlobOid":oid,
+                "ownerScopeSkillId":scope["id"],"access":"read-only"}));
+            continue;
+        }
         let size_bytes = git(source, &["cat-file", "-s", oid])?;
         let size: usize = std::str::from_utf8(&size_bytes)
             .map_err(|e| e.to_string())?
@@ -536,7 +725,7 @@ pub fn prepare(
     }
     let mut owner_knowledge = Vec::new();
     let mut knowledge_bytes = 0usize;
-    for owner in &owners {
+    for owner in owners.iter().filter(|_| !object_plan) {
         let mut analysis_facts = Vec::new();
         let mut excluded = Vec::new();
         for fact in tables["programFacts"].values().filter(|fact| {
@@ -600,6 +789,16 @@ pub fn prepare(
             read(&base.join(file))? == bytes,
             "context table changed during preparation",
         )?;
+    }
+    if object_plan {
+        return Ok(json!({"schema":"agentlab.case_context_object_plan.v1",
+            "repository":repository,"knowledgeCutSha256":digest(&cut_bytes),
+            "tableGitRevision":authority,"ownerScopeSkillIds":owners,"selectedFiles":entries,
+            "maximumSelectedFiles":32,"maximumContentFileBytes":65536,
+            "maximumContentTotalBytes":262144,"selectionPolicy":"operator-explicit-paths",
+            "contentVerified":false,"networkPerformed":false,"grantsEditablePaths":false,
+            "authorityWritePerformed":false,"automaticPromotion":false,
+            "boundary":"Exact regular Tree Blobs and unique owners only. Acquire objects in a separate bounded stage, then reconstruct the offline context packet. Content budgets apply after acquisition; this plan does not enforce network byte limits or qualify semantics, execution or cases."}));
     }
     Ok(
         json!({"schema":"agentlab.case_construction_context_packet.v2", "repository":repository,

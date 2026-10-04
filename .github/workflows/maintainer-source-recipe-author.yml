@@ -314,11 +314,15 @@ jobs:
           context_args=[]
           context_paths=os.environ.get('DEPENDENCY_CONTEXT_PATHS','').splitlines()
           if context_paths:
-              args=['--prepare-construction-context','--knowledge',knowledge,'--source-worktree',source,
-                    '--repository',scope['repositoryId'],'--output',output/'dependency-context.json']
+              args=['--prepare-construction-context-object-plan','--knowledge',knowledge,'--source-worktree',source,
+                    '--repository',scope['repositoryId'],'--output',output/'dependency-object-plan.json']
               for path in context_paths:args+=['--context-path',path]
               run(*args)
-              context_args=['--context-packet',output/'dependency-context.json']
+              git_program=Path(subprocess.check_output(['which','git'],text=True).strip()).resolve()
+              run('--acquire-construction-context-objects','--knowledge',knowledge,'--source-worktree',source,
+                  '--object-plan',output/'dependency-object-plan.json','--git-program',git_program,
+                  '--output',output/'dependency-acquisition')
+              context_args=['--context-packet',output/'dependency-acquisition/context.json']
           run('--prepare-source-recipe-author','--knowledge',knowledge,'--source-worktree',source,'--repository',os.environ['REPOSITORY_SELECTOR'],
               '--author-policy',output/'policy.json','--output',output/'request.json',*context_args)
           PY
