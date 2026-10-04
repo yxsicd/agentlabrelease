@@ -92,6 +92,23 @@ and fresh targeted mode, and budgets the additional stage prospectively. Inputs
 default empty so historical cohorts are not silently changed; new controlled runs
 must explicitly enroll this lane.
 
+Action's existing `revision_feedback` envelope carries early enrollment with
+exactly `schema`, `rubric` and `rubricSha256`:
+
+```json
+{"schema":"agentlab.source_design_review_action_enrollment.v1","rubric":"examples/maintainer-knowledge-gate/source-design-quality-rubric.json","rubricSha256":"d29abbb6f7f25e14c6d422639f1a78b347183aa723614c14e20dfe3229d8ba64"}
+```
+
+This is configuration, not a reviewer finding or a reviewed successor. A cloud
+workflow-contract gate rejected the first interface with 27 inputs against its
+25-input limit. The corrected interface retains the original 25 inputs and native
+review contract instead of skipping the gate. The real input validator rejects
+extra fields, wrong digest, path escape, mixed legacy parent and rerun enrollment.
+The actual request-argument builder still freezes sourceRecipeTarget when this
+typed configuration makes the feedback field nonempty; merely fixing the linter
+would otherwise risk losing the original target before inference. The pinned
+actionlint v1.7.10 command passes locally; exact-head cloud CI is still required.
+
 Rust-driven transport/routing fixtures cover all three derived decisions, distinct
 phase intent/label, mixed-lane and repair rejection, exact response retention and
 runtime-receipt-root restoration. Their native gate is explicitly mocked; actual

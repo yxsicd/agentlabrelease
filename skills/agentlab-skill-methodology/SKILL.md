@@ -262,6 +262,10 @@ Enroll early-review inputs and its separate bounded budget before the first
 constructor turn. Run it with fresh reviewer state before verifier generation;
 revise/unverified or capture failure stops code, retaining findings for an explicitly
 reviewed successor rather than reopening the same construction budget.
+When a dispatch interface is already at its input limit, carry new enrollment in
+an explicitly typed bounded envelope, preserving legacy lanes. Nonempty feedback
+transport is not necessarily a reviewed successor: retain original target binding
+for fresh enrollment and test the actual request builder plus pinned workflow linter.
 
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest

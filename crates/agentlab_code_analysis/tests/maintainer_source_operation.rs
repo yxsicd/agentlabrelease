@@ -971,6 +971,88 @@ fn source_action_accepts_explicit_checked_in_cuts_and_rejects_path_escape() {
             String::from_utf8_lossy(&result.stderr)
         );
     }
+    let rubric = "examples/maintainer-knowledge-gate/source-design-quality-rubric.json";
+    let rubric_digest = digest(&fs::read(root().join(rubric)).unwrap());
+    let selection = "examples/maintainer-knowledge-gate/reviewed-guidance/toggle-generate-ordered-attributes-e516a65a.json";
+    for variant in 0..6 {
+        let mut enrollment = json!({"schema":"agentlab.source_design_review_action_enrollment.v1",
+            "rubric":rubric,"rubricSha256":rubric_digest});
+        match variant {
+            1 => enrollment["rubricSha256"] = json!("0".repeat(64)),
+            2 => enrollment["extra"] = json!(true),
+            3 => enrollment["rubric"] = json!("../escape.json"),
+            _ => {}
+        }
+        let environment = fixture_root.join(format!("early-environment-{variant}"));
+        let result = Command::new("bash")
+            .args(["-e", "-c", &script])
+            .current_dir(root())
+            .env("KNOWLEDGE", "examples/maintainer-knowledge-gate/first-four")
+            .env("REVISION_PARENT_RUN", if variant == 4 { "123" } else { "" })
+            .env(
+                "REVISION_FEEDBACK",
+                serde_json::to_string(&enrollment).unwrap(),
+            )
+            .env("CONSTRUCTION_CODE_REVISIONS", "0")
+            .env("AGENTLAB_SOURCE_GUIDANCE_SELECTION", selection)
+            .env("CONSTRUCTION_DESIGN_FIRST", "true")
+            .env("GITHUB_RUN_ATTEMPT", if variant == 5 { "2" } else { "1" })
+            .env(
+                "GITHUB_OUTPUT",
+                fixture_root.join(format!("early-output-{variant}")),
+            )
+            .env("GITHUB_ENV", &environment)
+            .output()
+            .unwrap();
+        assert_eq!(
+            result.status.success(),
+            variant == 0,
+            "early variant {variant}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        if variant == 0 {
+            let exported = fs::read_to_string(&environment).unwrap();
+            assert!(exported.contains(&format!("DESIGN_QUALITY_RUBRIC={rubric}\n")));
+            assert!(exported.contains(&format!("DESIGN_QUALITY_RUBRIC_SHA256={rubric_digest}\n")));
+            // Execute the workflow's actual request-argument builder. This is command
+            // routing evidence, not native target admission or a model experiment.
+            let target_builder = workflow
+                .split("          target_args=[]\n")
+                .nth(1)
+                .unwrap()
+                .split("          PY\n")
+                .next()
+                .unwrap();
+            let python = format!("import os,json\nfrom pathlib import Path\ntarget_args=[]\nknowledge=Path('fixture-knowledge');source=Path('fixture-source');output=Path('fixture-output');context_args=[]\ndef run(*args): print(json.dumps([str(a) for a in args]))\n{}", target_builder.lines().map(|l| l.strip_prefix("          ").unwrap_or(l)).collect::<Vec<_>>().join("\n"));
+            let built = Command::new("python3")
+                .args(["-c", &python])
+                .current_dir(root())
+                .env("AGENTLAB_SOURCE_GUIDANCE_SELECTION", selection)
+                .env("REVISION_PARENT_RUN", "")
+                .env(
+                    "REVISION_FEEDBACK",
+                    serde_json::to_string(&enrollment).unwrap(),
+                )
+                .env("DESIGN_QUALITY_RUBRIC", rubric)
+                .env("REPOSITORY_SELECTOR", "code-workshop")
+                .output()
+                .unwrap();
+            assert!(
+                built.status.success(),
+                "{}",
+                String::from_utf8_lossy(&built.stderr)
+            );
+            let arguments: Vec<String> = serde_json::from_slice(&built.stdout).unwrap();
+            let index = arguments
+                .iter()
+                .position(|a| a == "--source-construction-selection")
+                .unwrap();
+            assert_eq!(
+                arguments[index + 1],
+                root().join(selection).display().to_string()
+            );
+        }
+    }
     fs::remove_dir_all(fixture_root).unwrap();
 }
 
