@@ -233,6 +233,15 @@ completed feedback with no lesson or knowledge write. Require the separate nativ
 completion and runtime-isolation receipts before reporting actual independent
 execution. The Action does not perform lesson admission or schedule a next round.
 
+A real isolated reviewer completed but miscounted source/log array indices and
+quoted arrays/booleans where the contract permits original string substrings.
+Provide the native path-to-string-pointer lookup instead of asking reviewers to
+count a large inventory. Report the exact response citation pointer on rejection.
+Missing authentication can remain unverified with evidence=[] and a rationale;
+it is not a reason to serialize a boolean as quoted evidence. Preserve the failed
+reply and exhausted enrollment. Index guidance is not semantic approval, an
+operator correction, relaxed membership validation or permission to rerun it.
+
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.
 Reconstruct all rows from the retained suite and optional review, preserving the

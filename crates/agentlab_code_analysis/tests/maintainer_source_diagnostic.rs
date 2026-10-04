@@ -768,6 +768,34 @@ fn independent_review_response_retains_negative_feedback_without_promoting() {
     assert_eq!(accepted["reviewerExecuted"], false);
     assert_eq!(accepted["quotationClaimSupportVerified"], false);
     assert_eq!(accepted["qualified"], false);
+    let prompt = String::from_utf8(reviewer::prompt(&observation, &rubric_bytes).unwrap()).unwrap();
+    let catalog: Value = serde_json::from_str(
+        prompt
+            .split("judgments):\n")
+            .nth(1)
+            .unwrap()
+            .split("\nORIGINAL REVIEW REQUEST:\n")
+            .next()
+            .unwrap(),
+    )
+    .unwrap();
+    for entry in catalog.as_array().unwrap() {
+        let pointer = entry["pointer"].as_str().unwrap();
+        assert!(packet.pointer(pointer).unwrap().is_string());
+    }
+    assert!(catalog
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|e| e["path"] == "unit.js" && e["pointer"] == "/originalSourceFiles/0/content"));
+    let mut nonstring = response.clone();
+    nonstring["criterionReviews"][0]["evidence"][0] =
+        json!({"pointer":"/rubricFreezeAuthenticated","quote":"false"});
+    let error = validate(&nonstring).unwrap_err();
+    assert!(
+        error.contains("/criterionReviews/0/evidence/0")
+            && error.contains("/rubricFreezeAuthenticated")
+    );
     for change in [
         "binding",
         "rubric",

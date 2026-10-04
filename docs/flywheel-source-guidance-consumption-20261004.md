@@ -473,3 +473,49 @@ inference or Git-source authentication. Next deliver the Action on main, dispatc
 one exact enrolled review, then preserve its actual verdict before ordinary
 lesson/admission/return integration. Maturity remains 74%; complete automatic
 five-stage loops zero.
+
+## Real isolated review 37163367548: preserved citation rejection
+
+PR248 merged after all 11 applicable checks passed as
+1b0ee2c31add888f68a90dbc234196933776cc72. One prospective dispatch used the
+exact original run/artifact/ZIP and six-criterion rubric above; dispatch JSON
+SHA256 9fe13f147da39046c9a4935d7a41e7203e07f2094da6dbeedaa1151f399bd3b3.
+Run 37163367548 / job 111321245324 reached terminal failure. Input enrollment,
+original artifact acquisition, Rust source reconstruction and isolated-runtime
+preparation passed. The real participant exited zero after 102509 ms without
+timeout, tool calls or transport retries under its 420-second watchdog. Original
+session evidence starts with zero prior bytes. The separate on-run runtime
+validator passed filesystem, egress and external-credential isolation.
+
+The unchanged model reply declared unverified: five criterion passes and missing
+identity evidence. This is a declared judgment, not accepted semantic review.
+Native content validation rejected its first quote at
+/criterionReviews/0/evidence/0, targeting originalSourceFiles/22/content (the
+filter) rather than the actual descriptor at index 25. Inspection finds ten
+invalid criterion citations: three source-index errors, one worker-file error,
+three array targets and three boolean targets. The response contract permits
+original string-valued quotes only; serialized arrays/booleans are not accepted.
+The original content was not corrected, the rubric was not weakened, and the
+exhausted one-attempt run was not rerun. Current native read-only content replay
+also exits one and identifies the precise rejected citation.
+
+Review artifact 11288039443 is 4225312 bytes; its recovered original ZIP SHA256
+matches f37708be6b83b79b960e6cb2dc2d490a2e7157865702dea1e79b3acfc5105010.
+Original response SHA256 is
+894b65f8ba15fdcc0ca262e0922d6168d24c7af43bd03a73b4a803c4320ee9cf. Complete
+captures, ZIP, dispatch and terminal receipts remain outside Release under
+flywheel-review-action-7LJa37. No accepted completion/content receipt, lesson,
+knowledge admission, formal case or benefit is claimed from this rejected review.
+
+The generic successor supplies a native lookup of exact source paths and worker
+files to their string-valued JSON pointers in the unchanged reconstructed request.
+The catalog contains locations, not conclusions or replacement evidence. Prompt
+instructions explicitly prohibit guessed indices and JSON serialization of
+nonstring evidence; missing provenance uses unverified with empty evidence and
+an explanation. The complete prompt remains bounded at 2 MiB without truncation.
+Criterion rejection now reports the exact response citation and target pointer.
+Tests verify every catalog entry resolves to an original string and that boolean
+quotations still reject. No rule is relaxed to accept the historical reply.
+Next deliver this generic correction and enroll a separate fresh reviewer
+experiment, then finish ordinary admission/return rather than operator-editing
+an old response. Maturity remains 74%; accepted automatic five-stage loops zero.
