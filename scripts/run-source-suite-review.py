@@ -96,7 +96,8 @@ def run_attempt(args, participant_class=None):
             thinking_type=None if args.thinking_type == 'default' else args.thinking_type,
             response_format='json_object', api='openai-completions',
             max_output_tokens=args.max_output_tokens)
-        policy = helpers.freeze_pi_retry_policy(output / 'participant-state', workspace, evidence)
+        policy = helpers.freeze_pi_retry_policy(output / 'participant-state', workspace, evidence,
+                                                disable_compaction=True)
         effort = None if args.reasoning_effort == 'default' else args.reasoning_effort
         wall_time = max(240, args.gateway_timeout_seconds + 60)
         intent = dict(schema=('agentlab.independent_source_design_review_intent.v1' if design_review
@@ -106,6 +107,7 @@ def run_attempt(args, participant_class=None):
                       promptSha256=hashlib.sha256(prompt.encode()).hexdigest(),
                       participantBudgetSeconds=participant.process_budget_seconds(wall_time),
                       transportRetryLimit=0,
+                      automaticCompactionDisabled=True,
                       participantIdentity=dict(model=os.environ['AGENTLAB_MODEL'],
                                                providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
                                                providerReasoningEffort=effort))

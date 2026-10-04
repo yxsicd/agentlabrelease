@@ -44,6 +44,7 @@ def freeze_design_review(args, request_bytes, participant_class):
         reasoningEffort=args.reasoning_effort,thinkingType=args.thinking_type,
         gatewayTimeoutSeconds=240,maxOutputTokens=args.max_output_tokens,
         maximumReviewerAttempts=1,participantBudgetSeconds=budget,transportRetryLimit=0,
+        automaticCompactionDisabled=True,
         automaticPromotion=False,authorityWritePerformed=False,qualified=False)
     with (root/'enrollment.json').open('x') as stream:
         json.dump(enrollment,stream)
@@ -110,11 +111,13 @@ def require_complete_gateway_capture(evidence):
         raise ValueError('Incomplete construction gateway capture; no proposal may be staged')
 
 
-def freeze_pi_retry_policy(state, workspace, evidence):
+def freeze_pi_retry_policy(state, workspace, evidence, *, disable_compaction=False):
     # This constructor owns fresh state/workspace; do not change assessed runs.
     state.mkdir(exist_ok=True)
     policy = {'retry': {'enabled': False, 'maxRetries': 0,
                         'provider': {'maxRetries': 0}}}
+    if disable_compaction:
+        policy['compaction'] = {'enabled': False}
     raw = (json.dumps(policy, sort_keys=True) + '\n').encode()
     with (state / 'settings.json').open('xb') as stream:
         stream.write(raw)
@@ -124,6 +127,7 @@ def freeze_pi_retry_policy(state, workspace, evidence):
         settingsSha256=hashlib.sha256(raw).hexdigest(),
         participantPackageVersion='0.73.1', nativeRetryEnabled=False,
         nativeMaxRetries=0, providerMaxRetries=0,
+        **({'automaticCompactionDisabled': True} if disable_compaction else {}),
         runtimeBehaviorQualified=False, automaticPromotion=False)) + '\n')
     return raw
 

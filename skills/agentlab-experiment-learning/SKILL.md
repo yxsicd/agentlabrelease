@@ -290,6 +290,20 @@ agreement. Recorded context separation is not filesystem isolation or provider
 authentication. Quote membership is not semantic support; full completion still
 does not grant knowledge authority, formal-case acceptance or measured benefit.
 
+For fresh one-exchange reviewers, freeze automatic context compaction off as
+well as retries before inference. A real early reviewer emitted its final reply
+and then launched an automatic summarization request: zero retries and no tool
+calls did not mean one upstream exchange. The pinned Pi 0.73.1 setting is
+compaction.enabled=false; apply it only to fresh reviewer state, preserving
+constructor and assessed-Agent defaults. Retain every captured exchange rather
+than filtering out summaries to satisfy admission. Explicit evidence-array
+shapes and a native catalog of pointers resolving to original strings reduce
+serialization/index errors without supplying verdicts. Quotes remain verbatim
+substrings, not joined excerpts or array/object values. See the
+[retained early-review findings](../../docs/flywheel-design-quality-review-20261005.md#retained-real-early-review-failure).
+These prospective changes need a new enrollment; neither local regressions nor
+well-formed citations prove reviewer judgment or permit reopening an old root.
+
 The main-only `maintainer-source-suite-review.yml` consumes one explicit completed
 source Action run/artifact/method commit and predeclared ZIP/rubric digests. The
 optional source_coordinator_request_id must bind a tagged gap constructor's exact
