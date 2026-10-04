@@ -222,7 +222,7 @@ def construct_design(participant, workspace, evidence, output, request, gate, pr
 
 
 def construct_proposal(participant, workspace, evidence, output, prompt, effort, revisions, retry_policy,
-                       guidance=None, guidance_mode='guided'):
+                       guidance=None, guidance_mode='guided', completion_request_bytes=None):
     """One explicit protocol correction, never a transport or semantic retry."""
     if type(revisions) is not int or not 0 <= revisions <= 1:
         raise ValueError('Proposal format revision budget must be 0..1')
@@ -234,6 +234,25 @@ def construct_proposal(participant, workspace, evidence, output, prompt, effort,
         wall_limit = max(240, getattr(participant, 'gateway_timeout_seconds', 180)+60)
         turn_prompt = guidance_prompt(next_prompt, guidance, guidance_mode, evidence, label, effort,
                                      participant.process_budget_seconds(wall_limit) if guidance is not None else wall_limit)
+        if completion_request_bytes is not None:
+            if guidance is not None or revisions != 0:
+                raise ValueError('Independent one-shot completion cannot mix guidance or format repair')
+            original_prompt = turn_prompt.encode()
+            with (evidence/(label+'-completion-prompt-original.txt')).open('xb') as stream:
+                stream.write(original_prompt)
+            # Pi trims outer stdin whitespace. Normalize before intent/dispatch,
+            # retain originals, and require exact normalized wire bytes natively.
+            turn_prompt = turn_prompt.strip(' \t\r\n')
+            intent = dict(schema='agentlab.source_recipe_completion_intent.v1',
+                authorRequestSha256=hashlib.sha256(completion_request_bytes).hexdigest(),
+                promptOriginalSha256=hashlib.sha256(original_prompt).hexdigest(),
+                promptSha256=hashlib.sha256(turn_prompt.encode()).hexdigest(),
+                participantIdentity=dict(model=os.environ['AGENTLAB_MODEL'],
+                    providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'], providerReasoningEffort=effort),
+                participantBudgetSeconds=participant.process_budget_seconds(wall_limit),
+                transportRetryLimit=0, guidanceProvided=False, automaticPromotion=False)
+            with (evidence/(label+'-completion-intent.json')).open('x') as stream:
+                json.dump(intent, stream)
         result = participant.turn(label, workspace, prompt=turn_prompt,
             wall_time_limit_seconds=wall_limit, tool_call_limit=1, transport_retry_limit=0,
             require_completed_tool_call=False, reasoning_effort=effort)
@@ -318,7 +337,12 @@ def main():
                    help='0..2 explicit same-session design corrections; no transport retries')
     p.add_argument('--proposal-format-revisions', type=int, choices=range(2), default=0,
                    help='0..1 same-session strict JSON corrections after complete generation; no semantic retries')
+    p.add_argument('--require-independent-completion', action='store_true',
+                   help='Native original-wire/proposal replay for one fresh frozen-design constructor')
     args = p.parse_args()
+    if args.require_independent_completion and (not args.frozen_design or args.guidance_selection
+            or args.proposal_format_revisions != 0 or args.api != 'openai-completions'):
+        p.error('Independent one-shot completion requires frozen design, no guidance/format repair and completions capture')
     if bool(args.guidance_knowledge) != bool(args.guidance_selection):
         p.error('--guidance-knowledge and --guidance-selection must be paired')
     if args.guidance_selection and args.api != 'openai-completions':
@@ -350,6 +374,9 @@ def main():
     evidence = args.output / 'evidence'
     workspace.mkdir()
     evidence.mkdir()
+    if args.require_independent_completion:
+        with (evidence/'source-completion-author-request.json').open('xb') as stream:
+            stream.write(request_bytes)
     guidance = None
     if args.guidance_selection:
         retained = evidence/'source-guidance-knowledge'
@@ -818,7 +845,8 @@ exports and require are reserved. The helper is not a sandbox or oracle approval
         participant.gateway_timeout_seconds = code_deadline
         proposal = construct_proposal(participant, workspace, evidence, args.output, prompt,
             None if args.reasoning_effort == 'default' else args.reasoning_effort,
-            args.proposal_format_revisions, retry_policy, guidance=guidance, guidance_mode=args.guidance_mode)
+            args.proposal_format_revisions, retry_policy, guidance=guidance, guidance_mode=args.guidance_mode,
+            completion_request_bytes=request_bytes if args.require_independent_completion else None)
     finally:
         participant.close()
     if guidance is not None:
@@ -832,6 +860,16 @@ exports and require are reserved. The helper is not a sandbox or oracle approval
     with proposal_path.open('x') as stream:
         json.dump(proposal, stream, ensure_ascii=False, indent=2)
         stream.write('\n')
+    if args.require_independent_completion:
+        checked = subprocess.run([str(args.gate.resolve()), '--verify-unguided-source-recipe-completion',
+            '--participant-evidence', str(evidence.resolve()), '--author-request', str(args.request.resolve()),
+            '--proposal', str(proposal_path.resolve()),
+            '--output', str((args.output/'independent-completion.json').resolve())], capture_output=True, timeout=60)
+        with (evidence/'independent-completion-stdout.log').open('xb') as stream:
+            stream.write(checked.stdout)
+        with (evidence/'independent-completion-stderr.log').open('xb') as stream:
+            stream.write(checked.stderr)
+        checked.check_returncode()
     command = [str(args.gate.resolve()), '--stage-source-recipe-proposal',
                '--author-request', str(args.request.resolve()), '--proposal', str(proposal_path),
                '--output', str((args.output / 'proposal-stage').resolve())]

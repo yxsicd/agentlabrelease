@@ -414,3 +414,53 @@ run 37200257820 ZIP was successfully selected into a fresh private preflight
 directory without Agent private state; this proves reception compatibility, not
 native admission or Agent repair. Full cloud tests and real continuation execution
 are still pending. Maturity remains 75%; complete automatic five-stage rounds zero.
+
+## Independent one-shot constructor completion (development)
+
+PR #288 final head 020f3a4423ec93607700163a2e0ef3cb48c151a1 passed Rust/Harmony
+37208527828, public 37208527832 and component 37208527852, and merged as
+3c6336c8f4f25c823816efecf689dccffd7de846. Its first Rust run retained an old
+fixture failure after the mode router gained a second output field. The fixture
+now checks both exact outputs and unchanged legacy enrollment values.
+
+`--verify-unguided-source-recipe-completion --participant-evidence DIR
+--author-request FILE --proposal FILE --output NEW_FILE` independently replays a
+fresh one-shot constructor without inventing a guidance packet. It requires the
+exact retained author request and prompt-bound intent, 420-second native watchdog,
+zero retries, one original full-prompt model exchange and isolated system/user
+history. Partial format-repair captures, changed model/route/reasoning, watchdog
+or retry drift, deadlines and disconnects reject. The original lifecycle must
+bind the final assistant bytes and complete normally.
+
+The native original-response parser is shared with independent source-suite
+review: one choice, no tools, normal stop, complete stream DONE when streaming,
+no post-terminal content, original final text equality and parsed proposal equality.
+JSON serialization may differ; the retained raw response is never rewritten.
+The receipt confirms recorded completion/proposal binding, not authentication,
+guidance absence, semantic qualification or learning benefit.
+
+Inspection of original run 37200257820 confirmed its retained prompt had 290314
+bytes while the actual typed-text user message carried the outer-trimmed 290313
+bytes. The new one-shot path explicitly normalizes ASCII outer whitespace before
+dispatch, retains the original prompt separately and binds both digests. Native
+admission verifies that exact normalization relation and exact sent prompt in
+the captured wire; it does not silently trim during verification or rewrite the
+old prompt/capture. This observed transport issue is not an Agent semantic failure.
+
+The ordinary constructor opts into this gate only for a fresh frozen-design turn
+without guidance or format corrections. It retains the request and writes an
+explicit completion intent before dispatch, then independently checks original
+wire/proposal before staging. The baseline bridge mandates this option and
+replays the native gate again against the final staged proposal before setting
+recordedAuthorCompletionVerified. Failure retains all original capture and is
+not converted into another model attempt.
+
+Native Rust regressions cover streaming/nonstreaming success, two unrelated
+repository identities, request/prompt/final/proposal drift, truncated response,
+missing DONE, tool calls, upstream error, post-DONE content, additional request,
+partial format repair, identity/budget/retry drift, transport interruption and
+actual CLI exclusive output. Those native tests await cloud execution. Local
+extracted bridge regression and Python AST checks passed; no real claim or new
+participant execution occurred. Overall maturity remains 75%, complete automatic
+five-stage rounds zero. Real bounded repair, full suite/review, knowledge return
+and later/cross-repository benefit remain outstanding.
