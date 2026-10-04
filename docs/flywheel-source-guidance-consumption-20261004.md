@@ -40,6 +40,43 @@ review success, full five-stage loops or learning benefit. Maturity stays 75%.
 
 ## Exclusive review repair coordination in the Action
 
+### First same-run automatic integration: upstream review deadline
+
+PR263 merged as 0ed699471ab9dd1a52601466326fa3258fba6653 after eleven
+applicable checks passed. Fresh run 37177047693 used the published f41c1bdf
+cut, explicit guided selection, json-object constructor protocol and the frozen
+common rubric. Construction, original control suite, reference recovery and
+independent constructor isolation passed; the same Action automatically prepared
+and launched the independent reviewer. Reviewer isolation subsequently passed.
+
+The initial reviewer did not complete: its lifecycle recorded exit zero, no native
+watchdog timeout and 253687 ms, while the upstream exchange recorded 250805 ms,
+upstreamEof=false, semanticComplete=false and upstream_deadline_exceeded in the
+response-body phase. It received content after 13443 ms but still lacked a terminal
+event after 3921 content chunks / 17034 UTF-8 content bytes. No response.json or
+accepted feedback was manufactured. The sole citation repair was not eligible:
+the transport failed before a complete response. Export/reception was skipped.
+
+Original review ZIP 11293823320 is 1451281 bytes, SHA256
+4be16a004d929b441566b99b68753a080449838e7acdcd83b7a528acf577117a.
+Original constructor ZIP 11293648715 is 1793982 bytes, SHA256
+67bf732ef03c016fbbfc6020c41319ffaef58d96b46e88cb49799d3cfda949d8.
+Independent acquisition and native readback reconstructed its six control
+definitions and fresh reference recovery, with declarations-matched status.
+The design has six scenarios and nine checks. No source workers or models were
+rerun for that readback; semanticQualified and qualified remain false.
+The strict feedback acquirer retained the exact review ZIP but correctly rejected
+missing complete reception inputs. External originals/enrollment/receipts remain
+in flywheel-automatic-review-Dgo02p. Do not reopen this dispatch or reinterpret
+partial prose as a semantic verdict, guidance benefit or committed knowledge.
+
+The next native prompt uses compact lossless JSON presentation of the complete
+packet/catalog and asks for concise sufficient rationales/quotes. No source,
+criterion, scenario, check, control, original capture, verdict rule or budget is
+removed. Native acceptance stays unchanged. This is a prospective output-economy
+hypothesis, not measured speedup or a completed automatic feedback round.
+Engineering maturity remains 75%; accepted full automatic five-stage loops zero.
+
 PR257 merged as f8cd1c6e57740429d957325e0506958f102cda23 after all eleven
 applicable checks passed. The review workflow accepts review_repair_limit=0|1,
 default zero, and freezes max attempts and total process budget before inference.

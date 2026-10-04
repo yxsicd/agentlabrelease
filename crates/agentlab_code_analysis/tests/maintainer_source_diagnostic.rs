@@ -762,6 +762,17 @@ fn git_bound_review_native_template_keeps_source_evidence_and_independent_verdic
         "frozenBeforeDispatch":true,"verdicts":["pass","fail","unverified"],
         "criteria":[{"id":"semantics","requirement":"Fixture source membership.","evidence":"Original source."}]})).unwrap();
     let packet = reviewer::prepare_with_git(&observation, &rubric, Some(&checkout)).unwrap();
+    let prompt = String::from_utf8(
+        reviewer::prompt_with_git(&observation, &rubric, Some(&checkout)).unwrap(),
+    )
+    .unwrap();
+    let presentation = prompt.split("\nORIGINAL REVIEW REQUEST:\n").nth(1).unwrap();
+    assert_eq!(serde_json::from_str::<Value>(presentation).unwrap(), packet);
+    assert_eq!(
+        presentation.as_bytes(),
+        serde_json::to_vec(&packet).unwrap()
+    );
+    assert!(presentation.len() < serde_json::to_vec_pretty(&packet).unwrap().len());
     let template = &packet["responseContract"]["lessonReviewTemplate"];
     assert_eq!(template["skillStage"], "calibration");
     assert_ne!(template["skillId"], packet["scope"]["id"]);
