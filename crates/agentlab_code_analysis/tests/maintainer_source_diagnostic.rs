@@ -581,11 +581,18 @@ with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as z:
     for name in required:z.writestr(name,'original '+name)
     z.writestr('agent/evidence/source-suite-review-events.jsonl',b'x'*(5*1024*1024))
     z.writestr('agent/participant-state/session.json','excluded full home')
+    z.writestr('agent/repair-attempt/response.json','original repaired response')
+    z.writestr('agent/repair-attempt/evidence/review-repair-policy.json','original policy')
+    z.writestr('agent/repair-attempt/evidence/source-suite-review-events.jsonl',b'x'*(5*1024*1024))
+    z.writestr('agent/repair-attempt/participant-state/session.json','excluded repair home')
 module.extract_observations(archive,base/'received',True)
 assert (base/'received/agent/evidence/gateway/0001.response').read_text()=='original agent/evidence/gateway/0001.response'
 assert (base/'received/feedback/receipt.json').read_text()=='original feedback/receipt.json'
 assert not (base/'received/agent/evidence/source-suite-review-events.jsonl').exists()
 assert not (base/'received/agent/participant-state').exists()
+assert (base/'received/agent/repair-attempt/response.json').read_text()=='original repaired response'
+assert not (base/'received/agent/repair-attempt/evidence/source-suite-review-events.jsonl').exists()
+assert not (base/'received/agent/repair-attempt/participant-state').exists()
 for name in ['missing-wire','missing-intent','oversized-selected','unselected-traversal']:
     archive=base/(name+'.zip')
     with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as z:
@@ -989,6 +996,150 @@ fn git_bound_review_native_template_keeps_source_evidence_and_independent_verdic
     )
     .is_err());
     fs::write(child_intent_path, child_intent_bytes).unwrap();
+    // Actual thin coordinator with synthetic participants and real native gates.
+    file(&base.join("coordinator-good.json"), &response);
+    file(&base.join("coordinator-citation.json"), &unsupported);
+    let transport = base.join("coordinator-fixture.py");
+    fs::write(&transport, r#"
+import argparse,hashlib,importlib.util,json,os,sys
+from pathlib import Path
+repo,base,checkout,mode=sys.argv[1:];base=Path(base)
+spec=importlib.util.spec_from_file_location('review_transport',Path(repo)/'scripts/run-source-suite-review.py')
+m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+def put(path,value):path.write_text(json.dumps(value))
+class Participant:
+    @staticmethod
+    def process_budget_seconds(wall):return 420
+    def __init__(self,evidence,state,binary,gateway,model,**kw):
+        self.evidence=evidence;self.model=model;self.route=kw['route'];state.mkdir();(evidence/'gateway').mkdir()
+    def turn(self,label,workspace,**kw):
+        assert not list(workspace.iterdir()) and label=='source-suite-review' and kw['transport_retry_limit']==0
+        child='repair-attempt' in self.evidence.parts
+        with (base/('launches-'+mode+'.txt')).open('a') as f:f.write('repair\n' if child else 'initial\n')
+        prompt=kw['prompt'];assert 'fixture-external-secret' not in prompt
+        if child:assert 'BOUNDED AGENT-OWNED CITATION REPAIR' in prompt and '/criterionReviews/0/evidence/0' in prompt
+        text=(base/('coordinator-good.json' if child and mode=='repair' else 'coordinator-citation.json')).read_text()
+        if mode=='noncitation':
+            value=json.loads(text);value.pop('reviewerId');text=json.dumps(value)
+        (self.evidence/(label+'-prompt.txt')).write_text(prompt)
+        (self.evidence/(label+'-events.jsonl')).write_text('original events retained outside repair input')
+        put(self.evidence/'gateway/1.upstream-request.json',dict(model=self.model,providerId=self.route,stream=False,messages=[dict(role='user',content=prompt)]))
+        raw=json.dumps(dict(choices=[dict(index=0,message=dict(content=text),finish_reason='stop')])).encode()
+        (self.evidence/'gateway/1.response').write_bytes(raw)
+        put(self.evidence/'gateway/1.status.json',dict(exchangeId='1',durationMs=1,status=200,upstreamEof=True,
+            semanticComplete=mode!='incomplete',outcome='completed',streamError=None,responseBytes=len(raw)))
+        final=self.evidence/(label+'-final-assistant-message.json')
+        put(final,dict(role='assistant',stopReason='stop',content=[dict(type='text',text=text)]))
+        put(self.evidence/(label+'-lifecycle.json'),dict(label=label,captureAuthority='operator',exitCode=0,timedOut=False,
+            finalAssistantMessagePresent=True,participantBudgetSeconds=420,participantBudgetScope='native-process-watchdog',
+            transportRetryLimit=0,finalAssistantMessageSha256=hashlib.sha256(final.read_bytes()).hexdigest()))
+        return dict(content=text)
+args=argparse.Namespace(source=base/'git-observations',rubric=base/'repair-rubric.json',output=base/('coordinator-'+mode),
+    gate=Path(os.environ['FIXTURE_NATIVE_GATE']),pi=Path('/fixture/pi'),gateway_timeout_seconds=240,
+    source_git_checkout=Path(checkout),review_repair_limit=0 if mode=='zero' else 1,
+    thinking_type='disabled',reasoning_effort='default',max_output_tokens=16384)
+m.run(args,participant_class=Participant)
+"#).unwrap();
+    let invoke = |mode: &str| {
+        Command::new("python3")
+            .arg(&transport)
+            .arg(root())
+            .arg(&base)
+            .arg(&checkout)
+            .arg(mode)
+            .env(
+                "FIXTURE_NATIVE_GATE",
+                env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"),
+            )
+            .env(
+                "AGENTLAB_PARTICIPANT_RUNTIME_CONFIG",
+                base.join("fixture-runtime.json"),
+            )
+            .env(
+                "AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT",
+                base.join(format!("coordinator-runtime-{mode}")),
+            )
+            .env("AGENTLAB_LM_GATEWAY_URL", "http://fixture.invalid")
+            .env("AGENTLAB_LM_GATEWAY_KEY", "fixture-external-secret")
+            .env("AGENTLAB_MODEL", "fixture")
+            .env("AGENTLAB_PROVIDER_ROUTE", "fixture")
+            .output()
+            .unwrap()
+    };
+    let coordinated = invoke("repair");
+    assert!(
+        coordinated.status.success(),
+        "{}",
+        String::from_utf8_lossy(&coordinated.stderr)
+    );
+    let run_root = base.join("coordinator-repair");
+    let coordinated_receipt: Value =
+        serde_json::from_slice(&fs::read(run_root.join("attempt-coordinator.json")).unwrap())
+            .unwrap();
+    assert_eq!(coordinated_receipt["selectedAttempt"], "repair-attempt");
+    assert_eq!(
+        coordinated_receipt["attempts"],
+        json!(["initial", "repair-1"])
+    );
+    assert_eq!(
+        fs::read(run_root.join("response.json")).unwrap(),
+        fs::read(base.join("coordinator-citation.json")).unwrap()
+    );
+    assert_eq!(
+        fs::read(run_root.join("repair-attempt/response.json")).unwrap(),
+        fs::read(base.join("coordinator-good.json")).unwrap()
+    );
+    assert!(!run_root
+        .join("repair-attempt/evidence/repair-inputs/evidence/source-suite-review-events.jsonl")
+        .exists());
+    assert!(run_root
+        .join("evidence/source-suite-review-events.jsonl")
+        .exists());
+    let coordinated_feedback = base.join("coordinator-feedback");
+    let coordinated_response = fs::read(run_root.join("repair-attempt/response.json")).unwrap();
+    reviewer::export_accepted_feedback(
+        &observation,
+        &rubric,
+        &run_root.join("repair-attempt/evidence"),
+        &coordinated_response,
+        Some(&checkout),
+        &coordinated_feedback,
+    )
+    .unwrap();
+    assert_eq!(
+        reviewer::verify_feedback_export(
+            &observation,
+            &rubric,
+            &run_root.join("repair-attempt/evidence"),
+            &coordinated_response,
+            Some(&checkout),
+            &coordinated_feedback
+        )
+        .unwrap()["candidateReadyForObservationImport"],
+        true
+    );
+    let before = fs::read(run_root.join("attempt-coordinator.json")).unwrap();
+    assert!(!invoke("repair").status.success());
+    assert_eq!(
+        fs::read(run_root.join("attempt-coordinator.json")).unwrap(),
+        before
+    );
+    assert_eq!(
+        fs::read_to_string(base.join("launches-repair.txt")).unwrap(),
+        "initial\nrepair\n"
+    );
+    for (mode, launches) in [
+        ("zero", "initial\n"),
+        ("noncitation", "initial\n"),
+        ("incomplete", "initial\n"),
+        ("failed", "initial\nrepair\n"),
+    ] {
+        assert!(!invoke(mode).status.success(), "{mode} must stop");
+        assert_eq!(
+            fs::read_to_string(base.join(format!("launches-{mode}.txt"))).unwrap(),
+            launches
+        );
+    }
     // Valid changed interpretation without corresponding original upstream text rejects.
     let mut changed = response.clone();
     changed["lessonInterpretation"]["body"] = json!("Changed independent interpretation.");

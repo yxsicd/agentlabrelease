@@ -1,5 +1,33 @@
 # Source-recipe knowledge consumption and equal-task treatments
 
+## Exclusive review repair coordination in the Action
+
+PR257 merged as f8cd1c6e57740429d957325e0506958f102cda23 after all eleven
+applicable checks passed. The review workflow accepts review_repair_limit=0|1,
+default zero, and freezes max attempts and total process budget before inference.
+The existing thin runner keeps the initial directory/response and creates only
+one exclusive repair-attempt with fresh participant state and workspace. It
+retains the prior response/evidence without copying the large event stream into
+the repair prompt inputs (the complete original remains in the initial capture).
+Native preparation independently verifies the preconsumed policy, full original
+completion and all recomputed citation findings before any repair inference.
+
+Each same-label fresh participant gets a distinct runtime receipt directory,
+initial or repair-1. The Action independently validates both containers before
+export. The coordinator selects only . or repair-attempt; the export gate again
+verifies original response/wire and full parent chain rather than trusting selected
+producer status. The ZIP acquirer now selects both bounded wire/input sets and
+isolation receipts while excluding both full event streams and Agent homes.
+
+Rust-driven transport fixtures invoke the actual runner and native CLI: two
+synthetic attempts can complete citation feedback, ordinary export and receiver
+reconstruction while preserving the failed original. Existing captures refuse
+relaunch and keep coordinator bytes unchanged. Zero repair allowance, noncitation
+failure and incomplete original wire launch only once; a still-invalid repair
+launches twice and stops. These are synthetic participant decisions, not real
+accepted repair, runtime-isolation success, knowledge commitment or benefit.
+Maturity remains 74%; accepted complete automatic five-stage loops remain zero.
+
 ## Native predeclared bounded citation-repair primitives
 
 PR256 merged as 82163f290ebc84b0caa7dfa19490bae01c82fb51 after all eleven

@@ -54,6 +54,12 @@ on:
         required: true
         type: choice
         options: ['8192', '16384']
+      review_repair_limit:
+        description: Predeclare at most one native citation-feedback repair; no old attempt resumes
+        default: '0'
+        required: true
+        type: choice
+        options: ['0', '1']
 permissions:
   contents: read
   actions: read
@@ -78,6 +84,7 @@ jobs:
       REVIEW_THINKING_TYPE: ${{ inputs.thinking_type }}
       REVIEW_GATEWAY_TIMEOUT: ${{ inputs.gateway_timeout_seconds }}
       REVIEW_MAX_OUTPUT_TOKENS: ${{ inputs.max_output_tokens }}
+      REVIEW_REPAIR_LIMIT: ${{ inputs.review_repair_limit }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -98,7 +105,10 @@ jobs:
               model=os.environ['AGENTLAB_MODEL'],providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
               reasoningEffort=os.environ['REVIEW_REASONING_EFFORT'],thinkingType=os.environ['REVIEW_THINKING_TYPE'],
               gatewayTimeoutSeconds=int(os.environ['REVIEW_GATEWAY_TIMEOUT']),maxOutputTokens=int(os.environ['REVIEW_MAX_OUTPUT_TOKENS']),
-              maximumReviewerAttempts=1,transportRetryLimit=0,automaticPromotion=False,authorityWritePerformed=False,qualified=False)
+              reviewRepairLimit=int(os.environ['REVIEW_REPAIR_LIMIT']),
+              maximumReviewerAttempts=1+int(os.environ['REVIEW_REPAIR_LIMIT']),
+              totalParticipantBudgetSeconds=420*(1+int(os.environ['REVIEW_REPAIR_LIMIT'])),
+              transportRetryLimit=0,automaticPromotion=False,authorityWritePerformed=False,qualified=False)
           with (root/'enrollment.json').open('x') as f:json.dump(enrollment,f,indent=2)
           PY
       - name: Acquire only the exact original source Action artifact
@@ -162,21 +172,39 @@ jobs:
             --source-git-checkout "$RUNNER_TEMP/review-source-git" \
             --gate target/release/agentlab-maintainer-skill-flywheel --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py" \
             --reasoning-effort "$REVIEW_REASONING_EFFORT" --thinking-type "$REVIEW_THINKING_TYPE" \
-            --gateway-timeout-seconds "$REVIEW_GATEWAY_TIMEOUT" --max-output-tokens "$REVIEW_MAX_OUTPUT_TOKENS"
+            --gateway-timeout-seconds "$REVIEW_GATEWAY_TIMEOUT" --max-output-tokens "$REVIEW_MAX_OUTPUT_TOKENS" \
+            --review-repair-limit "$REVIEW_REPAIR_LIMIT"
       - name: Independently validate recorded reviewer isolation
         id: isolation
         if: always() && steps.contain.outcome == 'success'
         run: |
           cmp "$RUNNER_TEMP/review-runtime.json" "$RUNNER_TEMP/source-suite-review/runtime-inputs/config.json"
-          python3 scripts/validate-participant-runtime.py --config "$RUNNER_TEMP/source-suite-review/runtime-inputs/config.json" \
-            --receipt-root "$RUNNER_TEMP/source-suite-review/runtime-receipts" \
+          root="$RUNNER_TEMP/source-suite-review"
+          initial_receipts="$root/runtime-receipts"
+          if [[ "$REVIEW_REPAIR_LIMIT" == 1 ]]; then initial_receipts="$initial_receipts/initial"; fi
+          python3 scripts/validate-participant-runtime.py --config "$root/runtime-inputs/config.json" \
+            --receipt-root "$initial_receipts" \
             --workspace "$RUNNER_TEMP/source-suite-review/agent/workspace" \
             --participant-state "$RUNNER_TEMP/source-suite-review/agent/participant-state" \
             --label source-suite-review --output "$RUNNER_TEMP/source-suite-review/runtime-validation.json"
+          if [[ -d "$root/agent/repair-attempt" ]]; then
+            python3 scripts/validate-participant-runtime.py --config "$root/runtime-inputs/config.json" \
+              --receipt-root "$root/runtime-receipts/repair-1" \
+              --workspace "$root/agent/repair-attempt/workspace" \
+              --participant-state "$root/agent/repair-attempt/participant-state" \
+              --label source-suite-review --output "$root/runtime-repair-validation.json"
+          fi
       - name: Export accepted original review through native lesson gates
         if: success() && steps.isolation.outcome == 'success'
         run: |
-          verdict=$(jq -er '.verdict' "$RUNNER_TEMP/source-suite-review/agent/validation.json")
+          root="$RUNNER_TEMP/source-suite-review"
+          selected=$(jq -er 'select(.completed == true) | .selectedAttempt' "$root/agent/attempt-coordinator.json")
+          case "$selected" in
+            .) agent="$root/agent" ;;
+            repair-attempt) agent="$root/agent/repair-attempt" ;;
+            *) echo "Unexpected selected review attempt" >&2; exit 1 ;;
+          esac
+          verdict=$(jq -er '.verdict' "$agent/validation.json")
           case "$verdict" in
             reject|unverified) echo "Completed feedback has no accepted lesson; nothing exported."; exit 0 ;;
             accept) ;;
@@ -185,8 +213,8 @@ jobs:
           target/release/agentlab-maintainer-skill-flywheel --export-source-suite-review-feedback \
             --source "$RUNNER_TEMP/source-suite-review/source/observations" \
             --quality-rubric "$RUNNER_TEMP/source-suite-review/rubric.json" \
-            --participant-evidence "$RUNNER_TEMP/source-suite-review/agent/evidence" \
-            --review-response "$RUNNER_TEMP/source-suite-review/agent/response.json" \
+            --participant-evidence "$agent/evidence" \
+            --review-response "$agent/response.json" \
             --source-git-checkout "$RUNNER_TEMP/review-source-git" \
             --output "$RUNNER_TEMP/source-suite-review/feedback"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

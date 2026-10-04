@@ -36,13 +36,16 @@ def extract_observations(archive, output, feedback=False):
             require(not stat.S_ISLNK(mode) and (stat.S_IFMT(mode) in (0, stat.S_IFREG, stat.S_IFDIR))
                     and not (entry.flag_bits & 1), 'Nonregular or encrypted artifact member')
             if feedback and not entry.is_dir():
-                exact = {'enrollment.json', 'rubric.json', 'runtime-validation.json',
-                         'agent/response.json', 'agent/validation.json', 'agent/transport-receipt.json'}
+                exact = {'enrollment.json', 'rubric.json', 'runtime-validation.json', 'runtime-repair-validation.json',
+                         'agent/response.json', 'agent/validation.json', 'agent/transport-receipt.json', 'agent/attempt-coordinator.json'}
                 prefix = ('source/observations/', 'feedback/', 'agent/evidence/',
-                          'runtime-inputs/', 'runtime-receipts/')
+                          'agent/repair-attempt/evidence/', 'runtime-inputs/', 'runtime-receipts/')
+                exact.update({'agent/repair-attempt/response.json', 'agent/repair-attempt/validation.json',
+                              'agent/repair-attempt/transport-receipt.json'})
                 # The complete Pi event stream stays in the byte-bound original
                 # ZIP. Native reception consumes wire/final/lifecycle, not events.
-                excluded = {'agent/evidence/source-suite-review-events.jsonl'}
+                excluded = {'agent/evidence/source-suite-review-events.jsonl',
+                            'agent/repair-attempt/evidence/source-suite-review-events.jsonl'}
                 if entry.filename not in excluded and (entry.filename in exact or entry.filename.startswith(prefix)):
                     require(entry.file_size <= 4 * 1024 * 1024,
                             'Selected feedback file exceeds native read budget')
