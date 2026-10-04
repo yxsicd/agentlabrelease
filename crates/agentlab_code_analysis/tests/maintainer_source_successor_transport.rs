@@ -10,7 +10,7 @@ from unittest.mock import patch
 spec=importlib.util.spec_from_file_location('transport',os.environ['CONTINUATION_SCRIPT'])
 transport=importlib.util.module_from_spec(spec);spec.loader.exec_module(transport)
 with tempfile.TemporaryDirectory() as temporary:
-  for scenario in ['pass','producer-drift','archive-drift','native-stop','review-stop','live-stop','remote-refusal','author-failure','timeout','isolation-stop','post-stop']:
+  for scenario in ['pass','prepared-pass','prepared-drift','producer-drift','archive-drift','native-stop','review-stop','live-stop','remote-refusal','author-failure','timeout','isolation-stop','post-stop']:
     root=Path(temporary)/scenario;root.mkdir();(root/'claims').mkdir();(root/'git').mkdir()
     for name in ['gate','pi','request','review-enrollment','config']:(root/name).write_text('{}')
     successor=dict(authorRequestOriginal='{}',targetDesignOriginal='{}')
@@ -38,6 +38,11 @@ with tempfile.TemporaryDirectory() as temporary:
       parent_archive=root/'original.zip',source_git_checkout=root/'git',claim_root=root/'claims',
       repository='owner/repo',method_revision='b'*40,parent_method_revision='a'*40,parent_run='1',
       parent_artifact='2',parent_archive_sha256=sha,reasoning_effort='low')
+    args.prepared_output=scenario.startswith('prepared-')
+    if args.prepared_output:
+      args.output.mkdir()
+      (args.output/'request.json').write_text('changed' if scenario=='prepared-drift' else '{}')
+      (args.output/'runtime-validation.json').write_text('original Action-owned evidence')
     if scenario=='archive-drift':(root/'original.zip').write_bytes(original+b'changed')
     authors=[];reserved=set();posts=[];isolations=[]
     def run(command,**kwargs):
@@ -84,8 +89,10 @@ with tempfile.TemporaryDirectory() as temporary:
       return subprocess.CompletedProcess(command,0,b'original stdout',b'original stderr')
     with patch.dict(os.environ,AGENTLAB_PARTICIPANT_RUNTIME_CONFIG=str(root/'config'),GH_TOKEN='operator-only',GITHUB_TOKEN='operator-only'),patch.object(transport.subprocess,'run',side_effect=run):
       try:result=transport.execute(args)
-      except Exception:assert scenario!='pass'
-      else:assert scenario=='pass' and result['constructionCompleted'] is True and result['runtimeIsolationVerified'] is True
+      except Exception:assert scenario not in ['pass','prepared-pass']
+      else:assert scenario in ['pass','prepared-pass'] and result['constructionCompleted'] is True and result['runtimeIsolationVerified'] is True
+      if args.prepared_output:
+        assert (args.output/'runtime-validation.json').read_text()=='original Action-owned evidence'
       if scenario=='pass':
         # Different new enrollment plus fresh local claim root cannot reuse the remote parent slot.
         packet['continuationEnrollmentOriginal']='{"id":"second"}';(root/'repair').write_text(json.dumps(packet))
@@ -98,7 +105,7 @@ with tempfile.TemporaryDirectory() as temporary:
     terminal=json.loads((root/'output/transport-terminal.json').read_bytes())
     assert terminal['oldBudgetReopened'] is False and terminal['knowledgeWritePerformed'] is False
     assert terminal['recordedAuthorCompletionVerified'] is False and terminal['qualified'] is False
-    if scenario in ['producer-drift','archive-drift','native-stop','review-stop','live-stop']:
+    if scenario in ['prepared-drift','producer-drift','archive-drift','native-stop','review-stop','live-stop']:
       assert authors==[] and posts==[]
     if scenario in ['author-failure','timeout']:assert len(isolations)==1 and len(list((root/'claims').iterdir()))==1
     if scenario=='timeout':assert (root/'output/constructor-stdout.log').read_bytes()==b'partial bytes'
