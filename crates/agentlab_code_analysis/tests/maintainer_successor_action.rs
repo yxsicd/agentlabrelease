@@ -33,8 +33,7 @@ print('per-check shapes, nonmutation and answer exclusion passed')
         .args(["-c", code])
         .env(
             "AUTHOR_SCRIPT",
-            Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../scripts/run-source-recipe-author.py"),
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/run-source-recipe-author.py"),
         )
         .output()
         .unwrap();
