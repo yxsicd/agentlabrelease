@@ -237,8 +237,15 @@ def construct_proposal(participant, workspace, evidence, output, prompt, effort,
         if completion_request_bytes is not None:
             if guidance is not None or revisions != 0:
                 raise ValueError('Independent one-shot completion cannot mix guidance or format repair')
+            original_prompt = turn_prompt.encode()
+            with (evidence/(label+'-completion-prompt-original.txt')).open('xb') as stream:
+                stream.write(original_prompt)
+            # Pi trims outer stdin whitespace. Normalize before intent/dispatch,
+            # retain originals, and require exact normalized wire bytes natively.
+            turn_prompt = turn_prompt.strip(' \t\r\n')
             intent = dict(schema='agentlab.source_recipe_completion_intent.v1',
                 authorRequestSha256=hashlib.sha256(completion_request_bytes).hexdigest(),
+                promptOriginalSha256=hashlib.sha256(original_prompt).hexdigest(),
                 promptSha256=hashlib.sha256(turn_prompt.encode()).hexdigest(),
                 participantIdentity=dict(model=os.environ['AGENTLAB_MODEL'],
                     providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'], providerReasoningEffort=effort),

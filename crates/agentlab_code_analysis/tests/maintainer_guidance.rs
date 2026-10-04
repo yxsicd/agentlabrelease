@@ -28,6 +28,7 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
             "good-json",
             "request-drift",
             "prompt-drift",
+            "normalization-drift",
             "budget-drift",
             "retry",
             "partial-final",
@@ -56,13 +57,18 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
                 serde_json::to_vec(&json!({"schema":"fixture-proposal","value":7})).unwrap();
             let label = "source-recipe-author";
             let prompt = "Exact fresh constructor prompt";
+            let original_prompt = format!("\n{prompt}\n");
             let text = String::from_utf8(proposal.clone()).unwrap();
             let mut intent = json!({"schema":"agentlab.source_recipe_completion_intent.v1",
                 "authorRequestSha256":digest(&request),"promptSha256":digest(prompt.as_bytes()),
+                "promptOriginalSha256":digest(original_prompt.as_bytes()),
                 "participantBudgetSeconds":420,"transportRetryLimit":0,"guidanceProvided":false,
                 "participantIdentity":{"model":"fixture-model","providerRoute":"fixture-route","providerReasoningEffort":"low"}});
             if mode == "budget-drift" {
                 intent["participantBudgetSeconds"] = json!(421);
+            }
+            if mode == "normalization-drift" {
+                intent["promptOriginalSha256"] = json!(digest(b"changed original"));
             }
             let mut final_message = json!({"role":"assistant","stopReason":"stop",
                 "content":[{"type":"text","text":text}]});
@@ -143,6 +149,10 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
             .unwrap();
             for (name, bytes) in [
                 (format!("{label}-prompt.txt"), prompt.as_bytes().to_vec()),
+                (
+                    format!("{label}-completion-prompt-original.txt"),
+                    original_prompt.as_bytes().to_vec(),
+                ),
                 (
                     format!("{label}-completion-intent.json"),
                     serde_json::to_vec(&intent).unwrap(),

@@ -439,6 +439,14 @@ JSON serialization may differ; the retained raw response is never rewritten.
 The receipt confirms recorded completion/proposal binding, not authentication,
 guidance absence, semantic qualification or learning benefit.
 
+Inspection of original run 37200257820 confirmed its retained prompt had 290314
+bytes while the actual typed-text user message carried the outer-trimmed 290313
+bytes. The new one-shot path explicitly normalizes ASCII outer whitespace before
+dispatch, retains the original prompt separately and binds both digests. Native
+admission verifies that exact normalization relation and exact sent prompt in
+the captured wire; it does not silently trim during verification or rewrite the
+old prompt/capture. This observed transport issue is not an Agent semantic failure.
+
 The ordinary constructor opts into this gate only for a fresh frozen-design turn
 without guidance or format corrections. It retains the request and writes an
 explicit completion intent before dispatch, then independently checks original

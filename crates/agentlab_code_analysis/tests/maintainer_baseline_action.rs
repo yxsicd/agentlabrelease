@@ -2,6 +2,53 @@ use std::path::Path;
 use std::process::Command;
 
 #[test]
+fn one_shot_constructor_records_exact_normalized_prompt_before_dispatch() {
+    let code = r#"
+import hashlib,importlib.util,json,os,tempfile
+from pathlib import Path
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('author',os.environ['AUTHOR_SCRIPT'])
+author=importlib.util.module_from_spec(spec);spec.loader.exec_module(author)
+with tempfile.TemporaryDirectory() as temporary:
+    root=Path(temporary);evidence=root/'evidence';evidence.mkdir();workspace=root/'workspace';workspace.mkdir()
+    original='\nExact source prompt\n\t';request=b'{"schema":"original request"}';sent=[]
+    class Participant:
+        gateway_timeout_seconds=180
+        @staticmethod
+        def process_budget_seconds(wall_limit):assert wall_limit==240;return 420
+        def turn(self,label,workspace,**options):
+            intent=json.loads((evidence/(label+'-completion-intent.json')).read_bytes())
+            assert (evidence/(label+'-completion-prompt-original.txt')).read_bytes()==original.encode()
+            assert intent['promptOriginalSha256']==hashlib.sha256(original.encode()).hexdigest()
+            assert intent['promptSha256']==hashlib.sha256(options['prompt'].encode()).hexdigest()
+            assert intent['authorRequestSha256']==hashlib.sha256(request).hexdigest()
+            assert intent['participantBudgetSeconds']==420 and intent['transportRetryLimit']==0
+            assert intent['participantIdentity']==dict(model='fixture',providerRoute='route',providerReasoningEffort='low')
+            assert options['prompt']=='Exact source prompt' and options['transport_retry_limit']==0
+            sent.append(options['prompt']);return dict(content='{"value":7}',message={'stopReason':'stop'})
+    def complete(path):(path/'construction-completion.json').write_text('{}')
+    with patch.dict(os.environ,AGENTLAB_MODEL='fixture',AGENTLAB_PROVIDER_ROUTE='route'),patch.object(author,'require_pi_retry_policy'),patch.object(author,'require_complete_gateway_capture',side_effect=complete):
+        result=author.construct_proposal(Participant(),workspace,evidence,root,original,'low',0,b'policy',completion_request_bytes=request)
+    assert result=={'value':7} and sent==['Exact source prompt']
+print('one-shot constructor normalized prompt and native budget intent retained before dispatch')
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "AUTHOR_SCRIPT",
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../scripts/run-source-recipe-author.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn baseline_action_retains_exact_inputs_and_routes_existing_downstream_gates() {
     let code = r#"
 import argparse,importlib.util,json,os,stat,subprocess,tempfile,textwrap,warnings,zipfile

@@ -679,12 +679,18 @@ pub fn source_recipe_unguided_completion(
         )?;
     }
     let prompt = read(evidence, &format!("{label}-prompt.txt"))?;
+    let original_prompt = read(evidence, &format!("{label}-completion-prompt-original.txt"))?;
+    let normalized = std::str::from_utf8(&original_prompt)
+        .map_err(|e| e.to_string())?
+        .trim_matches([' ', '\t', '\r', '\n']);
     let intent_bytes = read(evidence, &format!("{label}-completion-intent.json"))?;
     let intent: Value = serde_json::from_slice(&intent_bytes).map_err(|e| e.to_string())?;
     need(
         intent["schema"] == "agentlab.source_recipe_completion_intent.v1"
             && intent["authorRequestSha256"] == digest(request_bytes)
             && intent["promptSha256"] == digest(&prompt)
+            && intent["promptOriginalSha256"] == digest(&original_prompt)
+            && normalized.as_bytes() == prompt
             && intent["participantBudgetSeconds"] == 420
             && intent["transportRetryLimit"] == 0
             && intent["guidanceProvided"] == false,
