@@ -254,6 +254,12 @@ reception automatically. Nonaccept stays feedback only; constructor failure neve
 receives a fictitious review suite. Preserve source and review artifacts separately.
 Validate frozen rubric criteria with the native shared validator before constructor
 model budget; this is structural preflight, not proof of semantic completeness.
+If a reviewer receives content but the upstream stream never completes before its
+deadline, retain the partial wire as an infrastructure failure, not a review or
+lesson. For a fresh method, prefer compact JSON, concise rationales and sufficient
+short exact quotations without dropping any source, rubric item or inventory row.
+Measure completion and citation validity again; shorter presentation alone does
+not prove faster review, better judgment or justify reopening an exhausted run.
 This same-run source handoff is not acquisition of a preexisting Action ZIP;
 acquisition checks that explicit enrollment against the trusted constructor run.
 See the source-guidance checkpoint for inputs/budgets. Integration fixtures are
