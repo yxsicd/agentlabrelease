@@ -160,6 +160,15 @@ identity separately from the producer. Restore knowledge from the exact producer
 Git object, not today's working tree. The replay adapter invokes existing native
 staging, baseline and complete-control gates with zero new author calls; its
 successful observation export still needs independent review and committed return.
+Test replay from a fresh sparse blob-filtered checkout, not only a full local
+clone. Consumer Git queries can require omitted objects (including ignore files)
+even when all candidate source files exist. Acquire the consumer's read-query
+closure and declared supplementary context in a separate preparation phase;
+keep source files read-only, permit writes only to owned Git metadata there, and
+restore network-disabled, entirely read-only source mounts for native staging.
+Retain failed original queries and acquisition logs. Package restoration archives
+separately from review captures so reception budgets do not reject an otherwise
+complete review; retain a byte-bound dependency receipt with the review evidence.
 
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest

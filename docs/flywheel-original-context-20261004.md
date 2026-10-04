@@ -202,3 +202,45 @@ Maturity remains **76% (+0)** pending actual review-Action execution and accepta
 The real replay is an automated partial chain, not a complete five-stage round.
 Independent reviewer verdict, accepted committed return, fresh next-round work,
 multiple rounds, cross-repository business acceptance and Agent benefit remain open.
+
+## Clean-runner consumer Git closure
+
+PR #293 merged as `68968ca52298ef52bbad2d31e6cd27873040f3f0`; its tree equals
+the tested head. All three head workflows passed (`37218738178`, `37218738182`,
+`37218738177`). One frozen review dispatch returned HTTP 204 and was resolved
+uniquely to run `37219266311`, job `111486088582`. Original review artifact
+`11307320998` contained only enrollment/rubric/validation, proving its reviewer
+had not started. Its model, route, reasoning, thinking, 240-second upstream
+deadline, output limit and maximum two reviewer attempts were preserved.
+
+The real Action failed at isolated staging after construction, exact artifact
+admission and dependency restoration succeeded. No reviewer step executed.
+Original failed artifact `11310185415` is retained, SHA256
+`eb5d14647a0a50313b2230af8f4b9372481618ef6028c0baa1ef787409f0e8ea`,
+94,426,961 bytes. The job reported `operation source identity query failed`.
+
+A fresh hwlinux sparse checkout reproduced the precise boundary in operation
+`exec-00000000000002de`: rev-parse and remote queries exited 0; offline read-only
+`git status` exited 128 because it could not fetch omitted promisor object
+`ed4ba0410d3999b6eb609c3c419c89892f62a4ab`. The previous local full-object clone
+had hidden this dependency. Preparation now executes the consumer Git read query
+with source files read-only and only owned `.git` metadata writable, then fetches
+declared supplementary context. Native staging still has no network and no writable
+source or Git metadata. Neither source identity nor original request is relaxed.
+
+The first preparation-only replay (`...02df`) fixed Git status but stopped on a
+missing supplementary context object; it remains preserved. A second wholly fresh
+sparse checkout plus complete preparation/replay (`exec-00000000000002e0`) returned
+exit 0 in 30,796ms, through baseline, full controls/recovery and observation export,
+with unchanged original request digest and zero new author calls. This is local
+clean-room replay evidence, not an independent review verdict.
+
+Dependency archives/knowledge are now uploaded separately; extracted runtime binaries
+are not duplicated in review artifacts. A restoration digest receipt remains with
+review captures. This prevents the observed 94MB artifact from breaking the existing
+64MB feedback reception budget without increasing that budget or dropping raw archives.
+The scheduling regression separates network-enabled Git acquisition from offline
+staging and stops on dirty source; its mocked workers do not prove semantic acceptance.
+
+Maturity remains **76% (+0)** until the repaired Action actually reaches independent
+review and accepted return. Complete automatic five-stage rounds remain **0**.
