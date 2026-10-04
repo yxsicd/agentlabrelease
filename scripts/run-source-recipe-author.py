@@ -395,6 +395,11 @@ def main():
         (evidence/'diagnostic-repair-check-stderr.log').write_bytes(checked.stderr)
         checked.check_returncode()
         packet = json.loads(raw)
+        continuation_enrollment = None
+        if packet['schema'] == 'agentlab.source_recipe_diagnostic_repair.v2':
+            if args.design_revisions or args.proposal_format_revisions:
+                raise ValueError('Prospective continuation forbids design or code revisions')
+            continuation_enrollment = json.loads(packet['continuationEnrollmentOriginal'])
         if args.frozen_design.read_bytes() != packet['parentDesignOriginal'].encode():
             raise ValueError('Diagnostic repair frozen design differs from original bytes')
         with (args.output/'diagnostic-repair.json').open('xb') as stream:
@@ -405,6 +410,9 @@ def main():
             stderrTruncatedForPrompt=len(packet['stderrOriginal']) > 16384,
             stderrSha256=admission['feedback']['stderrSha256'], repairIndex=packet['repairIndex'],
             maximumRepairs=packet['maximumRepairs'])
+        if continuation_enrollment is not None:
+            diagnostic_context['prospectiveEnrollment'] = continuation_enrollment
+            diagnostic_context['oldBudgetReopened'] = False
     if args.frozen_design:
         raw = args.frozen_design.read_bytes()
         if (len(raw) > 64 * 1024 or len(args.frozen_design_sha256) != 64

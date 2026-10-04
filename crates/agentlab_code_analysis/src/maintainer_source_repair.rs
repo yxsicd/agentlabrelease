@@ -66,6 +66,28 @@ pub fn prepare(
     maximum: u64,
     output: &Path,
 ) -> Result<Value, String> {
+    prepare_inner(stage, inputs, capture, maximum, None, output)
+}
+
+/// A separately reviewed, prospective enrollment; never retrofit the parent's budget.
+pub fn prepare_continuation(
+    stage: &Path,
+    inputs: &Path,
+    capture: &Path,
+    enrollment: &[u8],
+    output: &Path,
+) -> Result<Value, String> {
+    prepare_inner(stage, inputs, capture, 1, Some(enrollment), output)
+}
+
+fn prepare_inner(
+    stage: &Path,
+    inputs: &Path,
+    capture: &Path,
+    maximum: u64,
+    enrollment: Option<&[u8]>,
+    output: &Path,
+) -> Result<Value, String> {
     need(
         (1..=2).contains(&maximum),
         "construction repair budget must be 1..2",
@@ -77,6 +99,13 @@ pub fn prepare(
     let mut packet = json!({"schema":"agentlab.source_recipe_diagnostic_repair.v1",
         "maximumRepairs":maximum,"repairIndex":1,"previousRepairOriginal":null,
         "reviewed":false,"semanticQualified":false,"automaticPromotion":false,"authorityWritePerformed":false});
+    if let Some(bytes) = enrollment {
+        need(bytes.len() <= 65536, "continuation enrollment budget")?;
+        packet["schema"] = json!("agentlab.source_recipe_diagnostic_repair.v2");
+        packet["continuationEnrollmentOriginal"] =
+            json!(std::str::from_utf8(bytes).map_err(|e| e.to_string())?);
+        packet["loopIntentOriginal"] = Value::Null;
+    }
     for (key, name, limit) in [
         ("parentRequestOriginal", "request.json", 512 * 1024),
         ("parentProposalOriginal", "proposal.json", 256 * 1024),
@@ -92,6 +121,9 @@ pub fn prepare(
             64 * 1024,
         ),
     ] {
+        if enrollment.is_some() && key == "loopIntentOriginal" {
+            continue;
+        }
         let bytes = diagnostic::read(&stage.join(name), limit)?;
         packet[key] = json!(std::str::from_utf8(&bytes).map_err(|e| e.to_string())?);
     }
@@ -121,6 +153,7 @@ pub fn prepare(
     if stage_receipt.get("diagnosticRepairPacketSha256").is_some()
         || stage.join("diagnostic-repair.json").exists()
     {
+        need(enrollment.is_none(), "continuation cannot reset a repair lineage")?;
         let previous = diagnostic::read(&stage.join("diagnostic-repair.json"), PACKET_LIMIT)?;
         need(
             stage_receipt["diagnosticRepairPacketSha256"] == digest(&previous),
@@ -152,9 +185,10 @@ fn check_depth(request_bytes: &[u8], packet_bytes: &[u8], depth: usize) -> Resul
         "construction repair lineage/packet budget",
     )?;
     let p = parsed(packet_bytes)?;
+    let continuation = p["schema"] == "agentlab.source_recipe_diagnostic_repair.v2";
     need(
-        p.as_object().is_some_and(|o| o.len() == 20)
-            && p["schema"] == "agentlab.source_recipe_diagnostic_repair.v1"
+        p.as_object().is_some_and(|o| o.len() == if continuation { 21 } else { 20 })
+            && (continuation || p["schema"] == "agentlab.source_recipe_diagnostic_repair.v1")
             && p["reviewed"] == false
             && p["semanticQualified"] == false
             && p["automaticPromotion"] == false
@@ -180,13 +214,42 @@ fn check_depth(request_bytes: &[u8], packet_bytes: &[u8], depth: usize) -> Resul
     let design = parsed(design_bytes)?;
     let request = parsed(parent_request)?;
     let stage = parsed(raw(&p, "parentStageReceiptOriginal", 65536)?)?;
-    let loop_bytes = raw(&p, "loopIntentOriginal", 65536)?;
-    let frozen_budget = check_loop_intent(parent_request, loop_bytes)?;
-    need(
-        frozen_budget["maximumRepairs"] == maximum
-            && stage["diagnosticLoopIntentSha256"] == digest(loop_bytes),
-        "construction repair budget differs from pre-generation intent",
-    )?;
+    if continuation {
+        need(
+            depth == 0 && maximum == 1 && index == 1 && p["loopIntentOriginal"].is_null(),
+            "continuation cannot extend or reopen a repair budget",
+        )?;
+        let enrollment = parsed(raw(&p, "continuationEnrollmentOriginal", 65536)?)?;
+        let id = enrollment["enrollmentId"]
+            .as_str()
+            .filter(|s| !s.trim().is_empty() && s.len() <= 96)
+            .ok_or("continuation enrollment id")?;
+        let mut expected = json!({"schema":"agentlab.source_recipe_diagnostic_continuation_enrollment.v1",
+            "enrollmentId":id,"maximumSuccessors":1,"participantBudgetSeconds":420,
+            "transportRetryLimit":0,"designRevisionLimit":0,"codeRevisionLimit":0,
+            "reviewed":true,"automaticPromotion":false});
+        for (field, original) in [
+            ("authorRequestSha256", "parentRequestOriginal"),
+            ("parentStageReceiptSha256", "parentStageReceiptOriginal"),
+            ("parentDesignSha256", "parentDesignOriginal"),
+            ("parentProposalSha256", "parentProposalOriginal"),
+            ("diagnosticIntentSha256", "intentOriginal"),
+            ("diagnosticProcessSha256", "processOriginal"),
+            ("diagnosticStdoutSha256", "stdoutOriginal"),
+            ("diagnosticStderrSha256", "stderrOriginal"),
+        ] {
+            expected[field] = json!(digest(raw(&p, original, PACKET_LIMIT)?));
+        }
+        need(enrollment == expected, "continuation enrollment differs from original failure")?;
+    } else {
+        let loop_bytes = raw(&p, "loopIntentOriginal", 65536)?;
+        let frozen_budget = check_loop_intent(parent_request, loop_bytes)?;
+        need(
+            frozen_budget["maximumRepairs"] == maximum
+                && stage["diagnosticLoopIntentSha256"] == digest(loop_bytes),
+            "construction repair budget differs from pre-generation intent",
+        )?;
+    }
     need(
         stage["schema"] == "agentlab.source_recipe_author_stage.v1"
             && stage["reviewed"] == false
@@ -239,6 +302,12 @@ fn check_depth(request_bytes: &[u8], packet_bytes: &[u8], depth: usize) -> Resul
         stdout,
         stderr,
     )?;
+    if continuation {
+        need(
+            feedback["classification"] == "baseline-observations-rejected",
+            "continuation requires completed baseline observations, not infrastructure failure",
+        )?;
+    }
     let intent = parsed(intent_bytes)?;
     let execution = parsed(execution_bytes)?;
     let descriptor = parsed(descriptor_bytes)?;

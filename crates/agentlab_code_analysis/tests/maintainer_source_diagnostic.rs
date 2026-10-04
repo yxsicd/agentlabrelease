@@ -3213,6 +3213,113 @@ fn repair_packet(base: &Path, capture: &Path, maximum: u64) -> Value {
 }
 
 #[test]
+fn prospective_baseline_continuation_keeps_old_budget_and_reconstructs_original_failure() {
+    use agentlab_code_analysis::maintainer_source_repair::{check, check_output, prepare_continuation};
+    let base = fixture();
+    prepared(&base);
+    let capture = captured(&base, 0, json!({"scenario":{"value":8,"nullable":null}}));
+    let process_path = capture.join("process.json");
+    let mut process: Value = serde_json::from_slice(&fs::read(&process_path).unwrap()).unwrap();
+    for (key, value) in [
+        ("cleanupExitCode", json!(0)),
+        ("network", json!("none")),
+        ("rootFilesystemReadOnly", json!(true)),
+        ("capabilitiesDropped", json!(true)),
+        ("durationMs", json!(206)),
+    ] {
+        process[key] = value;
+    }
+    file(&process_path, &process);
+    let stage = base.join("stage");
+    let inputs = base.join("inputs");
+    let mut enrollment = json!({"schema":"agentlab.source_recipe_diagnostic_continuation_enrollment.v1",
+        "enrollmentId":"prospective-test-only","maximumSuccessors":1,"participantBudgetSeconds":420,
+        "transportRetryLimit":0,"designRevisionLimit":0,"codeRevisionLimit":0,
+        "reviewed":true,"automaticPromotion":false});
+    for (field, path) in [
+        ("authorRequestSha256", stage.join("request.json")),
+        ("parentStageReceiptSha256", stage.join("stage-receipt.json")),
+        ("parentDesignSha256", stage.join("design.json")),
+        ("parentProposalSha256", stage.join("proposal.json")),
+        ("diagnosticIntentSha256", inputs.join("intent.json")),
+        ("diagnosticProcessSha256", process_path),
+        ("diagnosticStdoutSha256", capture.join("worker-stdout.log")),
+        ("diagnosticStderrSha256", capture.join("worker-stderr.log")),
+    ] {
+        enrollment[field] = json!(digest(&fs::read(path).unwrap()));
+    }
+    let original_stage = fs::read(stage.join("stage-receipt.json")).unwrap();
+    let enrolled = serde_json::to_vec(&enrollment).unwrap();
+    let output = base.join("continuation.json");
+    prepare_continuation(&stage, &inputs, &capture, &enrolled, &output).unwrap();
+    let packet_bytes = fs::read(&output).unwrap();
+    let packet: Value = serde_json::from_slice(&packet_bytes).unwrap();
+    let request = fs::read(stage.join("request.json")).unwrap();
+    let admitted = check(&request, &packet_bytes).unwrap();
+    assert_eq!(admitted["feedback"]["classification"], "baseline-observations-rejected");
+    assert_eq!(admitted["feedback"]["checks"][0]["actual"], 8);
+    assert_eq!(admitted["semanticQualified"], false);
+    assert!(packet["loopIntentOriginal"].is_null());
+    assert_eq!(fs::read(stage.join("stage-receipt.json")).unwrap(), original_stage);
+    assert!(!stage.join("diagnostic-loop-intent.json").exists());
+    assert!(prepare_continuation(&stage, &inputs, &capture, &enrolled, &output).is_err());
+    // The legacy path still requires its pre-generation allowance.
+    assert!(agentlab_code_analysis::maintainer_source_repair::prepare(
+        &stage, &inputs, &capture, 1, &base.join("legacy.json")
+    ).is_err());
+    for (field, value) in [
+        ("reviewed", json!(false)),
+        ("maximumSuccessors", json!(2)),
+        ("participantBudgetSeconds", json!(840)),
+        ("transportRetryLimit", json!(1)),
+        ("codeRevisionLimit", json!(1)),
+        ("diagnosticStdoutSha256", json!("a".repeat(64))),
+    ] {
+        let mut bad = packet.clone();
+        let mut policy = enrollment.clone();
+        policy[field] = value;
+        bad["continuationEnrollmentOriginal"] = json!(serde_json::to_string(&policy).unwrap());
+        assert!(check(&request, &serde_json::to_vec(&bad).unwrap()).is_err(), "{field}");
+    }
+    for (field, value) in [
+        ("maximumRepairs", json!(2)),
+        ("repairIndex", json!(2)),
+        ("previousRepairOriginal", json!("{}")),
+        ("stdoutOriginal", json!("{}")),
+    ] {
+        let mut bad = packet.clone();
+        bad[field] = value;
+        assert!(check(&request, &serde_json::to_vec(&bad).unwrap()).is_err(), "{field}");
+    }
+    // Even a rehashed enrollment cannot admit unsafe/incomplete execution.
+    for (field, value) in [
+        ("timedOut", json!(true)),
+        ("cleanupExitCode", json!(1)),
+        ("durationMs", json!(0)),
+        ("network", json!("bridge")),
+        ("rootFilesystemReadOnly", json!(false)),
+        ("exitCode", json!(1)),
+    ] {
+        let mut bad = packet.clone();
+        let mut changed_process = process.clone();
+        changed_process[field] = value;
+        let raw = serde_json::to_string(&changed_process).unwrap();
+        let mut policy = enrollment.clone();
+        policy["diagnosticProcessSha256"] = json!(digest(raw.as_bytes()));
+        bad["processOriginal"] = json!(raw);
+        bad["continuationEnrollmentOriginal"] = json!(serde_json::to_string(&policy).unwrap());
+        assert!(check(&request, &serde_json::to_vec(&bad).unwrap()).is_err(), "{field}");
+    }
+    let mut proposal: Value = serde_json::from_slice(&fs::read(stage.join("proposal.json")).unwrap()).unwrap();
+    proposal["verifierSource"] = json!("changed candidate, not qualified");
+    let design = fs::read(stage.join("design.json")).unwrap();
+    assert!(check_output(&request, &packet_bytes, &serde_json::to_vec(&proposal).unwrap(), &design).is_ok());
+    proposal["contract"]["checks"][0]["expected"] = json!(8);
+    assert!(check_output(&request, &packet_bytes, &serde_json::to_vec(&proposal).unwrap(), &design).is_err());
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn repair_reconstructs_failure_and_freezes_complete_design_contract_and_source_paths() {
     use agentlab_code_analysis::maintainer_source_repair::{check, check_output};
     let (base, capture) = repair_fixture(2);

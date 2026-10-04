@@ -548,6 +548,14 @@ contract presentation; it does not prove successful Agent correction or authoriz
 repair of a historical zero-revision enrollment. See the
 [diagnostic checkpoint](../../docs/flywheel-diagnostic-feedback-20261004.md).
 
+Keep pre-generation repair and prospective continuation as distinct enrollments.
+The native diagnostic-continuation command binds a new explicitly reviewed,
+single-successor budget to exact original baseline failure and frozen design;
+it never writes a repair allowance into the parent. Require completed baseline
+observations, not launch/timeout/cleanup failure. Keep original review lineage and
+durable scheduler ownership alongside the packet. Native admission and changed
+verifier staging alone prove neither model correction nor an automatic return.
+
 A frozen dependency return supplies the declared value; it need not invoke a real
 dependency callback passed as an argument. Inspect the runtime implementation
 before claiming real parser, storage or framework behavior. Controlled returns

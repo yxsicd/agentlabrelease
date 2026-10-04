@@ -292,3 +292,40 @@ and independent completion/isolation, without changing the original failed run.
 The current source-reviewed-successor lane expects completed full-suite review;
 this baseline rejection cannot be represented as one. That integration remains
 unfinished. Maturity remains 75%; completed automatic five-stage rounds remain zero.
+
+## Prospective baseline continuation admission (development)
+
+`--prepare-source-recipe-diagnostic-continuation --stage DIR --diagnostic-inputs
+DIR --worker-capture DIR --continuation-enrollment FILE --output NEW_FILE` prepares
+`agentlab.source_recipe_diagnostic_repair.v2` for the ordinary frozen-design author.
+Unlike v1 pre-generation repairs, v2 does not insert a loop intent into the parent
+or reinterpret its exhausted budget. Existing v1 admission remains unchanged.
+
+The explicit reviewed enrollment uses
+`agentlab.source_recipe_diagnostic_continuation_enrollment.v1`: enrollmentId,
+authorRequestSha256, parentStageReceiptSha256, parentDesignSha256,
+parentProposalSha256, diagnosticIntentSha256, diagnosticProcessSha256,
+diagnosticStdoutSha256 and diagnosticStderrSha256. It must declare
+maximumSuccessors=1, participantBudgetSeconds=420, transportRetryLimit=0,
+designRevisionLimit=0, codeRevisionLimit=0, reviewed=true and automaticPromotion=false.
+All bindings refer to exact original bytes. Unknown fields or budget/binding drift
+reject. The enrollment records explicit review, not authenticated reviewer identity.
+
+Native admission reconstructs the original diagnostic and requires completed
+baseline-observations-rejected, unchanged original-source baseline, containment
+declarations, positive duration and confirmed cleanup. Incomplete execution,
+infrastructure failure, passing baseline, recursive repair lineage and attempts
+to extend the single-successor budget reject. Parent stage/request/design/proposal
+and full raw diagnostic bytes remain in the packet. Output must change verifier
+code while preserving byte-exact design, source paths and full check contract.
+The normal author accepts this packet only with zero design/code revisions and
+adds its prospective enrollment to the retained feedback prompt.
+
+This is admission/staging development, not a scheduler or repaired business round.
+No old capture is changed, no model is dispatched and no reservation is removed.
+Fresh runtime isolation/completion, a durable single-slot transport, full control
+suite, independent review, committed knowledge return and later consumption still
+need their separate implementation/execution evidence. In particular, a new
+enrollment ID is not global budget ownership or authentication of the original
+reviewed design lineage. The original reviewed-successor envelope remains retained
+separately and must be bound by the eventual transport, not discarded as optional.
