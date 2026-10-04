@@ -89,6 +89,13 @@ Read [the retained compiler checkpoint](../../docs/flywheel-compiler-dependency-
 when interpreting the import-erasure finding; it does not amend a historical review
 or supply compiler evidence to an already frozen experiment.
 
+In pre-execution design reviews, prefer criterion source citations as exact
+path/quote pairs against uniquely loaded frozen context; source-array positions
+are not stable identities. Cite design statements through their actual /design
+string pointers, not original-request text. Native location validation establishes
+content binding only, not whether a citation supports the reviewer's conclusion.
+Never relocate a rejected historical response into acceptance.
+
 The frozen source runtime owns control transformations: source() and loadModule()
 already consume the selected edits. Do not apply the design's edits a second time
 in generated verifiers. For initialization claims, compare source-observed state

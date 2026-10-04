@@ -65,3 +65,11 @@ limitations index 3. The original response remains unchanged and unadmitted.
 No verifier execution or knowledge return followed. This identifies evidence
 location reliability as a separate next-action gap; it does not contradict the
 compiler finding or make the reviewer's unadmitted opinions accepted findings.
+
+The prospective native interface now also accepts criterion source citations as
+exact path/quote pairs, using the same unique-source content check as item reviews.
+Existing pointer/quote citations remain strict. The prompt's location-only catalog
+now includes design strings, including limitations, with correctly escaped JSON
+pointers. No historical response is converted to the new form. Rust regressions
+cover reordered source context, duplicate paths, wrong paths/quotes, read-only
+context and design-pointer escaping; real model reliability remains unverified.
