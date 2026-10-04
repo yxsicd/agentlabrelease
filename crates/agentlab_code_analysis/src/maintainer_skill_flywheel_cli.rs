@@ -738,6 +738,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         let mut bytes = serde_json::to_vec_pretty(&request)?;
         bytes.push(b'\n');
+        agentlab_code_analysis::maintainer_source_recipe_author::validate_request(&bytes)?;
         OpenOptions::new()
             .write(true)
             .create_new(true)

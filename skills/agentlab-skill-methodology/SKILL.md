@@ -222,6 +222,16 @@ fixture can hide a new parsing boundary; touched-file tests alone miss those cal
 This establishes review input completeness, not automatic semantic truth or a
 successful business round.
 
+Exercise a newly frozen request extension through the actual producer's request
+reconstruction, design and staging gates, not only review/export and continuation
+adapters. Run deterministic full-request reconstruction before inference and before
+publishing the prepared request. A real targeted constructor completed its design
+turn but failed because reconstruction omitted the frozen target. Preserve exact
+non-target equality and validate the retained target against regenerated scope and
+source bytes; do not discard new fields or bypass identity checks to obtain a pass.
+This preflight prevents wasted participant calls, not semantic approval or learning
+benefit. See the [target-review checkpoint](../../docs/flywheel-construction-target-review-20261004.md).
+
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest
 and restore frozen paths inside an isolated namespace rather than overwriting

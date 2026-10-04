@@ -356,12 +356,36 @@ fn reproduce(request: &Value) -> Result<Value, String> {
                 .ok_or("recipe context original bytes absent")
         })
         .transpose()?;
-    prepare_with_context(
+    let mut reproduced = prepare_with_context(
         Path::new(text(request, "knowledgeDirectory")?),
         Path::new(text(request, "sourceWorktree")?),
         text(request, "repositorySelector")?,
         &serde_json::to_vec(&request["policy"]).map_err(|e| e.to_string())?,
         context.map(str::as_bytes),
+    )?;
+    if let Some(target) = crate::maintainer_guidance::frozen_source_recipe_target(request)? {
+        reproduced["sourceRecipeTarget"] = target;
+        crate::maintainer_guidance::frozen_source_recipe_target(&reproduced)?;
+    }
+    Ok(reproduced)
+}
+
+/// Deterministic admission before participant inference; not semantic approval.
+pub fn validate_request(request_bytes: &[u8]) -> Result<(), String> {
+    need(
+        request_bytes.len() <= 512 * 1024,
+        "recipe author request budget",
+    )?;
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    need(
+        request["schema"] == "agentlab.source_recipe_author_request.v1"
+            && request["reviewed"] == false
+            && request["automaticPromotion"] == false,
+        "recipe author request schema differs",
+    )?;
+    need(
+        reproduce(&request)? == request,
+        "recipe author request no longer reproduces",
     )
 }
 

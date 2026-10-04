@@ -78,3 +78,31 @@ Next: deliver this method and prospectively enroll a fresh real constructor usin
 the new frozen rubric, then complete baseline, wrong/reference controls, review
 and committed return. Measure repeated outcomes and transfer to another repository
 before claiming effectiveness or increasing complete-round counts.
+
+## Real targeted producer failure and pre-inference repair
+
+PR301 merged as `204de29a8d3a14bf5d3c4bd4110533c55de99afd`. Fresh run
+[37232947775](https://github.com/yxsicd/agentlabrelease/actions/runs/37232947775)
+completed with failure. The real initial design turn completed, then native design
+admission rejected `recipe design request no longer reproduces`. Code generation,
+case execution and independent review were not completed; uploading a review
+enrollment artifact does not establish reviewer execution. Original source ZIP
+SHA256 is `f7a22d4738d505026d2713002e85636b122a05e1799a74e3a73ed9559482625f`.
+The failed root, captured output and attempt budget remain unchanged.
+
+The native request reconstruction rebuilt source/context/policy fields but omitted
+`sourceRecipeTarget`. The fix reconstructs only the original validated target and
+revalidates it against regenerated source/scope before the existing complete-value
+equality gates. A new deterministic `validate_request` gate is invoked by fresh
+CLI preparation after target enrichment and before writing the request, so this
+class of incompatibility stops before participant inference. Legacy requests do
+not gain target fields. Exact equality is not weakened and unknown fields remain
+rejected; target shape/source binding is not semantic authentication of the demand.
+
+Regression coverage uses an actual source Git/knowledge/policy fixture with
+supplementary context and exercises native design and staging, preserving original
+request bytes. Malformed/missing-scope/out-of-scope targets, changed source bytes,
+unexpected request fields and changed knowledge identity must fail before staging
+creates files. Full regression and delivery status must be reported separately
+from the retained failed Agent run. Maturity remains **79%**, accepted complete
+automatic rounds **0**; no new constructor or knowledge write is implied.
