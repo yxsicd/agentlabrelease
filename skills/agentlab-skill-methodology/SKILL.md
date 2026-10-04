@@ -258,6 +258,13 @@ Keep-alive bytes are not model output; an unobserved stage is null, not zero.
 These timings locate waiting versus observed output, not provider queue or compute
 causality. Provider-created timestamps and model catalogs cannot replace arrival
 measurements or demonstrate that a reasoning policy was honored.
+An explicit `thinking.type=disabled` request can still receive reasoning deltas:
+the guided design run 37228563734 received first content at 150877 ms and hit
+its 180-second upstream deadline without a terminal event. Check the retained
+wire and arrival timings rather than treating requested policy as effective.
+If testing a different reasoning hint, enroll a prospective controlled experiment
+with unchanged source/task and other budgets; preserve the failed root and do
+not salvage its partial JSON or change defaults before measuring outcomes.
 If code text starts near the observed deadline, test a separately
 recorded code-phase budget rather than extending every stage. Keep design limits,
 repair counts, transport retry policy and semantic admission unchanged; propagate
