@@ -3257,6 +3257,34 @@ fn prospective_baseline_continuation_keeps_old_budget_and_reconstructs_original_
     let packet_bytes = fs::read(&output).unwrap();
     let packet: Value = serde_json::from_slice(&packet_bytes).unwrap();
     let request = fs::read(stage.join("request.json")).unwrap();
+    let policy_path = base.join("prospective-enrollment.json");
+    fs::write(&policy_path, &enrolled).unwrap();
+    let cli_output = base.join("cli-continuation.json");
+    let invoke = || {
+        Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--prepare-source-recipe-diagnostic-continuation")
+            .arg("--stage")
+            .arg(&stage)
+            .arg("--diagnostic-inputs")
+            .arg(&inputs)
+            .arg("--worker-capture")
+            .arg(&capture)
+            .arg("--continuation-enrollment")
+            .arg(&policy_path)
+            .arg("--output")
+            .arg(&cli_output)
+            .output()
+            .unwrap()
+    };
+    let executed = invoke();
+    assert!(
+        executed.status.success(),
+        "{}",
+        String::from_utf8_lossy(&executed.stderr)
+    );
+    assert_eq!(fs::read(&cli_output).unwrap(), packet_bytes);
+    assert!(!invoke().status.success());
+    assert_eq!(fs::read(&cli_output).unwrap(), packet_bytes);
     let admitted = check(&request, &packet_bytes).unwrap();
     assert_eq!(
         admitted["feedback"]["classification"],
