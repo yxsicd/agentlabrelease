@@ -48,8 +48,9 @@ case "$lane" in
     ;;
   *) echo 'No implemented child for selected lane' >&2; exit 1 ;;
 esac
-jq -n --arg workflow "$workflow" --arg method "$method" --argjson inputs "$inputs" \
-  '{schema:"agentlab.gap_dispatch_request.v1",workflow:$workflow,methodRevision:$method,inputs:$inputs,closedLoopQualified:false}' > "$output/request.json"
+request_id=$(printf '%s' "$(cd "$output" && pwd):$method" | shasum -a 256 | cut -d ' ' -f1)
+jq -n --arg workflow "$workflow" --arg method "$method" --arg id "$request_id" --argjson inputs "$inputs" \
+  '{schema:"agentlab.gap_dispatch_request.v1",requestId:$id,workflow:$workflow,methodRevision:$method,inputs:($inputs+{coordinator_request_id:$id}),closedLoopQualified:false}' > "$output/request.json"
 if [[ $mode == plan ]]; then
   jq '.' "$output/request.json"
   exit 0
@@ -59,7 +60,8 @@ test -z "$(git status --porcelain)"
 test "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)" == "$method"
 # Intent exists before the only external dispatch. Uncertain outcome needs run
 # discovery, never another call or reuse of this output directory.
-jq '{workflow,methodRevision,inputs,dispatchAttempted:true}' "$output/request.json" > "$output/dispatch-intent.json"
+jq --arg repository "$GITHUB_REPOSITORY" --arg created "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  '{requestId,workflow,methodRevision,inputs,repository:$repository,createdAt:$created,dispatchAttempted:true}' "$output/request.json" > "$output/dispatch-intent.json"
 fields=()
 while IFS= read -r field; do fields+=(-f "$field"); done < <(jq -r '.inputs|to_entries[]|.key+"="+.value' "$output/request.json")
 gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref main "${fields[@]}" \

@@ -23,6 +23,89 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn gap_run_recovery_retains_originals_and_rejects_ambiguity_and_identity_drift() {
+    use std::os::unix::fs::PermissionsExt;
+    let base = std::env::temp_dir().join(format!(
+        "agentlab-run-recovery-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&base).unwrap();
+    let id = "a".repeat(64);
+    let method = "b".repeat(40);
+    let intent = json!({"requestId":id,"methodRevision":method,"repository":"fixture/project",
+        "workflow":"maintainer-source-recipe-author.yml","createdAt":"2026-10-04T00:00:00Z"});
+    let intent_bytes = serde_json::to_vec(&intent).unwrap();
+    fs::write(base.join("dispatch-intent.json"), &intent_bytes).unwrap();
+    let response = base.join("response.json");
+    let gh = base.join("gh");
+    fs::write(&gh, "#!/bin/sh\ncat \"$FIXTURE_RUN_RESPONSE\"\n").unwrap();
+    fs::set_permissions(&gh, fs::Permissions::from_mode(0o755)).unwrap();
+    let run = |name: &str, rows: Value| {
+        fs::write(
+            &response,
+            serde_json::to_vec(&json!({"workflow_runs":rows})).unwrap(),
+        )
+        .unwrap();
+        Command::new("bash")
+            .arg(root().join("scripts/recover-maintainer-flywheel-run.sh"))
+            .arg(&base)
+            .arg(base.join(name))
+            .env("FIXTURE_RUN_RESPONSE", &response)
+            .env(
+                "PATH",
+                format!("{}:{}", base.display(), std::env::var("PATH").unwrap()),
+            )
+            .output()
+            .unwrap()
+    };
+    let original = json!({"id":123,"display_title":format!("AgentLab gap {id}"),
+        "head_sha":method,"head_branch":"main","event":"workflow_dispatch",
+        "repository":{"full_name":"fixture/project"},"status":"in_progress","conclusion":null,
+        "html_url":"https://github.com/fixture/project/actions/runs/123"});
+    assert!(run("pending", json!([])).status.success());
+    let read = |name: &str| {
+        serde_json::from_slice::<Value>(
+            &fs::read(base.join(name).join("observation.json")).unwrap(),
+        )
+        .unwrap()
+    };
+    assert_eq!(read("pending")["dispatchAgainAllowed"], false);
+    assert!(run("running", json!([original.clone()])).status.success());
+    assert_eq!(read("running")["runId"], 123);
+    assert_eq!(read("running")["childCompletionVerified"], false);
+    let mut terminal = original.clone();
+    terminal["status"] = json!("completed");
+    terminal["conclusion"] = json!("failure");
+    assert!(run("terminal", json!([terminal])).status.success());
+    assert_eq!(read("terminal")["conclusion"], "failure");
+    assert_eq!(read("terminal")["closedLoopQualified"], false);
+    assert!(
+        !run("duplicate", json!([original.clone(), original.clone()]))
+            .status
+            .success()
+    );
+    for key in ["head_sha", "head_branch", "event"] {
+        let mut drift = original.clone();
+        drift[key] = json!("wrong");
+        assert!(!run(key, json!([drift])).status.success());
+        assert!(!base.join(key).join("observation.json").exists());
+    }
+    let mut foreign = original;
+    foreign["repository"]["full_name"] = json!("other/project");
+    assert!(!run("foreign", json!([foreign])).status.success());
+    assert_eq!(
+        fs::read(base.join("dispatch-intent.json")).unwrap(),
+        intent_bytes
+    );
+    assert!(base.join("duplicate/original-runs.json").exists());
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn gap_router_dispatches_only_supported_children_and_never_repeats_uncertain_requests() {
     use std::os::unix::fs::PermissionsExt;
     let base = std::env::temp_dir().join(format!(

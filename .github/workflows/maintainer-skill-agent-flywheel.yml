@@ -1,7 +1,13 @@
 name: Maintainer Skill Agent flywheel
+run-name: ${{ inputs.coordinator_request_id && format('AgentLab gap {0}', inputs.coordinator_request_id) || 'Maintainer Skill Agent flywheel' }}
 on:
   workflow_dispatch:
     inputs:
+      coordinator_request_id:
+        description: Optional original gap-dispatch identity for read-only run recovery
+        required: false
+        default: ''
+        type: string
       expected_method:
         description: Optional exact Release commit required by the gap coordinator
         required: false

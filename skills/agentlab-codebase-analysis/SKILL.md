@@ -171,6 +171,11 @@ to bind the native gap plan to implemented child workflows; dispatch mode sends
 one request after method fencing. Unsupported operation kinds remain visible.
 A dispatch receipt is not child completion, knowledge admission or a full loop;
 an uncertain dispatch must be discovered, never repeated automatically.
+Recover that original request with
+`bash scripts/recover-maintainer-flywheel-run.sh DISPATCH_OUTPUT FRESH_OBSERVATION`.
+Keep each original bounded run listing and require a unique request title,
+repository, method and main-branch match. Missing visibility means wait, not
+failure or redispatch; ambiguous matches stop for explicit inspection.
 
 Route bounded work by capability: source behavior, configuration/asset, or
 repository contract. Require only evidence dimensions that the mode can prove;
