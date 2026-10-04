@@ -7,6 +7,8 @@ import json
 import re
 import subprocess
 import threading
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -89,12 +91,40 @@ class StrictTransport:
     def rpc(self, name, arguments):
         self.counter += 1
         body = {'jsonrpc': '2.0', 'id': self.counter, 'method': 'tools/call',
-                'params': {'name': name, 'arguments': arguments}}
+                'params': {'name': name, 'arguments': arguments,
+                           '_meta': {
+                               'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+                               'io.modelcontextprotocol/clientCapabilities': {}}}}
         request = urllib.request.Request(self.request['endpoint'], json.dumps(body).encode(),
             headers={'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream',
                      'MCP-Protocol-Version': '2026-07-28', 'Mcp-Method': 'tools/call', 'Mcp-Name': name})
-        with urllib.request.urlopen(request, timeout=30) as response:
-            packet = json.load(response)
+        readonly = name in ('service_metadata', 'skill_list', 'skill_get',
+                            'person_status', 'skill_run_read')
+        # person_select validates the explicit existing identity on this
+        # sessionless surface; it does not commit business state.
+        context_validation = name == 'person_select'
+        replay_safe = readonly or context_validation
+        attempts = 3 if replay_safe else 1
+        for attempt in range(1, attempts + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=30) as response:
+                    packet = json.load(response)
+                break
+            except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
+                retry = replay_safe and not isinstance(error, urllib.error.HTTPError) and attempt < attempts
+                reason = getattr(error, 'reason', error)
+                save(self.root, f'rpc-transport-failure-{self.counter}-{attempt}.json', {
+                    'schema': 'agentlab.reviewed_return_transport_failure.v1',
+                    'tool': name, 'operation': arguments.get('operation'),
+                    'attempt': attempt, 'errorType': type(error).__name__,
+                    'reasonType': type(reason).__name__, 'reasonErrno': getattr(reason, 'errno', None),
+                    'readOnly': readonly, 'retryAllowed': retry,
+                    'contextValidation': context_validation,
+                    'writePreviouslyDispatched': self.writes != 0,
+                    'writeReplayAllowed': False})
+                if not retry:
+                    raise
+                time.sleep(0.25 * attempt)
         if packet.get('error') or packet.get('result', {}).get('isError'):
             raise RuntimeError('MCP rejected; no retry')
         result = packet['result']['structuredContent']
