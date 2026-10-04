@@ -40,7 +40,7 @@ def extract_observations(archive, output, feedback=False, baseline=False):
                 exact = {'successor-request.json', 'successor-enrollment.json',
                          'baseline-diagnostic/intent.json', 'baseline-diagnostic/request.json',
                          'baseline-diagnostic/descriptor.json', 'baseline-diagnostic/support.json'}
-                capture = re.fullmatch(r'baseline-diagnostic/contained-input-[^/]+/(process.json|worker-stdout.log|worker-stderr.log)', entry.filename)
+                capture = re.fullmatch(r'baseline-diagnostic/contained-input-[^/]+/(request.json|process.json|worker-stdout.log|worker-stderr.log)', entry.filename)
                 if entry.filename in exact or entry.filename.startswith('agent/proposal-stage/') or capture:
                     require(entry.file_size <= 4 * 1024 * 1024,
                             'Selected baseline file exceeds native read budget')
@@ -73,7 +73,7 @@ def extract_observations(archive, output, feedback=False, baseline=False):
             processes = [name for name in names if re.fullmatch(r'baseline-diagnostic/contained-input-[^/]+/process.json', name)]
             require(len(processes) == 1, 'Exactly one original baseline process required')
             capture = processes[0].rsplit('/', 1)[0]
-            required.update({capture + '/worker-stdout.log', capture + '/worker-stderr.log'})
+            required.update({capture + '/request.json', capture + '/worker-stdout.log', capture + '/worker-stderr.log'})
             require(required <= names and sum(entry.file_size for entry, _ in selected) <= 16 * 1024 * 1024,
                     'Original baseline reception incomplete or over budget')
         elif feedback:

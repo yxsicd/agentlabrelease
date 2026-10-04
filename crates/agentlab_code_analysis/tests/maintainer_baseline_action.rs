@@ -65,17 +65,19 @@ required=['successor-request.json','successor-enrollment.json',
     'agent/proposal-stage/controls.cjs','baseline-diagnostic/intent.json',
     'baseline-diagnostic/request.json','baseline-diagnostic/descriptor.json',
     'baseline-diagnostic/support.json','baseline-diagnostic/contained-input-original/process.json',
+    'baseline-diagnostic/contained-input-original/request.json',
     'baseline-diagnostic/contained-input-original/worker-stdout.log',
     'baseline-diagnostic/contained-input-original/worker-stderr.log']
 with tempfile.TemporaryDirectory() as temporary:
     root=Path(temporary)
-    for scenario in ['good','missing','duplicate','traversal','symlink','two-processes','oversize']:
+    for scenario in ['good','missing','missing-captured-request','duplicate','traversal','symlink','two-processes','oversize']:
         archive=root/(scenario+'.zip');out=root/('selected-'+scenario)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as bundle:
                 for name in required:
                     if scenario=='missing' and name.endswith('/support.json'):continue
+                    if scenario=='missing-captured-request' and name=='baseline-diagnostic/contained-input-original/request.json':continue
                     bundle.writestr(name,'original '+name)
                 bundle.writestr('agent/participant-state/auth.json','excluded private state')
                 if scenario=='duplicate':bundle.writestr(required[0],'duplicate')
