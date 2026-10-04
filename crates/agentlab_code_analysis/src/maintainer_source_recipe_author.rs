@@ -1708,10 +1708,19 @@ pub fn stage_with_diagnostic_repair(
     )?;
     let validation = check_design_proposal(request_bytes, proposal_bytes, design_bytes)?;
     let packet: Value = serde_json::from_slice(packet_bytes).map_err(|e| e.to_string())?;
-    let loop_intent = packet["loopIntentOriginal"]
-        .as_str()
-        .ok_or("construction repair loop intent missing")?
-        .as_bytes();
+    // check_output already reconstructs the enrollment and enforces exactly one
+    // successor for v2. That lane deliberately has no old repair-loop intent;
+    // requiring one here would reopen a budget that continuation preserves.
+    let loop_intent = if packet["schema"] == "agentlab.source_recipe_diagnostic_repair.v2" {
+        None
+    } else {
+        Some(
+            packet["loopIntentOriginal"]
+                .as_str()
+                .ok_or("construction repair loop intent missing")?
+                .as_bytes(),
+        )
+    };
     stage_inner(
         request_bytes,
         proposal_bytes,
@@ -1719,7 +1728,7 @@ pub fn stage_with_diagnostic_repair(
         Some((design_bytes, &validation)),
         None,
         Some(packet_bytes),
-        Some(loop_intent),
+        loop_intent,
         None,
     )
 }

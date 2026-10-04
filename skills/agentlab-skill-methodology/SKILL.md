@@ -146,6 +146,17 @@ Do not simply admit extra exchanges, disable permitted tools to fit the verifier
 or reopen the consumed attempt. Recorded chain consistency is not authentication
 of tool effects or semantic acceptance of the generated candidate.
 
+For cross-host continuation, inventory the author host executable separately
+from the participant/worker image. Recover dependencies by original byte digest
+and restore frozen paths inside an isolated namespace rather than overwriting
+host tools or editing the original request. Reproduce the original clean Git
+source cut and knowledge cut there. Acquisition and static staging are separate
+from execution, review and knowledge return. At each packet-version transition,
+test the actual final consumer: a prospectively enrolled one-successor packet
+deliberately has no inherited repair-loop intent. Preserve that lane's enrollment
+and budget checks instead of synthesizing an old intent to satisfy a legacy
+consumer. See the [original-context checkpoint](../../docs/flywheel-original-context-20261004.md).
+
 When a clean-runner gate exceeds its budget, inspect the individual test and a
 completed comparison run before calling it a hang. Repeated exact-byte executable
 hashing can dominate debug builds, especially when one platform has a small loader
