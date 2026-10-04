@@ -14,7 +14,8 @@ if ! jq -e '.runVisible==true and .childCompletionVerified==true' "$observed" >/
   exit 0
 fi
 intent="$dispatch/dispatch-intent.json"
-test "$(jq -r .workflow "$intent")" == maintainer-source-recipe-author.yml
+workflow=$(jq -er .workflow "$intent")
+[[ $workflow == maintainer-source-recipe-author.yml || $workflow == maintainer-source-suite-review.yml ]]
 repository=$(jq -er .repository "$intent")
 run=$(jq -er .runId "$observed")
 method=$(jq -er .methodRevision "$intent")
@@ -26,11 +27,32 @@ test "$(jq length "$output/selected-artifacts.json")" == 1
 artifact=$(jq -er '.[0].id' "$output/selected-artifacts.json")
 digest=$(jq -er '.[0].digest' "$output/selected-artifacts.json")
 [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]]
-python3 scripts/acquire-source-suite-review-input.py --repository "$repository" --run "$run" \
-  --artifact "$artifact" --artifact-sha256 "${digest#sha256:}" --source-revision "$method" \
-  --coordinator-request-id "$(jq -er .requestId "$intent")" \
-  --artifact-kind review-feedback --output "$output/acquisition" > "$output/acquisition.stdout"
+acquisition_args=(--repository "$repository" --run "$run"
+  --artifact "$artifact" --artifact-sha256 "${digest#sha256:}" --source-revision "$method"
+  --artifact-kind review-feedback --output "$output/acquisition")
+if [[ $workflow == maintainer-source-recipe-author.yml ]]; then
+  acquisition_args+=(--coordinator-request-id "$(jq -er .requestId "$intent")")
+fi
+python3 scripts/acquire-source-suite-review-input.py "${acquisition_args[@]}" > "$output/acquisition.stdout"
 review="$output/acquisition/review-inputs"
+if [[ $workflow == maintainer-source-suite-review.yml ]]; then
+  # Compare actual retained enrollment with the immutable pre-dispatch body.
+  jq -e --slurpfile body "$dispatch/dispatch-body.json" --slurpfile intent "$intent" '
+    $body[0].inputs as $b | $intent[0] as $i |
+    .schema=="agentlab.independent_source_suite_review_enrollment.v1" and
+    .methodRevision==$i.methodRevision and (.sourceRun|tostring)==$b.source_run and
+    (.sourceArtifact|tostring)==$b.source_artifact and .sourceMethodRevision==$b.source_revision and
+    .artifactSha256==$b.artifact_sha256 and .rubricSha256==$b.rubric_sha256 and
+    .sourceCoordinatorRequestId==null and .retainedCompletion==($b.retained_completion=="true") and
+    .originalHostNodeVersion==$b.original_host_node_version and .originalTypescriptVersion==$b.original_typescript_version and
+    .model==$b.model and .providerRoute==$b.provider_route and .reasoningEffort==$b.reasoning_effort and .thinkingType==$b.thinking_type and
+    .gatewayTimeoutSeconds==($b.gateway_timeout_seconds|tonumber) and .maxOutputTokens==($b.max_output_tokens|tonumber) and
+    .reviewRepairLimit==($b.review_repair_limit|tonumber) and
+    .maximumReviewerAttempts==$i.maximumReviewerAttempts and .maximumReviewerAttempts==(1+.reviewRepairLimit) and
+    .totalParticipantBudgetSeconds==$i.totalParticipantBudgetSeconds and .totalParticipantBudgetSeconds==(420*.maximumReviewerAttempts) and
+    .transportRetryLimit==0 and .maximumNewAuthorCalls==0 and .automaticPromotion==false and .authorityWritePerformed==false' \
+    "$review/enrollment.json" >/dev/null
+fi
 if ! jq -e '.completed==true' "$review/agent/attempt-coordinator.json" >/dev/null; then
   jq -n '{decision:"retain-incomplete-or-rejected-review",knowledgeAdmissionAllowed:false,authorityWritePerformed:false}' > "$output/result.json"
   exit 0

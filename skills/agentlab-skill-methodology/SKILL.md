@@ -169,6 +169,14 @@ restore network-disabled, entirely read-only source mounts for native staging.
 Retain failed original queries and acquisition logs. Package restoration archives
 separately from review captures so reception budgets do not reject an otherwise
 complete review; retain a byte-bound dependency receipt with the review evidence.
+For separately dispatched retained reviews, continue by the resolved exact run ID
+and unchanged dispatch-body digest. Compare actual review enrollment with the
+original source/artifact, rubric and participant policy before native reception.
+A terminal pre-review failure leaves reviewer budget unspent; a completed initial
+plus citation-repair review consumes both attempts. Never reopen them because
+downstream transport or knowledge admission remains unfinished. Accepted isolated
+review and portable reception establish an experience candidate, not committed
+knowledge or an automatic next round. See the original-context checkpoint below.
 
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest

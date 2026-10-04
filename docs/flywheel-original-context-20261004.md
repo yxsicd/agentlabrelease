@@ -244,3 +244,58 @@ staging and stops on dirty source; its mocked workers do not prove semantic acce
 
 Maturity remains **76% (+0)** until the repaired Action actually reaches independent
 review and accepted return. Complete automatic five-stage rounds remain **0**.
+
+## Real isolated review and portable reception
+
+PR #294 passed all three head workflows and merged as
+`7e0d14d1713e15c8663bd1fe8808c0cb67c4fc44`, tree
+`731205903cf655dd4f6b5413e35ada0c2a3f1bb4` (equal to the tested head).
+One fixed-method dispatch returned HTTP 204 with unchanged body SHA256
+`08aadc7da0a14b4b5b9c4149081037d385b44beb6980a1848927e8c274909d72`.
+It uniquely resolved to run `37221779920`, job `111493405187`, completed success.
+Context restoration, full controls and independent-review preflight passed.
+
+The initial reviewer had nine native citation findings. The pre-enrolled single
+citation repair completed and was selected with verdict `accept`; both attempts
+passed separate filesystem, credential and network-isolation gates. Two reviewer
+attempts are now consumed; downstream failure cannot reopen that enrollment.
+New author calls remain zero. Original accepted response SHA256:
+`5672555da450b6f88ad57ac076fa9b28db1f3905eaf1f101d99949e6973e0b0d`.
+
+Review artifact `11309879091`: 15,575,161 bytes, SHA256
+`5dbc259498d18ae52736c28e8ba77cba676363a5dbb4eba30624450c28f1ddec`.
+Separate dependency artifact `11309419763`: 36,349,396 bytes, SHA256
+`6dff5b82b581f5249e278b2ba8cc8415bedce949a704a8db80e4327093df55ea`.
+The original ZIP is retained locally; bounded reception inputs transferred with
+matching digest to hwlinux. Routes were peer_direct, but data used control-WebSocket
+fallback: this is not a direct-LAN performance result.
+
+Native portable feedback reception `exec-00000000000002e3` exited 0 in 3,162ms:
+original response/raw source, Git binding and full operational export reconstructed;
+candidateReadyForObservationImport=true. Lesson manifest SHA256:
+`6dab0ea8db6759a7a168a0bfa41dac481e1dd1e7799442adeb084e6500b1b444`.
+The preceding `...02e2` failed at process spawn before command execution; retained,
+not counted as semantic failure or another reviewer attempt.
+
+The read-only recovery/collection adapter adds this standalone retained-review lane
+using exact resolved run ID, original body digest and actual enrollment comparison.
+It reuses acquisition and native reception, adds no reviewer or writer, and leaves
+runtime isolation separate. Native reception does not authenticate the reviewer
+or mechanically establish quotation-to-claim support.
+
+The maintained exact-run recovery passed against the real completed run. Actual
+artifact acquisition and enrollment comparison then reached an intentionally
+failing native executable and stopped without result.json; this verifies fail-closed
+transport, not integrated native success. Real native success is the separate
+hwlinux reception above. Bash 3 rejected an empty optional argument array; use a
+nonempty acquisition argument array instead. Rust recovery and legacy collection
+regressions passed in `exec-00000000000002e6` (exit 0), with temporary jq installed
+in the test container. Earlier `...02e4` lacked Cargo in the login-shell PATH and
+`...02e5` lacked jq; preserve these environmental failures. Only the two focused
+tests were rerun after preparation, not claimed as a full regression-suite pass.
+
+Maturity is **77% (+1)** for real automated independent review, bounded Agent-owned
+citation repair, accepted experience export and portable native reception.
+Accepted automatic five-stage rounds remain **0**. Operational commitment/raw
+readback, knowledge admission, next-round consumption, repeated automatic rounds,
+cross-repository acceptance and measured Agent benefit remain open.

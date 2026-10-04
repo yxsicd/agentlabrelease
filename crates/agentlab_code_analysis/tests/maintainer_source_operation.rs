@@ -271,6 +271,81 @@ fn gap_run_recovery_retains_originals_and_rejects_ambiguity_and_identity_drift()
 }
 
 #[test]
+fn standalone_review_recovery_binds_exact_run_body_and_first_attempt() {
+    use std::os::unix::fs::PermissionsExt;
+    let base = std::env::temp_dir().join(format!(
+        "agentlab-review-recovery-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&base).unwrap();
+    let method = "b".repeat(40);
+    let body = br#"{"ref":"main","inputs":{}}"#;
+    fs::write(base.join("dispatch-body.json"), body).unwrap();
+    let intent = serde_json::to_vec(&json!({"schema":"agentlab.retained_completion_review_dispatch_intent.v1",
+        "repository":"fixture/project","workflow":"maintainer-source-suite-review.yml","methodRevision":method,
+        "createdAt":"2026-10-04T00:00:00.123Z","bodySha256":digest(body),"dispatchAgainAllowed":false,"maximumNewAuthorCalls":0})).unwrap();
+    fs::write(base.join("dispatch-intent.json"), &intent).unwrap();
+    fs::write(base.join("run-observation.json"), serde_json::to_vec(&json!({"runId":"123","methodRevision":method,
+        "workflow":".github/workflows/maintainer-source-suite-review.yml","event":"workflow_dispatch","uniqueMatch":true})).unwrap()).unwrap();
+    let response = base.join("response.json");
+    let gh = base.join("gh");
+    fs::write(&gh, "#!/bin/sh\n[ \"$2\" = repos/fixture/project/actions/runs/123 ] || exit 9\ncat \"$FIXTURE_RUN_RESPONSE\"\n").unwrap();
+    fs::set_permissions(&gh, fs::Permissions::from_mode(0o755)).unwrap();
+    let run = |name: &str, row: &Value| {
+        fs::write(&response, serde_json::to_vec(row).unwrap()).unwrap();
+        Command::new("bash")
+            .arg(root().join("scripts/recover-maintainer-flywheel-run.sh"))
+            .arg(&base)
+            .arg(base.join(name))
+            .env("FIXTURE_RUN_RESPONSE", &response)
+            .env(
+                "PATH",
+                format!("{}:{}", base.display(), std::env::var("PATH").unwrap()),
+            )
+            .output()
+            .unwrap()
+    };
+    let original = json!({"id":123,"head_sha":method,"head_branch":"main","event":"workflow_dispatch",
+        "repository":{"full_name":"fixture/project"},"run_attempt":1,"name":"Maintainer independent source suite review",
+        "path":".github/workflows/maintainer-source-suite-review.yml","created_at":"2026-10-04T00:00:01Z",
+        "status":"in_progress","conclusion":null});
+    assert!(run("running", &original).status.success());
+    let read = |name: &str| {
+        serde_json::from_slice::<Value>(
+            &fs::read(base.join(name).join("observation.json")).unwrap(),
+        )
+        .unwrap()
+    };
+    assert_eq!(read("running")["childCompletionVerified"], false);
+    let mut terminal = original.clone();
+    terminal["status"] = json!("completed");
+    terminal["conclusion"] = json!("failure");
+    assert!(run("terminal", &terminal).status.success());
+    assert_eq!(read("terminal")["dispatchAgainAllowed"], false);
+    assert_eq!(read("terminal")["closedLoopQualified"], false);
+    for (key, value) in [
+        ("id", json!(124)),
+        ("head_sha", json!("wrong")),
+        ("run_attempt", json!(2)),
+        ("path", json!(".github/workflows/other.yml")),
+        ("created_at", json!("2026-10-03T23:59:59Z")),
+    ] {
+        let mut drift = original.clone();
+        drift[key] = value;
+        assert!(!run(key, &drift).status.success());
+        assert!(!base.join(key).join("observation.json").exists());
+    }
+    fs::write(base.join("dispatch-body.json"), b"changed").unwrap();
+    assert!(!run("changed-body", &original).status.success());
+    assert_eq!(fs::read(base.join("dispatch-intent.json")).unwrap(), intent);
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn gap_router_dispatches_only_supported_children_and_never_repeats_uncertain_requests() {
     use std::os::unix::fs::PermissionsExt;
     let base = std::env::temp_dir().join(format!(
