@@ -53,9 +53,10 @@ with tempfile.TemporaryDirectory() as temporary:
     class Participant:
         @staticmethod
         def process_budget_seconds(wall):return 420
-        def __init__(self,evidence,state,*args,**kwargs):self.evidence=evidence;state.mkdir()
+        def __init__(self,evidence,state,*args,**kwargs):self.evidence=evidence;self.state=state;state.mkdir()
         def turn(self,label,workspace,**kwargs):
             assert label=='source-design-review' and not list(workspace.iterdir())
+            assert json.loads((self.state/'settings.json').read_text())['compaction']['enabled'] is False
             assert kwargs['transport_retry_limit']==0
             intent=json.loads((self.evidence/'review-intent.json').read_text())
             assert intent['schema']=='agentlab.independent_source_design_review_intent.v1'

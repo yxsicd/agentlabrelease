@@ -1,5 +1,35 @@
 # Pre-execution source design quality review
 
+## Retained real early-review failure
+
+Real run [37239237427](https://github.com/yxsicd/agentlabrelease/actions/runs/37239237427)
+at method `249175ebaeaac01b70192a0e8227546cf082ca1f` completed two design
+turns and one early-review generation. Native content admission failed with
+`design quality array absent: evidence`: criterion evidence was an object rather
+than the required array. Retained quotations also included non-string/missing
+pointers and joined excerpts. No verifier generation, control execution, final
+review or knowledge commitment followed. The consumed root remains closed.
+
+Original source artifact 11317390442 has verified SHA256
+`0d8b8ece396df40fe163753e531637d6d9c66e45b8b4a859bcac02482da71588`.
+Its raw early-review capture contains two upstream requests. The first completed
+without tool calls; the second was automatic context summarization, identified
+by original request messages and the compaction_start event. The one-exchange
+gate was not reached after content rejection and must not be relaxed or made to
+ignore that second capture. Model opinions in the rejected response, including
+an unverified runtime-closure judgment, are not admitted review decisions.
+
+Prospective canonical prompts now disclose evidence arrays and exact item shapes
+and provide a native location-only catalog restricted to actual packet strings.
+No source quotations or judgments are supplied as answers. Fresh reviewer state
+disables automatic compaction, separately from zero retry policy. The exact pinned
+Pi 0.73.1 settings manager reads compaction.enabled and its session exits the
+automatic compaction check when disabled. Constructor defaults, historical
+captures, source contracts and all native admission gates remain unchanged.
+Local regression is not evidence that a future real reviewer complies or that
+runtime closure is solved. Engineering maturity remains 79%, complete automatic
+rounds zero. The sections below retain the incremental implementation history.
+
 Overall engineering maturity remains **79%**; accepted complete automatic rounds
 remain **0**. Native input/content validation is implemented here, not a completed
 automatic reviewer, enforced Action gate or successful flywheel round.
