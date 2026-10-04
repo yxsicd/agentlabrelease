@@ -367,6 +367,12 @@ fn suite_fixture_with_outcome(
     let mut design: Value =
         serde_json::from_slice(&fs::read(stage.join("design.json")).unwrap()).unwrap();
     design["controls"] = controls.clone();
+    design["invariant"] = json!("Retain the fixture's declared source observations.");
+    design["limitations"] = json!([
+        "Synthetic source seam only",
+        "No semantic or framework qualification"
+    ]);
+    design["scenarios"][0]["inputs"]["seams"] = json!({});
     file(&stage.join("design.json"), &design);
     let runtime = fs::read_to_string(stage.join("design-runtime.cjs")).unwrap();
     let mut manifest: Value = serde_json::from_str(
@@ -381,6 +387,7 @@ fn suite_fixture_with_outcome(
     )
     .unwrap();
     manifest["controls"] = controls.clone();
+    manifest["scenarios"] = design["scenarios"].clone();
     if binding.is_some_and(|b| b["gitBlobOid"].is_string()) {
         let request: Value =
             serde_json::from_slice(&fs::read(stage.join("request.json")).unwrap()).unwrap();
@@ -599,6 +606,216 @@ fn suite_readback_reconstructs_every_control_and_recovery_without_approval() {
     assert_eq!(result["acceptedReferenceRecoveryReconstructed"], true);
     assert_eq!(result["qualified"], false);
     assert_eq!(result["producerAuthenticated"], false);
+}
+
+#[test]
+fn reviewed_successor_reconstructs_rejected_wire_and_preserves_frozen_oracle() {
+    use agentlab_code_analysis::{
+        maintainer_source_review as reviewer, maintainer_source_suite_lesson as lesson,
+    };
+    let base = suite_fixture_with_outcome(2, None, false, true);
+    let observation = base.join("successor-observations");
+    lesson::export(&base.join("stage"), &base.join("suite"), None, &observation).unwrap();
+    let rubric = json!({"schema":"agentlab.prospective_source_quality_review.v1",
+        "repositoryAgnostic":true,"frozenBeforeDispatch":true,"verdicts":["pass","fail","unverified"],
+        "criteria":[{"id":"controls","requirement":"Exact failures.","evidence":"Original capture."}]});
+    let rubric_bytes = serde_json::to_vec(&rubric).unwrap();
+    let packet = reviewer::prepare(&observation, &rubric_bytes).unwrap();
+    let judgments = suite_lesson_review(&observation);
+    let finding = "The wrong controls have an undeclared additional state failure.";
+    let response = json!({"schema":"agentlab.independent_source_suite_review_response.v1",
+        "reviewerId":"synthetic-review","reviewRequestSha256":digest(&serde_json::to_vec(&packet).unwrap()),
+        "qualityRubricSha256":packet["qualityRubricSha256"],"reviewBindings":packet["reviewBindings"],
+        "automaticPromotion":false,"verdict":"reject","lessonReview":null,"unresolvedFindings":[finding],
+        "scenarioReviews":judgments["scenarioReviews"],"checkReviews":judgments["checkReviews"],
+        "controlReviews":judgments["controlReviews"],"criterionReviews":[{"id":"controls","verdict":"fail",
+            "rationale":"Synthetic source/capture binding, not semantic proof.",
+            "evidence":[{"pointer":"/originalSourceFiles/0/content","quote":"module.exports"}]}]});
+    let response_bytes = serde_json::to_vec(&response).unwrap();
+    let evidence = base.join("successor-review-evidence");
+    fs::create_dir_all(evidence.join("gateway")).unwrap();
+    let prompt = reviewer::prompt(&observation, &rubric_bytes).unwrap();
+    fs::write(evidence.join("source-suite-review-prompt.txt"), &prompt).unwrap();
+    file(
+        &evidence.join("review-intent.json"),
+        &json!({"schema":"agentlab.independent_source_suite_review_intent.v1",
+        "reviewRequestSha256":digest(&serde_json::to_vec(&packet).unwrap()),"qualityRubricSha256":digest(&rubric_bytes),
+        "promptSha256":digest(&prompt),"participantBudgetSeconds":420,"transportRetryLimit":0,
+        "participantIdentity":{"model":"fixture","providerRoute":"fixture","providerReasoningEffort":null}}),
+    );
+    file(
+        &evidence.join("gateway/1.upstream-request.json"),
+        &json!({"model":"fixture","providerId":"fixture","stream":true,
+        "messages":[{"role":"system","content":"Fixture only."},{"role":"user","content":String::from_utf8(prompt).unwrap()}]}),
+    );
+    let upstream = format!(
+        "data: {}\n\ndata: [DONE]\n\n",
+        json!({"choices":[{"index":0,
+        "delta":{"content":String::from_utf8(response_bytes.clone()).unwrap()},"finish_reason":"stop"}]})
+    );
+    fs::write(evidence.join("gateway/1.response"), &upstream).unwrap();
+    file(
+        &evidence.join("gateway/1.status.json"),
+        &json!({"exchangeId":"1","durationMs":1,"status":200,
+        "upstreamEof":true,"semanticComplete":true,"outcome":"completed","streamError":null,"responseBytes":upstream.len()}),
+    );
+    let final_path = evidence.join("source-suite-review-final-assistant-message.json");
+    file(
+        &final_path,
+        &json!({"role":"assistant","stopReason":"stop",
+        "content":[{"type":"text","text":String::from_utf8(response_bytes.clone()).unwrap()}]}),
+    );
+    file(
+        &evidence.join("source-suite-review-lifecycle.json"),
+        &json!({"label":"source-suite-review",
+        "captureAuthority":"operator","exitCode":0,"timedOut":false,"finalAssistantMessagePresent":true,
+        "participantBudgetSeconds":420,"participantBudgetScope":"native-process-watchdog","transportRetryLimit":0,
+        "finalAssistantMessageSha256":digest(&fs::read(final_path).unwrap())}),
+    );
+    let request_bytes = fs::read(observation.join("source-stage/request.json")).unwrap();
+    let parent_bytes = fs::read(observation.join("source-stage/design.json")).unwrap();
+    let parent: Value = serde_json::from_slice(&parent_bytes).unwrap();
+    let changes = parent["controls"].as_array().unwrap().iter().filter(|control| control["role"] == "wrong")
+        .map(|control| { let mut after = control.clone(); after["expectedFailedCheckIds"] = json!(["answer","nullable"]);
+            json!({"id":control["id"],"before":control,"after":after,"findingId":"additional-state"}) }).collect::<Vec<_>>();
+    let feedback = json!({"schema":"agentlab.source_recipe_design_review.v3",
+        "parentRequestSha256":digest(&request_bytes),"parentDesignSha256":digest(&parent_bytes),
+        "reviewed":true,"verdict":"revise","reviewer":"maintained-change-review","automaticPromotion":false,
+        "findings":[{"id":"additional-state","observed":finding,"requiredChange":"Account for the reviewed state effect without weakening checks.","sourcePaths":["unit.js"]}],
+        "checkChanges":[],"scenarioChanges":[],"controlChanges":changes});
+    let feedback_bytes = serde_json::to_vec(&feedback).unwrap();
+    let policy = json!({"schema":"agentlab.source_successor_policy.v1","reviewed":true,"maximumSuccessors":2,
+        "participantBudgetSeconds":420,"designRevisionLimit":0,"codeRevisionLimit":0,"transportRetryLimit":0,"automaticPromotion":false});
+    let policy_bytes = serde_json::to_vec(&policy).unwrap();
+    let prepare = |f: &[u8], p: &[u8], previous: Option<&[u8]>| {
+        reviewer::prepare_reviewed_successor(
+            &observation,
+            &rubric_bytes,
+            &evidence,
+            &response_bytes,
+            None,
+            f,
+            p,
+            previous,
+        )
+    };
+    let successor = prepare(&feedback_bytes, &policy_bytes, None).unwrap();
+    assert_eq!(successor["successorIndex"], 1);
+    assert_eq!(successor["dispatchPerformed"], false);
+    assert_eq!(successor["oldBudgetReopened"], false);
+    assert_eq!(successor["historicalFeedbackCaptureVerified"], false);
+    let target: Value =
+        serde_json::from_str(successor["targetDesignOriginal"].as_str().unwrap()).unwrap();
+    assert_eq!(target["checks"], parent["checks"]);
+    assert_eq!(target["scenarios"], parent["scenarios"]);
+    assert_eq!(
+        target["controls"][3]["expectedFailedCheckIds"],
+        json!(["answer", "nullable"])
+    );
+    for key in [
+        "maximumSuccessors",
+        "participantBudgetSeconds",
+        "designRevisionLimit",
+        "codeRevisionLimit",
+        "transportRetryLimit",
+        "automaticPromotion",
+        "reviewed",
+    ] {
+        let mut bad = policy.clone();
+        bad[key] = json!(99);
+        assert!(
+            prepare(&feedback_bytes, &serde_json::to_vec(&bad).unwrap(), None).is_err(),
+            "{key}"
+        );
+    }
+    let mut paraphrased = feedback.clone();
+    paraphrased["findings"][0]["observed"] = json!("Operator-rewritten finding");
+    assert!(prepare(
+        &serde_json::to_vec(&paraphrased).unwrap(),
+        &policy_bytes,
+        None
+    )
+    .is_err());
+    assert!(prepare(
+        &feedback_bytes,
+        &policy_bytes,
+        Some(&serde_json::to_vec(&successor).unwrap())
+    )
+    .is_err());
+    let original = fs::read(evidence.join("gateway/1.response")).unwrap();
+    fs::write(evidence.join("gateway/1.response"), b"incomplete").unwrap();
+    assert!(prepare(&feedback_bytes, &policy_bytes, None).is_err());
+    fs::write(evidence.join("gateway/1.response"), original).unwrap();
+    assert_eq!(
+        prepare(&feedback_bytes, &policy_bytes, None).unwrap(),
+        successor
+    );
+    for (name, bytes) in [
+        ("successor-rubric.json", &rubric_bytes),
+        ("successor-response.json", &response_bytes),
+        ("successor-feedback.json", &feedback_bytes),
+        ("successor-policy.json", &policy_bytes),
+    ] {
+        fs::write(base.join(name), bytes).unwrap();
+    }
+    let output = base.join("successor-request.json");
+    let cli = |mode: &str, output: &Path| {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"));
+        command
+            .arg(mode)
+            .arg("--source")
+            .arg(&observation)
+            .arg("--quality-rubric")
+            .arg(base.join("successor-rubric.json"))
+            .arg("--review-response")
+            .arg(base.join("successor-response.json"))
+            .arg("--participant-evidence")
+            .arg(&evidence)
+            .arg("--review-feedback")
+            .arg(base.join("successor-feedback.json"))
+            .arg("--successor-policy")
+            .arg(base.join("successor-policy.json"))
+            .arg("--output")
+            .arg(output);
+        if mode == "--check-source-reviewed-successor" {
+            command
+                .arg("--successor-request")
+                .arg(base.join("successor-request.json"));
+        }
+        command.output().unwrap()
+    };
+    let created = cli("--prepare-source-reviewed-successor", &output);
+    assert!(
+        created.status.success(),
+        "{}",
+        String::from_utf8_lossy(&created.stderr)
+    );
+    assert_eq!(
+        serde_json::from_slice::<Value>(&fs::read(&output).unwrap()).unwrap(),
+        successor
+    );
+    let retained = fs::read(&output).unwrap();
+    assert!(!cli("--prepare-source-reviewed-successor", &output)
+        .status
+        .success());
+    assert_eq!(fs::read(&output).unwrap(), retained);
+    let verified_output = base.join("successor-reconstruction.json");
+    assert!(cli("--check-source-reviewed-successor", &verified_output)
+        .status
+        .success());
+    let mut forged = successor.clone();
+    forged["successorIndex"] = json!(8);
+    file(&output, &forged);
+    let rejected_output = base.join("forged-successor-reconstruction.json");
+    assert!(!cli("--check-source-reviewed-successor", &rejected_output)
+        .status
+        .success());
+    assert!(!rejected_output.exists());
+    assert_eq!(
+        fs::read(observation.join("source-stage/design.json")).unwrap(),
+        parent_bytes
+    );
+    fs::remove_dir_all(base).unwrap();
 }
 
 fn suite_lesson_review(export: &Path) -> Value {
@@ -1952,6 +2169,22 @@ fn independent_review_response_retains_negative_feedback_without_promoting() {
     assert_eq!(completed["verdict"], "unverified");
     assert_eq!(completed["reviewerAuthenticated"], false);
     assert_eq!(completed["qualified"], false);
+    let successor_policy = json!({"schema":"agentlab.source_successor_policy.v1",
+        "reviewed":true,"maximumSuccessors":2,"participantBudgetSeconds":420,
+        "designRevisionLimit":0,"codeRevisionLimit":0,"transportRetryLimit":0,
+        "automaticPromotion":false});
+    let rejection = reviewer::prepare_reviewed_successor(
+        &observation,
+        &rubric_bytes,
+        &evidence,
+        &serde_json::to_vec(&response).unwrap(),
+        None,
+        b"{}",
+        &serde_json::to_vec(&successor_policy).unwrap(),
+        None,
+    )
+    .unwrap_err();
+    assert!(rejection.contains("requires complete rejected review"));
     let completion_output = base.join("review-completion.json");
     let cli = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
         .args(["--verify-source-suite-review-completion", "--source"])

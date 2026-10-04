@@ -188,6 +188,23 @@ approval, a replay of old workers or permission to weaken unreviewed checks.
 Legacy v1/v2 receipts remain unchanged. This contract alone neither validates a
 captured independent review nor removes the one-child transport restriction.
 
+For retained design-review reconstruction, validate the contract against retained
+source bytes rather than opening paths from the old runner. Keep live request
+reproduction mandatory at fresh authoring: portable reconstruction does not prove
+the next checkout, knowledge cut or runtime is ready. Use native
+`--prepare-source-reviewed-successor` with the original observation export, rubric,
+review response and participant evidence, exact v3 review-feedback and an explicit
+successor-policy. It reconstructs a completed reject and requires every original
+unresolved finding verbatim before deriving the exact target design. The current
+policy enrolls at most eight fresh code-only successors, 420 seconds each, with
+zero design/code repairs or transport retries. Optional previous-successor binds
+the declared design chain and unchanged policy; it does not authenticate historical
+captures or prevent a scheduler from omitting history. Recheck with
+`--check-source-reviewed-successor` against the same original inputs before use.
+Preparation performs no dispatch, authority write or promotion. Require independent
+runtime isolation, durable scheduler budget enforcement and the ordinary source,
+control, review and return gates before treating this as a real multi-round loop.
+
 Business cycles accept sourceSuiteCapture directly rather than manufacturing
 legacy behavior files. Bind original stage/suite digests, source/scope/knowledge
 and current round, then reconstruct again at return. Retained capture replay is
