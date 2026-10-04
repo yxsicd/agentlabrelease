@@ -820,6 +820,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.iter().any(|arg| {
         arg == "--validate-source-suite-review-response"
             || arg == "--verify-source-suite-review-completion"
+            || arg == "--diagnose-source-suite-review-citations"
     }) {
         let source = PathBuf::from(value(&args, "--source")?);
         let rubric = fs::read(value(&args, "--quality-rubric")?)?;
@@ -834,6 +835,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &PathBuf::from(value(&args, "--participant-evidence")?),
                 &response,
             )?
+        } else if args
+            .iter()
+            .any(|arg| arg == "--diagnose-source-suite-review-citations")
+        {
+            agentlab_code_analysis::maintainer_source_review::diagnose_citations(
+                &source, &rubric, &response,
+            )?
         } else {
             agentlab_code_analysis::maintainer_source_review::validate_response(
                 &source, &rubric, &response,
@@ -847,7 +855,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         file.write_all(b"\n")?;
         println!(
             "{}",
-            serde_json::json!({"verdict":report["verdict"],"responseContentVerified":true,"qualified":false})
+            serde_json::json!({"verdict":report["verdict"],"responseContentVerified":report["responseContentVerified"] == true,"diagnosticOnly":report["diagnosticOnly"] == true,"qualified":false})
         );
         return Ok(());
     }

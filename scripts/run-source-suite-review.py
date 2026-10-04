@@ -87,8 +87,17 @@ def run(args, participant_class=None):
             raise ValueError('Missing or oversized original reviewer response')
         with (output / 'response.json').open('xb') as stream:
             stream.write(content.encode())  # No fences stripped, operator repairs or JSON rewriting.
-        gate(args, '--verify-source-suite-review-completion', output / 'validation.json',
-             '--review-response', str(output / 'response.json'), '--participant-evidence', str(evidence))
+        try:
+            gate(args, '--verify-source-suite-review-completion', output / 'validation.json',
+                 '--review-response', str(output / 'response.json'), '--participant-evidence', str(evidence))
+        except RuntimeError:
+            # Complete diagnostics are feedback, never a replacement acceptance gate.
+            try:
+                gate(args, '--diagnose-source-suite-review-citations', output / 'citation-diagnostic.json',
+                     '--review-response', str(output / 'response.json'))
+            except RuntimeError:
+                pass  # Invalid JSON/identity retains the original rejection and both logs.
+            raise
         validated = json.loads((output / 'validation.json').read_bytes())
         terminal.update(completed=True, verdict=validated['verdict'],
                         recordedCompletionVerified=validated['recordedCompletionVerified'])

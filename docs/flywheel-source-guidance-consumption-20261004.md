@@ -519,3 +519,31 @@ quotations still reject. No rule is relaxed to accept the historical reply.
 Next deliver this generic correction and enroll a separate fresh reviewer
 experiment, then finish ordinary admission/return rather than operator-editing
 an old response. Maturity remains 74%; accepted automatic five-stage loops zero.
+
+## Complete citation feedback on the retained rejected response
+
+PR249 merged as 227901a08c018c9c86c33398fe41e45669768cf8. Its location catalog
+has not yet been evaluated by a new real reviewer. A subsequent complete native
+audit of the unchanged 37163367548 response found 32 citation errors: the ten
+criterion errors above plus 22 item sourceEvidence paths that name worker files
+or reconstructed result fields rather than loaded repository source paths.
+Those 22 comprise five scenario, ten check and seven control citations. The ten
+earlier findings were criterion-only, not the complete response error inventory.
+
+The Rust `--diagnose-source-suite-review-citations --source OBSERVATION_EXPORT
+--quality-rubric FROZEN_RUBRIC --review-response ORIGINAL_RESPONSE --output NEW_FILE`
+reconstructs original inputs and requires response/request/rubric bindings before
+collecting criterion and item citation errors together. It retains exact response
+JSON pointers without editing model output. Its diagnostic-only receipt cannot
+accept content, qualify execution or grant authority, even with zero findings.
+Other schema, inventory, verdict and capture rules remain separate full gates.
+
+The thin transport retains this diagnostic after a full gate rejection and still
+fails with the original rejection. It neither retries the model nor writes
+knowledge. The native prompt now explicitly separates item repository-path source
+quotes from criterion string-pointer execution evidence. This is a generic
+contract correction, not a target-specific answer or weakened source validation.
+Retained real response replay produced all 32 findings (22 invalid source paths,
+four absent string quotes and six nonstring targets). Original evidence remains
+unchanged outside Release; no fresh Agent execution, accepted review, admission,
+benefit or complete automatic cycle is claimed. Maturity remains 74%.
