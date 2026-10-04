@@ -862,6 +862,11 @@ try:
     packet=json.loads(pathlib.Path(outcome['nextGuidancePacket']['path']).read_text())
     assert packet['selectionSha256']==sha(selected) and packet['agentConsumptionVerified'] is False
     assert packet['guidance'][0]['skill']['id']==skill['id']
+    returned=outcome['committedReturn']
+    assert returned['guidanceSelection']==outcome['nextGuidanceSelection']
+    assert returned['knowledge']['cutSha256']==selection['knowledgeCutSha256']
+    assert returned['knowledge']['revision']==new and returned['reviewed'] is True
+    assert returned['readback']['sha256']==sha(pathlib.Path(returned['readback']['path']))
     assert (root/'transport-return/committed-knowledge/source-set.txt').read_bytes()==(base/'source-set.txt').read_bytes()
     for name in names:
         assert (root/'transport-return/committed-knowledge'/(name+'.jsonl')).read_bytes()==(root/'transport-return/staged-admission'/(name+'.jsonl')).read_bytes()

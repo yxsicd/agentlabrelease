@@ -320,6 +320,15 @@ def main():
                               ('nextGuidancePacket', 'guidance-packet.json')]:
             path = root / 'return-reconstruction' / filename
             outcome[key] = {'path': str(path), 'sha256': hashlib.sha256(read(path)).hexdigest()}
+        knowledge = root / 'committed-knowledge'
+        readback_path = root / 'committed-readback.json'
+        # This is the existing business gate's input, not a next-round state or
+        # scheduling receipt. That gate reconstructs current-round evidence again.
+        outcome['committedReturn'] = {'reviewed': True,
+            'knowledge': {'directory': str(knowledge), 'revision': client.current,
+                          'cutSha256': hashlib.sha256(read(knowledge / 'maintainer-knowledge-cut.json')).hexdigest()},
+            'guidanceSelection': outcome['nextGuidanceSelection'],
+            'readback': {'path': str(readback_path), 'sha256': hashlib.sha256(read(readback_path)).hexdigest()}}
     save(root, 'result.json', outcome)
     print(json.dumps({'revision': client.current, 'authorityWrites': client.writes}))
 

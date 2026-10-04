@@ -28,6 +28,10 @@ guidance-selection.json and guidance-packet.json with exact compact bytes in its
 fresh return directory; result.json retains their paths/digests and reports
 nextGuidanceBound. It never invents applicability reasons or changes selected
 rows to follow a newer revision. No intent means no automatic guidance selection.
+The result also emits the existing business gate's committedReturn input with
+exact knowledge, selection and readback references. This is not an advanced state:
+the business evidence-return gate must reconsume this round's original evidence
+and ordinary lesson reconstruction before it can retire old inputs or advance.
 
 The full transport integration fixture now covers committed selection/packet
 binding and rejects unreviewed intent, stale baseline, wrong row hash, missing
