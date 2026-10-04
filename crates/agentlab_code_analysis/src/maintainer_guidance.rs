@@ -654,6 +654,108 @@ pub fn source_recipe_completion(evidence: &Path, packet_bytes: &[u8]) -> Result<
     Ok(receipt)
 }
 
+/// Independently replay a one-shot source constructor without manufacturing guidance.
+/// Fresh frozen-design continuations own one isolated exchange and no format repair.
+pub fn source_recipe_unguided_completion(
+    evidence: &Path,
+    request_bytes: &[u8],
+    proposal_bytes: &[u8],
+) -> Result<Value, String> {
+    let label = "source-recipe-author";
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    need(
+        request["schema"] == "agentlab.source_recipe_author_request.v1"
+            && request["automaticPromotion"] == false
+            && read(evidence, "source-completion-author-request.json")? == request_bytes,
+        "source completion retained author request differs",
+    )?;
+    for entry in fs::read_dir(evidence).map_err(|e| e.to_string())? {
+        let name = entry.map_err(|e| e.to_string())?.file_name();
+        need(
+            !name
+                .to_string_lossy()
+                .starts_with("source-recipe-author-format-revision-"),
+            "one-shot source completion cannot borrow a format repair",
+        )?;
+    }
+    let prompt = read(evidence, &format!("{label}-prompt.txt"))?;
+    let intent_bytes = read(evidence, &format!("{label}-completion-intent.json"))?;
+    let intent: Value = serde_json::from_slice(&intent_bytes).map_err(|e| e.to_string())?;
+    need(
+        intent["schema"] == "agentlab.source_recipe_completion_intent.v1"
+            && intent["authorRequestSha256"] == digest(request_bytes)
+            && intent["promptSha256"] == digest(&prompt)
+            && intent["participantBudgetSeconds"] == 420
+            && intent["transportRetryLimit"] == 0
+            && intent["guidanceProvided"] == false,
+        "one-shot source completion intent or budget differs",
+    )?;
+    let (exchanges, lifecycle_bytes) =
+        recorded_exchanges_for_turn(evidence, &prompt, &intent, label, &[])?;
+    let request_count = fs::read_dir(evidence.join("gateway"))
+        .map_err(|e| e.to_string())?
+        .map(|entry| {
+            entry.map(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .ends_with(".upstream-request.json")
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .filter(|present| *present)
+        .count();
+    need(
+        exchanges.len() == 1 && request_count == 1,
+        "source completion requires one isolated original exchange",
+    )?;
+    let id = exchanges[0]["exchangeId"].as_str().unwrap();
+    let wire: Value = serde_json::from_slice(&read(
+        evidence,
+        &format!("gateway/{id}.upstream-request.json"),
+    )?)
+    .map_err(|e| e.to_string())?;
+    let messages = wire["messages"]
+        .as_array()
+        .ok_or("source completion messages absent")?;
+    need(
+        messages
+            .iter()
+            .all(|m| m["role"] == "system" || m["role"] == "user")
+            && messages.iter().filter(|m| m["role"] == "user").count() == 1,
+        "source completion history is not a fresh isolated constructor",
+    )?;
+    let status: Value =
+        serde_json::from_slice(&read(evidence, &format!("gateway/{id}.status.json"))?)
+            .map_err(|e| e.to_string())?;
+    need(
+        status["upstreamDeadlineExceeded"] != true && status["clientDisconnected"] != true,
+        "source completion transport deadline or disconnect",
+    )?;
+    let raw = read(evidence, &format!("gateway/{id}.response"))?;
+    let final_bytes = read(evidence, &format!("{label}-final-assistant-message.json"))?;
+    let final_message: Value = serde_json::from_slice(&final_bytes).map_err(|e| e.to_string())?;
+    let text =
+        crate::maintainer_source_review::recorded_completion_text(&wire, &raw, &final_message)?;
+    let proposal: Value = serde_json::from_slice(proposal_bytes).map_err(|e| e.to_string())?;
+    need(
+        proposal.is_object()
+            && serde_json::from_str::<Value>(&text).map_err(|e| e.to_string())? == proposal,
+        "source completion proposal differs from original upstream text",
+    )?;
+    Ok(json!({"schema":"agentlab.source_recipe_unguided_completion.v1",
+        "authorRequestSha256":digest(request_bytes),"proposalSha256":digest(proposal_bytes),
+        "promptSha256":digest(&prompt),"intentSha256":digest(&intent_bytes),
+        "lifecycleSha256":digest(&lifecycle_bytes),"finalAssistantMessageSha256":digest(&final_bytes),
+        "completedExchanges":exchanges,"participantBudgetSeconds":420,"transportRetryLimit":0,
+        "authorCompletionVerified":true,"proposalOriginalWireVerified":true,
+        "guidanceProvided":false,"guidanceAbsenceVerified":false,"agentConsumptionVerified":false,
+        "producerAuthenticated":false,"learningBenefitVerified":false,"caseQualified":false,
+        "authorityWritePerformed":false,"automaticPromotion":false}))
+}
+
 fn consumption_for_turn(
     evidence: &Path,
     packet_bytes: &[u8],

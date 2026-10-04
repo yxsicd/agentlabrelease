@@ -177,6 +177,7 @@ def execute(args):
             '--gate', gate, '--pi', str(args.pi), '--frozen-design', str(design),
             '--frozen-design-sha256', digest(design.read_bytes()), '--diagnostic-repair', str(repair),
             '--design-revisions', '0', '--proposal-format-revisions', '0', '--reasoning-effort', args.reasoning_effort,
+                '--require-independent-completion',
                 '--gateway-timeout-seconds', '180', '--max-output-tokens', '16384'], 'constructor', timeout=600, env=env)
         except Exception as error:
             constructor_error = error
@@ -194,6 +195,11 @@ def execute(args):
         if constructor_error is not None:
             raise constructor_error
         stage = output / 'agent/proposal-stage'
+        run([gate, '--verify-unguided-source-recipe-completion',
+            '--participant-evidence', str(output / 'agent/evidence'), '--author-request', str(request),
+            '--proposal', str(stage / 'proposal.json'),
+            '--output', str(output / 'independent-author-completion.json')], 'independent-author-completion')
+        terminal['recordedAuthorCompletionVerified'] = True
         if (request.read_bytes() != request_bytes or repair.read_bytes() != packet_bytes
                 or args.successor_request.read_bytes() != successor_bytes
                 or args.review_enrollment.read_bytes() != review_enrollment_bytes

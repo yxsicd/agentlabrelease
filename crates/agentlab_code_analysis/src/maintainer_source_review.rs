@@ -1163,6 +1163,29 @@ fn verify_recorded_exchange(
         "review history contains constructor or prior reviewer context",
     )?;
     let raw = read(&format!("gateway/{id}.response"))?;
+    let final_bytes = read("source-suite-review-final-assistant-message.json")?;
+    let final_message = parse(&final_bytes)?;
+    let text = recorded_completion_text(&wire, &raw, &final_message)?;
+    need(
+        parse(text.as_bytes())? == parse(response)?,
+        "review response differs from original upstream completion",
+    )?;
+    report["reviewerExecuted"] = json!(true);
+    report["recordedCompletionVerified"] = json!(true);
+    report["recordedContextSeparationVerified"] = json!(true);
+    report["promptSha256"] = json!(digest(&prompt_bytes));
+    report["intentSha256"] = json!(digest(&intent_bytes));
+    report["lifecycleSha256"] = json!(digest(&lifecycle_bytes));
+    report["completedReviewExchanges"] = json!(exchanges);
+    Ok(report)
+}
+
+/// Shared original-wire completion parser; not semantic approval or producer authentication.
+pub(crate) fn recorded_completion_text(
+    wire: &Value,
+    raw: &[u8],
+    final_message: &Value,
+) -> Result<String, String> {
     let mut frames = Vec::new();
     let mut done = false;
     if wire["stream"] == true {
@@ -1220,11 +1243,9 @@ fn verify_recorded_exchange(
         }
     }
     need(
-        stopped && !text.is_empty() && parse(text.as_bytes())? == parse(response)?,
+        stopped && !text.is_empty(),
         "review response differs from original upstream completion",
     )?;
-    let final_bytes = read("source-suite-review-final-assistant-message.json")?;
-    let final_message = parse(&final_bytes)?;
     let final_text = rows(&final_message, "content")?
         .iter()
         .filter(|v| v["type"] == "text")
@@ -1235,14 +1256,7 @@ fn verify_recorded_exchange(
         final_text == text && final_message["stopReason"] == "stop",
         "review participant final response differs",
     )?;
-    report["reviewerExecuted"] = json!(true);
-    report["recordedCompletionVerified"] = json!(true);
-    report["recordedContextSeparationVerified"] = json!(true);
-    report["promptSha256"] = json!(digest(&prompt_bytes));
-    report["intentSha256"] = json!(digest(&intent_bytes));
-    report["lifecycleSha256"] = json!(digest(&lifecycle_bytes));
-    report["completedReviewExchanges"] = json!(exchanges);
-    Ok(report)
+    Ok(text)
 }
 
 /// Hand an accepted original recorded review to the existing operational exporter.

@@ -10,7 +10,7 @@ from unittest.mock import patch
 spec=importlib.util.spec_from_file_location('transport',os.environ['CONTINUATION_SCRIPT'])
 transport=importlib.util.module_from_spec(spec);spec.loader.exec_module(transport)
 with tempfile.TemporaryDirectory() as temporary:
-  for scenario in ['pass','prepared-pass','prepared-drift','producer-drift','archive-drift','native-stop','review-stop','live-stop','remote-refusal','author-failure','timeout','isolation-stop','post-stop']:
+  for scenario in ['pass','prepared-pass','prepared-drift','producer-drift','archive-drift','native-stop','review-stop','live-stop','remote-refusal','author-failure','timeout','isolation-stop','completion-stop','post-stop']:
     root=Path(temporary)/scenario;root.mkdir();(root/'claims').mkdir();(root/'git').mkdir()
     for name in ['gate','pi','request','review-enrollment','config']:(root/name).write_text('{}')
     successor=dict(authorRequestOriginal='{}',targetDesignOriginal='{}')
@@ -70,12 +70,15 @@ with tempfile.TemporaryDirectory() as temporary:
         return subprocess.CompletedProcess(command,1,b'',b'live source drift')
       elif '--check-source-reviewed-successor' in command and authors and scenario=='post-stop':
         return subprocess.CompletedProcess(command,1,b'',b'original review changed')
+      elif '--verify-unguided-source-recipe-completion' in command and scenario=='completion-stop':
+        return subprocess.CompletedProcess(command,1,b'',b'original wire rejected')
       elif any(str(x).endswith('run-source-recipe-author.py') for x in command):
         authors.append(command);assert kwargs['timeout']==600
         assert 'GH_TOKEN' not in kwargs['env'] and 'GITHUB_TOKEN' not in kwargs['env']
         assert command[command.index('--design-revisions')+1]=='0'
         assert command[command.index('--proposal-format-revisions')+1]=='0'
         assert '--diagnostic-repair' in command
+        assert '--require-independent-completion' in command
         if scenario=='timeout':raise subprocess.TimeoutExpired(command,600,output=b'partial bytes',stderr=b'original timeout')
         if scenario=='author-failure':return subprocess.CompletedProcess(command,1,b'partial bytes',b'original failure')
         stage=out/'proposal-stage';stage.mkdir(parents=True)
@@ -104,7 +107,8 @@ with tempfile.TemporaryDirectory() as temporary:
         assert len(reserved)==1
     terminal=json.loads((root/'output/transport-terminal.json').read_bytes())
     assert terminal['oldBudgetReopened'] is False and terminal['knowledgeWritePerformed'] is False
-    assert terminal['recordedAuthorCompletionVerified'] is False and terminal['qualified'] is False
+    assert terminal['recordedAuthorCompletionVerified'] is (scenario in ['pass','prepared-pass','post-stop'])
+    assert terminal['qualified'] is False
     if scenario in ['prepared-drift','producer-drift','archive-drift','native-stop','review-stop','live-stop']:
       assert authors==[] and posts==[]
     if scenario in ['author-failure','timeout']:assert len(isolations)==1 and len(list((root/'claims').iterdir()))==1

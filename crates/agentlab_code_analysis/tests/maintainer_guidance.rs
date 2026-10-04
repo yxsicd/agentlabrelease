@@ -2,7 +2,7 @@ use agentlab_code_analysis::{
     digest,
     maintainer_guidance::{
         bind, bind_source_recipe, consumption, source_recipe_completion, source_recipe_consumption,
-        source_recipe_target, stage_proposal,
+        source_recipe_target, source_recipe_unguided_completion, stage_proposal,
     },
 };
 use serde_json::{json, Value};
@@ -19,6 +19,209 @@ struct Fixture {
     selection: Value,
 }
 static FIXTURE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+#[test]
+fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift() {
+    for repository in ["independent-source-one", "unrelated-source-two"] {
+        for mode in [
+            "good-stream",
+            "good-json",
+            "request-drift",
+            "prompt-drift",
+            "budget-drift",
+            "retry",
+            "partial-final",
+            "final-text-drift",
+            "proposal-drift",
+            "missing-done",
+            "truncated",
+            "tool-call",
+            "upstream-error",
+            "after-done",
+            "second-wire",
+            "format-repair",
+            "deadline",
+            "disconnect",
+            "history",
+            "identity-drift",
+        ] {
+            let f = Fixture::new(repository);
+            let evidence = f.root.join("completion-evidence");
+            fs::create_dir(&evidence).unwrap();
+            let gateway = evidence.join("gateway");
+            fs::create_dir(&gateway).unwrap();
+            let request = serde_json::to_vec(&json!({"schema":"agentlab.source_recipe_author_request.v1",
+                "source":{"repositoryId":repository},"automaticPromotion":false})).unwrap();
+            let proposal =
+                serde_json::to_vec(&json!({"schema":"fixture-proposal","value":7})).unwrap();
+            let label = "source-recipe-author";
+            let prompt = "Exact fresh constructor prompt";
+            let text = String::from_utf8(proposal.clone()).unwrap();
+            let mut intent = json!({"schema":"agentlab.source_recipe_completion_intent.v1",
+                "authorRequestSha256":digest(&request),"promptSha256":digest(prompt.as_bytes()),
+                "participantBudgetSeconds":420,"transportRetryLimit":0,"guidanceProvided":false,
+                "participantIdentity":{"model":"fixture-model","providerRoute":"fixture-route","providerReasoningEffort":"low"}});
+            if mode == "budget-drift" {
+                intent["participantBudgetSeconds"] = json!(421);
+            }
+            let mut final_message = json!({"role":"assistant","stopReason":"stop",
+                "content":[{"type":"text","text":text}]});
+            if mode == "partial-final" {
+                final_message["stopReason"] = json!("length");
+            }
+            if mode == "final-text-drift" {
+                final_message["content"][0]["text"] = json!("{}");
+            }
+            let final_bytes = serde_json::to_vec(&final_message).unwrap();
+            let mut lifecycle = json!({"label":label,"captureAuthority":"operator","exitCode":0,"timedOut":false,
+                "finalAssistantMessagePresent":true,"finalAssistantMessageSha256":digest(&final_bytes),
+                "participantBudgetSeconds":420,"participantBudgetScope":"native-process-watchdog","transportRetryLimit":0});
+            if mode == "retry" {
+                lifecycle["transportRetryLimit"] = json!(1);
+            }
+            let mut wire = json!({"model":"fixture-model","providerId":"fixture-route","reasoning_effort":"low",
+                "stream":mode != "good-json","messages":[{"role":"user","content":prompt}]});
+            if mode == "prompt-drift" {
+                wire["messages"][0]["content"] = json!("changed prompt");
+            }
+            if mode == "history" {
+                wire["messages"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(json!({"role":"assistant","content":"prior result"}));
+            }
+            if mode == "identity-drift" {
+                wire["providerId"] = json!("other-route");
+            }
+            let mut delta = json!({"content":text});
+            if mode == "tool-call" {
+                delta["tool_calls"] = json!([{"id":"tool"}]);
+            }
+            let finish = if mode == "truncated" {
+                "length"
+            } else {
+                "stop"
+            };
+            let mut raw = if mode == "good-json" {
+                serde_json::to_vec(
+                    &json!({"choices":[{"index":0,"message":delta,"finish_reason":finish}]}),
+                )
+                .unwrap()
+            } else {
+                format!(
+                    "data: {}\n\ndata: {}\n\n",
+                    json!({"choices":[{"index":0,"delta":delta,"finish_reason":null}]}),
+                    json!({"choices":[{"index":0,"delta":{},"finish_reason":finish}]})
+                )
+                .into_bytes()
+            };
+            if mode == "upstream-error" {
+                raw.extend_from_slice(b"data: {\"error\":{\"message\":\"original error\"}}\n\n");
+            }
+            if mode != "good-json" && mode != "missing-done" {
+                raw.extend_from_slice(b"data: [DONE]\n\n");
+            }
+            if mode == "after-done" {
+                raw.extend_from_slice(b"data: {\"choices\":[]}\n\n");
+            }
+            let mut status = json!({"exchangeId":"0001","status":200,"durationMs":1,"upstreamEof":true,"semanticComplete":true,
+                "outcome":"completed","streamError":null,"responseBytes":raw.len(),"upstreamDeadlineExceeded":false,"clientDisconnected":false});
+            if mode == "deadline" {
+                status["upstreamDeadlineExceeded"] = json!(true);
+            }
+            if mode == "disconnect" {
+                status["clientDisconnected"] = json!(true);
+            }
+            fs::write(
+                evidence.join("source-completion-author-request.json"),
+                if mode == "request-drift" {
+                    b"changed".to_vec()
+                } else {
+                    request.clone()
+                },
+            )
+            .unwrap();
+            for (name, bytes) in [
+                (format!("{label}-prompt.txt"), prompt.as_bytes().to_vec()),
+                (
+                    format!("{label}-completion-intent.json"),
+                    serde_json::to_vec(&intent).unwrap(),
+                ),
+                (
+                    format!("{label}-lifecycle.json"),
+                    serde_json::to_vec(&lifecycle).unwrap(),
+                ),
+                (format!("{label}-final-assistant-message.json"), final_bytes),
+            ] {
+                fs::write(evidence.join(name), bytes).unwrap();
+            }
+            fs::write(
+                gateway.join("0001.upstream-request.json"),
+                serde_json::to_vec(&wire).unwrap(),
+            )
+            .unwrap();
+            fs::write(
+                gateway.join("0001.status.json"),
+                serde_json::to_vec(&status).unwrap(),
+            )
+            .unwrap();
+            fs::write(gateway.join("0001.response"), raw).unwrap();
+            if mode == "second-wire" {
+                fs::write(gateway.join("0002.upstream-request.json"), b"{}").unwrap();
+            }
+            if mode == "format-repair" {
+                fs::write(
+                    evidence.join("source-recipe-author-format-revision-1-prompt.txt"),
+                    b"partial repair",
+                )
+                .unwrap();
+            }
+            let supplied_proposal = if mode == "proposal-drift" {
+                b"{}".to_vec()
+            } else {
+                proposal
+            };
+            let result = source_recipe_unguided_completion(&evidence, &request, &supplied_proposal);
+            let accepted = mode.starts_with("good-");
+            assert_eq!(result.is_ok(), accepted, "{repository} {mode}: {result:?}");
+            if let Ok(receipt) = result {
+                assert_eq!(receipt["authorCompletionVerified"], true);
+                assert_eq!(receipt["proposalOriginalWireVerified"], true);
+                assert_eq!(receipt["caseQualified"], false);
+                assert_eq!(receipt["guidanceAbsenceVerified"], false);
+            }
+            if mode == "good-stream" || mode == "proposal-drift" {
+                let request_path = f.root.join("completion-request.json");
+                let proposal_path = f.root.join("completion-proposal.json");
+                let output = f.root.join("completion-receipt.json");
+                fs::write(&request_path, &request).unwrap();
+                fs::write(&proposal_path, &supplied_proposal).unwrap();
+                let run = || {
+                    Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+                        .arg("--verify-unguided-source-recipe-completion")
+                        .arg("--participant-evidence")
+                        .arg(&evidence)
+                        .arg("--author-request")
+                        .arg(&request_path)
+                        .arg("--proposal")
+                        .arg(&proposal_path)
+                        .arg("--output")
+                        .arg(&output)
+                        .output()
+                        .unwrap()
+                };
+                assert_eq!(run().status.success(), accepted);
+                if accepted {
+                    let original = fs::read(&output).unwrap();
+                    assert!(!run().status.success());
+                    assert_eq!(fs::read(&output).unwrap(), original);
+                } else {
+                    assert!(!output.exists());
+                }
+            }
+        }
+    }
+}
 
 fn source_request(f: &Fixture, repo: &str) -> (Value, Value) {
     let mut selection = f.selection.clone();
