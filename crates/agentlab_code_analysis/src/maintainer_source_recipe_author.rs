@@ -1344,6 +1344,42 @@ pub fn source_dependency_inventory(request: &Value) -> Result<Value, String> {
 
 /// Bind mechanical verifier interfaces to an independently validated design.
 /// This supplies no expected observations and grants no execution or approval.
+fn dependency_inventory_binding(inventory: &Value) -> Result<Value, String> {
+    let bytes = serde_json::to_vec(inventory).map_err(|e| e.to_string())?;
+    Ok(
+        json!({"requestPointer":"/sourceDependencyInventory","valueSha256":digest(&bytes),
+        "serializedByteCount":bytes.len(),
+        "importCount":inventory["imports"].as_array().ok_or("interface dependency imports absent")?.len(),
+        "contentLocation":"complete original author request; retain it in model context",
+        "runtimeResolutionVerified":false,"modelTransmissionVerified":false}),
+    )
+}
+
+#[cfg(test)]
+mod interface_inventory_tests {
+    use super::*;
+    #[test]
+    fn full_large_inventory_is_bound_without_duplicate_transport() {
+        let mut inventory = json!({"imports":(0..165).map(|index|json!({
+            "sourcePath":format!("scope/module-{index}.ets"),"specifier":"../shared/dependency",
+            "statement":"x".repeat(550),"candidateSourceFiles":[]})).collect::<Vec<_>>()});
+        let bytes = serde_json::to_vec(&inventory).unwrap();
+        assert!(bytes.len() > 64 * 1024 && bytes.len() <= 128 * 1024);
+        let binding = dependency_inventory_binding(&inventory).unwrap();
+        assert_eq!(binding["valueSha256"], digest(&bytes));
+        assert_eq!(binding["serializedByteCount"], bytes.len());
+        assert_eq!(binding["importCount"], 165);
+        assert!(serde_json::to_vec(&binding).unwrap().len() < 1024);
+        assert_eq!(serde_json::to_vec(&inventory).unwrap(), bytes);
+        inventory["imports"][164]["specifier"] = json!("../changed/dependency");
+        assert_ne!(
+            dependency_inventory_binding(&inventory).unwrap()["valueSha256"],
+            binding["valueSha256"]
+        );
+        assert!(dependency_inventory_binding(&json!({})).is_err());
+    }
+}
+
 pub fn verifier_interface(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String> {
     design(request_bytes, design_bytes)?;
     let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
@@ -1367,12 +1403,12 @@ pub fn verifier_interface(request_bytes: &[u8], design_bytes: &[u8]) -> Result<V
             "inputTopLevelPointers":scenario["inputs"].as_object().unwrap().keys().map(|key|pointer(key)).collect::<Vec<_>>()})
     }).collect();
     let mut result = json!({
-        "schema":"agentlab.source_verifier_interface.v1",
+        "schema":"agentlab.source_verifier_interface.v2",
         "requestSha256":digest(request_bytes),"designSha256":digest(design_bytes),
         "runtimeSourceSha256":digest(include_bytes!("source_design_runtime.cjs")),
         "scopeSkillId":request["scope"]["id"],
         "allowedLoadedSourcePaths":loaded,
-        "sourceDependencyInventory":source_dependency_inventory(&request)?,
+        "sourceDependencyInventoryBinding":dependency_inventory_binding(&source_dependency_inventory(&request)?)?,
         "sourcePathSelection":"only loaded paths actually read; import seams do not load implementation files",
         "invocation":{"sourceRootArgvIndex":2,"controlIdArgvIndex":3,
             "runtimeArgvIndex":4+dependencies,"methodDependencyArgvStart":4,
