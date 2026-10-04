@@ -118,8 +118,10 @@ with tempfile.TemporaryDirectory() as directory:
       else:
         assert mode not in ['mixed','rerun']
         selected='true' if mode.startswith('successor') else 'false'
-        assert Path(env['GITHUB_OUTPUT']).read_text()=='reviewed_successor='+selected+'\n'
-        value=Path(env['GITHUB_ENV']).read_text().split('=',1)[1].strip()
+        assert Path(env['GITHUB_OUTPUT']).read_text()=='reviewed_successor='+selected+'\nbaseline_continuation=false\n'
+        values=dict(line.split('=',1) for line in Path(env['GITHUB_ENV']).read_text().splitlines())
+        assert set(values)=={'REVIEWED_SUCCESSOR','BASELINE_CONTINUATION'} and values['BASELINE_CONTINUATION']==''
+        value=values['REVIEWED_SUCCESSOR']
         if selected=='true':assert json.loads(value)==envelope and '\n' not in value
         else:assert value==''
   section=workflow.split('      - name: Freeze optional independent review before construction budget\n',1)[1].split('      - name:',1)[0]
