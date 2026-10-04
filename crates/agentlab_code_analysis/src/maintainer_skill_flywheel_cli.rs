@@ -47,6 +47,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if args
         .iter()
+        .any(|a| a == "--acquire-construction-context-objects")
+    {
+        let report = agentlab_code_analysis::maintainer_construction_context::acquire_objects(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &fs::read(value(&args, "--object-plan")?)?,
+            &PathBuf::from(value(&args, "--git-program")?),
+            &output,
+        )?;
+        println!("{}", report);
+        return Ok(());
+    }
+    if args
+        .iter()
         .any(|a| a == "--prepare-source-verifier-interface")
     {
         let result = agentlab_code_analysis::maintainer_source_recipe_author::verifier_interface(

@@ -43,3 +43,35 @@ Explicit bounded acquisition, retained process/network receipts, post-acquisitio
 offline reconstruction and workflow integration remain next. The plan declares
 post-acquisition content limits but does not claim network byte enforcement.
 Maturity remains 75%, and accepted complete automatic loops remain zero.
+
+## Explicit acquisition and workflow connection
+
+The Rust `--acquire-construction-context-objects` entrypoint now reconstructs
+the complete retained plan before mutation, requests only missing selected Blob
+IDs with one explicit Git fetch, and uses the existing process-group capture
+runner with a 60-second deadline. It retains original plan, preflight validation,
+command/executable digest, stdout/stderr digests, exit and termination evidence.
+No retry occurs. Post-fetch plan reconstruction precedes unchanged offline
+context production. Failed captures or content checks retain their acquisition
+directory but produce no `context.json`. This bounds selection/process/logs,
+not network transfer bytes; the current execution adapter is Unix-only.
+
+The source constructor Action now invokes plan then acquisition before author
+request preparation. A cached object avoids network acquisition. This workflow
+edit is not yet a completed prospective cloud construction.
+
+On the original fresh Gitcode partial clone, the exact missing object
+9e4c2e02fa46ddc3d5f3b2d3e39c8561ae9d4598 was acquired in 2092 ms with exit 0.
+Offline reconstruction and independent whole-packet validation succeeded;
+packet SHA256 is 3d897ba64b0d70a78cec626569a73e7bbeb04170d2d072552580c666aa8a4c7a.
+The worktree remains clean and dependency paths were not materialized.
+Captures remain outside Release in the original cohort's native-acquisition-v1
+directory. This fixes the reproduced local infrastructure seam, not the terminal
+failed Action or any exhausted model budget.
+
+New Rust regressions exercise a fresh filtered local-server clone with absent
+out-of-scope contents, exact object fetch and no path materialization, cached
+reuse, preserved outputs, forged-plan rejection before output creation, and
+post-acquisition content-budget rejection. The operator protocol and remaining
+network/platform boundaries are recorded in the generic codebase-analysis Skill;
+Skill Creator validation passes. Maturity remains 75%, full automatic loops zero.

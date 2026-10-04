@@ -427,6 +427,124 @@ pub fn validate_object_plan(
     )
 }
 
+/// Explicit network preparation, separate from offline context validation.
+/// Retain the original plan and bounded process capture even when acquisition fails.
+#[cfg(unix)]
+pub fn acquire_objects(
+    base: &Path,
+    source: &Path,
+    plan_bytes: &[u8],
+    git_program: &Path,
+    out: &Path,
+) -> Result<Value, String> {
+    use std::io::Write;
+    let validation = validate_object_plan(base, source, plan_bytes)?;
+    need(
+        out.is_absolute(),
+        "object acquisition output must be absolute",
+    )?;
+    need(
+        git_program.is_absolute(),
+        "object acquisition Git program must be absolute",
+    )?;
+    let program_sha = crate::maintainer_operation_exec::executable_sha(git_program)?;
+    fs::create_dir(out).map_err(|e| e.to_string())?;
+    let retain = |name: &str, bytes: &[u8]| -> Result<(), String> {
+        fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(out.join(name))
+            .map_err(|e| e.to_string())?
+            .write_all(bytes)
+            .map_err(|e| e.to_string())
+    };
+    retain("object-plan.json", plan_bytes)?;
+    retain(
+        "plan-validation.json",
+        &serde_json::to_vec_pretty(&validation).map_err(|e| e.to_string())?,
+    )?;
+    let plan: Value = serde_json::from_slice(plan_bytes).map_err(|e| e.to_string())?;
+    let mut missing = BTreeSet::new();
+    for file in plan["selectedFiles"].as_array().unwrap() {
+        let oid = file["gitBlobOid"].as_str().unwrap();
+        if git(source, &["cat-file", "-e", oid]).is_err() {
+            missing.insert(oid.to_owned());
+        }
+    }
+    let process = if missing.is_empty() {
+        Value::Null
+    } else {
+        let mut args = vec![
+            "-c",
+            "core.fsmonitor=false",
+            "-c",
+            "gc.auto=0",
+            "fetch",
+            "--no-tags",
+            "--no-write-fetch-head",
+            "--no-recurse-submodules",
+            "--depth=1",
+            "--filter=blob:none",
+            "origin",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+        args.extend(missing.iter().cloned());
+        let command = json!({"program":git_program,"programSha256":program_sha,
+            "args":args,"cwd":".","timeoutMs":60000});
+        crate::maintainer_operation_exec::capture(&command, source, out, "fetch")?
+    };
+    let outcome = (|| -> Result<Value, String> {
+        need(
+            process.is_null() || process["status"] == "successful",
+            "explicit object fetch failed",
+        )?;
+        validate_object_plan(base, source, plan_bytes)?;
+        let paths = plan["selectedFiles"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f["path"].as_str().unwrap().to_owned())
+            .collect::<Vec<_>>();
+        prepare(
+            base,
+            source,
+            plan["repository"]["id"].as_str().unwrap(),
+            &paths,
+        )
+    })();
+    let error = outcome.as_ref().err().cloned();
+    let receipt = json!({"schema":"agentlab.case_context_object_acquisition.v1",
+        "planSha256":digest(plan_bytes),"repository":plan["repository"],
+        "missingBlobOids":missing,"process":process,"networkRequested":!missing.is_empty(),
+        "offlineContextReconstructed":outcome.is_ok(),"error":error,
+        "maximumFetchAttempts":1,"maximumFetchWallMs":60000,"networkByteLimitEnforced":false,
+        "worktreeFilesMaterialized":false,"grantsEditablePaths":false,
+        "authorityWritePerformed":false,"automaticPromotion":false});
+    retain(
+        "acquisition.json",
+        &serde_json::to_vec_pretty(&receipt).map_err(|e| e.to_string())?,
+    )?;
+    let packet = outcome?;
+    retain(
+        "context.json",
+        &serde_json::to_vec_pretty(&packet).map_err(|e| e.to_string())?,
+    )?;
+    Ok(receipt)
+}
+
+#[cfg(not(unix))]
+pub fn acquire_objects(
+    _base: &Path,
+    _source: &Path,
+    _plan_bytes: &[u8],
+    _git_program: &Path,
+    _out: &Path,
+) -> Result<Value, String> {
+    Err("bounded object acquisition requires a Unix process-group adapter".into())
+}
+
 fn prepare_internal(
     base: &Path,
     source: &Path,

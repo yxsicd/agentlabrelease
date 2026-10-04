@@ -91,6 +91,15 @@ owner before acquiring objects, then revalidate their bytes. Preserve the
 consumer's no-lazy-fetch boundary; a missing promised object is infrastructure
 evidence, not source absence or Agent failure. Cached/full-clone success alone
 does not qualify the fresh partial-clone workflow.
+Use `--prepare-construction-context-object-plan` with the ordinary selection
+arguments, then `--acquire-construction-context-objects --knowledge ABSOLUTE_CUT
+--source-worktree ABSOLUTE_CHECKOUT --object-plan ABSOLUTE_PLAN --git-program
+ABSOLUTE_GIT --output FRESH_DIRECTORY`. The Rust operator reconstructs the plan,
+fetches only missing selected object IDs in one bounded invocation, retains the
+process evidence, and produces `context.json` only after offline reconstruction.
+Keep failed acquisition directories; never consume a plan as verified content.
+The limits bound object selection, process time and retained logs, not network
+transfer bytes. The executor currently requires a Unix process-group adapter.
 
 For proposed cross-scope host/test changes, prepare a separate Rust
 `--prepare-construction-edit-boundary` packet with the same knowledge/source/repository
