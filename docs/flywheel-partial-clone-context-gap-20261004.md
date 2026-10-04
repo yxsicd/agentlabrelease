@@ -75,3 +75,42 @@ reuse, preserved outputs, forged-plan rejection before output creation, and
 post-acquisition content-budget rejection. The operator protocol and remaining
 network/platform boundaries are recorded in the generic codebase-analysis Skill;
 Skill Creator validation passes. Maturity remains 75%, full automatic loops zero.
+
+## Prospective cloud acquisition passes; duplicate interface budget blocks code
+
+PR 271 passed eleven applicable checks at exact head
+02d9b00d5e9753578db35ba41c70c6684a0431ab and merged at
+757877ac9f4cc924dbd4bef25f6f48d086badeeb. Original cloud Rust job 111381718475
+explicitly passed the fresh partial-clone and cached/budget acquisition tests,
+all 12 context tests and all 38 source-operation tests.
+
+Prospective run 37184263701 passed exact method/current-cut admission and the
+new acquisition phase: one missing selected Blob fetched in 1749 ms, exit 0,
+followed by offline context reconstruction. The real model design turn completed
+and its native static design validation passed without granting semantic review.
+Before code generation, verifier interface preparation failed with
+`verifier interface packet budget`. No code, control suite, independent review,
+observation export or authority write is claimed. The run is terminal failure;
+do not rerun it or retroactively change its repair policy.
+
+The native dependency inventory is 112784 compact UTF-8 bytes with 165 import
+declarations. It fits the original 128 KiB inventory budget but was duplicated
+inside the 64 KiB interface. The v2 interface now references the full original
+inventory using its independently reconstructed digest, byte count and request
+pointer instead of embedding a second copy. The original request and design/code
+source context retain all import evidence; their transmission still needs the
+existing recorded context/completion gates. Neither budget is increased.
+
+Local integration tests check the new interface binding through ordinary design
+validation; a separate Rust unit test exercises a complete inventory larger
+than 64 KiB and below 128 KiB, retains its bytes unchanged, and detects an edit
+to the last import. This is a mechanical regression, not a completed code turn.
+All 38 source-operation regressions passed in 45.21 seconds. Another prospective
+cloud code/control/review round remains required. Maturity stays 75%; full
+automatic five-stage loops stay zero.
+
+The original constructor artifact 11296042764 is 779968 bytes, SHA256
+169949cc25575851aec71c48b5feb81448d62a11ba117358d074cfa5bfe3308f.
+The strict acquirer preserved the original ZIP and rejected absent observations,
+as expected. Private diagnostic extraction and original run/intent captures
+remain outside Release under flywheel-context-acquisition-successor-RhmsIb.

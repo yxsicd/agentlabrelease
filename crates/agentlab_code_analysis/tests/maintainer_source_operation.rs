@@ -2586,6 +2586,21 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     let interface = author::verifier_interface(&request_bytes, &design_bytes).unwrap();
     assert_eq!(interface["requestSha256"], digest(&request_bytes));
     assert_eq!(interface["designSha256"], digest(&design_bytes));
+    assert_eq!(interface["schema"], "agentlab.source_verifier_interface.v2");
+    assert!(interface.get("sourceDependencyInventory").is_none());
+    let inventory = author::source_dependency_inventory(&request).unwrap();
+    assert_eq!(
+        interface["sourceDependencyInventoryBinding"]["valueSha256"],
+        digest(&serde_json::to_vec(&inventory).unwrap())
+    );
+    assert_eq!(
+        interface["sourceDependencyInventoryBinding"]["requestPointer"],
+        "/sourceDependencyInventory"
+    );
+    assert_eq!(
+        interface["sourceDependencyInventoryBinding"]["modelTransmissionVerified"],
+        false
+    );
     assert_eq!(
         interface["allowedLoadedSourcePaths"],
         json!(["src/state.json", "src/unloaded.json"])

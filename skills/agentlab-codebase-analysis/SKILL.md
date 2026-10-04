@@ -46,6 +46,13 @@ missing cross-scope context, aliases and ambiguous candidates. Syntactic import
 bindings and paths are not runtime resolution. A named constructor needs its
 source-supported export contract, not an empty map or guessed same-named object.
 Obtain revision-bound context or an explicit controlled seam without widening edits.
+Keep complete dependency evidence in the original construction request rather
+than duplicating it in every later interface. The v2 verifier interface binds
+the reconstructed inventory's digest, byte count and original-request pointer;
+the design/code context must still retain the complete inventory. A reference
+is not proof of model transmission. Test an inventory valid under the source
+request budget but larger than the interface budget without increasing either
+limit, truncating evidence or replacing it with a smaller selected sample.
 
 Resolve build tools from existing composition/toolchain receipts before declaring
 them absent from PATH or a bounded search. Revalidate their current entrypoints
