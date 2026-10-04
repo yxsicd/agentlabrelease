@@ -541,6 +541,7 @@ fn reviewed_checks(proposal: &Value, review: &Value) -> Result<Value, String> {
             "agentlab.source_recipe_review_feedback.v2"
                 | "agentlab.source_recipe_review_feedback.v3"
                 | "agentlab.source_recipe_design_review.v2"
+                | "agentlab.source_recipe_design_review.v3"
         )
     ) {
         let changes = review["checkChanges"]
@@ -549,6 +550,7 @@ fn reviewed_checks(proposal: &Value, review: &Value) -> Result<Value, String> {
                 a.len() <= 64
                     && (review["schema"] == "agentlab.source_recipe_review_feedback.v3"
                         || review["schema"] == "agentlab.source_recipe_design_review.v2"
+                        || review["schema"] == "agentlab.source_recipe_design_review.v3"
                         || !a.is_empty())
             })
             .ok_or("recipe revision explicit check changes budget")?;
@@ -779,6 +781,53 @@ pub fn design_review(
 }
 
 // Portable byte-bound review validation: no historical runner paths are opened.
+fn reviewed_controls(parent: &Value, review: &Value) -> Result<Value, String> {
+    let mut controls = parent["controls"]
+        .as_array()
+        .filter(|rows| (4..=8).contains(&rows.len()))
+        .ok_or("design review parent control budget")?
+        .clone();
+    let changes = review["controlChanges"]
+        .as_array()
+        .filter(|rows| rows.len() <= 8)
+        .ok_or("design review control changes budget")?;
+    let mut seen = BTreeSet::new();
+    for change in changes {
+        let id = text(change, "id")?;
+        need(
+            change.as_object().is_some_and(|row| row.len() == 4)
+                && seen.insert(id)
+                && change.get("before").is_some()
+                && change.get("after").is_some()
+                && change["before"] != change["after"]
+                && review["findings"].as_array().is_some_and(|findings| {
+                    findings.iter().any(|finding| {
+                        finding["id"] == change["findingId"] && change["findingId"].is_string()
+                    })
+                }),
+            "design review control change/finding",
+        )?;
+        let index = controls
+            .iter()
+            .position(|control| control["id"] == id)
+            .ok_or("design review cannot add or remove control identities")?;
+        need(
+            controls[index] == change["before"],
+            "design review control before differs from parent",
+        )?;
+        let after = &change["after"];
+        need(
+            after.as_object().is_some_and(|row| row.len() == 4)
+                && after["id"] == controls[index]["id"]
+                && after["role"] == controls[index]["role"]
+                && after["role"] != "baseline",
+            "design review control identity/role or baseline change",
+        )?;
+        controls[index] = after.clone();
+    }
+    Ok(Value::Array(controls))
+}
+
 fn design_review_contract(
     request_bytes: &[u8],
     design_bytes: &[u8],
@@ -793,12 +842,19 @@ fn design_review_contract(
     let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
     let parent: Value = serde_json::from_slice(design_bytes).map_err(|e| e.to_string())?;
     let review: Value = serde_json::from_slice(review_bytes).map_err(|e| e.to_string())?;
-    let exact = review["schema"] == "agentlab.source_recipe_design_review.v2";
+    let protected_controls = review["schema"] == "agentlab.source_recipe_design_review.v3";
+    let exact = protected_controls || review["schema"] == "agentlab.source_recipe_design_review.v2";
     need(
-        review
-            .as_object()
-            .is_some_and(|o| o.len() == if exact { 10 } else { 8 })
-            && (exact || review["schema"] == "agentlab.source_recipe_design_review.v1")
+        review.as_object().is_some_and(|o| {
+            o.len()
+                == if protected_controls {
+                    11
+                } else if exact {
+                    10
+                } else {
+                    8
+                }
+        }) && (exact || review["schema"] == "agentlab.source_recipe_design_review.v1")
             && request["schema"] == "agentlab.source_recipe_author_request.v1"
             && parent["scopeSkillId"] == request["scope"]["id"]
             && review["parentRequestSha256"] == digest(request_bytes)
@@ -842,8 +898,19 @@ fn design_review_contract(
         reviewed_checks(&json!({"contract":{"checks":parent["checks"]}}), &review)?;
         reviewed_scenarios(&parent, &review)?;
     }
+    if protected_controls {
+        let mut reviewed = parent.clone();
+        reviewed["checks"] =
+            reviewed_checks(&json!({"contract":{"checks":parent["checks"]}}), &review)?;
+        reviewed["scenarios"] = reviewed_scenarios(&parent, &review)?;
+        reviewed["controls"] = reviewed_controls(&parent, &review)?;
+        design(
+            request_bytes,
+            &serde_json::to_vec(&reviewed).map_err(|error| error.to_string())?,
+        )?;
+    }
     Ok(
-        json!({"schema":if exact {"agentlab.source_recipe_design_review_admission.v2"} else {"agentlab.source_recipe_design_review_admission.v1"},
+        json!({"schema":if protected_controls {"agentlab.source_recipe_design_review_admission.v3"} else if exact {"agentlab.source_recipe_design_review_admission.v2"} else {"agentlab.source_recipe_design_review_admission.v1"},
         "authorRequestSha256":digest(request_bytes),"parentDesignSha256":digest(design_bytes),
         "reviewSha256":digest(review_bytes),"revisionRequested":true,"semanticQualified":false,
         "executionPerformed":false,"authorityWritePerformed":false,"automaticPromotion":false}),
@@ -866,7 +933,8 @@ pub fn check_design_review_output(
     let p: Value = serde_json::from_slice(parent).map_err(|e| e.to_string())?;
     let r: Value = serde_json::from_slice(review).map_err(|e| e.to_string())?;
     let s: Value = serde_json::from_slice(successor).map_err(|e| e.to_string())?;
-    let exact = r["schema"] == "agentlab.source_recipe_design_review.v2";
+    let protected_controls = r["schema"] == "agentlab.source_recipe_design_review.v3";
+    let exact = protected_controls || r["schema"] == "agentlab.source_recipe_design_review.v2";
     if exact {
         need(
             s["schema"] == p["schema"] && s["scopeSkillId"] == p["scopeSkillId"],
@@ -898,15 +966,24 @@ pub fn check_design_review_output(
             s["scenarios"] == scenarios,
             "recipe design scenario sequence differs from exact design review",
         )?;
+        if protected_controls {
+            need(
+                s["controls"] == reviewed_controls(&p, &r)?,
+                "recipe design controls differ from exact design review; require controlChanges before/after/findingId and unchanged control order",
+            )?;
+            design(request, successor)?;
+        }
     }
-    Ok(
-        json!({"schema":"agentlab.source_recipe_design_review_output.v1",
+    let mut result = json!({"schema":"agentlab.source_recipe_design_review_output.v1",
         "authorRequestSha256":admission["authorRequestSha256"],
         "parentDesignSha256":admission["parentDesignSha256"],"reviewSha256":admission["reviewSha256"],
         "successorDesignSha256":digest(successor),"exactContractProtected":exact,
         "semanticQualified":false,"reviewerIdentityAuthenticated":false,
-        "executionPerformed":false,"authorityWritePerformed":false,"automaticPromotion":false}),
-    )
+        "executionPerformed":false,"authorityWritePerformed":false,"automaticPromotion":false});
+    if protected_controls {
+        result["exactControlsProtected"] = json!(true);
+    }
+    Ok(result)
 }
 
 /// Static source correction before code generation; this does not establish semantic truth.

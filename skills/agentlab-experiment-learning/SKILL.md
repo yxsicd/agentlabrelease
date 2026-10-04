@@ -170,6 +170,24 @@ publication. This automatic operational handoff neither creates a lesson nor
 admits knowledge. A cloud run on an older method needs a separate retained-byte
 export; local replay is not proof the cloud producer performed that handoff.
 
+When an exception-removing mutation resumes execution, trace both its returned
+outcome and every subsequent state effect before declaring its full failure set.
+A completed independent reject is useful diagnostic feedback, not an accepted
+lesson. Preserve original and Agent-repaired citations separately; citation repair
+does not repair the assessed design. A single-input exception test cannot prove
+multi-input ordering or rollback behavior. Continue through a versioned successor
+with explicit lineage and a newly bounded enrollment, not by deleting child markers
+or reopening an exhausted attempt. The current one-child design-review transport
+does not implement that multi-round scheduling capability; see the
+[real failure-review checkpoint](../../docs/flywheel-diagnostic-feedback-20261004.md).
+For a reviewed control repair, design_review.v3 adds controlChanges with exact
+id/before/after/findingId entries. It protects all ordered controls, preserves IDs,
+roles and baseline, and runs ordinary design validation on the reviewed result.
+An updated failure prediction must refer to known checks; it is not semantic
+approval, a replay of old workers or permission to weaken unreviewed checks.
+Legacy v1/v2 receipts remain unchanged. This contract alone neither validates a
+captured independent review nor removes the one-child transport restriction.
+
 Business cycles accept sourceSuiteCapture directly rather than manufacturing
 legacy behavior files. Bind original stage/suite digests, source/scope/knowledge
 and current round, then reconstruct again at return. Retained capture replay is

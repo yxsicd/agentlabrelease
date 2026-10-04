@@ -630,8 +630,10 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                 design_prompt += 'Preserve original check IDs, pointers and expected values except exact v2/v3 checkChanges entries authorized by review. Prose findings alone do not authorize check changes.\n'
                 if 'parentProposal' in revision_context and 'parentDesign' in revision_context:
                     design_prompt += 'Preserve the parent schema and complete scenario records, including initial state, ordered inputs, dependency sequences and expected observations, except exact v3 scenarioChanges authorized by review. Prose alone is not authorization.\n'
-                if revision_context['review'].get('schema') == 'agentlab.source_recipe_design_review.v2':
+                if revision_context['review'].get('schema') in ('agentlab.source_recipe_design_review.v2', 'agentlab.source_recipe_design_review.v3'):
                     design_prompt += 'Preserve all parent checks and complete ordered scenarios except exact checkChanges/scenarioChanges before/after/findingId entries. Prose findings alone authorize neither.\n'
+                if revision_context['review'].get('schema') == 'agentlab.source_recipe_design_review.v3':
+                    design_prompt += 'Preserve complete ordered controls except exact controlChanges before/after/findingId entries. Control IDs, roles and the baseline are immutable; a changed failure prediction or source edit needs an explicit reviewed replacement. This authorizes a draft, not semantic acceptance.\n'
             if args.frozen_design:
                 design_path = args.output / 'design.json'
                 design_content = design_path.read_text()
