@@ -36,6 +36,8 @@ class StrictTransport:
         self.request, self.writer, self.root = request, writer, root
         self.current = request['expectedKnowledgeRevision']
         self.writes = self.counter = 0
+        self.readbacks = {}
+        self.postcommit_before = None
         self.lock = threading.RLock()
         self.allowed = {}
         for table, filename in writer.TABLE_FILES.items():
@@ -154,6 +156,9 @@ class StrictTransport:
             return result
         if operation != 'table_query' or arguments['view']['revision'] != self.current:
             raise ValueError('Read revision differs')
+        if self.writes == 1 and self.postcommit_before is None:
+            self.postcommit_before = self.call_locked('skill_run_read', 'table.query', 'table_status',
+                {'repo': self.request['knowledgeRepository'], 'path': 'maintainer_skill_refresh_rounds'})
         rows, total, first = [], None, None
         for offset in range(0, 1050, 50):
             page = self.one(runner, skill, operation, {**arguments, 'limit': 50, 'offset': offset})
@@ -178,6 +183,7 @@ class StrictTransport:
         joined = {**first, 'rows': rows, 'offset': 0, 'limit': total, 'returned_count': total,
                   'truncated': False, 'pagedReadback': True}
         save(self.root, f'complete-{self.counter}.json', joined)
+        self.readbacks[(self.current, arguments['path'])] = joined
         return joined
 
 
@@ -214,11 +220,35 @@ def main():
         raise ValueError('Baseline authority differs')
     root.mkdir()
     save(root, 'request.json', request)
+    source_reference = request['lessonSourceReadback']
+    source_bytes = read(Path(source_reference['path']))
+    if hashlib.sha256(source_bytes).hexdigest() != source_reference['sha256']:
+        raise ValueError('Operational source capture drift')
+    snapshot = json.loads(source_bytes)
+    if snapshot['schema'] != 'agentlab.observation_store_snapshot.v1':
+        raise ValueError('Operational source snapshot schema')
+    source_export = json.loads(read(Path(request['lessonSourceDirectory']) / 'export.json'))
+    source_readback = {key: snapshot[key] for key in ['repository', 'revision', 'tablePrefix']}
+    source_readback.update(schema='agentlab.reviewed_lesson_source_readback.v1',
+                          tables={name: snapshot['tables'][name] for name in source_export['tables']})
+    (root / 'original-source-snapshot.json').write_bytes(source_bytes)
+    save(root, 'lesson-source-readback.json', source_readback)
+    method_args = []
+    if request.get('methodSource') is not None:
+        reference = request['methodSource']
+        method_bytes = read(Path(reference['path']), 1024 * 1024)
+        if hashlib.sha256(method_bytes).hexdigest() != reference['sha256']:
+            raise ValueError('Historical method drift')
+        method_path = root / 'reviewed-method-source.md'
+        method_path.write_bytes(method_bytes)
+        method_args = ['--method-source', str(method_path)]
     stage = root / 'staged-admission'
-    command = [str(tool), '--stage-lesson-admission', '--knowledge', str(base),
+    common = ['--knowledge', str(base),
                '--proposal', request['proposalDirectory'], '--lesson-source', request['lessonSourceDirectory'],
                '--lesson-id', request['lessonId'], '--expected-knowledge-revision',
-               request['expectedKnowledgeRevision'], '--output', str(stage)]
+               request['expectedKnowledgeRevision'], *method_args]
+    command = [str(tool), '--verify-lesson-source-readback', *common,
+               '--readback', str(root / 'lesson-source-readback.json'), '--output', str(stage)]
     result = subprocess.run(command, capture_output=True, timeout=60)
     (root / 'native-stage.stdout').write_bytes(result.stdout)
     (root / 'native-stage.stderr').write_bytes(result.stderr)
@@ -232,7 +262,11 @@ def main():
     writer = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(writer)
     client = StrictTransport(request, args.credentials, writer, root, stage)
-    retained = {file: read(file) for directory in [base, stage] for file in directory.rglob('*') if file.is_file()}
+    directories = [base, stage, Path(request['proposalDirectory']), Path(request['lessonSourceDirectory'])]
+    retained = {file: read(file) for directory in directories for file in directory.rglob('*') if file.is_file()}
+    retained[root / 'lesson-source-readback.json'] = read(root / 'lesson-source-readback.json')
+    if method_args:
+        retained[method_path] = method_bytes
     def prewrite():
         if (hashlib.sha256(read(tool, 256 * 1024 * 1024)).hexdigest() != request['flywheelToolSha256']
                 or read(writer_path) != writer_bytes
@@ -250,8 +284,26 @@ def main():
     final = client.call('skill_run_read', 'table.query', 'table_status',
                        {'repo': request['knowledgeRepository'], 'path': 'maintainer_skill_refresh_rounds'})
     save(root, 'final-status.json', final)
+    readback = {'schema': 'agentlab.reviewed_lesson_committed_readback.v1',
+        'knowledgeRepository': request['knowledgeRepository'],
+        'previousRevision': request['expectedKnowledgeRevision'], 'revision': client.current,
+        'before': client.postcommit_before, 'after': final,
+        'tables': {name: client.readbacks[(client.current, name)] for name in writer.TABLE_FILES},
+        'lessonSource': source_readback}
+    save(root, 'committed-readback.json', readback)
+    prewrite()  # No write: original reviewed inputs must still be byte-exact.
+    result = subprocess.run([str(tool), '--verify-committed-lesson-return', *common,
+        '--committed-knowledge', str(root / 'committed-knowledge'),
+        '--readback', str(root / 'committed-readback.json'),
+        '--output', str(root / 'return-reconstruction')], capture_output=True, timeout=60)
+    (root / 'native-return.stdout').write_bytes(result.stdout)
+    (root / 'native-return.stderr').write_bytes(result.stderr)
+    if result.returncode:
+        raise ValueError('Committed native return rejected; recover read-only, do not replay writer')
     save(root, 'result.json', {'revision': client.current, 'authorityWrites': client.writes,
-         'committedExportExact': True, 'automaticFiveStageLoopCompleted': False})
+         'committedExportExact': True, 'committedReadbackVerified': True,
+         'sourceReadbackVerified': True, 'remoteCaptureAuthenticated': False,
+         'automaticFiveStageLoopCompleted': False})
     print(json.dumps({'revision': client.current, 'authorityWrites': client.writes}))
 
 
