@@ -3259,6 +3259,76 @@ fn prospective_baseline_continuation_keeps_old_budget_and_reconstructs_original_
     let request = fs::read(stage.join("request.json")).unwrap();
     let policy_path = base.join("prospective-enrollment.json");
     fs::write(&policy_path, &enrolled).unwrap();
+    // Cross the actual ZIP selection -> Action preparation -> native consumer
+    // boundary. Only GitHub acquisition is replaced; subprocess/native admission
+    // must execute, otherwise missing retained sidecars can escape the test.
+    let code = r#"
+import argparse,importlib.util,json,os,subprocess,zipfile
+from pathlib import Path
+from unittest.mock import patch
+base=Path(os.environ['FIXTURE_ROOT']);repo=Path(os.environ['REPOSITORY_ROOT'])
+def load(name):
+    spec=importlib.util.spec_from_file_location(name,repo/'scripts'/name)
+    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
+acquisition=load('acquire-source-suite-review-input.py')
+preparation=load('prepare-baseline-continuation-action.py')
+envelope=dict(schema='agentlab.baseline_continuation_action_enrollment.v1',parentRun='123',
+    parentArtifact='456',parentMethodRevision='a'*40,parentArchiveSha256='b'*64,
+    continuationEnrollment=json.loads((base/'prospective-enrollment.json').read_bytes()))
+(base/'action-enrollment.json').write_text(json.dumps(envelope))
+captured_request='baseline-diagnostic/contained-input-original/request.json'
+for scenario in ['good','missing-captured-request','changed-captured-request']:
+    archive=base/(scenario+'.zip')
+    with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as bundle:
+        bundle.writestr('successor-request.json','original successor')
+        bundle.writestr('successor-enrollment.json','original review')
+        bundle.writestr('agent/participant-state/auth.json','excluded private state')
+        for member in (base/'stage').iterdir():
+            if member.is_file():bundle.write(member,'agent/proposal-stage/'+member.name)
+        for name in ['intent.json','request.json','descriptor.json','support.json']:
+            bundle.write(base/'inputs'/name,'baseline-diagnostic/'+name)
+        for name in ['request.json','process.json','worker-stdout.log','worker-stderr.log']:
+            target='baseline-diagnostic/contained-input-original/'+name
+            if target==captured_request and scenario=='missing-captured-request':continue
+            if target==captured_request and scenario=='changed-captured-request':bundle.writestr(target,'{}')
+            else:bundle.write(base/'capture'/name,target)
+    def acquire(args):
+        args.output.mkdir()
+        (args.output/'original-artifact.zip').write_bytes(archive.read_bytes())
+        acquisition.extract_observations(archive,args.output/'baseline-inputs',baseline=True)
+    args=argparse.Namespace(enrollment=base/'action-enrollment.json',output=base/('action-'+scenario),
+        request=base/'stage/request.json',gate=Path(os.environ['NATIVE_GATE']),repository='generic/fixture')
+    with patch.object(acquisition,'acquire',side_effect=acquire),patch.object(preparation,'module_from_spec',return_value=acquisition),patch.object(preparation,'spec_from_file_location') as spec:
+        spec.return_value.loader.exec_module=lambda module:None
+        try:result=preparation.prepare(args)
+        except ValueError:assert scenario=='missing-captured-request'
+        except subprocess.CalledProcessError:assert scenario=='changed-captured-request'
+        else:
+            assert scenario=='good'
+            assert Path(result['diagnostic_repair']).read_bytes()==(base/'continuation.json').read_bytes()
+            selected=args.output/'acquired/baseline-inputs'
+            assert (selected/captured_request).read_bytes()==(base/'capture/request.json').read_bytes()
+            assert not (selected/'agent/participant-state').exists()
+        if scenario!='good':
+            assert not (args.output/'diagnostic-repair.json').exists()
+            assert not (args.output/'local-claims').exists()
+print('actual baseline ZIP preparation and native captured-request admission passed')
+"#;
+    let reception = Command::new("python3")
+        .args(["-c", code])
+        .env("FIXTURE_ROOT", &base)
+        .env("REPOSITORY_ROOT", root())
+        .env(
+            "NATIVE_GATE",
+            env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        reception.status.success(),
+        "{}",
+        String::from_utf8_lossy(&reception.stderr)
+    );
     let cli_output = base.join("cli-continuation.json");
     let invoke = || {
         Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))

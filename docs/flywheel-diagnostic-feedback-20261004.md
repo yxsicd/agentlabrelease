@@ -464,3 +464,22 @@ extracted bridge regression and Python AST checks passed; no real claim or new
 participant execution occurred. Overall maturity remains 75%, complete automatic
 five-stage rounds zero. Real bounded repair, full suite/review, knowledge return
 and later/cross-repository benefit remain outstanding.
+
+## Real pre-dispatch reception failure and consumer-bound regression
+
+Action 37210150537 at method 913e651b840fb6add21160320cc49c520471d818
+completed with failure before participant execution. Baseline archive selection
+omitted `baseline-diagnostic/contained-input-*/request.json`; native prospective
+preparation reads that exact original and compares it with the retained execution
+request. The missing file caused `No such file or directory`, not an Agent failure.
+The Action routing regression had mocked native preparation and missed this
+consumer dependency. Preserve the original failed run and its artifact.
+
+Reception now selects and requires the captured request alongside process/stdout/
+stderr. The existing prospective Rust regression additionally packages its real
+native diagnostic fixture into ZIP, runs actual selection and Action preparation,
+and executes the real native CLI. Only GitHub acquisition is mocked. It requires
+byte-identical native output, excludes participant private state, rejects missing
+captured requests before preparation and rejects changed requests through native
+admission without creating a packet or local claims. Cloud execution is pending;
+this change does not establish a successful model repair or completed round.

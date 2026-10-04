@@ -128,6 +128,15 @@ failure. Preserve those real planner checks rather than skipping them or replaci
 them with success fixtures. Formatting and dependency-order repairs improve
 delivery reliability, not semantic coverage or completed flywheel-round counts.
 
+For retained-artifact continuation, test selected ZIP members through the actual
+native consumer before model dispatch. A real Action failed because extraction
+retained process/log files but omitted the captured request that native admission
+compares with the execution request. Mocking native preparation hid this boundary.
+Require original consumer sidecars in the reception inventory; reject missing or
+changed captures rather than recreating them from another request or weakening
+native checks. Keep download mocks separate from real extraction/admission tests.
+See the [diagnostic checkpoint](../../docs/flywheel-diagnostic-feedback-20261004.md).
+
 When a clean-runner gate exceeds its budget, inspect the individual test and a
 completed comparison run before calling it a hang. Repeated exact-byte executable
 hashing can dominate debug builds, especially when one platform has a small loader
