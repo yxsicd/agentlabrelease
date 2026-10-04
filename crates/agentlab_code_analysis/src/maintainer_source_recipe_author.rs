@@ -934,7 +934,10 @@ pub fn reviewed_design_target(
     let reviewed = reviewed_checks(&json!({"contract":{"checks":target["checks"]}}), &feedback)?;
     let mut remaining = check_map(&reviewed)?;
     let mut ordered = Vec::new();
-    for check in target["checks"].as_array().ok_or("parent check inventory")? {
+    for check in target["checks"]
+        .as_array()
+        .ok_or("parent check inventory")?
+    {
         if let Some(replacement) = remaining.remove(text(check, "id")?) {
             ordered.push(replacement);
         }
