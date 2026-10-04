@@ -7,14 +7,33 @@ output=$2
 test ! -e "$output" && test ! -L "$output"
 mkdir "$output"
 intent="$dispatch/dispatch-intent.json"
-id=$(jq -er .requestId "$intent")
-[[ $id =~ ^[0-9a-f]{64}$ ]]
 repository=$(jq -er .repository "$intent")
 workflow=$(jq -er .workflow "$intent")
-[[ $workflow == maintainer-skill-agent-flywheel.yml || $workflow == maintainer-source-recipe-author.yml ]]
 method=$(jq -er .methodRevision "$intent")
 [[ $method =~ ^[0-9a-f]{40}$ ]]
 created=$(jq -er .createdAt "$intent")
+if [[ $workflow == maintainer-source-suite-review.yml ]]; then
+  # An already resolved standalone review is observed by exact ID, never latest.
+  observed="$dispatch/run-observation.json"
+  run=$(jq -er --arg method "$method" 'select(.uniqueMatch==true and .methodRevision==$method and
+    .workflow==".github/workflows/maintainer-source-suite-review.yml" and .event=="workflow_dispatch") | .runId' "$observed")
+  [[ $run =~ ^[1-9][0-9]{0,19}$ ]]
+  body_sha=$(shasum -a 256 "$dispatch/dispatch-body.json" | cut -d ' ' -f1)
+  jq -e --arg sha "$body_sha" '.schema=="agentlab.retained_completion_review_dispatch_intent.v1" and
+    .bodySha256==$sha and .dispatchAgainAllowed==false and .maximumNewAuthorCalls==0' "$intent" >/dev/null
+  jq -e '.ref=="main"' "$dispatch/dispatch-body.json" >/dev/null
+  gh api "repos/$repository/actions/runs/$run" > "$output/original-run.json"
+  jq -e --arg run "$run" --arg method "$method" --arg repository "$repository" --arg created "$created" '
+    (.id|tostring)==$run and .head_sha==$method and .head_branch=="main" and
+    .event=="workflow_dispatch" and .repository.full_name==$repository and .run_attempt==1 and
+    .name=="Maintainer independent source suite review" and
+    .path==".github/workflows/maintainer-source-suite-review.yml" and
+    .created_at>=($created|sub("\\.[0-9]+Z$";"Z"))' "$output/original-run.json" >/dev/null
+  jq '[.]' "$output/original-run.json" > "$output/matches.json"
+else
+[[ $workflow == maintainer-skill-agent-flywheel.yml || $workflow == maintainer-source-recipe-author.yml ]]
+id=$(jq -er .requestId "$intent")
+[[ $id =~ ^[0-9a-f]{64}$ ]]
 # A bounded first page. If visibility/history is inconclusive, retain it and
 # wait or explicitly inspect additional history; never dispatch a replacement.
 gh api --method GET "repos/$repository/actions/workflows/$workflow/runs" \
@@ -22,6 +41,7 @@ gh api --method GET "repos/$repository/actions/workflows/$workflow/runs" \
   -f "created=>=$created" > "$output/original-runs.json"
 jq --arg title "AgentLab gap $id" \
   '[.workflow_runs[]|select(.display_title==$title)]' "$output/original-runs.json" > "$output/matches.json"
+fi
 count=$(jq length "$output/matches.json")
 if [[ $count == 0 ]]; then
   jq -n '{runVisible:false,dispatchAgainAllowed:false,childCompletionVerified:false}' > "$output/observation.json"
