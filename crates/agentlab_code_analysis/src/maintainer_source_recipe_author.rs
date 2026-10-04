@@ -65,7 +65,7 @@ fn rows(p: &Path) -> Result<Vec<Value>, String> {
         .map(|l| serde_json::from_str(l).map_err(|e| e.to_string()))
         .collect()
 }
-fn policy_gate(policy: &Value) -> Result<(), String> {
+pub(crate) fn policy_gate(policy: &Value) -> Result<(), String> {
     need(
         policy["schema"] == "agentlab.source_recipe_author_policy.v1"
             && policy["automaticPromotion"] == false,
@@ -293,6 +293,7 @@ pub fn prepare(
         "planSha256":digest(&pretty(&plan)?),"planSummary":plan["summary"],
         "reviewed":false,"automaticPromotion":false,"closedLoopQualified":false});
     request["sourceDependencyInventory"] = source_dependency_inventory(&request)?;
+    crate::maintainer_source_compiler::attach(&mut request)?;
     need(
         serde_json::to_vec(&request)
             .map_err(|e| e.to_string())?
@@ -336,6 +337,7 @@ pub fn prepare_with_context(
         request["readOnlySourceContext"] = json!({"packetUtf8":std::str::from_utf8(bytes).map_err(|e|e.to_string())?,
             "packet":packet,"validation":receipt,"grantsEditablePaths":false});
         request["sourceDependencyInventory"] = source_dependency_inventory(&request)?;
+        crate::maintainer_source_compiler::attach(&mut request)?;
         need(
             serde_json::to_vec(&request)
                 .map_err(|e| e.to_string())?
@@ -458,6 +460,10 @@ pub fn revision_with_design(
     need(
         current.get("readOnlySourceContext") == parent.get("readOnlySourceContext"),
         "recipe revision read-only context drift",
+    )?;
+    need(
+        current.get("sourceCompilerEvidence") == parent.get("sourceCompilerEvidence"),
+        "recipe revision compiler evidence drift",
     )?;
     need(
         proposal["schema"] == "agentlab.source_recipe_author_proposal.v1"

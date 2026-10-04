@@ -89,6 +89,19 @@ Read [the retained compiler checkpoint](../../docs/flywheel-compiler-dependency-
 when interpreting the import-erasure finding; it does not amend a historical review
 or supply compiler evidence to an already frozen experiment.
 
+For the explicit TypeScript host adapter, set compilerAnalysisAdapter to
+typescript-transpile-v1 in the original author policy with exactly one pinned
+compiler dependency. Rust reconstructs sourceCompilerEvidence from loaded script
+bodies during request preparation and admission; design reviews receive that same
+evidence. It binds executable, compiler, analyzer, runtime-helper and source
+digests, options, diagnostics and emitted-output digests. Requests without this
+adapter remain unchanged. Require error-free parse/transpile evidence before
+using an emitted dependency absence; static require calls remain candidates where
+shadowing or dynamic loading is unresolved. This adapter neither checks types nor
+executes source, and does not replace maintenance-operation or platform evidence.
+Use [the native adapter contract](../../docs/flywheel-native-compiler-evidence-20261005.md)
+for activation, capture limits and independently run real-compiler verification.
+
 In pre-execution design reviews, prefer criterion source citations as exact
 path/quote pairs against uniquely loaded frozen context; source-array positions
 are not stable identities. Cite design statements through their actual /design
@@ -198,6 +211,11 @@ resolved dependency edge. Missing, conflicting or revision-mismatched context
 bindings remain knowledge blockers; runtime and Oracle qualification stay
 independent. A failure after knowledge persistence must recover the committed
 cut and retained proposal, not rerun the successful Agent or overwrite history.
+Do not assume empty constructor export seams preserve a dependency's field
+initialization. Prefer available read-only source when its behavior is required,
+or verify the controlled seam against actual initial-state observations. A
+source-bound review opinion cannot waive a failed baseline or initialize missing
+fields from expected values.
 
 ### Feedback multi-round instance
 

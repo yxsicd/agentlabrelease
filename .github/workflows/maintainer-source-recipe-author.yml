@@ -354,7 +354,8 @@ jobs:
           node=Path(subprocess.check_output(['which','node'],text=True).strip()).resolve()
           compiler=root/'recipe-compiler/node_modules/typescript/lib/typescript.js'
           policy={'schema':'agentlab.source_recipe_author_policy.v1','program':str(node),'programSha256':hashlib.sha256(node.read_bytes()).hexdigest(),
-                  'methodDependencies':[{'path':str(compiler),'sha256':hashlib.sha256(compiler.read_bytes()).hexdigest()}],'automaticPromotion':False}
+                  'methodDependencies':[{'path':str(compiler),'sha256':hashlib.sha256(compiler.read_bytes()).hexdigest()}],
+                  'compilerAnalysisAdapter':'typescript-transpile-v1','automaticPromotion':False}
           (output/'policy.json').write_text(json.dumps(policy)+'\n')
           context_args=[]
           context_paths=os.environ.get('DEPENDENCY_CONTEXT_PATHS','').splitlines()
