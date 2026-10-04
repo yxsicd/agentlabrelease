@@ -2852,6 +2852,32 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     );
     let actual: Value = serde_json::from_slice(&fs::read(&quality_path).unwrap()).unwrap();
     assert_eq!(actual, quality);
+    let prompt_path = dir.join("design-quality-prompt.txt");
+    let cli = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+        .args(["--source-design-quality-review-prompt", "--author-request"])
+        .arg(&review_request_path)
+        .arg("--design")
+        .arg(&review_design_path)
+        .arg("--quality-rubric")
+        .arg(root().join("examples/maintainer-knowledge-gate/source-design-quality-rubric.json"))
+        .arg("--output")
+        .arg(&prompt_path)
+        .output()
+        .unwrap();
+    assert!(
+        cli.status.success(),
+        "{}",
+        String::from_utf8_lossy(&cli.stderr)
+    );
+    assert_eq!(
+        fs::read(&prompt_path).unwrap(),
+        agentlab_code_analysis::maintainer_source_design_quality::prompt(
+            &targeted_bytes,
+            &design_bytes,
+            &quality_rubric
+        )
+        .unwrap()
+    );
     let item = |entry: &Value| {
         json!({"id":entry["id"],"verdict":"pass",
         "rationale":"Fixture binding only, not semantic approval.",

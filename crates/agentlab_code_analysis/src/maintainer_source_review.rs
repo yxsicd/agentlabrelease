@@ -1118,6 +1118,30 @@ fn verify_recorded_exchange(
     prompt_bytes: &[u8],
     mut report: Value,
 ) -> Result<Value, String> {
+    let contract = ReviewCaptureContract {
+        intent_schema: "agentlab.independent_source_suite_review_intent.v1",
+        label: "source-suite-review",
+        request_sha256: report["reviewRequestSha256"].clone(),
+        rubric_sha256: report["qualityRubricSha256"].clone(),
+    };
+    verify_review_capture(evidence, response, prompt_bytes, report.take(), contract)
+}
+
+/// Phase-specific recorded consistency, not provider identity or semantic truth.
+pub(crate) struct ReviewCaptureContract {
+    pub intent_schema: &'static str,
+    pub label: &'static str,
+    pub request_sha256: Value,
+    pub rubric_sha256: Value,
+}
+
+pub(crate) fn verify_review_capture(
+    evidence: &Path,
+    response: &[u8],
+    prompt_bytes: &[u8],
+    mut report: Value,
+    contract: ReviewCaptureContract,
+) -> Result<Value, String> {
     let read = |name: &str| diagnostic::read(&evidence.join(name), 4 * 1024 * 1024);
     let intent_bytes = read("review-intent.json")?;
     let intent = parse(&intent_bytes)?;
@@ -1130,9 +1154,9 @@ fn verify_recorded_exchange(
         )?;
     }
     need(
-        intent["schema"] == "agentlab.independent_source_suite_review_intent.v1"
-            && intent["reviewRequestSha256"] == report["reviewRequestSha256"]
-            && intent["qualityRubricSha256"] == report["qualityRubricSha256"]
+        intent["schema"] == contract.intent_schema
+            && intent["reviewRequestSha256"] == contract.request_sha256
+            && intent["qualityRubricSha256"] == contract.rubric_sha256
             && intent["promptSha256"] == digest(&prompt_bytes)
             && intent["participantBudgetSeconds"]
                 .as_u64()
@@ -1144,7 +1168,7 @@ fn verify_recorded_exchange(
         evidence,
         &prompt_bytes,
         &intent,
-        "source-suite-review",
+        contract.label,
         &[],
     )?;
     let request_count = std::fs::read_dir(evidence.join("gateway"))
@@ -1176,7 +1200,7 @@ fn verify_recorded_exchange(
         "review history contains constructor or prior reviewer context",
     )?;
     let raw = read(&format!("gateway/{id}.response"))?;
-    let final_bytes = read("source-suite-review-final-assistant-message.json")?;
+    let final_bytes = read(&format!("{}-final-assistant-message.json", contract.label))?;
     let final_message = parse(&final_bytes)?;
     let text = recorded_completion_text(&wire, &raw, &final_message)?;
     need(
