@@ -664,10 +664,9 @@ fn git_bound_review_native_template_keeps_source_evidence_and_independent_verdic
             .unwrap()
             .insert(key.clone(), value.clone());
     }
-    let mut response = json!({"schema":"agentlab.independent_source_suite_review_response.v1",
-        "reviewerId":review["reviewerId"],"reviewRequestSha256":digest(&serde_json::to_vec(&packet).unwrap()),
-        "qualityRubricSha256":packet["qualityRubricSha256"],"reviewBindings":packet["reviewBindings"],
-        "automaticPromotion":false,"verdict":"accept","unresolvedFindings":[],"lessonReview":review,
+    let mut response = json!({"schema":"agentlab.independent_source_suite_review_response.v2",
+        "reviewerId":review["reviewerId"],"unresolvedFindings":[],
+        "lessonInterpretation":{"phenomenon":review["phenomenon"],"cause":review["cause"],"change":review["change"],"body":review["body"]},
         "scenarioReviews":review["scenarioReviews"],"checkReviews":review["checkReviews"],"controlReviews":review["controlReviews"],
         "criterionReviews":[{"id":"semantics","verdict":"pass","rationale":"Synthetic fixture membership only.",
             "evidence":[{"pointer":"/originalSourceFiles/0/content","quote":"module.exports"}]}]});
@@ -680,19 +679,129 @@ fn git_bound_review_native_template_keeps_source_evidence_and_independent_verdic
         )
     };
     assert_eq!(validate(&response).unwrap()["lessonContentVerified"], true);
-    for key in ["skillId", "skillStage"] {
-        let mut wrong = response.clone();
-        wrong["lessonReview"][key] =
-            packet["scope"][if key == "skillId" { "id" } else { "stage" }].clone();
-        assert!(validate(&wrong)
+    for key in response.as_object().unwrap().keys() {
+        let mut missing = response.clone();
+        missing.as_object_mut().unwrap().remove(key);
+        assert!(validate(&missing)
             .unwrap_err()
-            .contains(&format!("/lessonReview/{key}")));
+            .contains("field set differs"));
     }
+    let mut old_schema = response.clone();
+    old_schema["schema"] = json!("agentlab.independent_source_suite_review_response.v1");
+    assert!(validate(&old_schema).is_err());
+    for key in ["skillId", "skillStage", "scopeSha256", "automaticPromotion"] {
+        let mut wrong = response.clone();
+        wrong["lessonInterpretation"][key] = json!("forged");
+        assert!(validate(&wrong).is_err());
+    }
+    for key in [
+        "verdict",
+        "automaticPromotion",
+        "reviewBindings",
+        "reviewRequestSha256",
+        "lessonReview",
+    ] {
+        let mut wrong = response.clone();
+        wrong[key] = json!(false);
+        assert!(validate(&wrong).unwrap_err().contains("field set differs"));
+    }
+    for key in ["phenomenon", "cause", "change", "body"] {
+        let mut wrong = response.clone();
+        wrong["lessonInterpretation"][key] = json!("");
+        assert!(validate(&wrong).is_err());
+    }
+    let mut incomplete = response.clone();
+    incomplete["controlReviews"].as_array_mut().unwrap().pop();
+    assert!(validate(&incomplete).is_err());
     let mut unsupported = response.clone();
     unsupported["criterionReviews"][0]["evidence"][0]["quote"] = json!("fabricated quote");
     assert!(validate(&unsupported).is_err());
-    response["verdict"] = json!("unverified");
-    response["lessonReview"] = Value::Null;
+    // Synthetic wire fixture: exercise v2 completion/export/reception, not an Agent.
+    let evidence = base.join("git-review-evidence");
+    fs::create_dir_all(evidence.join("gateway")).unwrap();
+    let prompt = reviewer::prompt_with_git(&observation, &rubric, Some(&checkout)).unwrap();
+    fs::write(evidence.join("source-suite-review-prompt.txt"), &prompt).unwrap();
+    file(
+        &evidence.join("review-intent.json"),
+        &json!({"schema":"agentlab.independent_source_suite_review_intent.v1",
+        "reviewRequestSha256":digest(&serde_json::to_vec(&packet).unwrap()),"qualityRubricSha256":packet["qualityRubricSha256"],
+        "promptSha256":digest(&prompt),"participantBudgetSeconds":420,"transportRetryLimit":0,
+        "participantIdentity":{"model":"fixture","providerRoute":"fixture","providerReasoningEffort":null}}),
+    );
+    file(
+        &evidence.join("gateway/1.upstream-request.json"),
+        &json!({"model":"fixture","providerId":"fixture","stream":false,
+        "messages":[{"role":"user","content":String::from_utf8(prompt).unwrap()}]}),
+    );
+    let response_bytes = serde_json::to_vec(&response).unwrap();
+    let response_text = String::from_utf8(response_bytes.clone()).unwrap();
+    let wire = serde_json::to_vec(&json!({"choices":[{"index":0,"message":{"role":"assistant","content":response_text},"finish_reason":"stop"}]})).unwrap();
+    fs::write(evidence.join("gateway/1.response"), &wire).unwrap();
+    file(
+        &evidence.join("gateway/1.status.json"),
+        &json!({"exchangeId":"1","durationMs":1,"status":200,"upstreamEof":true,
+        "semanticComplete":true,"outcome":"completed","streamError":null,"responseBytes":wire.len()}),
+    );
+    let final_path = evidence.join("source-suite-review-final-assistant-message.json");
+    file(
+        &final_path,
+        &json!({"role":"assistant","stopReason":"stop","content":[{"type":"text","text":response_text}]}),
+    );
+    file(
+        &evidence.join("source-suite-review-lifecycle.json"),
+        &json!({"label":"source-suite-review","captureAuthority":"operator",
+        "exitCode":0,"timedOut":false,"finalAssistantMessagePresent":true,"participantBudgetSeconds":420,
+        "participantBudgetScope":"native-process-watchdog","transportRetryLimit":0,"finalAssistantMessageSha256":digest(&fs::read(final_path).unwrap())}),
+    );
+    let envelope = base.join("git-review-feedback");
+    reviewer::export_accepted_feedback(
+        &observation,
+        &rubric,
+        &evidence,
+        &response_bytes,
+        Some(&checkout),
+        &envelope,
+    )
+    .unwrap();
+    let received = reviewer::verify_feedback_export(
+        &observation,
+        &rubric,
+        &evidence,
+        &response_bytes,
+        Some(&checkout),
+        &envelope,
+    )
+    .unwrap();
+    assert_eq!(received["candidateReadyForObservationImport"], true);
+    assert_eq!(received["authorityWritePerformed"], false);
+    assert_eq!(
+        fs::read(envelope.join("original-response.json")).unwrap(),
+        response_bytes
+    );
+    let derived: Value = serde_json::from_slice(
+        &fs::read(envelope.join("lesson-export/lesson-review.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(derived["skillId"], template["skillId"]);
+    assert_eq!(derived["body"], response["lessonInterpretation"]["body"]);
+    assert_eq!(derived["controlReviews"], response["controlReviews"]);
+    // Valid changed interpretation without corresponding original upstream text rejects.
+    let mut changed = response.clone();
+    changed["lessonInterpretation"]["body"] = json!("Changed independent interpretation.");
+    assert!(reviewer::verify_completion_with_git(
+        &observation,
+        &rubric,
+        &evidence,
+        &serde_json::to_vec(&changed).unwrap(),
+        Some(&checkout)
+    )
+    .is_err());
+    let mut failed = response.clone();
+    failed["criterionReviews"][0]["verdict"] = json!("fail");
+    failed["lessonInterpretation"] = Value::Null;
+    failed["unresolvedFindings"] = json!(["Synthetic negative review."]);
+    assert_eq!(validate(&failed).unwrap()["verdict"], "reject");
+    response["lessonInterpretation"] = Value::Null;
     response["unresolvedFindings"] = json!(["Synthetic reviewer has insufficient support."]);
     response["criterionReviews"][0]["verdict"] = json!("unverified");
     response["criterionReviews"][0]["evidence"] = json!([]);
@@ -702,9 +811,9 @@ fn git_bound_review_native_template_keeps_source_evidence_and_independent_verdic
         .get("lessonReviewTemplate")
         .is_none());
     let prompt = reviewer::prompt_with_git(&observation, &rubric, Some(&checkout)).unwrap();
-    assert!(String::from_utf8(prompt)
-        .unwrap()
-        .contains(&serde_json::to_string_pretty(template).unwrap()));
+    let prompt = String::from_utf8(prompt).unwrap();
+    assert!(prompt.contains("Emit each review array only once"));
+    assert!(!prompt.contains("Copy every template field exactly"));
     fs::remove_dir_all(base).unwrap();
     fs::remove_dir_all(git_root).unwrap();
 }
@@ -944,6 +1053,110 @@ module.run(args,participant_class=FixtureParticipant)
         &envelope.join("lesson-export"),
     )
     .unwrap();
+    let receive = |name: &str| {
+        Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--verify-source-suite-review-feedback")
+            .arg("--source")
+            .arg(&observation)
+            .arg("--quality-rubric")
+            .arg(&rubric_path)
+            .arg("--review-response")
+            .arg(base.join("review-accept/response.json"))
+            .arg("--participant-evidence")
+            .arg(base.join("review-accept/evidence"))
+            .arg("--feedback")
+            .arg(&envelope)
+            .arg("--output")
+            .arg(base.join(name))
+            .output()
+            .unwrap()
+    };
+    let received = receive("reception.json");
+    assert!(
+        received.status.success(),
+        "{}",
+        String::from_utf8_lossy(&received.stderr)
+    );
+    let reception: Value =
+        serde_json::from_slice(&fs::read(base.join("reception.json")).unwrap()).unwrap();
+    assert_eq!(reception["nativeOperationalExportReconstructed"], true);
+    assert_eq!(reception["originalRawSourceBytesVerified"], true);
+    assert_eq!(reception["candidateReadyForObservationImport"], true);
+    assert_eq!(
+        reception["lessonManifestSha256"],
+        digest(&fs::read(envelope.join("lesson-export/export.json")).unwrap())
+    );
+    for key in [
+        "authorityWritePerformed",
+        "committedReadbackVerified",
+        "runtimeIsolationVerified",
+        "qualified",
+        "learningBenefitVerified",
+    ] {
+        assert_eq!(reception[key], false);
+    }
+    let original_reception = fs::read(base.join("reception.json")).unwrap();
+    assert!(!receive("reception.json").status.success());
+    assert_eq!(
+        fs::read(base.join("reception.json")).unwrap(),
+        original_reception
+    );
+    for (path, name) in [
+        ("original-response.json", "changed-response-reception.json"),
+        ("completion.json", "changed-completion-reception.json"),
+        (
+            "lesson-export/lesson-review.json",
+            "changed-lesson-reception.json",
+        ),
+        (
+            "lesson-export/source-stage/controls.cjs",
+            "changed-source-reception.json",
+        ),
+    ] {
+        let path = envelope.join(path);
+        let bytes = fs::read(&path).unwrap();
+        let mut changed = bytes.clone();
+        changed.push(b' ');
+        fs::write(&path, changed).unwrap();
+        assert!(!receive(name).status.success());
+        assert!(!base.join(name).exists());
+        fs::write(&path, bytes).unwrap();
+    }
+    let original_receipt = fs::read(envelope.join("receipt.json")).unwrap();
+    let mut forged_receipt: Value = serde_json::from_slice(&original_receipt).unwrap();
+    forged_receipt["sourceGitBindingVerified"] = json!(true);
+    file(&envelope.join("receipt.json"), &forged_receipt);
+    assert!(!receive("forged-proof-reception.json").status.success());
+    assert!(!base.join("forged-proof-reception.json").exists());
+    fs::write(envelope.join("receipt.json"), &original_receipt).unwrap();
+    // Rehashing a changed table/manifest and producer receipt cannot bypass raw reconstruction.
+    let table = envelope.join("lesson-export/checks.jsonl");
+    let original_table = fs::read(&table).unwrap();
+    let mut rows: Vec<Value> = String::from_utf8(original_table.clone())
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    rows[0]["passed"] = json!(!rows[0]["passed"].as_bool().unwrap());
+    let changed_table = rows
+        .iter()
+        .map(|r| serde_json::to_string(r).unwrap() + "\n")
+        .collect::<String>()
+        .into_bytes();
+    fs::write(&table, &changed_table).unwrap();
+    let manifest_path = envelope.join("lesson-export/export.json");
+    let original_manifest = fs::read(&manifest_path).unwrap();
+    let mut manifest: Value = serde_json::from_slice(&original_manifest).unwrap();
+    manifest["tables"]["checks"]["sha256"] = json!(digest(&changed_table));
+    file(&manifest_path, &manifest);
+    forged_receipt["sourceGitBindingVerified"] = json!(false);
+    forged_receipt["lessonExport"] = manifest;
+    file(&envelope.join("receipt.json"), &forged_receipt);
+    assert!(!receive("rehashed-row-reception.json").status.success());
+    assert!(!base.join("rehashed-row-reception.json").exists());
+    fs::write(&table, original_table).unwrap();
+    fs::write(&manifest_path, original_manifest).unwrap();
+    fs::write(envelope.join("receipt.json"), original_receipt).unwrap();
     assert!(!export("accept", "accepted-feedback").status.success());
     assert_eq!(
         fs::read(envelope.join("original-response.json")).unwrap(),
@@ -965,6 +1178,8 @@ module.run(args,participant_class=FixtureParticipant)
     let mut changed: Value = serde_json::from_slice(&original_status).unwrap();
     changed["semanticComplete"] = json!(false);
     file(&status, &changed);
+    assert!(!receive("changed-wire-reception.json").status.success());
+    assert!(!base.join("changed-wire-reception.json").exists());
     assert!(!export("accept", "changed-wire-feedback").status.success());
     assert!(!base.join("changed-wire-feedback").exists());
     fs::write(&status, original_status).unwrap();
