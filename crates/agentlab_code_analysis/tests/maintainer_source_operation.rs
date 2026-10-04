@@ -2787,6 +2787,48 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
             {"id":"wrong","role":"wrong","expectedFailedCheckIds":["value"],"edits":[{"path":"src/state.json","before":body,"after":"{\"value\":0}"}]}]});
     let design_bytes = serde_json::to_vec(&design).unwrap();
     let checked = author::design(&request_bytes, &design_bytes).unwrap();
+    author::validate_request(&request_bytes).unwrap();
+    let mut targeted = request.clone();
+    targeted["sourceRecipeTarget"] = json!({
+        "scopeSkillId":request["scope"]["id"],
+        "sourcePaths":["src/state.json"],
+        "demand":"Read the actual initial state and distinguish independent wrong output."
+    });
+    let targeted_bytes = serde_json::to_vec(&targeted).unwrap();
+    author::validate_request(&targeted_bytes).unwrap();
+    let targeted_design = author::design(&targeted_bytes, &design_bytes).unwrap();
+    assert_eq!(targeted_design["requestSha256"], digest(&targeted_bytes));
+    let targeted_stage = dir.join("targeted-reproduction-stage");
+    author::stage(&targeted_bytes, &proposal_bytes, &targeted_stage).unwrap();
+    assert_eq!(
+        fs::read(targeted_stage.join("request.json")).unwrap(),
+        targeted_bytes
+    );
+    for index in 0..8 {
+        let mut invalid = targeted.clone();
+        match index {
+            0 => invalid["sourceRecipeTarget"] = Value::Null,
+            1 => invalid["sourceRecipeTarget"]["scopeSkillId"] = json!("other-scope"),
+            2 => invalid["sourceRecipeTarget"]["sourcePaths"] = json!(["other/state.json"]),
+            3 => invalid["sourceRecipeTarget"]["demand"] = json!(""),
+            4 => invalid["sourceRecipeTarget"]["extra"] = json!(true),
+            5 => invalid["sourceFiles"][0]["content"] = json!("changed"),
+            6 => invalid["unexpectedRequestExtension"] = json!(true),
+            _ => invalid["knowledgeCutSha256"] = json!("0".repeat(64)),
+        }
+        let bytes = serde_json::to_vec(&invalid).unwrap();
+        assert!(author::validate_request(&bytes).is_err(), "variant {index}");
+        assert!(
+            author::design(&bytes, &design_bytes).is_err(),
+            "variant {index}"
+        );
+        let rejected = dir.join(format!("invalid-target-reproduction-{index}"));
+        assert!(
+            author::stage(&bytes, &proposal_bytes, &rejected).is_err(),
+            "variant {index}"
+        );
+        assert!(!rejected.exists());
+    }
     let interface = author::verifier_interface(&request_bytes, &design_bytes).unwrap();
     assert_eq!(interface["requestSha256"], digest(&request_bytes));
     assert_eq!(interface["designSha256"], digest(&design_bytes));
