@@ -25,6 +25,13 @@ return-verification.json; --readback names the original capture, with optional
 --method-source for exact historical bytes. The committed gate additionally takes
 --committed-knowledge. Ordinary lesson admission arguments remain required.
 
+Integration inspection found that the existing writer did not retain source-set.txt
+and preserved exact assessed bytes only for scopes/facts. Reviewed-lesson portable
+validation now requires and retains the source inventory before mutation; strict
+portable exports preserve all five exact staged table byte streams after row
+equality checks. This prevents a successful transaction followed by an unusable
+consumer cut merely because the exporter omitted a sidecar or reserialized rows.
+
 Any failure after commit retains intent, receipt and captures; recovery must be
 read-only at the confirmed revision. This implementation does not yet provide a
 standalone recovery command, guidance selection, consumer publication or next-round

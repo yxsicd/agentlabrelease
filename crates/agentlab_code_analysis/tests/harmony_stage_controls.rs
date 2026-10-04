@@ -754,7 +754,7 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
             &staged
         )
         .is_err());
-        let validator = "import importlib.util,pathlib,sys; s=importlib.util.spec_from_file_location('tablegit',sys.argv[1]); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); f=m.operation_evidence_files(pathlib.Path(sys.argv[2])); assert 'operation-baseline.json' in f";
+        let validator = "import importlib.util,pathlib,sys; s=importlib.util.spec_from_file_location('tablegit',sys.argv[1]); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); f=m.operation_evidence_files(pathlib.Path(sys.argv[2])); assert 'operation-baseline.json' in f and f['source-set.txt']==b'retained fixture inventory\\n'";
         let validate = || {
             Command::new("python3")
                 .arg("-c")
