@@ -1,5 +1,42 @@
 # Source-recipe knowledge consumption and equal-task treatments
 
+## Real v2 review and bounded original-artifact reception acquisition
+
+PR255 merged as 909e8a221863b57a88df7252902b1a0ccb28341e after all eleven
+applicable checks passed. Fresh review 37170276398 used the unchanged exact
+source/rubric/model/budget inputs and terminated failure. Artifact 11290996780
+is 4115896 bytes with original ZIP SHA256
+e56a3ef7ed48e41a27221f73e77a0e23dc4da40772aebc73272e90fb69b87661.
+The original v2 response has all eight fields, but native content rejection and
+complete citation diagnostics locate four invalid criterion citations: two quotes
+not in their original string target and two array targets. Later semantic gates
+were not reached. Response SHA256 is
+debf167add55516eb60eaf259408925f0e876e6db247edca87d708112891e69c.
+Participant duration was 100556 ms, exit zero, no timeout or transport retries;
+independent runtime isolation passed. No operator correction, attempt reopening,
+lesson export, knowledge write or accepted automatic loop occurred. A future
+bounded Agent-owned feedback repair needs a fresh predeclared experiment policy.
+
+`scripts/acquire-source-suite-review-input.py --artifact-kind review-feedback`
+checks exact completed main reviewer workflow identity and artifact/run/method
+relationship, compares declared and GitHub ZIP digests, retains original bytes and
+selects reception inputs without executing them. Source mode remains the default.
+Reviewer mode bounds compressed bytes at 64MiB, full declared expansion at 1GiB,
+selected inputs at 64MiB, each selected file at the native 4MiB read limit and
+entries at 20000. It validates every member path, uniqueness/type/encryption before
+creating extraction output, including excluded members. Native source/feedback,
+wire/final/lifecycle, enrollment/rubric and runtime receipts are selected; the exact
+large Pi events file and surrounding Agent home remain only in the original ZIP.
+Required reception files and some original gateway capture are mandatory; complete
+wire inventory, contents, acceptance and runtime isolation remain native gates,
+not extraction claims. Failed original reviews can be acquired for diagnosis.
+
+Rust-driven transport regressions cover missing wire/intent, oversized selected
+files, unsafe excluded members, original-byte preservation and event/home exclusion.
+The real prior failed ZIP was extracted without unpacking its 598015591-byte event
+stream; its complete bytes remain retained. Acquisition/replay is not fresh Agent
+execution or commitment. Maturity remains 74%; accepted full automatic loops zero.
+
 ## Semantic reviewer output separated from deterministic lesson assembly
 
 Fresh real review 37169061437 at method d9b42439094a96c5156d41eb2097bf4b90eb927c

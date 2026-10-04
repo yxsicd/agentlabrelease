@@ -571,6 +571,34 @@ with zipfile.ZipFile(archive,'w') as z:
     z.writestr('observation-export/source-stage/request.json','original bytes')
     z.writestr('agent/participant-state/session.json','not reviewer instructions')
 module.extract_observations(archive,base/'selected')
+required=['enrollment.json','rubric.json','agent/response.json',
+    'agent/evidence/review-intent.json','agent/evidence/source-suite-review-prompt.txt',
+    'agent/evidence/source-suite-review-lifecycle.json','agent/evidence/source-suite-review-final-assistant-message.json',
+    'source/observations/export.json','source/observations/source-suite-inputs.json',
+    'agent/evidence/gateway/0001.response','feedback/receipt.json']
+archive=base/'review.zip'
+with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as z:
+    for name in required:z.writestr(name,'original '+name)
+    z.writestr('agent/evidence/source-suite-review-events.jsonl',b'x'*(5*1024*1024))
+    z.writestr('agent/participant-state/session.json','excluded full home')
+module.extract_observations(archive,base/'received',True)
+assert (base/'received/agent/evidence/gateway/0001.response').read_text()=='original agent/evidence/gateway/0001.response'
+assert (base/'received/feedback/receipt.json').read_text()=='original feedback/receipt.json'
+assert not (base/'received/agent/evidence/source-suite-review-events.jsonl').exists()
+assert not (base/'received/agent/participant-state').exists()
+for name in ['missing-wire','missing-intent','oversized-selected','unselected-traversal']:
+    archive=base/(name+'.zip')
+    with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as z:
+        for member in required:
+            if name=='missing-wire' and member.startswith('agent/evidence/gateway/'):continue
+            if name=='missing-intent' and member=='agent/evidence/review-intent.json':continue
+            z.writestr(member,'original '+member)
+        if name=='oversized-selected':z.writestr('feedback/too-large.json',b'x'*(4*1024*1024+1))
+        if name=='unselected-traversal':z.writestr('agent/participant-state/../../escape','invalid')
+    try:module.extract_observations(archive,base/('received-'+name),True)
+    except ValueError:pass
+    else:raise AssertionError(name+' accepted')
+    assert not (base/('received-'+name)).exists()
 for name in ['traversal','absolute','backslash','duplicate','symlink','missing']:
     archive=base/(name+'.zip')
     with warnings.catch_warnings():

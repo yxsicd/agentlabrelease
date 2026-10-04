@@ -245,6 +245,24 @@ before explicit promotion and knowledge admission. Candidate export is neither
 remote commitment, demonstrated benefit nor a next-round scheduling receipt.
 The Action does not perform lesson admission or schedule a next round.
 
+Acquire an exact completed reviewer artifact with the existing thin transport's
+`--artifact-kind review-feedback`, naming repository/run/artifact/method revision
+and enrolled ZIP digest. It checks the Action/artifact relationship and GitHub
+digest, retains the full original ZIP and extracts bounded reception inputs into
+review-inputs. Every archive member is checked for unsafe paths/duplicates/types,
+including excluded files. The full Pi events and Agent home remain in the ZIP,
+not the extracted input set; native wire/final/lifecycle gates consume their own
+original files. Acquisition permits failed feedback and never claims accept,
+runtime isolation, native reception or knowledge admission. Require native
+reception independently before importing any feedback export.
+
+A real v2 reviewer completed with all fixed fields correct but four invalid
+criterion citations. Keep this distinct from protocol assembly success or
+semantic acceptance. Native complete citation diagnostics are suitable feedback
+for a future predeclared bounded Agent-owned repair, not operator quote editing
+or reopening the original one-attempt enrollment. A shorter completed review
+does not prove learning benefit or a universal latency improvement.
+
 Before importing a captured automatic-review handoff, use native
 `--verify-source-suite-review-feedback` with the same source/rubric/original
 response/evidence/Git checkout and --feedback envelope. It independently replays
