@@ -1,8 +1,8 @@
 use agentlab_code_analysis::{
     digest,
     maintainer_construction_context::{
-        bind_candidate_paths, prepare, prepare_edit_boundary, validate_context,
-        validate_edit_boundary,
+        bind_candidate_paths, prepare, prepare_edit_boundary, prepare_object_plan,
+        validate_context, validate_edit_boundary, validate_object_plan,
     },
 };
 use serde_json::{json, Value};
@@ -21,6 +21,55 @@ struct Fixture {
     revision: String,
 }
 static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(0);
+
+#[test]
+fn object_plan_binds_tree_without_content_and_rejects_forged_authority() {
+    let f = Fixture::new();
+    let paths = vec!["build.cfg".to_owned()];
+    let plan = prepare_object_plan(&f.knowledge, &f.source, "arbitrary", &paths).unwrap();
+    let bytes = serde_json::to_vec(&plan).unwrap();
+    let validate = |bytes: &[u8]| validate_object_plan(&f.knowledge, &f.source, bytes);
+    assert_eq!(validate(&bytes).unwrap()["contentVerified"], false);
+    assert!(validate_context(&f.knowledge, &f.source, &bytes).is_err());
+    for field in ["gitBlobOid", "ownerScopeSkillId", "access"] {
+        let mut forged = plan.clone();
+        forged["selectedFiles"][0][field] = json!("forged");
+        assert!(
+            validate(&serde_json::to_vec(&forged).unwrap()).is_err(),
+            "{field}"
+        );
+    }
+    let mut forged = plan.clone();
+    forged["contentVerified"] = json!(true);
+    assert!(validate(&serde_json::to_vec(&forged).unwrap()).is_err());
+    assert!(prepare_object_plan(
+        &f.knowledge,
+        &f.source,
+        "arbitrary",
+        &["pkg/link.rs".into()]
+    )
+    .is_err());
+    // Simulate unavailable content without deleting evidence. Tree identity stays
+    // available, while the ordinary consumer must still refuse missing bytes.
+    let oid = plan["selectedFiles"][0]["gitBlobOid"].as_str().unwrap();
+    let object = f
+        .source
+        .join(".git/objects")
+        .join(&oid[..2])
+        .join(&oid[2..]);
+    let retained = f.root.join("retained-blob");
+    fs::rename(&object, &retained).unwrap();
+    assert!(prepare(&f.knowledge, &f.source, "arbitrary", &paths).is_err());
+    assert_eq!(
+        prepare_object_plan(&f.knowledge, &f.source, "arbitrary", &paths).unwrap(),
+        plan
+    );
+    assert!(validate(&bytes).is_ok());
+    fs::rename(retained, object).unwrap();
+    assert!(prepare(&f.knowledge, &f.source, "arbitrary", &paths).is_ok());
+    f.scopes(|scopes| scopes[0]["sourceRevision"] = json!("a".repeat(40)));
+    assert!(validate(&bytes).is_err());
+}
 fn edit_selection() -> Value {
     json!({"schema":"agentlab.case_edit_selection.v1","edits":[
         {"path":"pkg/main.rs","anchorPath":"pkg/main.rs","mode":"modify","ownerScopeSkillId":"implementation","reason":"implement the behavior contract"},

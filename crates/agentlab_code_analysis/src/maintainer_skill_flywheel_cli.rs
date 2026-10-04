@@ -342,13 +342,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", report);
         return Ok(());
     }
-    if args.iter().any(|a| a == "--prepare-construction-context") {
+    if args
+        .iter()
+        .any(|a| a == "--validate-construction-context-object-plan")
+    {
+        let report = agentlab_code_analysis::maintainer_construction_context::validate_object_plan(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &fs::read(value(&args, "--object-plan")?)?,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!("{}", report);
+        return Ok(());
+    }
+    if args.iter().any(|a| {
+        a == "--prepare-construction-context" || a == "--prepare-construction-context-object-plan"
+    }) {
         let paths = args
             .windows(2)
             .filter(|w| w[0] == "--context-path")
             .map(|w| w[1].clone())
             .collect::<Vec<_>>();
-        let report = agentlab_code_analysis::maintainer_construction_context::prepare(
+        let object_plan = args
+            .iter()
+            .any(|a| a == "--prepare-construction-context-object-plan");
+        let producer = if object_plan {
+            agentlab_code_analysis::maintainer_construction_context::prepare_object_plan
+        } else {
+            agentlab_code_analysis::maintainer_construction_context::prepare
+        };
+        let report = producer(
             &PathBuf::from(value(&args, "--knowledge")?),
             &PathBuf::from(value(&args, "--source-worktree")?),
             &value(&args, "--repository")?,
@@ -363,7 +390,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "{}",
             serde_json::json!({"schema":report["schema"],
             "selectedFileCount":report["selectedFiles"].as_array().unwrap().len(),
-            "analysisFactCount":report["ownerKnowledge"].as_array().unwrap().iter()
+            "analysisFactCount":report["ownerKnowledge"].as_array().into_iter().flatten()
                 .map(|owner| owner["analysisFacts"].as_array().unwrap().len()).sum::<usize>(),
             "ownerScopeSkillIds":report["ownerScopeSkillIds"],"qualified":false})
         );
