@@ -69,6 +69,12 @@ def require_pi_retry_policy(state, workspace, expected):
         raise ValueError('Constructor native retry policy drift or project override')
 
 
+def frozen_repair_contract(packet):
+    """Project native-admitted parent constraints; never infer relaxed scope."""
+    parent = json.loads(packet['parentProposalOriginal'])
+    return {key: parent[key] for key in ('schema', 'scopeSkillId', 'sourcePaths', 'contract')}
+
+
 def observation_contract_guide(design):
     """Present native-validated check shapes, never manufacture observations."""
     def shape(value):
@@ -445,6 +451,7 @@ def main():
             stream.write(raw)
         admission = json.loads((args.output/'diagnostic-repair-admission.json').read_bytes())
         diagnostic_context = dict(parentProposal=json.loads(packet['parentProposalOriginal']),
+            immutableProposalFields=frozen_repair_contract(packet),
             feedback=admission['feedback'], stderrData=packet['stderrOriginal'][:16384],
             stderrTruncatedForPrompt=len(packet['stderrOriginal']) > 16384,
             stderrSha256=admission['feedback']['stderrSha256'], repairIndex=packet['repairIndex'],
@@ -845,6 +852,8 @@ exports and require are reserved. The helper is not a sandbox or oracle approval
                 + '\nRepair the previous verifier against the exact supplied runtime API. '
                 'Keep the original sourcePaths and complete contract unchanged, including every '
                 'check and control declaration. The design is byte-frozen; do not regenerate it. '
+                'Copy immutableProposalFields exactly, including sourcePaths order and dependency '
+                'paths; changing an import strategy does not authorize shrinking the frozen array. '
                 'Execute actual selected source; never copy expected values into observations or '
                 'replace product bodies with guessed behavior. Infrastructure failure is not a '
                 'behavior verdict. Return one full successor proposal, not a patch. '

@@ -3577,16 +3577,16 @@ fn repair_reconstructs_failure_and_freezes_complete_design_contract_and_source_p
         } else {
             design.clone()
         };
-        assert!(
-            check_output(
-                &request,
-                &bytes,
-                &serde_json::to_vec(&bad).unwrap(),
-                &changed_design
-            )
-            .is_err(),
-            "{change}"
-        );
+        let error = check_output(
+            &request,
+            &bytes,
+            &serde_json::to_vec(&bad).unwrap(),
+            &changed_design,
+        )
+        .unwrap_err();
+        if change == "source" {
+            assert!(error.contains("/sourcePaths"), "{error}");
+        }
     }
     assert_eq!(
         original["verifierSource"],
