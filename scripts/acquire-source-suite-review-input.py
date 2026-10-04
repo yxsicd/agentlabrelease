@@ -36,7 +36,7 @@ def extract_observations(archive, output, feedback=False):
             require(not stat.S_ISLNK(mode) and (stat.S_IFMT(mode) in (0, stat.S_IFREG, stat.S_IFDIR))
                     and not (entry.flag_bits & 1), 'Nonregular or encrypted artifact member')
             if feedback and not entry.is_dir():
-                exact = {'enrollment.json', 'rubric.json', 'runtime-validation.json', 'runtime-repair-validation.json',
+                exact = {'enrollment.json', 'rubric.json', 'runtime-validation.json', 'runtime-repair-validation.json', 'native-reception.json',
                          'agent/response.json', 'agent/validation.json', 'agent/transport-receipt.json', 'agent/attempt-coordinator.json'}
                 prefix = ('source/observations/', 'feedback/', 'agent/evidence/',
                           'agent/repair-attempt/evidence/', 'runtime-inputs/', 'runtime-receipts/')
@@ -76,6 +76,18 @@ def extract_observations(archive, output, feedback=False):
                 stream.write(bundle.read(entry))
 
 
+def validate_run_identity(run, args, feedback):
+    constructor = (run['name'] == 'Maintainer source recipe construction'
+                   and run['path'] == '.github/workflows/maintainer-source-recipe-author.yml')
+    reviewer = (run['name'] == 'Maintainer independent source suite review'
+                and run['path'] == '.github/workflows/maintainer-source-suite-review.yml')
+    require(str(run['id']) == args.run and run['status'] == 'completed'
+            and run['event'] == 'workflow_dispatch' and run['head_branch'] == 'main'
+            and run['head_sha'] == args.source_revision
+            and (constructor or (feedback and reviewer)), 'Source Action identity differs or still running')
+    return feedback and constructor
+
+
 def acquire(args):
     feedback = getattr(args, 'artifact_kind', 'source') == 'review-feedback'
     require(re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', args.repository), 'Invalid repository')
@@ -96,12 +108,7 @@ def acquire(args):
             return json.loads(raw)
         run = metadata(f'repos/{args.repository}/actions/runs/{args.run}', 'source-run.json')
         artifact = metadata(f'repos/{args.repository}/actions/artifacts/{args.artifact}', 'source-artifact.json')
-        require(str(run['id']) == args.run and run['status'] == 'completed'
-                and run['event'] == 'workflow_dispatch'
-                and run['name'] == ('Maintainer independent source suite review' if feedback else 'Maintainer source recipe construction')
-                and run['path'] == ('.github/workflows/maintainer-source-suite-review.yml' if feedback else '.github/workflows/maintainer-source-recipe-author.yml')
-                and run['head_branch'] == 'main'
-                and run['head_sha'] == args.source_revision, 'Source Action identity differs or still running')
+        automatic_review = validate_run_identity(run, args, feedback)
         require(str(artifact['id']) == args.artifact and not artifact['expired']
                 and str(artifact['workflow_run']['id']) == args.run
                 and artifact['workflow_run']['head_sha'] == args.source_revision
@@ -118,7 +125,17 @@ def acquire(args):
         digest = hashlib.sha256(archive.read_bytes()).hexdigest()
         require(digest == args.artifact_sha256, 'Original ZIP digest differs')
         extract_observations(archive, args.output / ('review-inputs' if feedback else 'observations'), feedback)
+        if automatic_review:
+            enrollment = json.loads((args.output / 'review-inputs/enrollment.json').read_bytes())
+            require(enrollment.get('schema') == 'agentlab.independent_source_suite_review_enrollment.v1'
+                    and enrollment.get('mode') == 'same-run-constructor-review'
+                    and str(enrollment.get('sourceRun')) == args.run
+                    and enrollment.get('methodRevision') == args.source_revision
+                    and enrollment.get('sourceMethodRevision') == args.source_revision
+                    and enrollment.get('sourceArtifact') is None and enrollment.get('artifactSha256') is None,
+                    'Automatic review enrollment differs from same-run source identity')
         terminal.update(completed=True, artifactSha256=digest, originalBytes=True,
+                        producerWorkflow=run['path'], sameRunAutomaticReview=automatic_review,
                         sourceProducerAuthenticated=False, reviewAccepted=False,
                         nativeReceptionVerified=False, authorityWritePerformed=False)
         return terminal

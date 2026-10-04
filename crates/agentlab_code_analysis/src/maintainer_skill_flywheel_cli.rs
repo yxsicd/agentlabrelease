@@ -817,6 +817,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args
+        .iter()
+        .any(|arg| arg == "--validate-source-quality-rubric")
+    {
+        let bytes = fs::read(value(&args, "--quality-rubric")?)?;
+        let rubric = agentlab_code_analysis::maintainer_source_review::validate_rubric(&bytes)?;
+        let report = serde_json::json!({
+            "schema":"agentlab.source_quality_rubric_validation.v1",
+            "qualityRubricSha256":agentlab_code_analysis::digest(&bytes),
+            "criterionCount":rubric["criteria"].as_array().unwrap().len(),
+            "structureValidated":true,"semanticQualityVerified":false,
+            "reviewerExecuted":false,"authorityWritePerformed":false,"qualified":false
+        });
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!("{}", report);
+        return Ok(());
+    }
     if args.iter().any(|arg| {
         arg == "--export-source-suite-review-feedback"
             || arg == "--verify-source-suite-review-feedback"

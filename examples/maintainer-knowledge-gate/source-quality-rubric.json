@@ -1,0 +1,21 @@
+{
+  "schema": "agentlab.prospective_source_quality_review.v1",
+  "purpose": "Independent common assessment for source-constructor outputs; review policy, not an implemented automatic semantic scorer",
+  "repositoryAgnostic": true,
+  "frozenBeforeDispatch": true,
+  "verdicts": ["pass", "fail", "unverified"],
+  "aggregation": "Report each criterion separately; missing evidence is unverified and cannot qualify quality or benefit. Generated check counts are not comparative scores.",
+  "criteria": [
+    {"id": "source-semantics", "requirement": "Trace every declared scenario expectation and mutation failure to the exact loaded original body, including branches, ordered actions and early-exception effects. Separate implementation characterization from intended correctness.", "evidence": "Independent byte-bound original-source review covering all scenarios/checks/controls; unresolved findings reject."},
+    {"id": "actual-initial-state", "requirement": "Observe actual constructed source state and enforce matching before actions; do not assign expected defaults or ignore mismatch.", "evidence": "Original verifier execution path and complete baseline observations; constructor/dependency limitations disclosed."},
+    {"id": "frozen-input-consumption", "requirement": "Trace each declared initial state, ordered input and dependency outcome to actual verifier execution; a duplicate hardcoded action inventory does not establish consumption.", "evidence": "Original design and verifier source inspection, retained runtime interface and execution capture."},
+    {"id": "independent-controls", "requirement": "Valid baseline and behavior-preserving references pass; meaningful wrong variants fail their declared checks with exact observed failure sets. Distinct text alone is insufficient.", "evidence": "Complete unchanged original control-suite captures and independent native reconstruction including fresh reference recovery."},
+    {"id": "evidence-and-identity", "requirement": "Bind exact source, method, knowledge cut, request, design, proposal, compiler/runtime and raw terminal/lifecycle bytes. Incomplete transport is not a semantic verdict.", "evidence": "Existing native original-byte gates and explicit independent Git-source checks; no producer-success substitution."},
+    {"id": "scope-honesty", "requirement": "Disclose controlled imports, decorators, parent stubs and unexecuted framework/storage/runtime behavior. Host-seam success must not qualify Harmony, ohosTest or a formal case.", "evidence": "Independent review of source dependencies and scope claims; separate qualification fields."}
+  ],
+  "costMetrics": ["completedNativeAttempts", "contentRepairs", "designCorrections", "verifierRepairs", "observedParticipantWallMs", "observedWorkflowWallMs", "capturedUpstreamRequestBytes"],
+  "comparisonPolicy": "A benefit comparison requires prospectively matched task/source/method/model/route/reasoning, output and time budgets, retries and repair allowances, complete treatment captures and repeated outcomes. A single guided successor is consumption evidence only.",
+  "automaticSemanticReviewImplemented": false,
+  "learningBenefitVerified": false,
+  "formalCaseQualified": false
+}

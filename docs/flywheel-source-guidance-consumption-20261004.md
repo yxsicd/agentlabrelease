@@ -1,5 +1,43 @@
 # Source-recipe knowledge consumption and equal-task treatments
 
+## Optional automatic construction-to-review handoff
+
+Fresh constructor dispatches can explicitly enable independent_review=true and
+provide a checked-in review_rubric plus its exact review_rubric_sha256. The common
+repository-independent example is
+`examples/maintainer-knowledge-gate/source-quality-rubric.json`, SHA256
+d3276328cc1e23fc4216d0539eb7a003dc2e43d59de0d384b6476cbab4862731.
+review_repair_limit is 0 or 1. Disabled remains the default; review inputs while
+disabled, wrong rubric bytes, non-design construction and workflow reruns reject
+before construction model budget. No existing experiment is retroactively enabled.
+
+The policy is saved before the constructor's first model call. Native rubric
+preflight reuses the review parser to reject malformed/duplicate/empty criteria
+before model budget, without claiming semantic completeness. The same-run
+handoff copies the unchanged native observation export, verifies all source Git
+Blobs, starts the existing independent reviewer with fresh workspace/state and
+no constructor/source/evaluator mounts, validates each isolation capture, exports
+only native-accepted feedback and immediately reruns native feedback reception.
+Reject/unverified remain complete feedback without a lesson; malformed/incomplete
+captures stop. Existing construction/design/code allowances stay unchanged.
+Reviewer model/route/reasoning/thinking/output ceiling inherit the dispatch, while
+review wire protocol is explicitly openai-completions with json_object, gateway
+deadline 240 seconds, native watchdog 420 seconds each and zero retries. At most
+two review attempts consume 840 process-budget seconds. Enabled outer workflow
+ceiling is 45 minutes, distinct from inner watchdogs; disabled stays 20/25 minutes.
+
+The source artifact excludes only the separately uploaded automatic-review tree,
+whose complete original captures have their own independent-source-suite-review
+artifact. No original bytes are discarded. Reviewer acquisition recognizes only
+the trusted main constructor workflow paired with same-run-constructor-review
+enrollment and exact source/method run identity; native gates still revalidate
+the underlying source/rubric/response/captures. SourceArtifact/ZIP digest are null
+in this pre-model enrollment because source comes from this ongoing run, not an
+already terminal external artifact. Actual publication digest is acquired later.
+This integration neither writes TableGit nor admits knowledge or schedules a
+successor. Synthetic workflow/transport tests do not establish real automatic
+review success, full five-stage loops or learning benefit. Maturity stays 75%.
+
 ## Exclusive review repair coordination in the Action
 
 PR257 merged as f8cd1c6e57740429d957325e0506958f102cda23 after all eleven

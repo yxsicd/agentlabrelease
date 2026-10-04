@@ -23,6 +23,100 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn automatic_review_freezes_inputs_before_budget_and_keeps_native_gate_order() {
+    let code = r#"
+import hashlib,json,os,subprocess,tempfile,textwrap
+from pathlib import Path
+from unittest.mock import patch
+workflow=Path(os.environ['WORKFLOW']).read_text()
+def step(name):
+    return workflow.split('      - name: '+name+'\n')[1].split('      - ')[0].split('        run: |\n')[1]
+freeze=step('Freeze optional independent review before construction budget')
+freeze=textwrap.dedent(freeze.split("python3 - <<'PY'\n")[1].split('          PY')[0])
+export=textwrap.dedent(step('Automatically export and independently receive accepted feedback'))
+with tempfile.TemporaryDirectory() as directory:
+    base=Path(directory)
+    policy={'schema':'agentlab.prospective_source_quality_review.v1','repositoryAgnostic':True,'frozenBeforeDispatch':True}
+    for mode in ['enabled','disabled','wrong-digest','escape','unfrozen','repository-specific','no-design','disabled-inputs','invalid-repair','rerun']:
+        root=base/mode;root.mkdir();(root/'recipe-author').mkdir();rubric=root/'rubric.json'
+        value=dict(policy)
+        if mode=='unfrozen':value['frozenBeforeDispatch']=False
+        if mode=='repository-specific':value['repositoryAgnostic']=False
+        raw=json.dumps(value).encode();rubric.write_bytes(raw)
+        env={'RUNNER_TEMP':str(root),'GITHUB_SHA':'a'*40,'GITHUB_RUN_ID':'123',
+             'GITHUB_RUN_ATTEMPT':'2' if mode=='rerun' else '1',
+             'AUTOMATIC_REVIEW_ENABLED':'false' if mode.startswith('disabled') else 'true',
+             'AUTOMATIC_REVIEW_RUBRIC':'' if mode=='disabled' else '../rubric.json' if mode=='escape' else 'rubric.json',
+             'AUTOMATIC_REVIEW_RUBRIC_SHA256':'' if mode=='disabled' else 'b'*64 if mode=='wrong-digest' else hashlib.sha256(raw).hexdigest(),
+             'AUTOMATIC_REVIEW_REPAIR_LIMIT':'0' if mode=='disabled' else '2' if mode=='invalid-repair' else '1',
+             'CONSTRUCTION_DESIGN_FIRST':'false' if mode=='no-design' else 'true',
+             'AGENTLAB_MODEL':'fixture-model','AGENTLAB_PROVIDER_ROUTE':'fixture-route',
+             'CONSTRUCTION_REASONING_EFFORT':'default','CONSTRUCTION_THINKING_TYPE':'disabled',
+             'CONSTRUCTION_MAX_OUTPUT_TOKENS':'16384'}
+        before=Path.cwd();os.chdir(root)
+        try:
+            with patch.dict(os.environ,env):
+                try:exec(compile(freeze,'actual-review-freeze-step','exec'),{})
+                except SystemExit as error:assert mode=='disabled' and error.code==0
+                except (AssertionError,ValueError,KeyError):assert mode not in ('enabled','disabled')
+                else:assert mode=='enabled'
+        finally:os.chdir(before)
+        capture=root/'recipe-author/automatic-review'
+        if mode=='enabled':
+            assert (capture/'rubric.json').read_bytes()==raw
+            enrollment=json.loads((capture/'enrollment.json').read_bytes())
+            assert enrollment['mode']=='same-run-constructor-review' and enrollment['sourceRun']=='123'
+            assert enrollment['methodRevision']=='a'*40 and enrollment['sourceArtifact'] is None
+            assert enrollment['maximumReviewerAttempts']==2 and enrollment['totalParticipantBudgetSeconds']==840
+            assert enrollment['transportRetryLimit']==0 and enrollment['authorityWritePerformed'] is False
+            assert enrollment['responseFormat']=='json_object' and enrollment['api']=='openai-completions'
+            try:
+                with patch.dict(os.environ,env):
+                    os.chdir(root);exec(compile(freeze,'repeated-freeze','exec'),{})
+            except FileExistsError:pass
+            else:raise AssertionError('Existing enrollment overwritten')
+            finally:os.chdir(before)
+        else:assert not capture.exists()
+    for mode in ['accept','repair-accept','reject','unverified','incomplete','export-fails','unknown-selection']:
+        root=base/('export-'+mode);root.mkdir();capture=root/'recipe-author/automatic-review'
+        agent=capture/'agent';agent.mkdir(parents=True)
+        selection='repair-attempt' if mode=='repair-accept' else '../escape' if mode=='unknown-selection' else '.'
+        (agent/'attempt-coordinator.json').write_text(json.dumps({'completed':mode!='incomplete','selectedAttempt':selection}))
+        selected=agent/'repair-attempt' if mode=='repair-accept' else agent;selected.mkdir(exist_ok=True)
+        (selected/'validation.json').write_text(json.dumps({'verdict':mode if mode in ('reject','unverified') else 'accept'}))
+        gate=root/'target/release/agentlab-maintainer-skill-flywheel';gate.parent.mkdir(parents=True)
+        gate.write_text('#!/usr/bin/env python3\nimport json,os,sys\nwith open(os.environ["CALL_LOG"],"a") as f:f.write(json.dumps(sys.argv[1:])+"\\n")\nif os.environ.get("FAIL_EXPORT")=="true":sys.exit(1)\n')
+        gate.chmod(0o755);log=root/'calls.jsonl'
+        result=subprocess.run(['bash','-e','-c',export],cwd=root,
+            env=dict(os.environ,RUNNER_TEMP=str(root),CALL_LOG=str(log),FAIL_EXPORT='true' if mode=='export-fails' else 'false'),capture_output=True)
+        calls=[json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
+        if mode in ('accept','repair-accept'):
+            assert result.returncode==0 and len(calls)==2
+            assert calls[0][0]=='--export-source-suite-review-feedback' and calls[1][0]=='--verify-source-suite-review-feedback'
+            for call in calls:
+                assert call[call.index('--participant-evidence')+1]==str(selected/'evidence')
+                assert call[call.index('--review-response')+1]==str(selected/'response.json')
+                assert call[call.index('--source-git-checkout')+1]==str(root/'recipe-source')
+        elif mode in ('reject','unverified'):assert result.returncode==0 and not calls
+        elif mode=='export-fails':assert result.returncode!=0 and len(calls)==1
+        else:assert result.returncode!=0 and not calls
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "WORKFLOW",
+            root().join(".github/workflows/maintainer-source-recipe-author.yml"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn source_action_accepts_explicit_checked_in_cuts_and_rejects_path_escape() {
     let workflow =
         fs::read_to_string(root().join(".github/workflows/maintainer-source-recipe-author.yml"))

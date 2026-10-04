@@ -10,6 +10,65 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 static NEXT: AtomicU64 = AtomicU64::new(0);
+#[test]
+fn frozen_rubric_native_preflight_checks_criteria_without_source_or_model() {
+    use agentlab_code_analysis::maintainer_source_review::validate_rubric;
+    let path = root().join("examples/maintainer-knowledge-gate/source-quality-rubric.json");
+    let bytes = fs::read(&path).unwrap();
+    let rubric = validate_rubric(&bytes).unwrap();
+    assert_eq!(rubric["criteria"].as_array().unwrap().len(), 6);
+    let mut negatives = Vec::new();
+    let mut changed = rubric.clone();
+    changed["criteria"] = json!([]);
+    negatives.push(changed);
+    let mut changed = rubric.clone();
+    changed["criteria"][1] = changed["criteria"][0].clone();
+    negatives.push(changed);
+    for key in ["id", "requirement", "evidence"] {
+        for bad in [json!(" "), json!(null), json!("x".repeat(8193))] {
+            let mut changed = rubric.clone();
+            changed["criteria"][0][key] = bad;
+            negatives.push(changed);
+        }
+    }
+    let mut changed = rubric.clone();
+    changed["criteria"][0]["extra"] = json!(true);
+    negatives.push(changed);
+    for key in ["repositoryAgnostic", "frozenBeforeDispatch"] {
+        let mut changed = rubric.clone();
+        changed[key] = json!(false);
+        negatives.push(changed);
+    }
+    for bad in negatives {
+        assert!(validate_rubric(&serde_json::to_vec(&bad).unwrap()).is_err());
+    }
+    assert!(validate_rubric(&vec![b' '; 128 * 1024 + 1]).is_err());
+    let output = std::env::temp_dir().join(format!(
+        "agentlab-rubric-preflight-{}-{}.json",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::SeqCst)
+    ));
+    let run = || {
+        Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--validate-source-quality-rubric")
+            .arg("--quality-rubric")
+            .arg(&path)
+            .arg("--output")
+            .arg(&output)
+            .output()
+            .unwrap()
+    };
+    assert!(run().status.success());
+    let original = fs::read(&output).unwrap();
+    let receipt: Value = serde_json::from_slice(&original).unwrap();
+    assert_eq!(receipt["qualityRubricSha256"], digest(&bytes));
+    assert_eq!(receipt["criterionCount"], 6);
+    assert_eq!(receipt["semanticQualityVerified"], false);
+    assert_eq!(receipt["qualified"], false);
+    assert!(!run().status.success());
+    assert_eq!(fs::read(&output).unwrap(), original);
+    fs::remove_file(output).unwrap();
+}
 fn file(path: &Path, value: &Value) {
     fs::write(path, serde_json::to_vec(value).unwrap()).unwrap();
 }
@@ -566,6 +625,20 @@ from pathlib import Path
 repo,base=sys.argv[1:];base=Path(base)
 spec=importlib.util.spec_from_file_location('acquisition',Path(repo)/'scripts/acquire-source-suite-review-input.py')
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+from types import SimpleNamespace
+args=SimpleNamespace(run='123',source_revision='a'*40)
+constructor=dict(id=123,status='completed',event='workflow_dispatch',head_branch='main',head_sha='a'*40,
+                 name='Maintainer source recipe construction',path='.github/workflows/maintainer-source-recipe-author.yml')
+reviewer=dict(constructor,name='Maintainer independent source suite review',path='.github/workflows/maintainer-source-suite-review.yml')
+assert module.validate_run_identity(constructor,args,True) is True
+assert module.validate_run_identity(constructor,args,False) is False
+assert module.validate_run_identity(reviewer,args,True) is False
+for row,feedback in [(reviewer,False),(dict(constructor,status='in_progress'),True),
+                     (dict(constructor,event='pull_request'),True),(dict(constructor,head_branch='fork'),True),
+                     (dict(constructor,head_sha='b'*40),True),(dict(constructor,path='.github/workflows/arbitrary.yml'),True)]:
+    try:module.validate_run_identity(row,args,feedback)
+    except ValueError:pass
+    else:raise AssertionError('Untrusted automatic review identity accepted')
 archive=base/'good.zip'
 with zipfile.ZipFile(archive,'w') as z:
     z.writestr('observation-export/source-stage/request.json','original bytes')
