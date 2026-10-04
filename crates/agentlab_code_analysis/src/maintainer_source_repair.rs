@@ -153,7 +153,10 @@ fn prepare_inner(
     if stage_receipt.get("diagnosticRepairPacketSha256").is_some()
         || stage.join("diagnostic-repair.json").exists()
     {
-        need(enrollment.is_none(), "continuation cannot reset a repair lineage")?;
+        need(
+            enrollment.is_none(),
+            "continuation cannot reset a repair lineage",
+        )?;
         let previous = diagnostic::read(&stage.join("diagnostic-repair.json"), PACKET_LIMIT)?;
         need(
             stage_receipt["diagnosticRepairPacketSha256"] == digest(&previous),
@@ -187,7 +190,8 @@ fn check_depth(request_bytes: &[u8], packet_bytes: &[u8], depth: usize) -> Resul
     let p = parsed(packet_bytes)?;
     let continuation = p["schema"] == "agentlab.source_recipe_diagnostic_repair.v2";
     need(
-        p.as_object().is_some_and(|o| o.len() == if continuation { 21 } else { 20 })
+        p.as_object()
+            .is_some_and(|o| o.len() == if continuation { 21 } else { 20 })
             && (continuation || p["schema"] == "agentlab.source_recipe_diagnostic_repair.v1")
             && p["reviewed"] == false
             && p["semanticQualified"] == false
@@ -240,7 +244,10 @@ fn check_depth(request_bytes: &[u8], packet_bytes: &[u8], depth: usize) -> Resul
         ] {
             expected[field] = json!(digest(raw(&p, original, PACKET_LIMIT)?));
         }
-        need(enrollment == expected, "continuation enrollment differs from original failure")?;
+        need(
+            enrollment == expected,
+            "continuation enrollment differs from original failure",
+        )?;
     } else {
         let loop_bytes = raw(&p, "loopIntentOriginal", 65536)?;
         let frozen_budget = check_loop_intent(parent_request, loop_bytes)?;

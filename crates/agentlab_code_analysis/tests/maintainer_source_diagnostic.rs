@@ -3214,7 +3214,9 @@ fn repair_packet(base: &Path, capture: &Path, maximum: u64) -> Value {
 
 #[test]
 fn prospective_baseline_continuation_keeps_old_budget_and_reconstructs_original_failure() {
-    use agentlab_code_analysis::maintainer_source_repair::{check, check_output, prepare_continuation};
+    use agentlab_code_analysis::maintainer_source_repair::{
+        check, check_output, prepare_continuation,
+    };
     let base = fixture();
     prepared(&base);
     let capture = captured(&base, 0, json!({"scenario":{"value":8,"nullable":null}}));
@@ -3256,17 +3258,28 @@ fn prospective_baseline_continuation_keeps_old_budget_and_reconstructs_original_
     let packet: Value = serde_json::from_slice(&packet_bytes).unwrap();
     let request = fs::read(stage.join("request.json")).unwrap();
     let admitted = check(&request, &packet_bytes).unwrap();
-    assert_eq!(admitted["feedback"]["classification"], "baseline-observations-rejected");
+    assert_eq!(
+        admitted["feedback"]["classification"],
+        "baseline-observations-rejected"
+    );
     assert_eq!(admitted["feedback"]["checks"][0]["actual"], 8);
     assert_eq!(admitted["semanticQualified"], false);
     assert!(packet["loopIntentOriginal"].is_null());
-    assert_eq!(fs::read(stage.join("stage-receipt.json")).unwrap(), original_stage);
+    assert_eq!(
+        fs::read(stage.join("stage-receipt.json")).unwrap(),
+        original_stage
+    );
     assert!(!stage.join("diagnostic-loop-intent.json").exists());
     assert!(prepare_continuation(&stage, &inputs, &capture, &enrolled, &output).is_err());
     // The legacy path still requires its pre-generation allowance.
     assert!(agentlab_code_analysis::maintainer_source_repair::prepare(
-        &stage, &inputs, &capture, 1, &base.join("legacy.json")
-    ).is_err());
+        &stage,
+        &inputs,
+        &capture,
+        1,
+        &base.join("legacy.json")
+    )
+    .is_err());
     for (field, value) in [
         ("reviewed", json!(false)),
         ("maximumSuccessors", json!(2)),
@@ -3279,7 +3292,10 @@ fn prospective_baseline_continuation_keeps_old_budget_and_reconstructs_original_
         let mut policy = enrollment.clone();
         policy[field] = value;
         bad["continuationEnrollmentOriginal"] = json!(serde_json::to_string(&policy).unwrap());
-        assert!(check(&request, &serde_json::to_vec(&bad).unwrap()).is_err(), "{field}");
+        assert!(
+            check(&request, &serde_json::to_vec(&bad).unwrap()).is_err(),
+            "{field}"
+        );
     }
     for (field, value) in [
         ("maximumRepairs", json!(2)),
@@ -3289,7 +3305,10 @@ fn prospective_baseline_continuation_keeps_old_budget_and_reconstructs_original_
     ] {
         let mut bad = packet.clone();
         bad[field] = value;
-        assert!(check(&request, &serde_json::to_vec(&bad).unwrap()).is_err(), "{field}");
+        assert!(
+            check(&request, &serde_json::to_vec(&bad).unwrap()).is_err(),
+            "{field}"
+        );
     }
     // Even a rehashed enrollment cannot admit unsafe/incomplete execution.
     for (field, value) in [
@@ -3308,14 +3327,30 @@ fn prospective_baseline_continuation_keeps_old_budget_and_reconstructs_original_
         policy["diagnosticProcessSha256"] = json!(digest(raw.as_bytes()));
         bad["processOriginal"] = json!(raw);
         bad["continuationEnrollmentOriginal"] = json!(serde_json::to_string(&policy).unwrap());
-        assert!(check(&request, &serde_json::to_vec(&bad).unwrap()).is_err(), "{field}");
+        assert!(
+            check(&request, &serde_json::to_vec(&bad).unwrap()).is_err(),
+            "{field}"
+        );
     }
-    let mut proposal: Value = serde_json::from_slice(&fs::read(stage.join("proposal.json")).unwrap()).unwrap();
+    let mut proposal: Value =
+        serde_json::from_slice(&fs::read(stage.join("proposal.json")).unwrap()).unwrap();
     proposal["verifierSource"] = json!("changed candidate, not qualified");
     let design = fs::read(stage.join("design.json")).unwrap();
-    assert!(check_output(&request, &packet_bytes, &serde_json::to_vec(&proposal).unwrap(), &design).is_ok());
+    assert!(check_output(
+        &request,
+        &packet_bytes,
+        &serde_json::to_vec(&proposal).unwrap(),
+        &design
+    )
+    .is_ok());
     proposal["contract"]["checks"][0]["expected"] = json!(8);
-    assert!(check_output(&request, &packet_bytes, &serde_json::to_vec(&proposal).unwrap(), &design).is_err());
+    assert!(check_output(
+        &request,
+        &packet_bytes,
+        &serde_json::to_vec(&proposal).unwrap(),
+        &design
+    )
+    .is_err());
     fs::remove_dir_all(base).unwrap();
 }
 
