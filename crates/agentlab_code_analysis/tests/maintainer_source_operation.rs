@@ -1537,7 +1537,9 @@ with tempfile.TemporaryDirectory() as d:
                        'reviewOriginal':json.dumps({'findings':[{'id':'grounded-feedback'}]})}
     revision_path.write_text(json.dumps(revision_packet))
     parent_design=root/'parent-design.json'
-    parent_design.write_text('{"schema":"agentlab.source_recipe_design.v2"}')
+    fixture_design={'schema':'agentlab.source_recipe_design.v2',
+        'checks':[{'id':'probe','pointer':'/fixture/observed','expected':['probe']} ]}
+    parent_design.write_text(json.dumps(fixture_design))
     scenario_revision_path=root/'scenario-revision.json'
     scenario_revision_path.write_text(json.dumps(dict(revision_packet,
         schema='agentlab.source_recipe_revision_request.v2',
@@ -1592,7 +1594,7 @@ with tempfile.TemporaryDirectory() as d:
                 (gateway/f'{len(seen["labels"]):04d}.status.json').write_text(json.dumps(dict(status=200,
                     outcome='completed',semanticComplete=True,upstreamEof=True,
                     streamError=None,clientDisconnected=False)))
-                content=json.dumps({'schema':'agentlab.source_recipe_design.v2'}) if label.startswith('source-recipe-design') else '{}'
+                content=json.dumps(fixture_design) if label.startswith('source-recipe-design') else '{}'
                 return {'content':content,'message':{'stopReason':'stop'}}
             def close(self): seen['closed'] = True
         fake_spec = SimpleNamespace(loader=SimpleNamespace(exec_module=lambda _:None))
