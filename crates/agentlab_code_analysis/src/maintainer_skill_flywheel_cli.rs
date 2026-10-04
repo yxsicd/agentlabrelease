@@ -105,6 +105,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if args
         .iter()
+        .any(|a| a == "--prepare-source-recipe-diagnostic-continuation")
+    {
+        let packet = agentlab_code_analysis::maintainer_source_repair::prepare_continuation(
+            &PathBuf::from(value(&args, "--stage")?),
+            &PathBuf::from(value(&args, "--diagnostic-inputs")?),
+            &PathBuf::from(value(&args, "--worker-capture")?),
+            &fs::read(value(&args, "--continuation-enrollment")?)?,
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&packet)?);
+        return Ok(());
+    }
+    if args
+        .iter()
         .any(|a| a == "--prepare-source-recipe-diagnostic-repair")
     {
         let packet = agentlab_code_analysis::maintainer_source_repair::prepare(
