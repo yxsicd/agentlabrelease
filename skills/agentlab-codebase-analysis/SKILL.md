@@ -163,6 +163,15 @@ Agent budgets and an atomic no-write-on-failure boundary as defined by the
 flywheel reference. `No eligible scope` is a blocker report, not proof that the
 repository is understood.
 
+Before another semantic dispatch, inspect the selected repository's scope queue,
+not the catalog-wide eligible count. Semantic-ready scopes with missing operation
+receipts need operation verification, not repeated semantic synthesis. Use
+`bash scripts/route-maintainer-flywheel.sh CUT REPOSITORY FRESH_OUTPUT plan`
+to bind the native gap plan to implemented child workflows; dispatch mode sends
+one request after method fencing. Unsupported operation kinds remain visible.
+A dispatch receipt is not child completion, knowledge admission or a full loop;
+an uncertain dispatch must be discovered, never repeated automatically.
+
 Route bounded work by capability: source behavior, configuration/asset, or
 repository contract. Require only evidence dimensions that the mode can prove;
 never fabricate behavior for a non-source scope. Do not solve an oversized

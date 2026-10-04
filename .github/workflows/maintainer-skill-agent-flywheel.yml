@@ -2,6 +2,11 @@ name: Maintainer Skill Agent flywheel
 on:
   workflow_dispatch:
     inputs:
+      expected_method:
+        description: Optional exact Release commit required by the gap coordinator
+        required: false
+        default: ''
+        type: string
       mode:
         description: Expand, refresh, or atomically apply reviewed scope replacements
         required: true
@@ -11,8 +16,7 @@ on:
       repository:
         description: Repository selection; auto balances normalized semantic coverage
         required: true
-        type: choice
-        options: [auto, code-workshop, guide-snippets, harmony-iap-client, hms-cordova-iap]
+        type: string
         default: code-workshop
       knowledge_directory:
         description: Exact checked-in committed knowledge cut; live revision admission remains mandatory
@@ -80,6 +84,13 @@ jobs:
       AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Fence coordinator method before execution
+        env:
+          EXPECTED_METHOD: ${{ inputs.expected_method }}
+        run: |
+          if test -n "$EXPECTED_METHOD"; then
+            test "$(git rev-parse HEAD)" = "$EXPECTED_METHOD"
+          fi
       - name: Validate explicit knowledge directory before authority admission
         run: |
           python3 - <<'PY'
