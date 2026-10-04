@@ -52,6 +52,15 @@ claim must reference regular evidence files by exact SHA-256.
 Do not copy the portfolio into mutable runtime state. TableGit remains the live
 knowledge authority; this file is a Release-pinned sampling plan.
 
+The [reviewed return cut](cuts/e516a65af86b5291b4d617c860124c4d57be77bb/maintainer-knowledge-cut.json)
+publishes exact committed knowledge, including portable inventory, assessments
+and operation sidecars. The [ordered-attribute selection](reviewed-guidance/toggle-ordered-attributes-e516a65a.json)
+selects its admitted source-suite lesson for fresh calibration construction.
+Use these explicit `knowledge_directory` and `guidance_selection` paths in the
+source-recipe Action after their publication merges; live exact-revision preflight
+still applies. Historical cuts and selections remain unchanged. This publication
+does not itself execute an Agent or establish a qualified case or learning benefit.
+
 Oversized scope remediation starts with
 [`scope_decomposition.py`](scope_decomposition.py). It reads one scope row and
 an exact checkout, verifies the revision, Tree OID and parent inventory, then
