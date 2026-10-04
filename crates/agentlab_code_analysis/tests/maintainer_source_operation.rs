@@ -981,6 +981,71 @@ console.log('module-plumbing-pass');
 }
 
 #[test]
+fn frozen_readonly_dependency_requires_explicit_bindings_and_cannot_be_mutated_by_controls() {
+    let (dir, _) = loop_fixture();
+    let recipe: Value =
+        serde_json::from_slice(&fs::read(dir.join("recipe-0.json")).unwrap()).unwrap();
+    let node = recipe["controls"][0]["command"]["program"]
+        .as_str()
+        .unwrap();
+    let source_root = dir.join("readonly-runtime-source");
+    fs::create_dir(&source_root).unwrap();
+    let source = "exports.value=1;";
+    let dependency = "const api=require('platform'); exports.Ctor=class {constructor(v){this.value=v+api.offset+Flag;}};";
+    fs::write(source_root.join("unit.js"), source).unwrap();
+    let manifest = json!({"files":[{"path":"unit.js","content":source,"sha256":digest(source.as_bytes())}],
+        "readOnlyFiles":[{"path":"shared/dep.js","access":"read-only","contentUtf8":dependency,"sha256":digest(dependency.as_bytes())}],
+        "controls":[{"id":"baseline","edits":[]},{"id":"wrong","edits":[{"path":"unit.js","before":"value=1","after":"value=2"}]},
+            {"id":"borrowed-edit","edits":[{"path":"shared/dep.js","before":"exports.Ctor","after":"exports.Other"}]}]});
+    let runtime = dir.join("readonly-runtime.cjs");
+    fs::write(
+        &runtime,
+        format!(
+            "const manifest={manifest};\n{}",
+            include_str!("../src/source_design_runtime.cjs")
+        ),
+    )
+    .unwrap();
+    let script = r#"
+const assert=require('assert');const create=require(process.argv[1]);
+const compiler={ScriptTarget:{ES2020:1},ScriptKind:{TS:1},ModuleKind:{CommonJS:1},DiagnosticCategory:{Error:1},
+ createSourceFile:()=>({parseDiagnostics:[]}),transpileModule:t=>({outputText:t,diagnostics:[]})};
+const runtime=create(process.argv[2],'baseline',compiler);
+assert.throws(()=>runtime.loadModule('shared/dep.js'),/unselected source/);
+assert.throws(()=>runtime.loadReadOnlyModule('unit.js'),/unselected read-only source/);
+assert.throws(()=>runtime.loadReadOnlyModule('shared/dep.js'),/unbound import/);
+assert.throws(()=>runtime.loadReadOnlyModule('shared/dep.js',{'platform':{offset:1}}).Ctor && new (runtime.loadReadOnlyModule('shared/dep.js',{'platform':{offset:1}}).Ctor)(3),/Flag is not defined/);
+const imports={'platform':{offset:1}},globals={Flag:2};
+const a=runtime.loadReadOnlyModule('shared/dep.js',imports,globals);
+assert.equal(new a.Ctor(3).value,6);a.Ctor=0;
+assert.equal(new (runtime.loadReadOnlyModule('shared/dep.js',imports,globals).Ctor)(3).value,6);
+const wrong=create(process.argv[2],'wrong',compiler);
+assert.equal(wrong.loadModule('unit.js').value,2);
+assert.equal(new (wrong.loadReadOnlyModule('shared/dep.js',imports,globals).Ctor)(3).value,6);
+assert.throws(()=>create(process.argv[2],'borrowed-edit',compiler),/frozen edit must match/);
+assert.throws(()=>runtime.loadReadOnlyModule('shared/dep.js',imports,{require:()=>0}),/reserved module binding/);
+console.log('explicit-readonly-dependency-pass');
+"#;
+    let result = Command::new(node)
+        .arg("-e")
+        .arg(script)
+        .arg(&runtime)
+        .arg(&source_root)
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&result.stdout).trim(),
+        "explicit-readonly-dependency-pass"
+    );
+    fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn contained_pi_turns_preserve_history_and_refuse_missing_or_replaced_sessions() {
     let code = r#"
 import importlib.util, json, os, tempfile
@@ -2468,14 +2533,31 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     .unwrap();
     let policy = json!({"schema":"agentlab.source_recipe_author_policy.v1","automaticPromotion":false,
         "program":node,"programSha256":digest(&fs::read(&node).unwrap()),"methodDependencies":[]});
-    let request = author::prepare(
+    let context = agentlab_code_analysis::maintainer_construction_context::prepare(
+        &dir.join("knowledge"),
+        &dir.join("source"),
+        "arbitrary",
+        &["other/state.json".into()],
+    )
+    .unwrap();
+    let context_bytes = serde_json::to_vec_pretty(&context).unwrap();
+    let request = author::prepare_with_context(
         &dir.join("knowledge"),
         &dir.join("source"),
         "arbitrary",
         &serde_json::to_vec(&policy).unwrap(),
+        Some(&context_bytes),
     )
     .unwrap();
     assert_eq!(request["scope"]["id"], "scope-arbitrary");
+    assert_eq!(
+        request["readOnlySourceContext"]["validation"]["packetSha256"],
+        digest(&context_bytes)
+    );
+    assert_eq!(
+        request["readOnlySourceContext"]["grantsEditablePaths"],
+        false
+    );
     assert_eq!(request["sourceFiles"].as_array().unwrap().len(), 2);
     assert_eq!(request["sourceFiles"][0]["path"], "src/state.json");
     assert_eq!(request["sourceFiles"][1]["content"], "{\"metadata\":true}");

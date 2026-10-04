@@ -663,12 +663,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     if args.iter().any(|a| a == "--prepare-source-recipe-author") {
-        let request = agentlab_code_analysis::maintainer_source_recipe_author::prepare(
-            &PathBuf::from(value(&args, "--knowledge")?),
-            &PathBuf::from(value(&args, "--source-worktree")?),
-            &optional(&args, "--repository").unwrap_or_else(|| "auto".into()),
-            &fs::read(value(&args, "--author-policy")?)?,
-        )?;
+        let context = optional(&args, "--context-packet")
+            .map(fs::read)
+            .transpose()?;
+        let request =
+            agentlab_code_analysis::maintainer_source_recipe_author::prepare_with_context(
+                &PathBuf::from(value(&args, "--knowledge")?),
+                &PathBuf::from(value(&args, "--source-worktree")?),
+                &optional(&args, "--repository").unwrap_or_else(|| "auto".into()),
+                &fs::read(value(&args, "--author-policy")?)?,
+                context.as_deref(),
+            )?;
         let mut bytes = serde_json::to_vec_pretty(&request)?;
         bytes.push(b'\n');
         OpenOptions::new()

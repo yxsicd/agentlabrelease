@@ -298,6 +298,68 @@ pub fn prepare(
     Ok(request)
 }
 
+/// Add verified dependency context without changing the owned edit inventory.
+pub fn prepare_with_context(
+    knowledge: &Path,
+    source: &Path,
+    repository: &str,
+    policy_bytes: &[u8],
+    context_bytes: Option<&[u8]>,
+) -> Result<Value, String> {
+    let mut request = prepare(knowledge, source, repository, policy_bytes)?;
+    if let Some(bytes) = context_bytes {
+        let receipt =
+            crate::maintainer_construction_context::validate_context(knowledge, source, bytes)?;
+        let packet: Value = serde_json::from_slice(bytes).map_err(|e| e.to_string())?;
+        need(
+            packet["repository"]["id"] == request["scope"]["repositoryId"]
+                && packet["repository"]["revision"] == request["source"]["revision"]
+                && packet["knowledgeCutSha256"] == request["knowledgeCutSha256"],
+            "recipe context source or knowledge differs",
+        )?;
+        let owned = request["sourceFiles"]
+            .as_array()
+            .ok_or("recipe owned inventory absent")?;
+        need(
+            packet["selectedFiles"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|file| !owned.iter().any(|entry| entry["path"] == file["path"])),
+            "recipe supplementary context must not duplicate owned source",
+        )?;
+        request["readOnlySourceContext"] = json!({"packetUtf8":std::str::from_utf8(bytes).map_err(|e|e.to_string())?,
+            "packet":packet,"validation":receipt,"grantsEditablePaths":false});
+        request["sourceDependencyInventory"] = source_dependency_inventory(&request)?;
+        need(
+            serde_json::to_vec(&request)
+                .map_err(|e| e.to_string())?
+                .len()
+                <= 512 * 1024,
+            "recipe context exceeds request budget; select bounded dependencies",
+        )?;
+    }
+    Ok(request)
+}
+
+fn reproduce(request: &Value) -> Result<Value, String> {
+    let context = request
+        .get("readOnlySourceContext")
+        .map(|value| {
+            value["packetUtf8"]
+                .as_str()
+                .ok_or("recipe context original bytes absent")
+        })
+        .transpose()?;
+    prepare_with_context(
+        Path::new(text(request, "knowledgeDirectory")?),
+        Path::new(text(request, "sourceWorktree")?),
+        text(request, "repositorySelector")?,
+        &serde_json::to_vec(&request["policy"]).map_err(|e| e.to_string())?,
+        context.map(str::as_bytes),
+    )
+}
+
 /// One explicit source-grounded revision, not automatic approval or a transport retry.
 pub fn revision(
     current_bytes: &[u8],
@@ -343,12 +405,7 @@ pub fn revision_with_design(
         "recipe revision request identity",
     )?;
     need(
-        prepare(
-            Path::new(text(&current, "knowledgeDirectory")?),
-            Path::new(text(&current, "sourceWorktree")?),
-            text(&current, "repositorySelector")?,
-            &serde_json::to_vec(&current["policy"]).map_err(|e| e.to_string())?,
-        )? == current,
+        reproduce(&current)? == current,
         "recipe revision current request no longer reproduces",
     )?;
     for key in [
@@ -369,6 +426,10 @@ pub fn revision_with_design(
             "recipe revision source/knowledge context drift",
         )?;
     }
+    need(
+        current.get("readOnlySourceContext") == parent.get("readOnlySourceContext"),
+        "recipe revision read-only context drift",
+    )?;
     need(
         proposal["schema"] == "agentlab.source_recipe_author_proposal.v1"
             && proposal["scopeSkillId"] == current["scope"]["id"],
@@ -705,12 +766,7 @@ pub fn design_review(
     )?;
     let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
     need(
-        prepare(
-            Path::new(text(&request, "knowledgeDirectory")?),
-            Path::new(text(&request, "sourceWorktree")?),
-            text(&request, "repositorySelector")?,
-            &serde_json::to_vec(&request["policy"]).map_err(|e| e.to_string())?,
-        )? == request,
+        reproduce(&request)? == request,
         "design review request no longer reproduces",
     )?;
     design(request_bytes, design_bytes)?;
@@ -960,12 +1016,7 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
         "recipe design request identity",
     )?;
     need(
-        prepare(
-            Path::new(text(&request, "knowledgeDirectory")?),
-            Path::new(text(&request, "sourceWorktree")?),
-            text(&request, "repositorySelector")?,
-            &serde_json::to_vec(&request["policy"]).map_err(|e| e.to_string())?,
-        )? == request,
+        reproduce(&request)? == request,
         "recipe design request no longer reproduces",
     )?;
     need(
@@ -1176,12 +1227,23 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
 /// Reuse native syntactic analysis over the exact bounded source cut.
 /// Existing-file candidates do not grant imports, edits or semantic approval.
 pub fn source_dependency_inventory(request: &Value) -> Result<Value, String> {
-    let files = request["sourceFiles"]
+    let mut files = request["sourceFiles"]
         .as_array()
-        .ok_or("dependency source inventory missing")?;
+        .ok_or("dependency source inventory missing")?
+        .clone();
+    if let Some(context) = request.get("readOnlySourceContext") {
+        for file in context["packet"]["selectedFiles"]
+            .as_array()
+            .ok_or("dependency read-only context absent")?
+        {
+            let mut entry = file.clone();
+            entry["content"] = entry["contentUtf8"].clone();
+            files.push(entry);
+        }
+    }
     let mut imports = Vec::new();
     let mut syntax_errors = Vec::new();
-    for file in files {
+    for file in &files {
         let path = text(file, "path")?;
         let Some(content) = file["content"].as_str() else {
             continue;
@@ -1239,8 +1301,13 @@ pub fn source_dependency_inventory(request: &Value) -> Result<Value, String> {
                         .iter()
                         .filter(|target| possible.iter().any(|p| target["path"] == *p))
                     {
-                        candidates.push(json!({"path":target["path"],"gitBlobOid":target["gitBlobOid"],
-                            "sha256":target["sha256"],"contentLoaded":target["content"].is_string()}));
+                        let mut candidate = json!({"path":target["path"],"gitBlobOid":target["gitBlobOid"],
+                            "sha256":target["sha256"],"contentLoaded":target["content"].is_string()});
+                        if target["access"] == "read-only" {
+                            candidate["access"] = json!("read-only");
+                            candidate["ownerScopeSkillId"] = target["ownerScopeSkillId"].clone();
+                        }
+                        candidates.push(candidate);
                     }
                 }
             }
@@ -1299,7 +1366,7 @@ pub fn verifier_interface(request_bytes: &[u8], design_bytes: &[u8]) -> Result<V
         json!({"id":scenario["id"],"initialStateTopLevelPointers":pointers,
             "inputTopLevelPointers":scenario["inputs"].as_object().unwrap().keys().map(|key|pointer(key)).collect::<Vec<_>>()})
     }).collect();
-    let result = json!({
+    let mut result = json!({
         "schema":"agentlab.source_verifier_interface.v1",
         "requestSha256":digest(request_bytes),"designSha256":digest(design_bytes),
         "runtimeSourceSha256":digest(include_bytes!("source_design_runtime.cjs")),
@@ -1322,6 +1389,11 @@ pub fn verifier_interface(request_bytes: &[u8], design_bytes: &[u8]) -> Result<V
         "semanticQualified":false,"executionPerformed":false,
         "automaticPromotion":false,"authorityWritePerformed":false
     });
+    if let Some(context) = request.get("readOnlySourceContext") {
+        result["readOnlyContext"] = json!({"packetSha256":context["validation"]["packetSha256"],
+            "paths":context["packet"]["selectedFiles"].as_array().unwrap().iter().map(|file|file["path"].clone()).collect::<Vec<_>>(),
+            "api":"loadReadOnlyModule(path, explicitImports, explicitGlobals)","grantsEditablePaths":false});
+    }
     need(
         serde_json::to_vec(&result)
             .map_err(|e| e.to_string())?
@@ -1540,7 +1612,8 @@ fn design_runtime(
                 .ok_or("runtime unowned source".to_string())
         })
         .collect::<Result<_, _>>()?;
-    let manifest = json!({"files":files,"controls":design["controls"],
+    let manifest = json!({"files":files,"readOnlyFiles":request.get("readOnlySourceContext")
+        .map(|context|context["packet"]["selectedFiles"].clone()).unwrap_or_else(||json!([])),"controls":design["controls"],
         "scenarios":if design["schema"] == "agentlab.source_recipe_design.v2" { design["scenarios"].clone() } else { json!([]) }});
     // Preserve JSON keys such as __proto__; an object literal has different semantics.
     let encoded = serde_json::to_string(&manifest).map_err(|e| e.to_string())?;
@@ -1603,12 +1676,7 @@ fn stage_inner(
         "recipe author request schema",
     )?;
     need(
-        prepare(
-            Path::new(text(&request, "knowledgeDirectory")?),
-            Path::new(text(&request, "sourceWorktree")?),
-            text(&request, "repositorySelector")?,
-            &serde_json::to_vec(&request["policy"]).map_err(|e| e.to_string())?,
-        )? == request,
+        reproduce(&request)? == request,
         "recipe author request no longer reproduces",
     )?;
     need(
@@ -1854,12 +1922,7 @@ pub fn approve(
         "recipe author reviewed bytes differ",
     )?;
     need(
-        prepare(
-            Path::new(text(&request, "knowledgeDirectory")?),
-            Path::new(text(&request, "sourceWorktree")?),
-            text(&request, "repositorySelector")?,
-            &serde_json::to_vec(&request["policy"]).map_err(|e| e.to_string())?,
-        )? == request,
+        reproduce(&request)? == request,
         "recipe author stale review request",
     )?;
     if receipt.get("revisionPacketSha256").is_some() || stage.join("revision-request.json").exists()

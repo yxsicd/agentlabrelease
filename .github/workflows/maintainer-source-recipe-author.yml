@@ -32,6 +32,11 @@ on:
         default: ''
         required: false
         type: string
+      dependency_context_paths:
+        description: Optional newline-separated exact dependency paths; pinned read-only context, not edits
+        default: ''
+        required: false
+        type: string
       guidance_mode:
         description: Same reviewed construction target and budgets; only guided receives the selected knowledge body
         default: guided
@@ -148,6 +153,7 @@ jobs:
       AGENTLAB_SOURCE_GUIDANCE_SELECTION: ${{ inputs.guidance_selection }}
       AGENTLAB_SOURCE_GUIDANCE_MODE: ${{ inputs.guidance_mode }}
       REPOSITORY_SELECTOR: ${{ inputs.repository }}
+      DEPENDENCY_CONTEXT_PATHS: ${{ inputs.dependency_context_paths }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
       CONSTRUCTION_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
@@ -305,8 +311,16 @@ jobs:
           policy={'schema':'agentlab.source_recipe_author_policy.v1','program':str(node),'programSha256':hashlib.sha256(node.read_bytes()).hexdigest(),
                   'methodDependencies':[{'path':str(compiler),'sha256':hashlib.sha256(compiler.read_bytes()).hexdigest()}],'automaticPromotion':False}
           (output/'policy.json').write_text(json.dumps(policy)+'\n')
+          context_args=[]
+          context_paths=os.environ.get('DEPENDENCY_CONTEXT_PATHS','').splitlines()
+          if context_paths:
+              args=['--prepare-construction-context','--knowledge',knowledge,'--source-worktree',source,
+                    '--repository',scope['repositoryId'],'--output',output/'dependency-context.json']
+              for path in context_paths:args+=['--context-path',path]
+              run(*args)
+              context_args=['--context-packet',output/'dependency-context.json']
           run('--prepare-source-recipe-author','--knowledge',knowledge,'--source-worktree',source,'--repository',os.environ['REPOSITORY_SELECTOR'],
-              '--author-policy',output/'policy.json','--output',output/'request.json')
+              '--author-policy',output/'policy.json','--output',output/'request.json',*context_args)
           PY
       - name: Bind one reviewed revision to original constructor evidence
         if: inputs.revision_parent_run != ''
