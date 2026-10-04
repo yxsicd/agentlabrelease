@@ -55,6 +55,10 @@ fn hex(s: &str, n: usize) -> bool {
 /// Bind explicitly reviewed rows to one exported cut and exact target sources.
 /// This authenticates bytes, not the export's claimed remote commit or reviewer.
 pub fn bind(knowledge: &Path, request_bytes: &[u8]) -> Result<Value, String> {
+    bind_inner(knowledge, request_bytes, false)
+}
+
+fn bind_inner(knowledge: &Path, request_bytes: &[u8], staged: bool) -> Result<Value, String> {
     let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
     need(
         request["schema"] == "agentlab.maintainer_guidance_selection.v1"
@@ -68,7 +72,11 @@ pub fn bind(knowledge: &Path, request_bytes: &[u8]) -> Result<Value, String> {
             && request["knowledgeCutSha256"] == digest(&cut_bytes)
             && request["knowledgeRevision"] == cut["tableGitAuthority"]["revision"]
             && hex(text(&request, "knowledgeRevision")?, 40)
-            && cut.get("staging").is_none(),
+            && if staged {
+                cut["staging"]["mode"] == "reviewed-lesson-admission"
+            } else {
+                cut.get("staging").is_none()
+            },
         "guidance requires the selected committed knowledge cut",
     )?;
     let mut tables = BTreeMap::new();
@@ -187,6 +195,60 @@ pub fn bind(knowledge: &Path, request_bytes: &[u8]) -> Result<Value, String> {
         "guidance":guidance,"automaticPromotion":false,"authorityWritePerformed":false,
         "remoteCommitAuthenticated":false,"reviewerAuthenticated":false,
         "agentConsumptionVerified":false,"learningBenefitVerified":false}))
+}
+
+/// Called only after original lesson reconstruction. Staged validation is a
+/// pre-write applicability check; its packet must never escape as committed input.
+pub(crate) fn continuation(
+    knowledge: &Path,
+    baseline: &Path,
+    stage: &Path,
+    intent_bytes: &[u8],
+    staged: bool,
+) -> Result<Value, String> {
+    need(intent_bytes.len() <= 1024 * 1024, "guidance continuation budget")?;
+    let intent: Value = serde_json::from_slice(intent_bytes).map_err(|e| e.to_string())?;
+    let fields = ["schema", "reviewed", "automaticPromotion", "baselineKnowledgeCutSha256",
+        "baselineKnowledgeRevision", "stage", "sources", "skills", "sourceRecipeTarget"];
+    need(
+        intent.as_object().is_some_and(|object| {
+            (object.len() == 8 || object.len() == 9)
+                && object.keys().all(|key| fields.contains(&key.as_str()))
+                && fields[..8].iter().all(|key| object.contains_key(*key))
+        })
+            && intent["schema"] == "agentlab.reviewed_guidance_continuation.v1"
+            && intent["reviewed"] == true
+            && intent["automaticPromotion"] == false,
+        "guidance continuation reviewed intent differs",
+    )?;
+    let baseline_bytes = read(baseline, "maintainer-knowledge-cut.json")?;
+    let baseline_cut: Value = serde_json::from_slice(&baseline_bytes).map_err(|e| e.to_string())?;
+    let cut_bytes = read(knowledge, "maintainer-knowledge-cut.json")?;
+    let cut: Value = serde_json::from_slice(&cut_bytes).map_err(|e| e.to_string())?;
+    need(
+        intent["baselineKnowledgeCutSha256"] == digest(&baseline_bytes)
+            && intent["baselineKnowledgeRevision"] == baseline_cut["tableGitAuthority"]["revision"]
+            && cut["tableGitAuthority"]["repo"] == baseline_cut["tableGitAuthority"]["repo"],
+        "guidance continuation baseline differs",
+    )?;
+    let plan: Value = serde_json::from_slice(&read(stage, "lesson-admission-plan.json")?)
+        .map_err(|e| e.to_string())?;
+    let admitted_id = text(&plan["tables"]["maintainer_skills"], "key")?;
+    need(
+        intent["skills"].as_array().is_some_and(|choices| {
+            choices.iter().any(|choice| choice["id"] == admitted_id)
+        }),
+        "guidance continuation omits admitted Skill",
+    )?;
+    let mut selection = json!({"schema":"agentlab.maintainer_guidance_selection.v1",
+        "automaticPromotion":false,"knowledgeCutSha256":digest(&cut_bytes),
+        "knowledgeRevision":cut["tableGitAuthority"]["revision"],
+        "stage":intent["stage"],"sources":intent["sources"],"skills":intent["skills"]});
+    if let Some(target) = intent.get("sourceRecipeTarget") {
+        selection["sourceRecipeTarget"] = target.clone();
+    }
+    let packet = bind_inner(knowledge, &serde_json::to_vec(&selection).map_err(|e| e.to_string())?, staged)?;
+    Ok(json!({"selection":selection,"packet":packet}))
 }
 
 /// Bind selected calibration knowledge to a source-recipe author's exact cut

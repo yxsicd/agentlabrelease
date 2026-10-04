@@ -90,6 +90,15 @@ impl ReviewedReturnInputs<'_> {
     /// Reconstruct admission and verify full operational readback before a writer.
     /// Captured bytes do not authenticate remote transport or reviewer identity.
     pub fn verify_source_readback(&self, capture: &[u8], output: &Path) -> Result<Value, String> {
+        self.verify_source_readback_with_guidance(capture, None, output)
+    }
+
+    pub fn verify_source_readback_with_guidance(
+        &self,
+        capture: &[u8],
+        guidance_intent: Option<&[u8]>,
+        output: &Path,
+    ) -> Result<Value, String> {
         need(capture.len() <= 32 * 1024 * 1024, "source readback budget")?;
         let evidence: Value = serde_json::from_slice(capture).map_err(|e| e.to_string())?;
         need(
@@ -98,10 +107,14 @@ impl ReviewedReturnInputs<'_> {
         )?;
         self.reconstruct(output)?;
         crate::maintainer_lesson_return::verify_source(self.source, &evidence)?;
+        if let Some(intent) = guidance_intent {
+            crate::maintainer_guidance::continuation(output, self.base, output, intent, true)?;
+        }
         Ok(
             json!({"schema":"agentlab.reviewed_lesson_source_verification.v1",
             "sourceReadbackVerified":true,"readbackSha256":digest(capture),
             "authorityWritePerformed":false,"remoteCaptureAuthenticated":false,
+            "nextGuidanceIntentVerified":guidance_intent.is_some(),
             "automaticFiveStageLoopCompleted":false}),
         )
     }
@@ -114,12 +127,29 @@ impl ReviewedReturnInputs<'_> {
         capture: &[u8],
         output: &Path,
     ) -> Result<Value, String> {
+        self.verify_committed_return_with_guidance(next, capture, None, output)
+    }
+
+    pub fn verify_committed_return_with_guidance(
+        &self,
+        next: &Path,
+        capture: &[u8],
+        guidance_intent: Option<&[u8]>,
+        output: &Path,
+    ) -> Result<Value, String> {
         need(
             capture.len() <= 32 * 1024 * 1024,
             "committed readback budget",
         )?;
         self.reconstruct(output)?;
-        crate::maintainer_lesson_return::verify(output, self.source, next, capture)
+        let mut receipt = crate::maintainer_lesson_return::verify(output, self.source, next, capture)?;
+        if let Some(intent) = guidance_intent {
+            receipt["nextGuidance"] = crate::maintainer_guidance::continuation(
+                next, self.base, output, intent, false,
+            )?;
+        }
+        receipt["nextGuidanceBound"] = json!(guidance_intent.is_some());
+        Ok(receipt)
     }
 }
 
