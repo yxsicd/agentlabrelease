@@ -76,3 +76,129 @@ No baseline, complete control suite, independent review or committed return is c
 Remaining priority is actual candidate execution and acceptance, followed by the
 existing knowledge writer/readback/next-round interfaces, then multiple rounds
 and cross-repository transfer.
+
+## Follow-up: actual baseline and complete controls
+
+PR #292 merged as `c5c8a89b12b9991a13ce97a9e445c87432420451` after all
+head checks passed: Rust and Harmony run `37216339629`, component run
+`37216339601`, and all eight public validation jobs in run `37216339592`.
+This is a source merge, not a formal Release.
+
+The original registry index from the producer pull log is
+`sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df`.
+Its linux/amd64 platform manifest is
+`sha256:e5a8dee7bc1e6a215d224a7ef8206f7e77271bc3cabd5febf2beafac0674f174`,
+which references original config
+`sha256:622f209f6c16ba5af4d9a337cae6577d096f17174b904cfc6a5b0c81a2679c24`.
+hwlinux's current Docker store reports the index as its local image ID, unlike
+the original runner's config ID. The first literal comparison stopped before
+execution. The follow-up preserved that failure, checked platform manifest raw
+bytes against its digest, matched its config to the original, and retained the
+full inspect output and explicit identity mapping. The new diagnostic descriptor
+pins the actual local index identity; no original participant receipt was edited.
+
+Baseline operation `exec-00000000000002cd` returned exit 0: all **12/12** frozen
+checks passed. The earlier ancestor had **4/12**; no checks or design expectations
+were weakened, no new author turn or code repair was performed. Feedback SHA256:
+`81b039208c285cd3f29697fbe9c108d8d41b2350b36b254cd146a4c5a2e7a7f8`.
+
+Complete suite operation `exec-00000000000002ce` returned exit 0. Native readback
+reconstructed all six controls plus one fresh reference recovery, with status
+`declarations-matched`, `completeInventoryReconstructed: true` and
+`acceptedReferenceRecoveryReconstructed: true`:
+
+| Control | Observed outcome |
+| --- | --- |
+| Original baseline | All frozen checks pass |
+| `ref-color-ternary` | Valid alternative passes |
+| `ref-for-of-loop` | Second valid alternative passes |
+| `wrong-button-branch` | Exactly three declared failures |
+| `wrong-ison-parse` | Exactly two declared failures |
+| `wrong-switch-codeone` | Exactly four declared failures |
+| Fresh `ref-color-ternary` recovery | Passes after wrong controls |
+
+Suite result SHA256:
+`976c7e626f15acbaf13ec9897b2517624cc44b37e5a11ff703ad0fea66c827dc`.
+Observation export SHA256:
+`136a0ec6baec61b1c5c6ecfe2e02a27b54fa1224c0c9e54a34ce76a164f47e4f`.
+
+Native review preflight operation `exec-00000000000002d1` returned exit 0 and
+`reviewPreparedOnly: true`, `reviewerExecuted: false`, `qualified: false`.
+It reconstructed the exported suite against the independent clean source checkout
+and frozen generic rubric. It is **not** a reviewer verdict.
+
+Overall engineering maturity is now **76% (+1)** for real candidate behavioral
+calibration and recovery evidence; accepted automatic five-stage rounds remain
+**0**. Diagnostic feedback still reports `formalIsolationQualified: false` and
+`semanticQualified: false`: practical network-disabled containment must not be
+reported as formal isolation or independent semantic acceptance. No HAP/emulator,
+performance, accepted knowledge write, committed return or next-round execution
+is established by these source-only observations.
+
+The next integration gap is reception of this post-generation evidence by the
+review/return lane. The current review Action requires an original constructor
+Action artifact; the original failed run cannot contain this later local suite.
+Do not relabel the local ZIP as that original artifact or dispatch the old
+incomplete artifact. Preserve producer and current-validator identities separately
+and bridge retained completion to execution/review without another author budget.
+
+## Reception implementation checkpoint
+
+The acquisition CLI now exposes `--artifact-kind unguided-completion --gate ...`.
+It requires the original frozen request, proposal, design, repair packet and
+completion sidecars, retains all matching wire/revision members, excludes Agent
+home directories, and invokes the native completion gate before recording
+successful reception. Original Action/artifact/digest fences remain in force;
+this mode requires the original first run attempt. Native admission is distinct
+from semantic acceptance and authority writes.
+
+The Rust completion regression now constructs ZIPs and runs actual extraction
+before native consumption across two unrelated repository identifiers and all
+existing completion/drift variants. hwlinux operation `exec-00000000000002d2`
+passed, exit 0. This is synthetic boundary coverage, not cross-repository business
+acceptance. The full original ZIP was also extracted locally (21 selected files,
+33,660,126 bytes). A transfer of that full ZIP failed and a read-only target check
+confirmed no destination file; it was not retried or claimed as received.
+The already-retained original selected ZIP then passed the new extractor and
+actual native gate on hwlinux in `exec-00000000000002d5`, exit 0, with original
+request SHA256 unchanged and no new author call. `caseQualified` remained false.
+
+Maturity remains **76% (+0)**: this closes a reception interface gap, but the
+review Action is not yet wired to restore context and execute that retained
+completion automatically. Independent reviewer, accepted return, next round,
+multiple automatic rounds and cross-repository transfer remain unproven.
+
+## Automated retained replay and review Action integration
+
+The review Action has an explicit retained-completion mode with frozen original
+host Node and compiler acquisition versions. It builds the current validator in
+the staging ABI, acquires the exact original artifact through native completion
+admission, checks out the source and original knowledge producer, restores frozen
+dependency bytes and paths, and calls the maintained diagnostic/control scripts.
+The resulting fresh observations enter the existing independent-review preflight,
+contained reviewer and feedback export. The default completed-observation path
+is preserved. No author invocation, repair-budget reset or automatic knowledge
+write is added. This adapter currently covers Linux x64 Node with one TypeScript
+compiler dependency; unsupported environments fail explicitly.
+
+hwlinux operation `exec-00000000000002d9` completed the retained replay in 16,762ms,
+exit 0: original completion admission, frozen-context static staging, successful
+baseline, complete controls/recovery and observation export. The original request
+SHA256 remained unchanged. The preceding operation `exec-00000000000002d8` failed
+before output ownership or execution because hwlinux's Python lacks
+`hashlib.file_digest`; streaming SHA256 replaced that version-specific API, with
+no altered dependency identity or admission. The failed operation is preserved.
+
+The acquisition helper was separately exercised from a fresh private local output:
+official Node 22.23.3 and TypeScript 5.9.3 archives yielded exactly the original
+policy digests; five knowledge JSONL tables were restored from producer commit
+`6ee9e6b966ac0d7c72eb90667c3691a2658f3972`. Acquisition does not execute those binaries.
+Rust guard test `maintainer_retained_replay` passed on hwlinux in operation
+`exec-00000000000002da`, exit 0, and rustfmt check passed in `...02db`.
+The guard found and fixed traversal admission before publication; it also covers
+dependency-byte drift, archive symlinks, member budgets and retained archive bytes.
+
+Maturity remains **76% (+0)** pending actual review-Action execution and acceptance.
+The real replay is an automated partial chain, not a complete five-stage round.
+Independent reviewer verdict, accepted committed return, fresh next-round work,
+multiple rounds, cross-repository business acceptance and Agent benefit remain open.

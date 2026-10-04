@@ -325,6 +325,50 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
             let result = source_recipe_unguided_completion(&evidence, &request, &supplied_proposal);
             let accepted = mode.starts_with("good-");
             assert_eq!(result.is_ok(), accepted, "{repository} {mode}: {result:?}");
+            // Exercise the real ZIP reception boundary before native admission.
+            // Extra exchanges/revision files must survive extraction to be rejected.
+            fs::write(f.root.join("retained-request.json"), &request).unwrap();
+            fs::write(f.root.join("retained-proposal.json"), &supplied_proposal).unwrap();
+            let reception = Command::new("python3")
+                .arg("-c")
+                .arg(r#"
+import importlib.util,sys,zipfile
+from pathlib import Path
+root,script=map(Path,sys.argv[1:])
+spec=importlib.util.spec_from_file_location('acquisition',script)
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+archive=root/'retained.zip'
+with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as bundle:
+    bundle.write(root/'retained-request.json','request.json')
+    bundle.write(root/'retained-proposal.json','agent/proposal.json')
+    bundle.writestr('frozen-design.json','{}')
+    bundle.writestr('diagnostic-repair.json','{}')
+    bundle.writestr('agent/home/auth.json','private fixture; must not be selected')
+    for path in (root/'completion-evidence').rglob('*'):
+        if path.is_file():bundle.write(path,'agent/evidence/'+path.relative_to(root/'completion-evidence').as_posix())
+module.extract_observations(archive,root/'received',completion=True)
+assert not (root/'received/agent/home').exists()
+"#)
+                .arg(&f.root)
+                .arg(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../scripts/acquire-source-suite-review-input.py"))
+                .output()
+                .unwrap();
+            assert!(
+                reception.status.success(),
+                "{mode}: {}",
+                String::from_utf8_lossy(&reception.stderr)
+            );
+            let received = f.root.join("received");
+            let replay = source_recipe_unguided_completion(
+                &received.join("agent/evidence"),
+                &fs::read(received.join("request.json")).unwrap(),
+                &fs::read(received.join("agent/proposal.json")).unwrap(),
+            );
+            assert_eq!(
+                replay.is_ok(),
+                accepted,
+                "ZIP {repository} {mode}: {replay:?}"
+            );
             if let Ok(receipt) = result {
                 assert_eq!(receipt["authorCompletionVerified"], true);
                 assert_eq!(receipt["proposalOriginalWireVerified"], true);

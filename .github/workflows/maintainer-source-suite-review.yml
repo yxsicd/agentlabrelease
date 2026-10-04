@@ -14,6 +14,21 @@ on:
         description: Exact constructor method Git commit
         required: true
         type: string
+      retained_completion:
+        description: Requalify original unguided frozen completion and execute controls before review; no author call
+        default: false
+        required: false
+        type: boolean
+      original_host_node_version:
+        description: Explicit original Linux x64 host Node version; recovered bytes must match original request
+        default: ''
+        required: false
+        type: string
+      original_typescript_version:
+        description: Explicit original compiler version; recovered bytes must match original request
+        default: ''
+        required: false
+        type: string
       source_coordinator_request_id:
         description: Optional exact gap coordinator identity; required for a tagged constructor run
         default: ''
@@ -80,6 +95,9 @@ jobs:
       REVIEW_SOURCE_RUN: ${{ inputs.source_run }}
       REVIEW_SOURCE_ARTIFACT: ${{ inputs.source_artifact }}
       REVIEW_SOURCE_REVISION: ${{ inputs.source_revision }}
+      REVIEW_RETAINED_COMPLETION: ${{ inputs.retained_completion }}
+      REVIEW_HOST_NODE_VERSION: ${{ inputs.original_host_node_version }}
+      REVIEW_TYPESCRIPT_VERSION: ${{ inputs.original_typescript_version }}
       REVIEW_SOURCE_COORDINATOR_REQUEST_ID: ${{ inputs.source_coordinator_request_id }}
       REVIEW_ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
       REVIEW_RUBRIC: ${{ inputs.rubric }}
@@ -110,6 +128,10 @@ jobs:
               methodRevision=os.environ['GITHUB_SHA'],sourceRun=os.environ['REVIEW_SOURCE_RUN'],
               sourceArtifact=os.environ['REVIEW_SOURCE_ARTIFACT'],sourceMethodRevision=os.environ['REVIEW_SOURCE_REVISION'],
               sourceCoordinatorRequestId=request_id or None,
+              retainedCompletion=os.environ['REVIEW_RETAINED_COMPLETION']=='true',
+              originalHostNodeVersion=os.environ['REVIEW_HOST_NODE_VERSION'] or None,
+              originalTypescriptVersion=os.environ['REVIEW_TYPESCRIPT_VERSION'] or None,
+              maximumNewAuthorCalls=0,
               artifactSha256=os.environ['REVIEW_ARTIFACT_SHA256'],rubricSha256=os.environ['REVIEW_RUBRIC_SHA256'],
               model=os.environ['AGENTLAB_MODEL'],providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
               reasoningEffort=os.environ['REVIEW_REASONING_EFFORT'],thinkingType=os.environ['REVIEW_THINKING_TYPE'],
@@ -120,11 +142,22 @@ jobs:
               transportRetryLimit=0,automaticPromotion=False,authorityWritePerformed=False,qualified=False)
           with (root/'enrollment.json').open('x') as f:json.dump(enrollment,f,indent=2)
           PY
+      - name: Build trusted native validator in the staging ABI
+        if: inputs.retained_completion
+        run: |
+          docker pull rust:bookworm
+          image_id=$(docker image inspect rust:bookworm --format '{{.Id}}')
+          echo "REVIEW_STAGE_IMAGE=$image_id" >> "$GITHUB_ENV"
+          docker run --rm -e CARGO_BUILD_JOBS=3 -v "$GITHUB_WORKSPACE:/work" -w /work "$image_id" \
+            cargo build --locked --release -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
       - name: Acquire only the exact original source Action artifact
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           identity_args=()
+          if [[ "$REVIEW_RETAINED_COMPLETION" == true ]]; then
+            identity_args+=(--artifact-kind unguided-completion --gate "$GITHUB_WORKSPACE/target/release/agentlab-maintainer-skill-flywheel")
+          fi
           if test -n "$REVIEW_SOURCE_COORDINATOR_REQUEST_ID"; then
             identity_args+=(--coordinator-request-id "$REVIEW_SOURCE_COORDINATOR_REQUEST_ID")
           fi
@@ -132,6 +165,43 @@ jobs:
             --run "$REVIEW_SOURCE_RUN" --artifact "$REVIEW_SOURCE_ARTIFACT" \
             --source-revision "$REVIEW_SOURCE_REVISION" --artifact-sha256 "$REVIEW_ARTIFACT_SHA256" \
             --output "$RUNNER_TEMP/source-suite-review/source" "${identity_args[@]}"
+      - name: Checkout exact original knowledge producer
+        if: inputs.retained_completion
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.source_revision }}
+          path: .retained-producer
+          persist-credentials: false
+          sparse-checkout: examples/maintainer-knowledge-gate/cuts
+      - name: Restore frozen completion context and execute complete controls
+        if: inputs.retained_completion
+        run: |
+          root="$RUNNER_TEMP/source-suite-review"
+          request="$root/source/completion-inputs/request.json"
+          source_repository=$(jq -er '.source.repository' "$request")
+          [[ "$source_repository" == https://* && "$source_repository" != *@* ]]
+          source_revision=$(jq -er '.source.revision' "$request")
+          scope_boundary=$(jq -er '.scope.pathBoundary' "$request")
+          bash scripts/checkout-maintainer-scope.sh "$source_repository" "$source_revision" "$scope_boundary" \
+            "$RUNNER_TEMP/review-source-git" "$request"
+          python3 - "$request" "$RUNNER_TEMP/review-source-git" <<'PY'
+          import json,subprocess,sys
+          r=json.load(open(sys.argv[1]))
+          for f in r.get('readOnlySourceContext',{}).get('packet',{}).get('selectedFiles',[]):
+              subprocess.run(['git','-C',sys.argv[2],'show',r['source']['revision']+':'+f['path']],check=True,stdout=subprocess.DEVNULL,timeout=60)
+          PY
+          python3 scripts/restore-retained-source-dependencies.py --request "$request" \
+            --producer-checkout "$GITHUB_WORKSPACE/.retained-producer" --producer-revision "$REVIEW_SOURCE_REVISION" \
+            --repository "$GITHUB_REPOSITORY" --node-version "$REVIEW_HOST_NODE_VERSION" \
+            --typescript-version "$REVIEW_TYPESCRIPT_VERSION" --output "$root/restored-context"
+          docker pull node:24.19.0-bookworm-slim
+          worker_image=$(docker image inspect node:24.19.0-bookworm-slim --format '{{.Id}}')
+          python3 scripts/replay-retained-source-completion.py --inputs "$root/source/completion-inputs" \
+            --gate "$GITHUB_WORKSPACE/target/release/agentlab-maintainer-skill-flywheel" \
+            --source-checkout "$RUNNER_TEMP/review-source-git" --knowledge "$root/restored-context/knowledge" \
+            --host-node "$root/restored-context/host-node" --compiler "$root/restored-context/typescript.js" \
+            --stage-image "$REVIEW_STAGE_IMAGE" --worker-image "$worker_image" --output "$root/replayed-completion"
+          cp -a "$root/replayed-completion/observation-export" "$root/source/observations"
       - name: Reconstruct original evidence before installing or dispatching reviewer
         run: |
           request="$RUNNER_TEMP/source-suite-review/source/observations/source-stage/request.json"
@@ -139,9 +209,11 @@ jobs:
           [[ "$source_repository" == https://* && "$source_repository" != *@* ]]
           source_revision=$(jq -er '.source.revision' "$request")
           scope_boundary=$(jq -er '.scope.pathBoundary' "$request")
-          bash scripts/checkout-maintainer-scope.sh "$source_repository" "$source_revision" "$scope_boundary" \
-            "$RUNNER_TEMP/review-source-git" "$request"
-          cargo build --locked --release -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
+          if [[ "$REVIEW_RETAINED_COMPLETION" != true ]]; then
+            bash scripts/checkout-maintainer-scope.sh "$source_repository" "$source_revision" "$scope_boundary" \
+              "$RUNNER_TEMP/review-source-git" "$request"
+            cargo build --locked --release -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
+          fi
           target/release/agentlab-maintainer-skill-flywheel --prepare-source-suite-review \
             --source "$RUNNER_TEMP/source-suite-review/source/observations" \
             --quality-rubric "$RUNNER_TEMP/source-suite-review/rubric.json" \
