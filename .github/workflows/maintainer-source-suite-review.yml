@@ -194,6 +194,7 @@ jobs:
             --producer-checkout "$GITHUB_WORKSPACE/.retained-producer" --producer-revision "$REVIEW_SOURCE_REVISION" \
             --repository "$GITHUB_REPOSITORY" --node-version "$REVIEW_HOST_NODE_VERSION" \
             --typescript-version "$REVIEW_TYPESCRIPT_VERSION" --output "$root/restored-context"
+          cp "$root/restored-context/receipt.json" "$root/dependency-restoration-receipt.json"
           docker pull node:24.19.0-bookworm-slim
           worker_image=$(docker image inspect node:24.19.0-bookworm-slim --format '{{.Id}}')
           python3 scripts/replay-retained-source-completion.py --inputs "$root/source/completion-inputs" \
@@ -306,7 +307,19 @@ jobs:
         if: always()
         with:
           name: independent-source-suite-review-${{ github.run_id }}
-          path: ${{ runner.temp }}/source-suite-review
+          path: |
+            ${{ runner.temp }}/source-suite-review
+            !${{ runner.temp }}/source-suite-review/restored-context/**
           if-no-files-found: error
           retention-days: 14
           include-hidden-files: true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && inputs.retained_completion
+        with:
+          name: retained-source-dependencies-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/source-suite-review/restored-context/*.archive
+            ${{ runner.temp }}/source-suite-review/restored-context/knowledge
+            ${{ runner.temp }}/source-suite-review/restored-context/receipt.json
+          if-no-files-found: warn
+          retention-days: 14

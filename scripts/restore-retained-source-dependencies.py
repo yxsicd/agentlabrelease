@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Acquire declared Linux dependencies and original producer knowledge bytes."""
 import argparse
+import hashlib
 import io
 import json
 from pathlib import Path, PurePosixPath
@@ -85,6 +86,18 @@ def main():
             seen.add(name)
             target = knowledge/name; target.parent.mkdir(parents=True, exist_ok=True)
             with target.open('xb') as stream: stream.write(archive.extractfile(entry).read())
+    receipt = dict(schema='agentlab.retained_dependency_restoration.v1',
+                   sourceMethodRevision=args.producer_revision,
+                   knowledgeRelativePath=relative,
+                   requestSha256=hashlib.sha256(args.request.read_bytes()).hexdigest(),
+                   hostNodeVersion=args.node_version, typescriptVersion=args.typescript_version,
+                   hostNodeSha256=request['policy']['programSha256'],
+                   compilerSha256=dependencies[0]['sha256'],
+                   nodeArchiveSha256=hashlib.sha256(node.with_suffix('.archive').read_bytes()).hexdigest(),
+                   compilerArchiveSha256=hashlib.sha256(compiler.with_suffix('.archive').read_bytes()).hexdigest(),
+                   dependencyBytesMatchedOriginal=True, qualified=False, authorityWritePerformed=False)
+    with (args.output/'receipt.json').open('x') as stream:
+        json.dump(receipt, stream)
     print(json.dumps(dict(hostNode=str(node), compiler=str(compiler), knowledge=str(knowledge), qualified=False)))
 
 

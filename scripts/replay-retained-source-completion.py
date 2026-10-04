@@ -68,8 +68,9 @@ def replay(args):
         if len(inspected) != 1 or inspected[0]['Id'] != image:
             raise ValueError('Local image identity differs')
     output = args.output.resolve()
-    if any(c in str(output) for c in ':,\n\r\x00'):
-        raise ValueError('Unsafe output mount source')
+    if any(c in str(host) for host in [output, gate, inputs, *(host for host, _ in mounts)]
+           for c in ':,\n\r\x00'):
+        raise ValueError('Unsafe context mount source')
     if any(output == original or original in output.parents or output in original.parents
            for original in (inputs, source, knowledge)):
         raise ValueError('Replay output must be separate from original input/source')
@@ -87,6 +88,45 @@ def replay(args):
                     '--author-request', str(inputs/'request.json'),
                     '--proposal', str(inputs/'agent/proposal.json'),
                     '--output', str(output/'native-completion.json')], check=True, timeout=180)
+    # The consumer's Git may need objects omitted by a sparse blob:none fetch
+    # (for example tracked ignore files). Acquire that read-only query closure
+    # before the network-disabled stage, without materializing extra source paths.
+    metadata = source/'.git'
+    repository = request['source']['repository']
+    if (not metadata.is_dir() or metadata.is_symlink()
+            or not repository.startswith('https://') or '@' in repository):
+        raise ValueError('Owned HTTPS source checkout with regular Git metadata required')
+    for query, expected in [(['rev-parse', 'HEAD'], request['source']['revision']),
+                            (['remote', 'get-url', 'origin'], repository)]:
+        actual = subprocess.check_output(['git', '-C', str(source), *query], timeout=30).decode().strip()
+        if actual != expected:
+            raise ValueError('Source identity differs before Git object acquisition')
+    acquisition = ['docker', 'run', '--rm', '--read-only', '--cap-drop', 'ALL',
+                   '--security-opt', 'no-new-privileges', '--pids-limit', '64',
+                   '--memory', '512m', '--cpus', '1', '--user', f'{os.getuid()}:{os.getgid()}',
+                   '--tmpfs', '/tmp:rw,size=16m', '-e', 'GIT_OPTIONAL_LOCKS=0',
+                   '-e', 'GIT_TERMINAL_PROMPT=0', '-e', 'GIT_CONFIG_COUNT=1',
+                   '-e', 'GIT_CONFIG_KEY_0=safe.directory',
+                   '-e', 'GIT_CONFIG_VALUE_0='+request['sourceWorktree'],
+                   '-v', f'{source}:{request["sourceWorktree"]}:ro',
+                   '-v', f'{metadata}:{request["sourceWorktree"]}/.git:rw',
+                   args.stage_image, 'git', '-C', request['sourceWorktree'],
+                   'status', '--porcelain=v1', '--untracked-files=all']
+    with (output/'git-object-acquisition-command.json').open('x') as stream:
+        json.dump(dict(command=acquisition, network='dependency-acquisition-only',
+                       generatedCodeExecuted=False, qualified=False), stream)
+    with (output/'git-object-acquisition-stdout.log').open('xb') as out, (output/'git-object-acquisition-stderr.log').open('xb') as err:
+        subprocess.run(acquisition, stdout=out, stderr=err, check=True, timeout=90)
+    if (output/'git-object-acquisition-stdout.log').read_bytes().strip():
+        raise ValueError('Source checkout is dirty; no stage or model dispatch')
+    for index, item in enumerate(request.get('readOnlySourceContext', {}).get('packet', {}).get('selectedFiles', [])):
+        path = item['path']
+        if (not isinstance(path, str) or PurePosixPath(path).is_absolute()
+                or str(PurePosixPath(path)) != path or '..' in PurePosixPath(path).parts):
+            raise ValueError('Unsafe original supplementary context path')
+        command = acquisition[:-3] + ['show', request['source']['revision']+':'+path]
+        with (output/f'git-context-acquisition-{index}-stdout.log').open('xb') as out, (output/f'git-context-acquisition-{index}-stderr.log').open('xb') as err:
+            subprocess.run(command, stdout=out, stderr=err, check=True, timeout=90)
     shutil.copyfile(inputs/'request.json', output/'request.json')
     (output/'agent').mkdir()
     command = ['docker', 'run', '--rm', '--network', 'none', '--read-only',

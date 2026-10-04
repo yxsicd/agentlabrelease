@@ -40,6 +40,48 @@ for kind in ['regular','symlink','oversize']:
         except ValueError:assert kind!='regular' and not file.exists()
         else:assert kind=='regular' and file.read_bytes()==b'code'
         assert file.with_suffix('.archive').read_bytes()==archive.getvalue()
+# This tests scheduling/permissions only; native gates and real replay are
+# exercised separately. Never treat the mocked workers as business acceptance.
+import json,types
+original_run=m.subprocess.run;original_output=m.subprocess.check_output
+for dirty in [False,True]:
+    with tempfile.TemporaryDirectory(prefix='retained-git-phase-') as name:
+        root=Path(name).resolve();inputs=root/'inputs';inputs.mkdir()
+        source=root/'source';source.mkdir();(source/'.git').mkdir()
+        knowledge=root/'knowledge';knowledge.mkdir()
+        node=root/'node';node.write_bytes(b'node fixture')
+        compiler=root/'compiler';compiler.write_bytes(b'compiler fixture')
+        gate=root/'gate';gate.write_bytes(b'trusted gate fixture')
+        request={'sourceWorktree':'/home/runner/source','knowledgeDirectory':'/home/runner/knowledge',
+            'source':{'repository':'https://fixture.invalid/repo.git','revision':'a'*40},
+            'policy':{'program':'/usr/local/bin/node','programSha256':hashlib.sha256(node.read_bytes()).hexdigest(),
+                'methodDependencies':[{'path':'/home/runner/compiler.js','sha256':hashlib.sha256(compiler.read_bytes()).hexdigest()}]},
+            'readOnlySourceContext':{'packet':{'selectedFiles':[{'path':'shared/context.js'}]}}}
+        raw=json.dumps(request).encode();(inputs/'request.json').write_bytes(raw)
+        calls=[]
+        def output(command,**kw):
+            if command[:3]==['docker','image','inspect']:return json.dumps([{'Id':command[3]}]).encode()
+            return ('a'*40 if command[-2:]==['rev-parse','HEAD'] else request['source']['repository']).encode()
+        def run(command,**kw):
+            calls.append(command)
+            if command[-3:]==['status','--porcelain=v1','--untracked-files=all'] and dirty:kw['stdout'].write(b'?? changed.js\n')
+            return types.SimpleNamespace(returncode=0)
+        m.subprocess.check_output=output;m.subprocess.run=run
+        args=types.SimpleNamespace(inputs=inputs,gate=gate,source_checkout=source,knowledge=knowledge,
+            host_node=node,compiler=compiler,stage_image='sha256:'+'b'*64,worker_image='sha256:'+'c'*64,output=root/'result')
+        try:result=m.replay(args)
+        except ValueError:assert dirty
+        else:assert not dirty and result['newAuthorCalls']==0 and result['qualified'] is False
+        acquisition=[c for c in calls if c[0]=='docker' and 'git' in c]
+        assert acquisition and all('--network' not in c and '--read-only' in c for c in acquisition)
+        assert all(str(source/'.git')+':'+request['sourceWorktree']+'/.git:rw' in c for c in acquisition)
+        stages=[c for c in calls if '--stage-source-recipe-proposal' in c]
+        assert len(stages)==(0 if dirty else 1)
+        if stages:
+            assert stages[0][stages[0].index('--network')+1]=='none'
+            assert not any('/.git:rw' in value for value in stages[0])
+        assert (inputs/'request.json').read_bytes()==raw
+m.subprocess.run=original_run;m.subprocess.check_output=original_output
 "#)
         .arg(&scripts)
         .output()
