@@ -26,7 +26,11 @@ def write_new(path, raw):
 
 def execute(args):
     output = args.output
-    output.mkdir()
+    if getattr(args, 'prepared_output', False):
+        if output.is_symlink() or not output.is_dir():
+            raise ValueError('Prepared output must be an existing regular Action directory')
+    else:
+        output.mkdir()
     terminal = dict(schema='agentlab.baseline_continuation_transport.v1',
         dispatchIntentRecorded=False, durableClaimCreated=False,
         constructionCompleted=False, runtimeIsolationVerified=False,
@@ -118,7 +122,11 @@ def execute(args):
         request = output / 'request.json'
         design = output / 'frozen-design.json'
         repair = output / 'diagnostic-repair.json'
-        write_new(request, request_bytes)
+        if getattr(args, 'prepared_output', False):
+            if request.is_symlink() or request.read_bytes() != request_bytes:
+                raise ValueError('Prepared Action request differs from original baseline')
+        else:
+            write_new(request, request_bytes)
         write_new(design, packet['parentDesignOriginal'].encode())
         write_new(repair, packet_bytes)
         gate = str(args.gate.resolve(strict=True))
@@ -176,7 +184,7 @@ def execute(args):
             run([sys.executable, str(Path(__file__).with_name('validate-participant-runtime.py')),
                 '--config', runtime_config, '--receipt-root', str(output / 'runtime-receipts'),
                 '--workspace', str(output / 'agent/workspace'), '--participant-state', str(output / 'agent/participant-state'),
-                '--label', 'source-recipe-author', '--output', str(output / 'runtime-validation.json')], 'runtime-validation')
+                '--label', 'source-recipe-author', '--output', str(output / 'continuation-runtime-validation.json')], 'runtime-validation')
             terminal['runtimeIsolationVerified'] = True
         except Exception as error:
             terminal['runtimeValidationError'] = str(error)
@@ -214,6 +222,7 @@ def main():
                  'parent-artifact', 'parent-archive-sha256'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--reasoning-effort', choices=('default', 'none', 'low', 'medium', 'high', 'max'), default='low')
+    parser.add_argument('--prepared-output', action='store_true', help='Reuse only the exact Action-owned request; all other outputs remain exclusive')
     print(json.dumps(execute(parser.parse_args())))
 
 

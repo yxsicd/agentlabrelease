@@ -371,3 +371,46 @@ run the complete source-control suite, independent reviewer or knowledge writer.
 It is scoped reservation, not authenticated reviewer identity or global exactly-once
 business writes. Complete downstream gates, next-round benefit and cross-repository
 reuse remain outstanding. Overall maturity remains 75%, complete automatic rounds zero.
+
+## Baseline continuation Action integration (development)
+
+PR #287 final head 85d95eb2d05cc52dd8ae6bed5cfda4a6694a3595 passed Rust/Harmony
+37207342828, component 37207342798 and all eight public jobs in 37207342796.
+Native job 111451182840 confirmed both transport regressions. It merged as
+7e86cb89843cec69a8fe1c8ac2ba4c3954b57081; the earlier formatter failure remains
+retained. This is not a formal Release or a new model execution.
+
+The existing constructor's revision_feedback input now also accepts
+agentlab.baseline_continuation_action_enrollment.v1, with exact parentRun,
+parentArtifact, parentMethodRevision, parentArchiveSha256 and the native-owned
+continuationEnrollment. This is separate from a completed full-suite review
+successor, requires first workflow attempt, zero design/code revisions and the
+existing fixed transport/model limits, and cannot pair with legacy parent input
+or introduce a new guidance treatment. No dispatch input was added.
+
+The acquisition adapter validates the original trusted-main constructor/artifact
+and ZIP identity, rejects unsafe members even when unselected, and selects only
+the original proposal stage, baseline inputs/capture and root successor/review
+enrollment. It does not extract Agent homes or authentication state, execute
+downloaded code, reconstruct an observation export by rerunning old workers, or
+replace original raw bytes. Native prospective continuation preparation must
+succeed before the bridge can reserve any slot or run a participant.
+
+The bridge reuses only the exact Action-owned request in prepared-output mode;
+all new output remains exclusive. Its isolation receipt uses a distinct filename
+so the existing independent Action isolation gate is not overwritten. The
+continuation then follows existing baseline diagnostic, full control suite,
+independent reviewer and candidate return paths, without a new sample-specific
+workflow. The independent original-wire completion flag remains false; this
+integration cannot count as an accepted automatic round before that evidence and
+the downstream real gates are established.
+
+Local Rust-hosted extracted regressions exercised actual ZIP selection, malformed
+and duplicate members, unselected traversal/symlinks, missing/oversized captures,
+request drift, native preparation rejection, input-mode budget/rerun rejection,
+prepared-output preservation and actual embedded Action command forwarding.
+Network/native participant execution was mocked. Separately, the retained original
+run 37200257820 ZIP was successfully selected into a fresh private preflight
+directory without Agent private state; this proves reception compatibility, not
+native admission or Agent repair. Full cloud tests and real continuation execution
+are still pending. Maturity remains 75%; complete automatic five-stage rounds zero.

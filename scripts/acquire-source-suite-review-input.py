@@ -15,7 +15,8 @@ def require(ok, message):
         raise ValueError(message)
 
 
-def extract_observations(archive, output, feedback=False):
+def extract_observations(archive, output, feedback=False, baseline=False):
+    require(not (feedback and baseline), 'Artifact reception modes are exclusive')
     compressed_limit = (64 if feedback else 50) * 1024 * 1024
     require(archive.stat().st_size <= compressed_limit, 'Artifact exceeds compressed budget')
     with zipfile.ZipFile(archive) as bundle:
@@ -35,7 +36,16 @@ def extract_observations(archive, output, feedback=False):
             mode = entry.external_attr >> 16
             require(not stat.S_ISLNK(mode) and (stat.S_IFMT(mode) in (0, stat.S_IFREG, stat.S_IFDIR))
                     and not (entry.flag_bits & 1), 'Nonregular or encrypted artifact member')
-            if feedback and not entry.is_dir():
+            if baseline and not entry.is_dir():
+                exact = {'successor-request.json', 'successor-enrollment.json',
+                         'baseline-diagnostic/intent.json', 'baseline-diagnostic/request.json',
+                         'baseline-diagnostic/descriptor.json', 'baseline-diagnostic/support.json'}
+                capture = re.fullmatch(r'baseline-diagnostic/contained-input-[^/]+/(process.json|worker-stdout.log|worker-stderr.log)', entry.filename)
+                if entry.filename in exact or entry.filename.startswith('agent/proposal-stage/') or capture:
+                    require(entry.file_size <= 4 * 1024 * 1024,
+                            'Selected baseline file exceeds native read budget')
+                    selected.append((entry, Path(*path.parts)))
+            elif feedback and not entry.is_dir():
                 exact = {'enrollment.json', 'rubric.json', 'runtime-validation.json', 'runtime-repair-validation.json', 'native-reception.json',
                          'agent/response.json', 'agent/validation.json', 'agent/transport-receipt.json', 'agent/attempt-coordinator.json'}
                 prefix = ('source/observations/', 'feedback/', 'agent/evidence/',
@@ -53,7 +63,20 @@ def extract_observations(archive, output, feedback=False):
             elif not feedback and path.parts[0] == 'observation-export' and not entry.is_dir():
                 require(len(path.parts) > 1, 'Invalid observation member')
                 selected.append((entry, Path(*path.parts[1:])))
-        if feedback:
+        if baseline:
+            names = {entry.filename for entry, _ in selected}
+            required = {'successor-request.json', 'successor-enrollment.json',
+                        'agent/proposal-stage/request.json', 'agent/proposal-stage/proposal.json',
+                        'agent/proposal-stage/design.json', 'agent/proposal-stage/stage-receipt.json',
+                        'baseline-diagnostic/intent.json', 'baseline-diagnostic/request.json',
+                        'baseline-diagnostic/descriptor.json', 'baseline-diagnostic/support.json'}
+            processes = [name for name in names if re.fullmatch(r'baseline-diagnostic/contained-input-[^/]+/process.json', name)]
+            require(len(processes) == 1, 'Exactly one original baseline process required')
+            capture = processes[0].rsplit('/', 1)[0]
+            required.update({capture + '/worker-stdout.log', capture + '/worker-stderr.log'})
+            require(required <= names and sum(entry.file_size for entry, _ in selected) <= 16 * 1024 * 1024,
+                    'Original baseline reception incomplete or over budget')
+        elif feedback:
             names = {entry.filename for entry, _ in selected}
             required = {'enrollment.json', 'rubric.json', 'agent/response.json',
                         'agent/evidence/review-intent.json',
@@ -97,13 +120,14 @@ def validate_run_identity(run, args, feedback):
 
 def acquire(args):
     feedback = getattr(args, 'artifact_kind', 'source') == 'review-feedback'
+    baseline = getattr(args, 'artifact_kind', 'source') == 'baseline'
     require(re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', args.repository), 'Invalid repository')
     require(all(re.fullmatch(r'[1-9][0-9]{0,19}', value) for value in (args.run, args.artifact)), 'Invalid exact IDs')
     require(re.fullmatch(r'[0-9a-f]{40}', args.source_revision), 'Invalid source method commit')
     require(re.fullmatch(r'[0-9a-f]{64}', args.artifact_sha256), 'Invalid artifact digest')
     args.output.mkdir()
     terminal = dict(schema='agentlab.source_suite_review_acquisition.v1', completed=False,
-                    artifactKind='review-feedback' if feedback else 'source',
+                    artifactKind='baseline' if baseline else 'review-feedback' if feedback else 'source',
                     repository=args.repository, runId=args.run, artifactId=args.artifact,
                     expectedMethodRevision=args.source_revision, expectedArtifactSha256=args.artifact_sha256,
                     automaticPromotion=False, qualified=False)
@@ -116,6 +140,8 @@ def acquire(args):
         run = metadata(f'repos/{args.repository}/actions/runs/{args.run}', 'source-run.json')
         artifact = metadata(f'repos/{args.repository}/actions/artifacts/{args.artifact}', 'source-artifact.json')
         automatic_review = validate_run_identity(run, args, feedback)
+        if baseline:
+            require(run.get('run_attempt') == 1, 'Original baseline rerun is not eligible')
         require(str(artifact['id']) == args.artifact and not artifact['expired']
                 and str(artifact['workflow_run']['id']) == args.run
                 and artifact['workflow_run']['head_sha'] == args.source_revision
@@ -131,7 +157,7 @@ def acquire(args):
                            stdout=stream, check=True, timeout=120)
         digest = hashlib.sha256(archive.read_bytes()).hexdigest()
         require(digest == args.artifact_sha256, 'Original ZIP digest differs')
-        extract_observations(archive, args.output / ('review-inputs' if feedback else 'observations'), feedback)
+        extract_observations(archive, args.output / ('baseline-inputs' if baseline else 'review-inputs' if feedback else 'observations'), feedback, baseline)
         if automatic_review:
             enrollment = json.loads((args.output / 'review-inputs/enrollment.json').read_bytes())
             require(enrollment.get('schema') == 'agentlab.independent_source_suite_review_enrollment.v1'
@@ -160,7 +186,7 @@ def main():
     for name in ('repository', 'run', 'artifact', 'source-revision', 'artifact-sha256'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--artifact-kind', choices=['source', 'review-feedback'], default='source')
+    parser.add_argument('--artifact-kind', choices=['source', 'review-feedback', 'baseline'], default='source')
     parser.add_argument('--coordinator-request-id')
     print(json.dumps(acquire(parser.parse_args())))
 
