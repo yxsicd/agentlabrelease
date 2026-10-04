@@ -55,6 +55,30 @@ with tempfile.TemporaryDirectory() as directory:
     else:
       assert not (args.output/'bridge-inputs.json').exists()
       if scenario=='unknown-field':assert calls==[]
+  # Execute the workflow's actual parser, not a separately reimplemented schema router.
+  import textwrap
+  workflow=(Path(os.environ['ACTION_SCRIPT']).resolve().parents[1]/'.github/workflows/maintainer-source-recipe-author.yml').read_text()
+  section=workflow.split('      - name: Validate explicit revision input pairing\n',1)[1].split('      - name:',1)[0]
+  code=textwrap.dedent(section.split("          python3 - <<'PY'\n",1)[1].rsplit('          PY',1)[0])
+  for mode in ['empty','legacy','successor','successor-pretty','mixed','rerun']:
+    envelope=dict(schema='agentlab.source_reviewed_successor_enrollment.v1',reviewRun='1')
+    feedback=json.dumps(envelope,indent=2 if mode=='successor-pretty' else None) if mode in ['successor','successor-pretty','mixed','rerun'] else ('{}' if mode=='legacy' else '')
+    env=dict(KNOWLEDGE='examples/maintainer-knowledge-gate/first-four',REVISION_PARENT_RUN='1' if mode in ['legacy','mixed'] else '',
+      REVISION_FEEDBACK=feedback,CONSTRUCTION_CODE_REVISIONS='0',CONSTRUCTION_DESIGN_REVISIONS='0',
+      CONSTRUCTION_DESIGN_FIRST='false',CONSTRUCTION_GATEWAY_TIMEOUT='180',CONSTRUCTION_CODE_GATEWAY_TIMEOUT='inherit',
+      CONSTRUCTION_MAX_OUTPUT_TOKENS='16384',CONSTRUCTION_API='openai-completions',CONSTRUCTION_THINKING_TYPE='default',
+      CONSTRUCTION_RESPONSE_FORMAT='default',AGENTLAB_SOURCE_GUIDANCE_SELECTION='',GITHUB_RUN_ATTEMPT='2' if mode=='rerun' else '1',
+      GITHUB_OUTPUT=str(Path(directory)/(mode+'-outputs')),GITHUB_ENV=str(Path(directory)/(mode+'-env')))
+    with patch.dict(os.environ,env):
+      try:exec(code,{})
+      except AssertionError:assert mode in ['mixed','rerun']
+      else:
+        assert mode not in ['mixed','rerun']
+        selected='true' if mode.startswith('successor') else 'false'
+        assert Path(env['GITHUB_OUTPUT']).read_text()=='reviewed_successor='+selected+'\n'
+        value=Path(env['GITHUB_ENV']).read_text().split('=',1)[1].strip()
+        if selected=='true':assert json.loads(value)==envelope and '\n' not in value
+        else:assert value==''
 "#;
     let result = Command::new("python3")
         .args(["-c", code])

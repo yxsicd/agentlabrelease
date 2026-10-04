@@ -168,7 +168,8 @@ establish durable budget ownership or complete the five-stage loop.
 
 ## Reviewed successor Action integration
 
-The constructor workflow now has an optional `reviewed_successor` enrollment:
+The constructor workflow accepts a schema-selected enrollment in its existing
+`revision_feedback` input, with `revision_parent_run` empty:
 `agentlab.source_reviewed_successor_enrollment.v1` with exact `reviewRun`,
 `reviewArtifact`, `reviewMethodRevision`, `reviewArtifactSha256`,
 `reviewFeedback` and `successorPolicy`. Legacy revision inputs are mutually
@@ -204,5 +205,8 @@ and next-round benefit still require their separate downstream gates.
 Local extracted Rust-hosted regressions cover prepared output, successful/rejected
 remote claim transport and pre-budget acquisition/isolation/native/request stops.
 They mock transport and do not prove a GitHub claim or real Agent successor.
-Action lint, full cloud tests and real dispatch are pending. Overall maturity
+The first cloud lint rejected a separate 26th workflow input (limit 25). Keep the
+failure; the successor protocol now shares the existing feedback input and is
+selected by parsed schema, not fragile JSON whitespace matching. Revalidation,
+full cloud tests and real dispatch are pending. Overall maturity
 remains 75%, full automatic five-stage rounds zero.
