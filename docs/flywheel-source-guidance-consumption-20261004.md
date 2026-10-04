@@ -911,3 +911,49 @@ repair/export/reception path. Original failed captures stay pinned to their old
 method; a changed prompt requires a new prospective enrollment. No lesson export,
 knowledge admission, next-round benefit or complete automatic loop occurred.
 Overall engineering maturity remains 74%; accepted full automatic loops remain zero.
+
+## First real accepted automatic review and committed operational return
+
+PR259 merged as 37cfa0ce1ec6fcfa8c775b33255e8ba7010c9b3d after eleven
+applicable CI checks passed. Newly enrolled run 37172944970 completed successfully
+at 2026-10-04T03:07:14Z using the same source artifact, frozen rubric, model and
+420-second attempt budget with one predeclared citation-repair allowance.
+Only the initial attempt ran: 112069 ms, exit zero, no timeout, zero retries.
+Native completion accepted the unchanged original response, verified full canonical
+prompt transmission and exported the ordinary source-suite lesson automatically.
+This proves no successful repair: the allowance was unused.
+
+Artifact 11292515876 contains 4855692 bytes, original ZIP SHA256
+7005686a98f901043db79bfa41f951aabf88b5d720bfba1900b7ab18ec97c5b6.
+Exact native acquisition and independent Rust reception replay verified the original
+response SHA256 1d7abd200ea37d8940f5d5592a2989992e962a60d69a6ad9eeba00bfe0e253e6,
+full captured exchange, all 49 source Git Blobs, reconstructed operational rows and
+feedback manifest e3f4a56c926272661951cbe7e3b69a981b6052e00eccd5184acabad5a2899755.
+The on-run independent isolation validator passed. Local receipt audit bound its
+result to original runtime config, container/final/relay/network inspection digests;
+the environment-dependent runtime validator was not rerun on this different host.
+Native feedback reception still does not authenticate reviewer or quotation-to-claim
+support and does not independently grant runtime isolation or formal-case acceptance.
+
+The operator invoked the existing revision-fenced importer after native reception.
+It inserted 161 operational rows, preserved remote raw bytes, completely verified
+readback and recovered/bound the original export at
+agentlabsourcesuite-37147845918@edbcd54848c6e1e9868d25ac7a347d17c0899168,
+prefix assets/observations/source-suite/. A second import returned insertedRows=0,
+noChange=true at the same revision with no transaction. Active knowledge remained
+at 4bba501a1dffbdbeef05b759584fef70b090f292; no reusable knowledge write occurred.
+
+Explicit promotion of lesson-source-suite-fa345f866f5bd480ceacac93157aefa424bbadf7a755160c998fdd3246c26059
+and native full admission staging both succeeded against that fixed knowledge cut.
+They remain local candidate/stage outputs, not admitted knowledge or downstream
+consumption. The frozen original method body SHA256 is
+5c98fb3bbc7a3cbbdf793dfb3835af88185867421cc2974caa642a5b35824982.
+All original captures and operational/promotion/stage receipts remain outside
+Release under flywheel-review-prompt-boundary-f0zuH6.
+
+Engineering maturity advances to **75%** for the first real accepted automatic
+review/export plus verified operational return, not for CI counts. Complete
+automatic five-stage loops remain **zero**: operator scheduling connected these
+boundaries. Missing evidence is automatic knowledge admission/readback and next-round
+scheduling/consumption, repeated productive rounds, measurable benefit and transfer
+to another repository. Host-seam evidence does not qualify Harmony or ohosTest.
