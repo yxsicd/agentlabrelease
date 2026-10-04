@@ -244,3 +244,51 @@ Repair preserves the original failed run; a changed method needs a fresh dispatc
 not a rerun or deletion of evidence. Cloud validation of this correction and real
 post-admission successor execution are pending. Maturity remains 75%; automatic
 complete five-stage rounds remain zero.
+
+## Real successor construction and baseline rejection
+
+PR #284 passed Rust/Harmony 37199849804, component 37199849810 and public
+validation 37199849818, then merged as
+6fb92018c5fec168b8a8bac0987c092ec25d677a. A single fresh dispatch at that exact
+method completed as run 37200257820, job 111430314141, with conclusion failure.
+Current fixed knowledge, original reject reconstruction, fresh construction and
+live participant isolation passed. Baseline diagnosis failed; complete controls
+and independent review were skipped. No knowledge write occurred.
+
+The original constructor artifact is 11302826552,
+`unreviewed-source-recipe-37200257820`, 5503895 bytes, SHA256
+231e789644d8688ae495935d0273a47d9e9a50fe1f14bae9b9f66cd45da95dd2.
+It remains private because it includes participant state and original wire capture.
+The separate review artifact contains enrollment metadata, not an executed review.
+The durable remote request/policy/index-1 claim remains occupied; failure is not
+permission to delete or reuse that reservation.
+
+Original `baseline-diagnostic/feedback.json` reports baseline-observations-rejected:
+4/12 checks passed, worker exit 0, no timeout or log-budget overflow. The unchanged
+`agent/proposal-stage/controls.cjs` uses one global CANDIDATES union for each scenario's
+segmentsPresent/segmentsAbsent. Frozen checks instead demand scenario-specific
+ordered arrays. For example, the button-false result includes an additional
+selectedColor probe; default-absent also uses a different literal probe spelling.
+State/exception checks passed. This establishes an observation-projection defect,
+not a source defect, successful semantic control calibration or emulator acceptance.
+
+Future constructors receive a shape-only per-check guide and explicit exact-array,
+scenario-owned projection instructions. Guide generation preserves check identity,
+pointers, array arity and nested JSON types without copying expected scalar values.
+The frozen design still carries its original contract; this guide is presentation,
+not another authority or a changed comparison operator. The Rust-hosted regression
+executes the real generator, checking separate projections, nested types, input
+nonmutation and invariance under changed same-shape answers. It does not establish
+that another real Agent will generate a passing verifier.
+
+The repair gap is present in both layers: `run-source-recipe-diagnostic-loop.py`
+rejects a reviewed child with nonzero repairs, and native
+`maintainer_source_repair::prepare`/packet reconstruction reject revision lineage
+or a missing pre-generation repair intent. This run's policy enrolled zero code
+repairs. Removing the Python guard alone would neither admit native repair nor
+respect the original budget. A prospective continuation needs explicit bounded
+enrollment, exact retained baseline/stage/request/design bindings, durable lineage
+and independent completion/isolation, without changing the original failed run.
+The current source-reviewed-successor lane expects completed full-suite review;
+this baseline rejection cannot be represented as one. That integration remains
+unfinished. Maturity remains 75%; completed automatic five-stage rounds remain zero.

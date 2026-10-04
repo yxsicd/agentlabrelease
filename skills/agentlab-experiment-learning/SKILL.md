@@ -537,6 +537,17 @@ for the method itself is not evidence that the method was exercised through that
 seam. Report unused declarations and unverified initial-state assumptions before
 lesson admission, even when all control verdicts match.
 
+For exact JSON observation checks, review each scenario's measurement projection,
+not only its source invocation. A real constructor used a global union of string
+probes for every scenario; valid source execution then failed eight of twelve
+baseline checks through extra array items and a mismatched probe string. Arrays
+remain ordered exact values, not subset predicates. Bind scenario-specific probe
+strings and order, compute membership from actual output, and retain contradictory
+results instead of copying expected arrays. A shape-only prompt guide improves
+contract presentation; it does not prove successful Agent correction or authorize
+repair of a historical zero-revision enrollment. See the
+[diagnostic checkpoint](../../docs/flywheel-diagnostic-feedback-20261004.md).
+
 A frozen dependency return supplies the declared value; it need not invoke a real
 dependency callback passed as an argument. Inspect the runtime implementation
 before claiming real parser, storage or framework behavior. Controlled returns

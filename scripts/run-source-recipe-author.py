@@ -69,6 +69,28 @@ def require_pi_retry_policy(state, workspace, expected):
         raise ValueError('Constructor native retry policy drift or project override')
 
 
+def observation_contract_guide(design):
+    """Present native-validated check shapes, never manufacture observations."""
+    def shape(value):
+        if value is None:
+            return {'type': 'null'}
+        if isinstance(value, bool):
+            return {'type': 'boolean'}
+        if isinstance(value, (int, float)):
+            return {'type': 'number'}
+        if isinstance(value, str):
+            return {'type': 'string'}
+        if isinstance(value, list):
+            return {'type': 'array', 'length': len(value),
+                    'items': [shape(item) for item in value]}
+        if isinstance(value, dict):
+            return {'type': 'object', 'properties': {
+                key: shape(item) for key, item in value.items()}}
+        raise ValueError('Non-JSON frozen observation shape')
+    return [dict(id=check['id'], pointer=check['pointer'],
+                 shape=shape(check['expected'])) for check in design['checks']]
+
+
 def guidance_prompt(prompt, packet, mode, evidence, label, effort, budget):
     if packet is None:
         return prompt
@@ -683,6 +705,22 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
             prompt += ('\nFROZEN VERIFIER INTERFACE (operator data, not semantic approval), SHA256='
                 + hashlib.sha256(interface_path.read_bytes()).hexdigest() + ':\n' + interface_content)
             prompt += '\nFROZEN DESIGN (operator runtime applies exact edits; verifier consumes scenarios and shared contract):\n' + design_content
+            prompt += '\nCHECK OBSERVATION SHAPES (presentation only, no observed values):\n' + json.dumps(
+                observation_contract_guide(json.loads(design_content)), ensure_ascii=False)
+            prompt += '''
+Checks compare the actual JSON value at each exact pointer, not a subset match.
+Arrays are ordered values: extra items, missing items, duplicates or reordered
+items can reject the baseline. Each scenario owns its observation projection.
+For string-presence observations, evaluate that scenario's declared probes
+against the actual source output, using exact probe strings and declared order.
+Do not use one global union of every scenario's probes as every scenario's output.
+Probe strings are measurement parameters, not proof of presence or absence:
+compute membership from the actual executed result, never copy the expected
+array or filter results to force an expected answer. If a probe contradicts
+source behavior, retain the failure rather than changing the frozen check.
+The shape guide is not an Oracle or executable validator; ordinary native
+baseline, complete control and independent review gates remain mandatory.
+'''
             prompt += '\nPreserve check/control IDs, roles and expected failure sets exactly. '
             runtime_initialization = (
                 'const runtime=createRuntime.fromCompilerInvocation(process.argv);\n'

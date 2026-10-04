@@ -2,6 +2,50 @@ use std::path::Path;
 use std::process::Command;
 
 #[test]
+fn constructor_observation_guide_preserves_per_check_shape_without_answers() {
+    let code = r#"
+import copy,importlib.util,json,os
+spec=importlib.util.spec_from_file_location('author',os.environ['AUTHOR_SCRIPT'])
+author=importlib.util.module_from_spec(spec);spec.loader.exec_module(author)
+design={'checks':[
+  {'id':'left','pointer':'/left/present','expected':['unique-secret-probe', 'other']},
+  {'id':'right','pointer':'/right/absent','expected':['distinct-probe']},
+  {'id':'state','pointer':'/right/state','expected':{'flag':True,'count':3,'missing':None,'nested':[[1]]}},
+  {'id':'empty','pointer':'/left/empty','expected':[]}]}
+original=copy.deepcopy(design)
+guide=author.observation_contract_guide(design)
+assert design==original
+assert [(row['id'],row['pointer']) for row in guide]==[(row['id'],row['pointer']) for row in design['checks']]
+assert guide[0]['shape']=={'type':'array','length':2,'items':[{'type':'string'},{'type':'string'}]}
+assert guide[1]['shape']=={'type':'array','length':1,'items':[{'type':'string'}]}
+assert guide[2]['shape']=={'type':'object','properties':{'flag':{'type':'boolean'},'count':{'type':'number'},'missing':{'type':'null'},'nested':{'type':'array','length':1,'items':[{'type':'array','length':1,'items':[{'type':'number'}]}]}}}
+assert guide[3]['shape']=={'type':'array','length':0,'items':[]}
+assert not any(probe in json.dumps(guide) for probe in ['unique-secret-probe','other','distinct-probe'])
+# Same shapes, different answers: guide must not turn into an answer inventory.
+changed=copy.deepcopy(design)
+changed['checks'][0]['expected']=['changed','values']
+changed['checks'][2]['expected']['flag']=False
+changed['checks'][2]['expected']['count']=99
+assert author.observation_contract_guide(changed)==guide
+print('per-check shapes, nonmutation and answer exclusion passed')
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "AUTHOR_SCRIPT",
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../scripts/run-source-recipe-author.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn successor_action_reconstructs_original_review_before_dispatch_inputs() {
     let code = r#"
 import argparse,importlib.util,json,os,subprocess,tempfile
