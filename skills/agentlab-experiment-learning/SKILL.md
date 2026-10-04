@@ -253,6 +253,21 @@ diagnostic checks citations only: zero findings is not full response validation,
 completed review, promotion or permission to reset an exhausted attempt budget.
 Require the ordinary content/completion and admission gates independently.
 
+Use `--source-git-checkout` consistently for preparation, canonical prompt,
+response/citation validation and completion when independently acquiring source.
+The Rust gate compares exact origin/commit and every loaded path's Git Blob,
+size, SHA256 and full content; it does not trust an uploaded proof flag. A new
+proof-bearing request has its own digest; older no-proof captures remain bound
+to their original packet. Reacquire the exact checkout for portable replays.
+Verified source binding is not signed producer or rubric-freeze authentication.
+Apply the frozen criterion's actual requirements rather than inventing stronger
+ones from unrelated false qualification flags. Review acceptance is not formal
+runtime qualification or already-completed downstream admission. Control
+definitions and execution occurrences are different: a declared reference
+recovery is a fresh execution of an existing control, not a duplicate definition.
+Retain valid unverified feedback and independently inspect its claimed gaps;
+well-formed quotes and a completed isolated turn do not make every judgment true.
+
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.
 Reconstruct all rows from the retained suite and optional review, preserving the

@@ -825,26 +825,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let source = PathBuf::from(value(&args, "--source")?);
         let rubric = fs::read(value(&args, "--quality-rubric")?)?;
         let response = fs::read(value(&args, "--review-response")?)?;
+        let checkout = if args.iter().any(|a| a == "--source-git-checkout") {
+            Some(PathBuf::from(value(&args, "--source-git-checkout")?))
+        } else {
+            None
+        };
         let report = if args
             .iter()
             .any(|arg| arg == "--verify-source-suite-review-completion")
         {
-            agentlab_code_analysis::maintainer_source_review::verify_completion(
+            agentlab_code_analysis::maintainer_source_review::verify_completion_with_git(
                 &source,
                 &rubric,
                 &PathBuf::from(value(&args, "--participant-evidence")?),
                 &response,
+                checkout.as_deref(),
             )?
         } else if args
             .iter()
             .any(|arg| arg == "--diagnose-source-suite-review-citations")
         {
-            agentlab_code_analysis::maintainer_source_review::diagnose_citations(
-                &source, &rubric, &response,
+            agentlab_code_analysis::maintainer_source_review::diagnose_citations_with_git(
+                &source,
+                &rubric,
+                &response,
+                checkout.as_deref(),
             )?
         } else {
-            agentlab_code_analysis::maintainer_source_review::validate_response(
-                &source, &rubric, &response,
+            agentlab_code_analysis::maintainer_source_review::validate_response_with_git(
+                &source,
+                &rubric,
+                &response,
+                checkout.as_deref(),
             )?
         };
         let mut file = OpenOptions::new()
@@ -862,13 +874,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.iter().any(|arg| {
         arg == "--prepare-source-suite-review" || arg == "--prepare-source-suite-review-prompt"
     }) {
+        let checkout = if args.iter().any(|a| a == "--source-git-checkout") {
+            Some(PathBuf::from(value(&args, "--source-git-checkout")?))
+        } else {
+            None
+        };
         if args
             .iter()
             .any(|arg| arg == "--prepare-source-suite-review-prompt")
         {
-            let prompt = agentlab_code_analysis::maintainer_source_review::prompt(
+            let prompt = agentlab_code_analysis::maintainer_source_review::prompt_with_git(
                 &PathBuf::from(value(&args, "--source")?),
                 &fs::read(value(&args, "--quality-rubric")?)?,
+                checkout.as_deref(),
             )?;
             let mut file = OpenOptions::new()
                 .write(true)
@@ -881,9 +899,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             return Ok(());
         }
-        let report = agentlab_code_analysis::maintainer_source_review::prepare(
+        let report = agentlab_code_analysis::maintainer_source_review::prepare_with_git(
             &PathBuf::from(value(&args, "--source")?),
             &fs::read(value(&args, "--quality-rubric")?)?,
+            checkout.as_deref(),
         )?;
         let mut file = OpenOptions::new()
             .write(true)

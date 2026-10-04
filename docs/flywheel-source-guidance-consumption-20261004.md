@@ -547,3 +547,46 @@ Retained real response replay produced all 32 findings (22 invalid source paths,
 four absent string quotes and six nonstring targets). Original evidence remains
 unchanged outside Release; no fresh Agent execution, accepted review, admission,
 benefit or complete automatic cycle is claimed. Maturity remains 74%.
+
+## Completed isolated feedback and independently reacquired source
+
+PR250 merged as 254d55ad4899a1c6be2d9c615a3161c879e2143e after all eleven
+applicable CI checks passed. New run 37165101045 / job 111326299025 selected
+the same original constructor artifact, rubric, model and budget. It completed
+one isolated zero-retry reviewer turn in 146376 ms, exit zero, no timeout or
+tool calls, with empty prior context. Both native response/completion and on-run
+filesystem, egress and credential-isolation validators passed. The original
+reply verdict is unverified, not accept: five criterion passes, evidence-and-
+identity unverified, four unresolved findings and lessonReview=null.
+
+Artifact 11289655792 is 7569330 bytes, original ZIP SHA256
+4d8a7e06dc5b4bb66f8c7d258cd65caed2cb6062e148af0f90cbd633aa2e920e.
+Original response SHA256 is
+47f18085271f95acef5e85fcb7e693d5249e235243c5f67495e813237dc1afea.
+Captures remain outside Release under flywheel-review-indexed-XI6NoE. Local
+native completion replay passed on unchanged original bytes; complete citation
+diagnostic returned zero. The prior response had 32 citation errors. This is
+one observed successor, not a repeated benefit comparison or semantic truth.
+
+The reviewer treats absent authentication as a mandatory criterion, the explicit
+fresh reference recovery as a duplicate control, and false runtime/lesson flags
+as missing prerequisites for review acceptance. Preserve these original findings
+but check them against the actual frozen requirements: execution occurrences are
+not control definitions, and a scoped review precedes downstream lesson validation.
+The prior prompt itself instructed unverified for any missing authentication,
+stronger than the frozen criterion's actual binding requirement. Correct future
+method guidance without editing the rubric, old reply or historical receipts.
+
+A fresh exact-origin/commit checkout independently matched all 49 loaded files
+by Git Blob OID, size, SHA256 and full content. The operator comparison is retained
+under flywheel-source-identity-bdr4IR; it authenticates neither the producer nor
+rubric freeze. The native optional --source-git-checkout now reconsumes those Git
+objects at preparation, prompt and every response/completion gate, adding a
+digest-bound independentGitSourceIdentity rather than trusting a producer report.
+No-checkout mode preserves original request and prompt bytes for older captures.
+The Action acquires the exact source in an operator-only directory, forbids its
+mount into the reviewer and forwards the same checkout to all native gates.
+Future proof-bearing replays require an independently available exact checkout.
+This integration still requires a fresh main Action after delivery. No lesson
+admission, formal case, measured benefit or complete automatic cycle is claimed;
+overall maturity stays 74%.
