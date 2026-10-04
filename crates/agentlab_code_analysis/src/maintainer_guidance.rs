@@ -714,32 +714,52 @@ pub fn source_recipe_unguided_completion(
         .filter(|present| *present)
         .count();
     need(
-        exchanges.len() == 1 && request_count == 1,
-        "source completion requires one isolated original exchange",
+        (1..=2).contains(&exchanges.len()) && request_count == exchanges.len(),
+        "source completion requires one isolated turn with at most one tool exchange",
     )?;
-    let id = exchanges[0]["exchangeId"].as_str().unwrap();
+    let first_id = exchanges[0]["exchangeId"].as_str().unwrap();
+    let first_wire: Value = serde_json::from_slice(&read(
+        evidence,
+        &format!("gateway/{first_id}.upstream-request.json"),
+    )?)
+    .map_err(|e| e.to_string())?;
+    let messages = first_wire["messages"]
+        .as_array()
+        .ok_or("source completion messages absent")?;
+    need(
+        messages.iter().all(|m| m["role"] == "system" || m["role"] == "user")
+            && messages.iter().filter(|m| m["role"] == "user").count() == 1,
+        "source completion history is not a fresh isolated constructor",
+    )?;
+    let id = exchanges.last().unwrap()["exchangeId"].as_str().unwrap();
     let wire: Value = serde_json::from_slice(&read(
         evidence,
         &format!("gateway/{id}.upstream-request.json"),
     )?)
     .map_err(|e| e.to_string())?;
-    let messages = wire["messages"]
-        .as_array()
-        .ok_or("source completion messages absent")?;
-    need(
-        messages
-            .iter()
-            .all(|m| m["role"] == "system" || m["role"] == "user")
-            && messages.iter().filter(|m| m["role"] == "user").count() == 1,
-        "source completion history is not a fresh isolated constructor",
-    )?;
-    let status: Value =
-        serde_json::from_slice(&read(evidence, &format!("gateway/{id}.status.json"))?)
-            .map_err(|e| e.to_string())?;
-    need(
-        status["upstreamDeadlineExceeded"] != true && status["clientDisconnected"] != true,
-        "source completion transport deadline or disconnect",
-    )?;
+    for exchange in &exchanges {
+        let exchange_id = exchange["exchangeId"].as_str().unwrap();
+        let status: Value = serde_json::from_slice(&read(
+            evidence,
+            &format!("gateway/{exchange_id}.status.json"),
+        )?)
+        .map_err(|e| e.to_string())?;
+        need(
+            status["upstreamDeadlineExceeded"] != true && status["clientDisconnected"] != true,
+            "source completion transport deadline or disconnect",
+        )?;
+    }
+    let lifecycle: Value = serde_json::from_slice(&lifecycle_bytes).map_err(|e| e.to_string())?;
+    let tool_events_sha256 = if exchanges.len() == 2 {
+        Some(verify_source_tool_chain(evidence, first_id, &first_wire, &wire, &lifecycle)?)
+    } else {
+        need(
+            lifecycle["startedToolCalls"].as_u64().unwrap_or(0) == 0
+                && lifecycle["completedToolCalls"].as_u64().unwrap_or(0) == 0,
+            "source completion tool lifecycle lacks an original exchange chain",
+        )?;
+        None
+    };
     let raw = read(evidence, &format!("gateway/{id}.response"))?;
     let final_bytes = read(evidence, &format!("{label}-final-assistant-message.json"))?;
     let final_message: Value = serde_json::from_slice(&final_bytes).map_err(|e| e.to_string())?;
@@ -757,11 +777,170 @@ pub fn source_recipe_unguided_completion(
         "promptSha256":digest(&prompt),"intentSha256":digest(&intent_bytes),
         "lifecycleSha256":digest(&lifecycle_bytes),"finalAssistantMessageSha256":digest(&final_bytes),
         "completedExchanges":exchanges,"participantBudgetSeconds":420,"transportRetryLimit":0,
+        "toolExchangeChainVerified":tool_events_sha256.is_some(),"toolExecutionEventsSha256":tool_events_sha256,
         "authorCompletionVerified":true,"proposalOriginalWireVerified":true,
         "guidanceProvided":false,"guidanceAbsenceVerified":false,"agentConsumptionVerified":false,
         "producerAuthenticated":false,"learningBenefitVerified":false,"caseQualified":false,
         "authorityWritePerformed":false,"automaticPromotion":false}),
     )
+}
+
+/// One original tool response, not a retry or a second constructor. Retained
+/// participant events are observations, not authentication of tool semantics.
+fn verify_source_tool_chain(
+    evidence: &Path,
+    first_id: &str,
+    first: &Value,
+    final_wire: &Value,
+    lifecycle: &Value,
+) -> Result<String, String> {
+    need(
+        lifecycle["maxToolCalls"] == 1
+            && lifecycle["startedToolCalls"] == 1
+            && lifecycle["completedToolCalls"] == 1
+            && lifecycle["toolCallBudgetExceeded"] == false
+            && lifecycle["toolErrors"] == 0
+            && lifecycle["nativeParseErrors"] == 0,
+        "source tool chain exceeds or differs from recorded one-tool budget",
+    )?;
+    let prefix = first["messages"].as_array().ok_or("source first history absent")?;
+    let history = final_wire["messages"].as_array().ok_or("source tool history absent")?;
+    let mut before = first.clone();
+    let mut after = final_wire.clone();
+    before.as_object_mut().ok_or("source wire object absent")?.remove("messages");
+    after.as_object_mut().ok_or("source wire object absent")?.remove("messages");
+    need(
+        before == after && history.len() == prefix.len() + 2 && history[..prefix.len()] == prefix[..],
+        "source tool continuation changed original history or request policy",
+    )?;
+    let assistant = &history[prefix.len()];
+    let result = &history[prefix.len() + 1];
+    let calls = assistant["tool_calls"].as_array().ok_or("source tool calls absent")?;
+    need(
+        assistant["role"] == "assistant" && assistant["function_call"].is_null()
+            && calls.len() == 1 && result["role"] == "tool",
+        "source tool history roles or cardinality differ",
+    )?;
+    let call = &calls[0];
+    let raw = read(evidence, &format!("gateway/{first_id}.response"))?;
+    let (id, name, arguments, content) = original_single_tool_call(first, &raw)?;
+    need(
+        call["id"] == id && call["type"] == "function"
+            && call["function"]["name"] == name
+            && serde_json::from_str::<Value>(text(&call["function"], "arguments")?).map_err(|e| e.to_string())? == arguments
+            && assistant["content"].as_str().unwrap_or("") == content
+            && (assistant["content"].is_null() || assistant["content"].is_string())
+            && result["tool_call_id"] == id,
+        "source tool history differs from original upstream response",
+    )?;
+    need(
+        first["tools"].as_array().is_some_and(|tools| tools.iter().any(|t| {
+            t["type"] == "function" && t["function"]["name"] == name
+        })),
+        "source invoked tool is not declared",
+    )?;
+    let event_name = "source-recipe-author-events.jsonl";
+    let metadata = fs::symlink_metadata(evidence.join(event_name)).map_err(|e| e.to_string())?;
+    need(metadata.is_file() && metadata.len() <= 64 * 1024 * 1024, "source tool event budget")?;
+    let events = read(evidence, event_name)?;
+    need(events.len() <= 64 * 1024 * 1024, "source tool events grew beyond budget")?;
+    let mut state = 0;
+    let mut observed_content = None;
+    for line in std::str::from_utf8(&events).map_err(|e| e.to_string())?.lines() {
+        let event: Value = serde_json::from_str(line).map_err(|e| e.to_string())?;
+        let kind = event["type"].as_str().unwrap_or("");
+        if kind.starts_with("tool_execution_") {
+            need(event["toolCallId"] == id && event["toolName"] == name, "source unrelated tool event")?;
+            match kind {
+                "tool_execution_start" => {
+                    need(state == 0 && event["args"] == arguments, "source tool start drift or duplicate")?;
+                    state = 1;
+                }
+                "tool_execution_update" => {
+                    need(state == 1 && event["args"] == arguments, "source tool update outside execution")?;
+                }
+                "tool_execution_end" => {
+                    need(state == 1 && event["isError"] == false, "source tool end incomplete or duplicate")?;
+                    observed_content = Some(event["result"]["content"].clone());
+                    state = 2;
+                }
+                _ => return Err("source unknown tool event".into()),
+            }
+        } else if kind == "message_end" && event["message"]["role"] == "toolResult" {
+            let message = &event["message"];
+            need(
+                state == 2 && message["toolCallId"] == id && message["toolName"] == name
+                    && message["isError"] == false && Some(&message["content"]) == observed_content.as_ref(),
+                "source tool result message differs from completed execution",
+            )?;
+            state = 3;
+        }
+    }
+    let parts = observed_content.as_ref().and_then(Value::as_array).ok_or("source tool content absent")?;
+    let mut tool_text = String::new();
+    for part in parts {
+        need(part["type"] == "text", "source nontext tool result unsupported")?;
+        tool_text.push_str(part["text"].as_str().ok_or("source tool result text absent")?);
+    }
+    need(state == 3 && result["content"].as_str() == Some(tool_text.as_str()), "source tool result wire drift or incomplete events")?;
+    Ok(digest(&events))
+}
+
+fn original_single_tool_call(wire: &Value, raw: &[u8]) -> Result<(String, String, Value, String), String> {
+    need(raw.len() <= 4 * 1024 * 1024, "source tool response budget")?;
+    let streaming = wire["stream"] == true;
+    let mut frames = Vec::new();
+    let mut done = false;
+    if streaming {
+        for line in std::str::from_utf8(raw).map_err(|e| e.to_string())?.lines() {
+            if let Some(data) = line.strip_prefix("data:") {
+                need(!done, "source tool stream continues after DONE")?;
+                if data.trim() == "[DONE]" { done = true; }
+                else { frames.push(serde_json::from_str::<Value>(data.trim()).map_err(|e| e.to_string())?); }
+            }
+        }
+        need(done, "source tool stream lacks DONE")?;
+    } else {
+        frames.push(serde_json::from_slice(raw).map_err(|e| e.to_string())?);
+    }
+    let (mut id, mut name, mut args, mut content) = (String::new(), String::new(), String::new(), String::new());
+    let mut stopped = false;
+    let mut function_type_seen = false;
+    for frame in frames {
+        need(frame.get("error").is_none_or(Value::is_null), "source tool upstream error")?;
+        let choices = frame["choices"].as_array().ok_or("source tool choices absent")?;
+        need(choices.len() <= 1, "source tool multiple choices")?;
+        for choice in choices {
+            need(choice["index"] == 0, "source tool choice identity")?;
+            let message = &choice[if streaming { "delta" } else { "message" }];
+            need(message["function_call"].is_null()
+                && (message["role"].is_null() || message["role"] == "assistant")
+                && (message["content"].is_null() || message["content"].is_string()),
+                "source tool message role, content or legacy function differs")?;
+            if let Some(text) = message["content"].as_str() {
+                need(!stopped || text.is_empty(), "source tool content after terminal")?;
+                content.push_str(text);
+            }
+            if !message["tool_calls"].is_null() {
+                let calls = message["tool_calls"].as_array().ok_or("source tool calls malformed")?;
+                need(!stopped && calls.len() == 1, "source tool cardinality or terminal drift")?;
+                let call = &calls[0];
+                need((!streaming || call["index"] == 0) && (call["type"].is_null() || call["type"] == "function"), "source tool index or type differs")?;
+                function_type_seen |= call["type"] == "function";
+                for (target, value) in [(&mut id, &call["id"]), (&mut name, &call["function"]["name"]), (&mut args, &call["function"]["arguments"])] {
+                    if !value.is_null() { target.push_str(value.as_str().ok_or("source tool fragment malformed")?); }
+                }
+            }
+            if !choice["finish_reason"].is_null() {
+                need(!stopped && choice["finish_reason"] == "tool_calls", "source tool response lacks tool terminal")?;
+                stopped = true;
+            }
+        }
+    }
+    need(stopped && function_type_seen && !id.is_empty() && !name.is_empty(), "source tool response incomplete")?;
+    let arguments: Value = serde_json::from_str(&args).map_err(|e| e.to_string())?;
+    need(arguments.is_object(), "source tool arguments must be an object")?;
+    Ok((id, name, arguments, content))
 }
 
 fn consumption_for_turn(

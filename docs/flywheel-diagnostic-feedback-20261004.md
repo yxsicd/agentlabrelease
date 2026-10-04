@@ -483,3 +483,47 @@ byte-identical native output, excludes participant private state, rejects missin
 captured requests before preparation and rejects changed requests through native
 admission without creating a packet or local claims. Cloud execution is pending;
 this change does not establish a successful model repair or completed round.
+
+## Real completed tool turn rejected by an inconsistent admission contract
+
+PR290 normally merged as 6ee9e6b966ac0d7c72eb90667c3691a2658f3972 after
+Rust/Harmony, component and seven of eight public jobs passed. The unchanged
+legacy closure installation job remained in dependency setup; that gate is not
+claimed passed and no formal Release was issued.
+
+One non-retried dispatch created run 37212274329. Its actual retained baseline
+acquisition/native preparation passed, resolving the missing captured request.
+The original prospective slot was reserved, with unchanged 420-second/zero-retry
+policy. Participant exit zero, no timeout, duration 64311 ms, one started/completed
+tool call and a final stop response were retained. The actual tool was `bash`
+with `echo ok`; its `ok\n` result entered the second original upstream request.
+All original request policy fields outside messages match across both exchanges.
+Independent on-run isolation validation passed.
+
+Native independent completion rejected before staging with `source completion
+requires one isolated original exchange`. This contradicted the participant's
+permitted one-tool budget, not a failed baseline or demonstrated Agent inability.
+Neither baseline, full suite nor fresh independent review executed. Original
+artifact 11307475527 has 10818746 bytes, SHA256
+4b5ca91d761792a6dbcf6136900ca37d84e5c4558b614b54c6cb848b420189bf.
+Original dispatch, reception observation and terminal failure receipts remain
+separate outside Release. The reserved slot is exhausted, never removed/reopened.
+
+The native gate now supports one terminal-only exchange or one complete causal
+tool exchange followed by final completion. It requires an unchanged original
+history/policy prefix, one raw original function call with normal tool terminal
+and complete stream DONE, declared tool identity, matching original arguments,
+ordered complete participant execution/result events, and exact tool-result wire
+content. Lifecycle must retain the one-tool budget, one start/end, zero tool/parse
+errors and no budget overflow. Every exchange still requires completed transport,
+same model/route/effort and no deadline/disconnect. Final response/proposal remains
+independently replayed by the existing strict parser. Event capture is bounded to
+64 MiB and its digest retained; it is consistency evidence, not authentication.
+
+Rust fixtures cover stream/nonstream tool chains under two unrelated identities
+and reject history/policy/argument/result/identity drift, absent/duplicate/reordered
+events, undeclared tools, malformed terminals, overflow and extra exchanges.
+Cloud validation and independent requalification of the real original capture
+are pending. No model attempt is added. Maturity remains 75%, complete automatic
+five-stage rounds zero; actual baseline/suite, knowledge return, fresh consumption
+and cross-repository benefit remain unproven.

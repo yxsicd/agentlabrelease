@@ -26,6 +26,25 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
         for mode in [
             "good-stream",
             "good-json",
+            "good-chain-stream",
+            "good-chain-json",
+            "chain-history-drift",
+            "chain-policy-drift",
+            "chain-args-drift",
+            "chain-id-drift",
+            "chain-result-drift",
+            "chain-event-args-drift",
+            "chain-event-result-drift",
+            "chain-event-duplicate",
+            "chain-event-order",
+            "chain-missing-events",
+            "chain-tool-budget",
+            "chain-tool-error",
+            "chain-missing-done",
+            "chain-after-done",
+            "chain-non-tool-terminal",
+            "chain-undeclared-tool",
+            "chain-extra-exchange",
             "request-drift",
             "prompt-drift",
             "normalization-drift",
@@ -88,7 +107,7 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
                 lifecycle["transportRetryLimit"] = json!(1);
             }
             let mut wire = json!({"model":"fixture-model","providerId":"fixture-route","reasoning_effort":"low",
-                "stream":mode != "good-json","messages":[{"role":"user","content":prompt}]});
+                "stream":!mode.ends_with("json"),"messages":[{"role":"user","content":prompt}]});
             if mode == "prompt-drift" {
                 wire["messages"][0]["content"] = json!("changed prompt");
             }
@@ -110,7 +129,7 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
             } else {
                 "stop"
             };
-            let mut raw = if mode == "good-json" {
+            let mut raw = if mode.ends_with("json") {
                 serde_json::to_vec(
                     &json!({"choices":[{"index":0,"message":delta,"finish_reason":finish}]}),
                 )
@@ -126,7 +145,7 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
             if mode == "upstream-error" {
                 raw.extend_from_slice(b"data: {\"error\":{\"message\":\"original error\"}}\n\n");
             }
-            if mode != "good-json" && mode != "missing-done" {
+            if !mode.ends_with("json") && mode != "missing-done" {
                 raw.extend_from_slice(b"data: [DONE]\n\n");
             }
             if mode == "after-done" {
@@ -177,7 +196,70 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
                 serde_json::to_vec(&status).unwrap(),
             )
             .unwrap();
-            fs::write(gateway.join("0001.response"), raw).unwrap();
+            fs::write(gateway.join("0001.response"), &raw).unwrap();
+            if mode.contains("chain") {
+                let arguments = json!({"command":"echo ok"});
+                let call = json!({"id":"call-original","type":"function","function":{"name":"bash","arguments":serde_json::to_string(&arguments).unwrap()}});
+                let mut first = wire.clone();
+                first["tools"] = json!([{"type":"function","function":{"name":"bash"}}]);
+                let mut second = first.clone();
+                second["messages"].as_array_mut().unwrap().extend([
+                    json!({"role":"assistant","content":null,"tool_calls":[call.clone()]}),
+                    json!({"role":"tool","tool_call_id":"call-original","content":"ok\n"}),
+                ]);
+                let content = json!([{"type":"text","text":"ok\n"}]);
+                let mut events = vec![
+                    json!({"type":"tool_execution_start","toolCallId":"call-original","toolName":"bash","args":arguments}),
+                    json!({"type":"tool_execution_end","toolCallId":"call-original","toolName":"bash","result":{"content":content},"isError":false}),
+                    json!({"type":"message_end","message":{"role":"toolResult","toolCallId":"call-original","toolName":"bash","content":content,"isError":false}}),
+                ];
+                let mut tool_raw = if mode.ends_with("json") {
+                    serde_json::to_vec(&json!({"choices":[{"index":0,"message":{"role":"assistant","content":null,"tool_calls":[call]},"finish_reason":"tool_calls"}]})).unwrap()
+                } else {
+                    format!("data: {}\n\ndata: {}\n\ndata: [DONE]\n\n",
+                        json!({"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call-original","type":"function","function":{"name":"bash","arguments":"{\"command\":"}}]},"finish_reason":null}]}),
+                        json!({"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"echo ok\"}"}}]},"finish_reason":"tool_calls"}]})).into_bytes()
+                };
+                match mode {
+                    "chain-history-drift" => second["messages"][0]["content"] = json!("different constructor"),
+                    "chain-policy-drift" => second["max_tokens"] = json!(123),
+                    "chain-args-drift" => second["messages"][1]["tool_calls"][0]["function"]["arguments"] = json!("{}"),
+                    "chain-id-drift" => second["messages"][2]["tool_call_id"] = json!("other-call"),
+                    "chain-result-drift" => second["messages"][2]["content"] = json!("fabricated result"),
+                    "chain-event-args-drift" => events[0]["args"] = json!({}),
+                    "chain-event-result-drift" => events[1]["result"]["content"] = json!([]),
+                    "chain-event-duplicate" => events.push(events[1].clone()),
+                    "chain-event-order" => events.swap(0, 1),
+                    "chain-undeclared-tool" => { first["tools"] = json!([]); second["tools"] = json!([]); }
+                    "chain-missing-done" => tool_raw = tool_raw[..tool_raw.len() - b"data: [DONE]\n\n".len()].to_vec(),
+                    "chain-after-done" => tool_raw.extend_from_slice(b"data: {\"choices\":[]}\n\n"),
+                    "chain-non-tool-terminal" => tool_raw = String::from_utf8(tool_raw).unwrap().replace("\"finish_reason\":\"tool_calls\"", "\"finish_reason\":\"stop\"").into_bytes(),
+                    _ => {}
+                }
+                lifecycle["maxToolCalls"] = json!(if mode == "chain-tool-budget" { 2 } else { 1 });
+                lifecycle["startedToolCalls"] = json!(1);
+                lifecycle["completedToolCalls"] = json!(1);
+                lifecycle["toolCallBudgetExceeded"] = json!(false);
+                lifecycle["toolErrors"] = json!(if mode == "chain-tool-error" { 1 } else { 0 });
+                lifecycle["nativeParseErrors"] = json!(0);
+                fs::write(evidence.join(format!("{label}-lifecycle.json")), serde_json::to_vec(&lifecycle).unwrap()).unwrap();
+                if mode != "chain-missing-events" {
+                    fs::write(evidence.join(format!("{label}-events.jsonl")), events.iter().map(|e| serde_json::to_string(e).unwrap() + "\n").collect::<String>()).unwrap();
+                }
+                let mut first_status = status.clone();
+                first_status["responseBytes"] = json!(tool_raw.len());
+                let mut second_status = status.clone();
+                second_status["exchangeId"] = json!("0002");
+                for (name, bytes) in [
+                    ("0001.upstream-request.json", serde_json::to_vec(&first).unwrap()),
+                    ("0001.status.json", serde_json::to_vec(&first_status).unwrap()),
+                    ("0001.response", tool_raw),
+                    ("0002.upstream-request.json", serde_json::to_vec(&second).unwrap()),
+                    ("0002.status.json", serde_json::to_vec(&second_status).unwrap()),
+                    ("0002.response", raw.clone()),
+                ] { fs::write(gateway.join(name), bytes).unwrap(); }
+                if mode == "chain-extra-exchange" { fs::write(gateway.join("0003.upstream-request.json"), b"{}").unwrap(); }
+            }
             if mode == "second-wire" {
                 fs::write(gateway.join("0002.upstream-request.json"), b"{}").unwrap();
             }
@@ -202,7 +284,7 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
                 assert_eq!(receipt["caseQualified"], false);
                 assert_eq!(receipt["guidanceAbsenceVerified"], false);
             }
-            if mode == "good-stream" || mode == "proposal-drift" {
+            if mode == "good-stream" || mode == "good-chain-stream" || mode == "proposal-drift" {
                 let request_path = f.root.join("completion-request.json");
                 let proposal_path = f.root.join("completion-proposal.json");
                 let output = f.root.join("completion-receipt.json");
