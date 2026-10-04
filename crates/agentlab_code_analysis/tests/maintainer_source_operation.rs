@@ -1352,29 +1352,34 @@ class Participant:
         return {'content':content,'message':{'stopReason':self.stop}}
 with tempfile.TemporaryDirectory() as directory:
     root=Path(directory)
-    for scenario in ['recover','exhaust','parent-recover','parent-exhaust','review-recover','review-exhaust','drift','partial','truncated','oversized','legacy','json-recover','json-exhaust']:
+    for scenario in ['recover','exhaust','parent-recover','parent-exhaust','review-recover','review-exhaust','drift','partial','truncated','oversized','legacy','json-recover','json-exhaust','shape-recover','shape-exhaust','author-drift']:
         output=root/scenario;output.mkdir();evidence=output/'evidence';evidence.mkdir()
         participant=Participant(evidence,complete=scenario!='partial',stop='length' if scenario=='truncated' else 'stop',oversized=scenario=='oversized')
         commands=[]
         def gate(command,**kwargs):
             commands.append(command)
-            if scenario in ('parent-recover','review-recover') and len(commands)>1 or scenario=='recover' and len(commands)==2 or scenario=='json-recover':
+            if scenario in ('parent-recover','review-recover') and len(commands)>1 or scenario in ('recover','shape-recover') and len(commands)==2 or scenario=='json-recover':
                 Path(command[command.index('--output')+1]).write_text('{"semanticQualified":false}')
                 return subprocess.CompletedProcess(command,0,b'',b'')
             error='recipe design scenario differs from exact design review at scenario state; require scenarioChanges before/after/findingId' if scenario.startswith('review-') else 'recipe design checks differ from reviewed parent contract at check value; retain exact id/pointer/expected' if scenario.startswith('parent-') else 'recipe design request no longer reproduces' if scenario=='drift' else 'recipe design edit in control ref at arbitrary/source must match exactly once; observed 0'
+            if scenario.startswith('shape-'):error='recipe design check field at /checks/0/id: required nonempty string; no automatic coercion'
+            if scenario=='author-drift':error='recipe author id absent'
             return subprocess.CompletedProcess(command,1,b'',('Error: '+json.dumps(error)).encode())
         with patch.object(module.subprocess,'run',side_effect=gate):
             try:
                 selected,content=module.construct_design(participant,output,evidence,output,root/'request.json',Path('/fixture/gate'),'original bounded prompt','none',1,revision_request=root/'revision.json' if scenario.startswith('parent-') else None,design_review=(root/'parent.json',root/'review.json') if scenario.startswith('review-') else None)
             except ValueError:
-                assert scenario not in ('recover','parent-recover','review-recover','json-recover')
+                assert scenario not in ('recover','parent-recover','review-recover','json-recover','shape-recover')
             else:
-                assert scenario in ('recover','parent-recover','review-recover','json-recover')
+                assert scenario in ('recover','parent-recover','review-recover','json-recover','shape-recover')
                 assert selected.read_text()==content and json.loads(content)['iteration']==2
-        expected=2 if scenario in ('recover','exhaust','parent-recover','parent-exhaust','review-recover','review-exhaust','legacy','json-recover','json-exhaust') else 1
+        expected=2 if scenario in ('recover','exhaust','parent-recover','parent-exhaust','review-recover','review-exhaust','legacy','json-recover','json-exhaust','shape-recover','shape-exhaust') else 1
         assert len(participant.labels)==expected
         assert len(commands)==(0 if scenario in ('partial','truncated','oversized','legacy','json-exhaust') else 1 if scenario=='json-recover' else 3 if scenario in ('parent-recover','review-recover') else expected)
-        assert not (output/'design.json').exists() or scenario in ('recover','parent-recover','review-recover','json-recover')
+        assert not (output/'design.json').exists() or scenario in ('recover','parent-recover','review-recover','json-recover','shape-recover')
+        if scenario.startswith('shape-'):
+            assert '/checks/0/id' in participant.prompts[1]
+            assert 'required nonempty string' in participant.prompts[1]
         if scenario.startswith('json-'):
             raw=(output/'design-attempt-0.json').read_text()
             assert raw.endswith('`')
@@ -2667,6 +2672,32 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     assert_eq!(fs::read(&interface_output).unwrap(), original_interface);
     // A real constructor repeated abbreviated scenario pointers after receiving
     // only a generic mismatch. Diagnose the exact rejected field without repair.
+    // Numeric IDs from a real Agent must remain rejected, but their local
+    // shape diagnostics must reach the predeclared bounded correction lane.
+    for (pointer, kind) in [
+        ("/scenarios/0/id", "scenario"),
+        ("/checks/0/id", "check"),
+        ("/checks/0/pointer", "check"),
+        ("/controls/0/id", "control"),
+        ("/controls/1/edits/0/path", "edit"),
+        ("/controls/1/edits/0/before", "edit"),
+    ] {
+        for invalid in [json!(1), Value::Null, json!(""), json!([])] {
+            let mut malformed = design.clone();
+            *malformed.pointer_mut(pointer).unwrap() = invalid;
+            let original = serde_json::to_vec(&malformed).unwrap();
+            let error = author::design(&request_bytes, &original).unwrap_err();
+            assert!(
+                error.starts_with(&format!("recipe design {kind} field")),
+                "{error}"
+            );
+            assert!(
+                error.contains(pointer) && error.contains("nonempty string"),
+                "{error}"
+            );
+            assert_eq!(serde_json::to_vec(&malformed).unwrap(), original);
+        }
+    }
     let mut missing_pointer = design.clone();
     missing_pointer["scenarios"][0]["id"] = json!("state-long-name");
     let error = author::design(
