@@ -411,6 +411,7 @@ jobs:
             --response-format "$CONSTRUCTION_RESPONSE_FORMAT" \
             --api "$CONSTRUCTION_API" --design-revisions "$CONSTRUCTION_DESIGN_REVISIONS" "${revision_args[@]}"
       - name: Independently validate recorded participant isolation
+        id: author_isolation
         if: always() && steps.contain.outcome == 'success'
         run: |
           cmp "$RUNNER_TEMP/recipe-runtime.json" "$RUNNER_TEMP/recipe-author/runtime-inputs/config.json"
@@ -426,6 +427,7 @@ jobs:
             --participant-state "$RUNNER_TEMP/recipe-author/agent/participant-state" \
             "${labels[@]}" --output "$RUNNER_TEMP/recipe-author/runtime-validation.json"
       - name: Diagnose unchanged generated verifier baseline in a separate container
+        id: baseline_diagnostic
         if: inputs.design_first
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
@@ -438,6 +440,7 @@ jobs:
             --root "$RUNNER_TEMP/recipe-author" --gate target/release/agentlab-maintainer-skill-flywheel \
             --compiler "$compiler" --image-id "$image_id" --maximum-repairs "$CONSTRUCTION_CODE_REVISIONS"
       - name: Diagnose complete frozen control suite and fresh accepted-reference recovery
+        id: control_suite
         if: inputs.design_first
         run: |
           compiler="$RUNNER_TEMP/recipe-compiler/node_modules/typescript/lib/typescript.js"
@@ -447,7 +450,10 @@ jobs:
             --compiler "$compiler" --image-id "$image_id"
       - name: Prepare independent reviewer on the same original suite
         id: review_contain
-        if: inputs.independent_review
+        # A complete disagreement remains a failed task but is useful review input.
+        # Native preparation reconstructs the full export; partial/infrastructure
+        # failures cannot launch a reviewer merely because some files exist.
+        if: ${{ !cancelled() && inputs.independent_review && steps.author_isolation.outcome == 'success' && steps.baseline_diagnostic.outcome == 'success' }}
         run: |
           root="$RUNNER_TEMP/recipe-author/automatic-review"
           mkdir "$root/source"
@@ -473,7 +479,8 @@ jobs:
           cp "$RUNNER_TEMP/recipe-review-case/manifest.json" "$root/runtime-inputs/manifest.json"
           cp "$RUNNER_TEMP/recipe-pi/package-lock.json" "$root/runtime-inputs/package-lock.json"
       - name: Automatically capture a fresh independent reviewer
-        if: inputs.independent_review
+        id: review_capture
+        if: ${{ !cancelled() && inputs.independent_review && steps.review_contain.outcome == 'success' }}
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
           AGENTLAB_PARTICIPANT_RUNTIME_CONFIG: ${{ runner.temp }}/recipe-review-runtime.json
@@ -507,7 +514,7 @@ jobs:
               --output "$root/runtime-repair-validation.json"
           fi
       - name: Automatically export and independently receive accepted feedback
-        if: success() && inputs.independent_review && steps.review_isolation.outcome == 'success'
+        if: ${{ !cancelled() && inputs.independent_review && steps.review_capture.outcome == 'success' && steps.review_isolation.outcome == 'success' }}
         run: |
           root="$RUNNER_TEMP/recipe-author/automatic-review"
           selected=$(jq -er 'select(.completed == true) | .selectedAttempt' "$root/agent/attempt-coordinator.json")

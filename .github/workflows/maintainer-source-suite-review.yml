@@ -14,6 +14,11 @@ on:
         description: Exact constructor method Git commit
         required: true
         type: string
+      source_coordinator_request_id:
+        description: Optional exact gap coordinator identity; required for a tagged constructor run
+        default: ''
+        required: false
+        type: string
       artifact_sha256:
         description: Original ZIP SHA256 frozen before reviewer dispatch
         required: true
@@ -75,6 +80,7 @@ jobs:
       REVIEW_SOURCE_RUN: ${{ inputs.source_run }}
       REVIEW_SOURCE_ARTIFACT: ${{ inputs.source_artifact }}
       REVIEW_SOURCE_REVISION: ${{ inputs.source_revision }}
+      REVIEW_SOURCE_COORDINATOR_REQUEST_ID: ${{ inputs.source_coordinator_request_id }}
       REVIEW_ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
       REVIEW_RUBRIC: ${{ inputs.rubric }}
       REVIEW_RUBRIC_SHA256: ${{ inputs.rubric_sha256 }}
@@ -95,12 +101,15 @@ jobs:
           from pathlib import Path
           root=Path(os.environ['RUNNER_TEMP'])/'source-suite-review';root.mkdir()
           raw=os.environ['REVIEW_RUBRIC'].encode()
+          request_id=os.environ['REVIEW_SOURCE_COORDINATOR_REQUEST_ID']
+          assert not request_id or re.fullmatch('[0-9a-f]{64}',request_id)
           assert len(raw)<=128*1024 and re.fullmatch('[0-9a-f]{64}',os.environ['REVIEW_RUBRIC_SHA256'])
           assert hashlib.sha256(raw).hexdigest()==os.environ['REVIEW_RUBRIC_SHA256']
           with (root/'rubric.json').open('xb') as f:f.write(raw)
           enrollment=dict(schema='agentlab.independent_source_suite_review_enrollment.v1',
               methodRevision=os.environ['GITHUB_SHA'],sourceRun=os.environ['REVIEW_SOURCE_RUN'],
               sourceArtifact=os.environ['REVIEW_SOURCE_ARTIFACT'],sourceMethodRevision=os.environ['REVIEW_SOURCE_REVISION'],
+              sourceCoordinatorRequestId=request_id or None,
               artifactSha256=os.environ['REVIEW_ARTIFACT_SHA256'],rubricSha256=os.environ['REVIEW_RUBRIC_SHA256'],
               model=os.environ['AGENTLAB_MODEL'],providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
               reasoningEffort=os.environ['REVIEW_REASONING_EFFORT'],thinkingType=os.environ['REVIEW_THINKING_TYPE'],
@@ -115,10 +124,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          identity_args=()
+          if test -n "$REVIEW_SOURCE_COORDINATOR_REQUEST_ID"; then
+            identity_args+=(--coordinator-request-id "$REVIEW_SOURCE_COORDINATOR_REQUEST_ID")
+          fi
           python3 scripts/acquire-source-suite-review-input.py --repository "$GITHUB_REPOSITORY" \
             --run "$REVIEW_SOURCE_RUN" --artifact "$REVIEW_SOURCE_ARTIFACT" \
             --source-revision "$REVIEW_SOURCE_REVISION" --artifact-sha256 "$REVIEW_ARTIFACT_SHA256" \
-            --output "$RUNNER_TEMP/source-suite-review/source"
+            --output "$RUNNER_TEMP/source-suite-review/source" "${identity_args[@]}"
       - name: Reconstruct original evidence before installing or dispatching reviewer
         run: |
           request="$RUNNER_TEMP/source-suite-review/source/observations/source-stage/request.json"

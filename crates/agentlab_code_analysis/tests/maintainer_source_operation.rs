@@ -568,6 +568,71 @@ fn semantic_refresh_action_accepts_fixed_successor_cut_without_path_escape() {
 }
 
 #[test]
+fn standalone_review_forwards_exact_optional_coordinator_identity() {
+    use std::os::unix::fs::PermissionsExt;
+    let workflow =
+        fs::read_to_string(root().join(".github/workflows/maintainer-source-suite-review.yml"))
+            .unwrap();
+    let body = workflow
+        .split("      - name: Acquire only the exact original source Action artifact\n")
+        .nth(1)
+        .unwrap()
+        .split("      - name:")
+        .next()
+        .unwrap()
+        .split("        run: |\n")
+        .nth(1)
+        .unwrap();
+    let script = body
+        .lines()
+        .map(|line| line.strip_prefix("          ").unwrap_or(line))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let base = std::env::temp_dir().join(format!(
+        "review-identity-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&base).unwrap();
+    let stub = base.join("python3");
+    fs::write(&stub, "#!/bin/sh\nprintf '%s\\n' \"$@\"\n").unwrap();
+    fs::set_permissions(&stub, fs::Permissions::from_mode(0o700)).unwrap();
+    for identity in [String::new(), "c".repeat(64)] {
+        let output = Command::new("/bin/bash")
+            .args(["-e", "-c", &script])
+            .env("PATH", &base)
+            .env("RUNNER_TEMP", &base)
+            .env("GITHUB_REPOSITORY", "fixture/repository")
+            .env("REVIEW_SOURCE_RUN", "123")
+            .env("REVIEW_SOURCE_ARTIFACT", "456")
+            .env("REVIEW_SOURCE_REVISION", "a".repeat(40))
+            .env("REVIEW_ARTIFACT_SHA256", "b".repeat(64))
+            .env("REVIEW_SOURCE_COORDINATOR_REQUEST_ID", &identity)
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        let args: Vec<_> = stdout.lines().collect();
+        assert_eq!(args[0], "scripts/acquire-source-suite-review-input.py");
+        let position = args
+            .iter()
+            .position(|arg| *arg == "--coordinator-request-id");
+        if identity.is_empty() {
+            assert!(position.is_none());
+        } else {
+            assert_eq!(args[position.unwrap() + 1], identity);
+        }
+        assert_eq!(args[2], "fixture/repository");
+        assert_eq!(args[4], "123");
+        assert_eq!(args[6], "456");
+    }
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn automatic_review_freezes_inputs_before_budget_and_keeps_native_gate_order() {
     let code = r#"
 import hashlib,json,os,subprocess,tempfile,textwrap
@@ -576,6 +641,35 @@ from unittest.mock import patch
 workflow=Path(os.environ['WORKFLOW']).read_text()
 def step(name):
     return workflow.split('      - name: '+name+'\n')[1].split('      - ')[0].split('        run: |\n')[1]
+def enabled(name, outcomes, cancelled=False, review=True):
+    header=workflow.split('      - name: '+name+'\n')[1].split('        run: |\n')[0]
+    condition=next(line.strip()[4:] for line in header.splitlines() if line.strip().startswith('if: '))
+    assert condition.startswith('${{ ') and condition.endswith(' }}')
+    expression=condition[4:-3]
+    import re
+    expression=expression.replace('!cancelled()',repr(not cancelled))
+    expression=expression.replace('inputs.independent_review',repr(review))
+    expression=re.sub(r'steps\.([a-z_]+)\.outcome',lambda m:repr(outcomes.get(m[1],'skipped')),expression)
+    return eval(expression.replace('&&',' and '),{'__builtins__':{}},{})
+prepare_name='Prepare independent reviewer on the same original suite'
+capture_name='Automatically capture a fresh independent reviewer'
+export_name='Automatically export and independently receive accepted feedback'
+for suite in ('success','failure'):
+    outcomes=dict(author_isolation='success',baseline_diagnostic='success',control_suite=suite)
+    assert enabled(prepare_name,outcomes)
+    assert not enabled(prepare_name,outcomes,cancelled=True)
+    assert not enabled(prepare_name,outcomes,review=False)
+    for boundary in ('author_isolation','baseline_diagnostic'):
+        bad=dict(outcomes);bad[boundary]='failure'
+        assert not enabled(prepare_name,bad)
+for outcome in ('success','failure','skipped','cancelled'):
+    assert enabled(capture_name,dict(review_contain=outcome))==(outcome=='success')
+    assert not enabled(capture_name,dict(review_contain=outcome),cancelled=True)
+for capture in ('success','failure','skipped'):
+    for isolation in ('success','failure','skipped'):
+        assert enabled(export_name,dict(review_capture=capture,review_isolation=isolation))==(capture==isolation=='success')
+suite_header=workflow.split('      - name: Diagnose complete frozen control suite and fresh accepted-reference recovery\n')[1].split('        run: |\n')[0]
+assert 'continue-on-error' not in suite_header  # Diagnostic review must not turn the failed task green.
 freeze=step('Freeze optional independent review before construction budget')
 freeze=textwrap.dedent(freeze.split("python3 - <<'PY'\n")[1].split('          PY')[0])
 export=textwrap.dedent(step('Automatically export and independently receive accepted feedback'))

@@ -158,6 +158,13 @@ readback, explicit promotion and fixed-baseline knowledge admission boundaries.
 The full source-control-suite runner exports original observations after native
 suite reconstruction, including complete declaration disagreements before its
 failure exit. Incomplete/infrastructure failures do not export semantic outcomes.
+Route complete disagreements to the independently contained reviewer after native
+raw reconstruction, rather than letting the task's failure suppress diagnostic
+feedback. Keep the original suite step failed. A reviewer may reject or remain
+unverified; even a claimed acceptance cannot bypass matched-control lesson gates.
+Missing/altered exports and failed constructor isolation stop before reviewer
+budget. An unexpected additional failed check requires causal attribution, not
+automatic adoption of observed failure IDs or weakening the frozen Oracle.
 Export failure preserves the completed suite; do not restart workers to recover
 publication. This automatic operational handoff neither creates a lesson nor
 admits knowledge. A cloud run on an older method needs a separate retained-byte
@@ -224,8 +231,11 @@ authentication. Quote membership is not semantic support; full completion still
 does not grant knowledge authority, formal-case acceptance or measured benefit.
 
 The main-only `maintainer-source-suite-review.yml` consumes one explicit completed
-source Action run/artifact/method commit and predeclared ZIP/rubric digests. Its
-fresh contained reviewer uses the existing operator Gateway and canonical native
+source Action run/artifact/method commit and predeclared ZIP/rubric digests. The
+optional source_coordinator_request_id must bind a tagged gap constructor's exact
+identity; retain it in enrollment and forward it to ordinary artifact acquisition.
+Do not infer the tag from a display name or weaken acquisition to accept any run.
+A fresh contained reviewer uses the existing operator Gateway and canonical native
 prompt, not the constructor session or an operator-corrected reply. Preserve the
 original response on schema/capture rejection; do not restart an exhausted review
 or infer acceptance from workflow success. A valid reject/unverified verdict is
