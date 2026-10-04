@@ -417,9 +417,12 @@ fn check_output_inner(
     need(
         proposal["schema"] == parent["schema"]
             && proposal["scopeSkillId"] == parent["scopeSkillId"]
-            && proposal["contract"] == parent["contract"]
-            && proposal["sourcePaths"] == parent["sourcePaths"],
+            && proposal["contract"] == parent["contract"],
         "construction repair changed frozen checks/controls/source paths",
+    )?;
+    need(
+        proposal["sourcePaths"] == parent["sourcePaths"],
+        "construction repair changed frozen checks/controls/source paths: /sourcePaths must exactly equal the parent array, including order and dependency paths",
     )?;
     need(
         proposal["verifierSource"]

@@ -232,6 +232,16 @@ source bytes; do not discard new fields or bypass identity checks to obtain a pa
 This preflight prevents wasted participant calls, not semantic approval or learning
 benefit. See the [target-review checkpoint](../../docs/flywheel-construction-target-review-20261004.md).
 
+For source-only runtime closure, inspect transitive module initialization as well
+as the selected method: a real verifier failed before observations because a
+dependency evaluated a platform resource global absent from the host context.
+Declare required external behavior explicitly; never add default platform stubs
+or treat host execution as platform qualification. Code-only diagnostic repairs
+must preserve every frozen source path, including dependency paths and order,
+even when the import strategy changes. Present the native-admitted immutable
+proposal fields directly in repair context and report the offending field at
+admission. Prompt guidance does not prove model compliance or dependency closure.
+
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest
 and restore frozen paths inside an isolated namespace rather than overwriting

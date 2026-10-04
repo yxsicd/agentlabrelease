@@ -49,6 +49,17 @@ request['sourceRecipeTarget']=target
 original=copy.deepcopy(request)
 assert author.source_context(request)['sourceRecipeTarget']==target
 assert request==original
+for repository in ['unrelated-one', 'different-project']:
+    parent={'schema':'proposal','scopeSkillId':repository,'sourcePaths':['src/subject.ts','src/dependency.ts'],
+        'contract':{'checks':[{'id':'state','pointer':'/state','expected':True}], 'controls':[]},
+        'verifierSource':'old implementation','rationale':'old rationale','limitations':['none']}
+    packet={'parentProposalOriginal':json.dumps(parent)}
+    before=copy.deepcopy(packet)
+    frozen=author.frozen_repair_contract(packet)
+    assert frozen=={key:parent[key] for key in ('schema','scopeSkillId','sourcePaths','contract')}
+    assert packet==before and 'verifierSource' not in frozen
+    frozen['sourcePaths'].pop()
+    assert author.frozen_repair_contract(packet)['sourcePaths']==parent['sourcePaths']
 print('per-check shapes, nonmutation, answer exclusion and frozen target context passed')
 "#;
     let result = Command::new("python3")
