@@ -485,6 +485,47 @@ fn published_successor_cut_binds_new_lesson_without_rewriting_historical_guidanc
 }
 
 #[test]
+fn published_automatic_review_lesson_binds_new_cut_and_preserves_frozen_method() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let knowledge = repo
+        .join("examples/maintainer-knowledge-gate/cuts/f41c1bdfa145bacbe28f445e35707c0b2b1772ec");
+    let selection = fs::read(repo.join("examples/maintainer-knowledge-gate/reviewed-guidance/rating-convert-source-review-selection-f41c1bdf.json")).unwrap();
+    let packet = bind(&knowledge, &selection).unwrap();
+    assert_eq!(packet["guidance"].as_array().unwrap().len(), 1);
+    let skill = &packet["guidance"][0]["skill"];
+    assert_eq!(
+        skill["id"],
+        "skill-source-suite-fa345f866f5bd480ceacac93157aefa424bbadf7a755160c998fdd3246c26059"
+    );
+    assert_eq!(skill["stage"], "calibration");
+    assert_eq!(
+        skill["methodRevision"],
+        "37cfa0ce1ec6fcfa8c775b33255e8ba7010c9b3d"
+    );
+    assert_eq!(
+        skill["methodDigest"],
+        "5c98fb3bbc7a3cbbdf793dfb3835af88185867421cc2974caa642a5b35824982"
+    );
+    assert_eq!(
+        skill["lessonSource"]["revision"],
+        "edbcd54848c6e1e9868d25ac7a347d17c0899168"
+    );
+    for flag in [
+        "agentConsumptionVerified",
+        "learningBenefitVerified",
+        "authorityWritePerformed",
+    ] {
+        assert_eq!(packet[flag], false);
+    }
+    let old = repo
+        .join("examples/maintainer-knowledge-gate/cuts/4bba501a1dffbdbeef05b759584fef70b090f292");
+    assert!(bind(&old, &selection).is_err());
+    let mut changed: Value = serde_json::from_slice(&selection).unwrap();
+    changed["skills"][0]["rowSha256"] = json!("0".repeat(64));
+    assert!(bind(&knowledge, &serde_json::to_vec(&changed).unwrap()).is_err());
+}
+
+#[test]
 fn reviewed_real_repair_seed_preserves_original_bytes_and_execution_limits() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/maintainer-knowledge-gate/reviewed-guidance");

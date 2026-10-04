@@ -1,0 +1,28 @@
+{
+  "schema": "agentlab.maintainer_guidance_selection.v1",
+  "automaticPromotion": false,
+  "knowledgeCutSha256": "6d66160789a8666a6ed9256f8cc8f21480b8b3fd3626cbc3c61fd692035ebd74",
+  "knowledgeRevision": "f41c1bdfa145bacbe28f445e35707c0b2b1772ec",
+  "stage": "calibration",
+  "sources": [
+    {
+      "repositoryId": "code-workshop",
+      "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    }
+  ],
+  "skills": [
+    {
+      "id": "skill-source-suite-fa345f866f5bd480ceacac93157aefa424bbadf7a755160c998fdd3246c26059",
+      "objectId": "lesson-source-suite-fa345f866f5bd480ceacac93157aefa424bbadf7a755160c998fdd3246c26059",
+      "rowSha256": "f6c6a7ef2c73abe82de1077f9d43ed1b1183dfa00a3206d9014009182ce4cf71",
+      "applicabilityReason": "Consume the newly independently reviewed and committed source-suite lesson for the same frozen RatingDescriptor.convert calibration target. Preserve the disclosed source-characterization, controlled-import and untested-input limits; no Oracle approval or benefit is inferred."
+    }
+  ],
+  "sourceRecipeTarget": {
+    "scopeSkillId": "skill-scope-code-workshop-componentlibrary-input-display",
+    "sourcePaths": [
+      "features/componentlibrary/src/main/ets/componentdetailview/rating/viewmodel/RatingDescriptor.ets"
+    ],
+    "demand": "Construct a bounded source-grounded calibration exercise for RatingDescriptor.convert, with source-derived behavior and distinct behavior-preserving and meaningful wrong controls."
+  }
+}

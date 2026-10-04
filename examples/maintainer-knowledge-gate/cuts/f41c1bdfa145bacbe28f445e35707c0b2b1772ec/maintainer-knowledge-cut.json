@@ -1,0 +1,65 @@
+{
+  "automaticPromotion": false,
+  "policy": {
+    "candidateBindingsRequired": true,
+    "programAnalysisBound": true,
+    "semanticCoverageRequired": true,
+    "wholeRepositoryInventoryRequired": true
+  },
+  "repositories": [
+    {
+      "id": "code-workshop",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    {
+      "id": "guide-snippets",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/guide-snippets.git",
+      "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525"
+    },
+    {
+      "id": "harmony-iap-client",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/iapkit-sample-clientdemo-arkts.git",
+      "revision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3"
+    },
+    {
+      "id": "hms-cordova-iap",
+      "repository": "https://github.com/HMS-Core/hms-cordova-plugin.git",
+      "revision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+    }
+  ],
+  "schema": "agentlab.maintainer_knowledge_cut.v1",
+  "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6",
+  "tableGitAuthority": {
+    "exportedBy": {
+      "kind": "operator-native-admission",
+      "repository": "yxsicd/agentlabrelease",
+      "runId": "source-review-37172944970-admission",
+      "runUrl": "https://github.com/yxsicd/agentlabrelease/actions/runs/37172944970"
+    },
+    "repo": "agentlabtablegit",
+    "revision": "f41c1bdfa145bacbe28f445e35707c0b2b1772ec"
+  },
+  "tables": {
+    "evaluationCases": {
+      "path": "evaluation_cases.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "maintainerScopeSkills": {
+      "path": "maintainer_scope_skills.jsonl",
+      "sha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953"
+    },
+    "maintainerSkillRefreshRounds": {
+      "path": "maintainer_skill_refresh_rounds.jsonl",
+      "sha256": "a29f508e1245c6183f76fb4bc210c0cb08d2a0db5c2197bb20fd8088f7a3b648"
+    },
+    "maintainerSkills": {
+      "path": "maintainer_skills.jsonl",
+      "sha256": "add6739fdfd3046580a206e34cda6e925058e6b1c64a3bf1362a40d5a4a36b69"
+    },
+    "programFacts": {
+      "path": "program_facts.jsonl",
+      "sha256": "8180a03cbe0858e3dd844735b7752a8f4138f0707d047d18ecf6b4d31d4276c9"
+    }
+  }
+}

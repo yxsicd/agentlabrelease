@@ -1,0 +1,448 @@
+{
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "execution": {
+    "authorityWritePerformed": false,
+    "automaticPromotion": false,
+    "beforeAssessmentSha256": "4115f840bcfaf94f63f5b3520de8b2ab30b74a6a9d372aa0329ec1292d561a5a",
+    "captures": [
+      {
+        "command": {
+          "args": [
+            "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+            "baseline"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 10000
+        },
+        "durationMs": 383,
+        "exitCode": 0,
+        "label": "baseline",
+        "pid": 484490,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "baseline.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 394,
+          "complete": true,
+          "path": "baseline.stdout",
+          "sha256": "c5ebeed3e4ec7f04ccbf2e8af86aacef442483e93be7e1b3fe55ba0c06e58d19"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+            "reference"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 10000
+        },
+        "durationMs": 383,
+        "exitCode": 0,
+        "label": "reference",
+        "pid": 485007,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "reference.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 395,
+          "complete": true,
+          "path": "reference.stdout",
+          "sha256": "991aeb399c5e5163d772dddb2a9996086f4760b7162c09a86399c6d19460d637"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+            "alternative-valid"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 10000
+        },
+        "durationMs": 383,
+        "exitCode": 0,
+        "label": "alternative-valid",
+        "pid": 485744,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "alternative-valid.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 403,
+          "complete": true,
+          "path": "alternative-valid.stdout",
+          "sha256": "60132ab67b0bd66bfe59b3b528bc30baacd8afe11ade75db1eb6f3a56a3fcb46"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+            "delete-before-upload"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 10000
+        },
+        "durationMs": 383,
+        "exitCode": 0,
+        "label": "delete-before-upload",
+        "pid": 486984,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "delete-before-upload.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 403,
+          "complete": true,
+          "path": "delete-before-upload.stdout",
+          "sha256": "ac6a03144b97095c05fcdbfd5fe5e074dfcadc058efc560079ce602aeb76089f"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+            "failure-path-overreach"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 10000
+        },
+        "durationMs": 423,
+        "exitCode": 0,
+        "label": "failure-path-overreach",
+        "pid": 487782,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "failure-path-overreach.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 405,
+          "complete": true,
+          "path": "failure-path-overreach.stdout",
+          "sha256": "c6ef52ed884b3a20d97b69de5fe9293d6089ec07e715ea160e4259dbffd9081c"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+            "inclusive-threshold"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 10000
+        },
+        "durationMs": 383,
+        "exitCode": 0,
+        "label": "inclusive-threshold",
+        "pid": 488289,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "inclusive-threshold.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 402,
+          "complete": true,
+          "path": "inclusive-threshold.stdout",
+          "sha256": "8ecb3dee3a8109abdf4ab4870f30e9d3fe7a7decc3aa2b053d0162735a53c066"
+        },
+        "termination": "completed"
+      }
+    ],
+    "error": null,
+    "qualified": false,
+    "recipeSha256": "e227690f6d896c84203425928b29e3c277f93a86128d7ccf69fedaf2728b083e",
+    "schema": "agentlab.maintainer_source_operation_execution.v1",
+    "scopeSha256": "979abcb410e8eee8d4089d7dc79b1f1f46a0d6fb4fa76239f8b376f628e260c7",
+    "scopeSkillId": "skill-scope-code-workshop-common-persistence-telemetry",
+    "source": {
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "repositoryId": "code-workshop",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    "status": "successful"
+  },
+  "executionOriginal": "{\n  \"authorityWritePerformed\": false,\n  \"automaticPromotion\": false,\n  \"beforeAssessmentSha256\": \"4115f840bcfaf94f63f5b3520de8b2ab30b74a6a9d372aa0329ec1292d561a5a\",\n  \"captures\": [\n    {\n      \"command\": {\n        \"args\": [\n          \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n          \"baseline\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"timeoutMs\": 10000\n      },\n      \"durationMs\": 383,\n      \"exitCode\": 0,\n      \"label\": \"baseline\",\n      \"pid\": 484490,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"baseline.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 394,\n        \"complete\": true,\n        \"path\": \"baseline.stdout\",\n        \"sha256\": \"c5ebeed3e4ec7f04ccbf2e8af86aacef442483e93be7e1b3fe55ba0c06e58d19\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n          \"reference\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"timeoutMs\": 10000\n      },\n      \"durationMs\": 383,\n      \"exitCode\": 0,\n      \"label\": \"reference\",\n      \"pid\": 485007,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"reference.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 395,\n        \"complete\": true,\n        \"path\": \"reference.stdout\",\n        \"sha256\": \"991aeb399c5e5163d772dddb2a9996086f4760b7162c09a86399c6d19460d637\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n          \"alternative-valid\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"timeoutMs\": 10000\n      },\n      \"durationMs\": 383,\n      \"exitCode\": 0,\n      \"label\": \"alternative-valid\",\n      \"pid\": 485744,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"alternative-valid.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 403,\n        \"complete\": true,\n        \"path\": \"alternative-valid.stdout\",\n        \"sha256\": \"60132ab67b0bd66bfe59b3b528bc30baacd8afe11ade75db1eb6f3a56a3fcb46\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n          \"delete-before-upload\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"timeoutMs\": 10000\n      },\n      \"durationMs\": 383,\n      \"exitCode\": 0,\n      \"label\": \"delete-before-upload\",\n      \"pid\": 486984,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"delete-before-upload.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 403,\n        \"complete\": true,\n        \"path\": \"delete-before-upload.stdout\",\n        \"sha256\": \"ac6a03144b97095c05fcdbfd5fe5e074dfcadc058efc560079ce602aeb76089f\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n          \"failure-path-overreach\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"timeoutMs\": 10000\n      },\n      \"durationMs\": 423,\n      \"exitCode\": 0,\n      \"label\": \"failure-path-overreach\",\n      \"pid\": 487782,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"failure-path-overreach.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 405,\n        \"complete\": true,\n        \"path\": \"failure-path-overreach.stdout\",\n        \"sha256\": \"c6ef52ed884b3a20d97b69de5fe9293d6089ec07e715ea160e4259dbffd9081c\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n          \"inclusive-threshold\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"timeoutMs\": 10000\n      },\n      \"durationMs\": 383,\n      \"exitCode\": 0,\n      \"label\": \"inclusive-threshold\",\n      \"pid\": 488289,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"inclusive-threshold.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 402,\n        \"complete\": true,\n        \"path\": \"inclusive-threshold.stdout\",\n        \"sha256\": \"8ecb3dee3a8109abdf4ab4870f30e9d3fe7a7decc3aa2b053d0162735a53c066\"\n      },\n      \"termination\": \"completed\"\n    }\n  ],\n  \"error\": null,\n  \"qualified\": false,\n  \"recipeSha256\": \"e227690f6d896c84203425928b29e3c277f93a86128d7ccf69fedaf2728b083e\",\n  \"schema\": \"agentlab.maintainer_source_operation_execution.v1\",\n  \"scopeSha256\": \"979abcb410e8eee8d4089d7dc79b1f1f46a0d6fb4fa76239f8b376f628e260c7\",\n  \"scopeSkillId\": \"skill-scope-code-workshop-common-persistence-telemetry\",\n  \"source\": {\n    \"repository\": \"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\n    \"repositoryId\": \"code-workshop\",\n    \"revision\": \"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\"\n  },\n  \"status\": \"successful\"\n}",
+  "executionReceiptSha256": "3d2b41fc05636c6e62f24ffbe0491a0176093a1e2be8dbf684e184f0b41402af",
+  "qualificationScope": {
+    "build": false,
+    "performance": false,
+    "runtime": false,
+    "sourceMaintenance": true,
+    "tests": false
+  },
+  "recipe": {
+    "automaticPromotion": false,
+    "checks": [
+      {
+        "expected": [
+          0,
+          0,
+          0
+        ],
+        "id": "empty",
+        "pointer": "/observations/0"
+      },
+      {
+        "expected": [
+          1,
+          1,
+          0
+        ],
+        "id": "fulfilled-true",
+        "pointer": "/observations/1"
+      },
+      {
+        "expected": [
+          1,
+          0,
+          1
+        ],
+        "id": "fulfilled-false",
+        "pointer": "/observations/2"
+      },
+      {
+        "expected": [
+          1,
+          0,
+          1
+        ],
+        "id": "reject-below-limit",
+        "pointer": "/observations/3"
+      },
+      {
+        "expected": [
+          1,
+          0,
+          1000
+        ],
+        "id": "reject-at-limit",
+        "pointer": "/observations/4"
+      },
+      {
+        "expected": [
+          1,
+          1,
+          0
+        ],
+        "id": "reject-above-limit",
+        "pointer": "/observations/5"
+      }
+    ],
+    "controls": [
+      {
+        "command": {
+          "args": [
+            "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+            "baseline"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 10000
+        },
+        "expectedFailedCheckIds": [
+          "fulfilled-false"
+        ],
+        "id": "baseline",
+        "role": "baseline"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+            "reference"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 10000
+        },
+        "expectedFailedCheckIds": [],
+        "id": "reference",
+        "role": "reference"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+            "alternative-valid"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 10000
+        },
+        "expectedFailedCheckIds": [],
+        "id": "alternative-valid",
+        "role": "reference"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+            "delete-before-upload"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 10000
+        },
+        "expectedFailedCheckIds": [
+          "fulfilled-true",
+          "fulfilled-false",
+          "reject-below-limit",
+          "reject-at-limit",
+          "reject-above-limit"
+        ],
+        "id": "delete-before-upload",
+        "role": "wrong"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+            "failure-path-overreach"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 10000
+        },
+        "expectedFailedCheckIds": [
+          "reject-below-limit",
+          "reject-at-limit"
+        ],
+        "id": "failure-path-overreach",
+        "role": "wrong"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+            "inclusive-threshold"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 10000
+        },
+        "expectedFailedCheckIds": [
+          "reject-at-limit"
+        ],
+        "id": "inclusive-threshold",
+        "role": "wrong"
+      }
+    ],
+    "limitations": [
+      "Frozen task requests deletion only for boolean true; false/rejection are controlled service seams, not upstream live-service defects.",
+      "Model context lies outside selected scope ownership; it is pinned as a method dependency, not scope-owned source evidence.",
+      "Type-erased original body with in-memory seams; no RDB, taskpool, Harmony, ohosTest, performance or Agent execution."
+    ],
+    "methodInputs": [
+      {
+        "path": "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs",
+        "sha256": "5d130f024b752b95e5039745c855e22e237350f29b7661eb01e8aecf75fc056f"
+      },
+      {
+        "path": "/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/node_modules/typescript/lib/typescript.js",
+        "sha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+      },
+      {
+        "path": "/home/huawei/agentlab-source-builds/code-workshop-7aa95cac-operation-v1/common/src/main/ets/model/TrackModel.ets",
+        "sha256": "a54929bf185a3802c84d4e69f4f699a00657da4292d0a8f3af3f81497e2c396e"
+      }
+    ],
+    "operationKind": "source-only",
+    "reviewed": true,
+    "schema": "agentlab.maintainer_source_operation_recipe.v1",
+    "scopeSkillId": "skill-scope-code-workshop-common-persistence-telemetry",
+    "source": {
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "repositoryId": "code-workshop",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    "sourceInputs": [
+      {
+        "gitBlobOid": "f08fe1b07eeacf265e9ba446190e337a76a529fd",
+        "path": "common/src/main/ets/trackmanager/TrackManager.ets",
+        "sha256": "912048981ec553e7c4cbc87bea4420f323b3152a6e3790212551f1515b096e34"
+      }
+    ]
+  },
+  "recipeOriginal": "{\n  \"schema\": \"agentlab.maintainer_source_operation_recipe.v1\",\n  \"reviewed\": true,\n  \"automaticPromotion\": false,\n  \"operationKind\": \"source-only\",\n  \"scopeSkillId\": \"skill-scope-code-workshop-common-persistence-telemetry\",\n  \"source\": {\n    \"repositoryId\": \"code-workshop\",\n    \"repository\": \"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\n    \"revision\": \"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\"\n  },\n  \"sourceInputs\": [\n    {\n      \"path\": \"common/src/main/ets/trackmanager/TrackManager.ets\",\n      \"sha256\": \"912048981ec553e7c4cbc87bea4420f323b3152a6e3790212551f1515b096e34\",\n      \"gitBlobOid\": \"f08fe1b07eeacf265e9ba446190e337a76a529fd\"\n    }\n  ],\n  \"methodInputs\": [\n    {\n      \"path\": \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n      \"sha256\": \"5d130f024b752b95e5039745c855e22e237350f29b7661eb01e8aecf75fc056f\"\n    },\n    {\n      \"path\": \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/node_modules/typescript/lib/typescript.js\",\n      \"sha256\": \"3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675\"\n    },\n    {\n      \"path\": \"/home/huawei/agentlab-source-builds/code-workshop-7aa95cac-operation-v1/common/src/main/ets/model/TrackModel.ets\",\n      \"sha256\": \"a54929bf185a3802c84d4e69f4f699a00657da4292d0a8f3af3f81497e2c396e\"\n    }\n  ],\n  \"checks\": [\n    {\n      \"id\": \"empty\",\n      \"pointer\": \"/observations/0\",\n      \"expected\": [\n        0,\n        0,\n        0\n      ]\n    },\n    {\n      \"id\": \"fulfilled-true\",\n      \"pointer\": \"/observations/1\",\n      \"expected\": [\n        1,\n        1,\n        0\n      ]\n    },\n    {\n      \"id\": \"fulfilled-false\",\n      \"pointer\": \"/observations/2\",\n      \"expected\": [\n        1,\n        0,\n        1\n      ]\n    },\n    {\n      \"id\": \"reject-below-limit\",\n      \"pointer\": \"/observations/3\",\n      \"expected\": [\n        1,\n        0,\n        1\n      ]\n    },\n    {\n      \"id\": \"reject-at-limit\",\n      \"pointer\": \"/observations/4\",\n      \"expected\": [\n        1,\n        0,\n        1000\n      ]\n    },\n    {\n      \"id\": \"reject-above-limit\",\n      \"pointer\": \"/observations/5\",\n      \"expected\": [\n        1,\n        1,\n        0\n      ]\n    }\n  ],\n  \"controls\": [\n    {\n      \"id\": \"baseline\",\n      \"role\": \"baseline\",\n      \"command\": {\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"args\": [\n          \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n          \"baseline\"\n        ],\n        \"cwd\": \".\",\n        \"timeoutMs\": 10000\n      },\n      \"expectedFailedCheckIds\": [\n        \"fulfilled-false\"\n      ]\n    },\n    {\n      \"id\": \"reference\",\n      \"role\": \"reference\",\n      \"command\": {\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"args\": [\n          \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n          \"reference\"\n        ],\n        \"cwd\": \".\",\n        \"timeoutMs\": 10000\n      },\n      \"expectedFailedCheckIds\": []\n    },\n    {\n      \"id\": \"alternative-valid\",\n      \"role\": \"reference\",\n      \"command\": {\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"args\": [\n          \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n          \"alternative-valid\"\n        ],\n        \"cwd\": \".\",\n        \"timeoutMs\": 10000\n      },\n      \"expectedFailedCheckIds\": []\n    },\n    {\n      \"id\": \"delete-before-upload\",\n      \"role\": \"wrong\",\n      \"command\": {\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"args\": [\n          \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n          \"delete-before-upload\"\n        ],\n        \"cwd\": \".\",\n        \"timeoutMs\": 10000\n      },\n      \"expectedFailedCheckIds\": [\n        \"fulfilled-true\",\n        \"fulfilled-false\",\n        \"reject-below-limit\",\n        \"reject-at-limit\",\n        \"reject-above-limit\"\n      ]\n    },\n    {\n      \"id\": \"failure-path-overreach\",\n      \"role\": \"wrong\",\n      \"command\": {\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"args\": [\n          \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n          \"failure-path-overreach\"\n        ],\n        \"cwd\": \".\",\n        \"timeoutMs\": 10000\n      },\n      \"expectedFailedCheckIds\": [\n        \"reject-below-limit\",\n        \"reject-at-limit\"\n      ]\n    },\n    {\n      \"id\": \"inclusive-threshold\",\n      \"role\": \"wrong\",\n      \"command\": {\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"args\": [\n          \"/home/huawei/agentlab-source-builds/telemetry-source-controls-20261002-v1/controls.cjs\",\n          \"inclusive-threshold\"\n        ],\n        \"cwd\": \".\",\n        \"timeoutMs\": 10000\n      },\n      \"expectedFailedCheckIds\": [\n        \"reject-at-limit\"\n      ]\n    }\n  ],\n  \"limitations\": [\n    \"Frozen task requests deletion only for boolean true; false/rejection are controlled service seams, not upstream live-service defects.\",\n    \"Model context lies outside selected scope ownership; it is pinned as a method dependency, not scope-owned source evidence.\",\n    \"Type-erased original body with in-memory seams; no RDB, taskpool, Harmony, ohosTest, performance or Agent execution.\"\n  ]\n}\n",
+  "schema": "agentlab.maintainer_scope_source_qualification.v1",
+  "scopeOriginal": "{\"assetClass\":\"reusable-knowledge\",\"automaticPromotion\":false,\"buildEntrypoints\":[],\"codeLineCount\":1265,\"coverage\":\"all tracked files selected by this scope are assigned exactly once\",\"documentedPurpose\":null,\"documentedTitle\":null,\"evidence\":[{\"gitBlobOid\":\"f08fe1b07eeacf265e9ba446190e337a76a529fd\",\"path\":\"common/src/main/ets/trackmanager/TrackManager.ets\"},{\"gitBlobOid\":\"6efc1a886b442fcb8e2a99140e73c02e3e5b6ce2\",\"path\":\"common/src/main/ets/storagemanager/rdb/TrackTable.ets\"}],\"externalDependencies\":[\"@hms.hds.hdsBaseComponent\",\"@kit.AbilityKit\",\"@kit.AccountKit\",\"@kit.AppGalleryKit\",\"@kit.ArkData\",\"@kit.ArkGraphics2D\",\"@kit.ArkTS\",\"@kit.ArkUI\",\"@kit.ArkWeb\",\"@kit.BasicServicesKit\",\"@kit.CoreFileKit\",\"@kit.ImageKit\",\"@kit.NetworkKit\",\"@kit.NotificationKit\",\"@kit.PerformanceAnalysisKit\",\"@kit.PushKit\",\"@kit.SensorServiceKit\",\"@kit.ShareKit\",\"@kit.UIDesignKit\",\"@ohos/hvigor-ohos-plugin\",\"@ohos/hypium\",\"@ohos/imageknife\",\"env.json\"],\"externalDependencyCount\":23,\"id\":\"skill-scope-code-workshop-common-persistence-telemetry\",\"kind\":\"composite-responsibility\",\"languages\":{\"ets\":10},\"ownershipPlane\":\"target-operations\",\"ownershipSelectors\":[{\"path\":\"common/src/main/ets/database\",\"type\":\"prefix\"},{\"path\":\"common/src/main/ets/storagemanager\",\"type\":\"prefix\"},{\"path\":\"common/src/main/ets/trackmanager\",\"type\":\"prefix\"}],\"pathBoundary\":\"common\",\"repository\":\"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\"repositoryId\":\"code-workshop\",\"responsibility\":\"Maintain relational and preference persistence together with the telemetry records and upload flow that consume stored state.\",\"schema\":\"agentlab.maintainer_scope_skill.v1\",\"skillLayer\":\"instance\",\"sourceFileCount\":10,\"sourceRevision\":\"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\",\"sourceTreeOid\":\"ab156e6aa2fc9c64f400ee119e142fded5573271\",\"stage\":\"repository-scope\",\"status\":\"source-supported\",\"strategy\":\"harmony-multi-product-modules\",\"testEntrypoints\":[],\"testFileCount\":0,\"trackedFileCount\":10}",
+  "scopeSkillId": "skill-scope-code-workshop-common-persistence-telemetry",
+  "source": {
+    "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+    "repositoryId": "code-workshop",
+    "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+  },
+  "status": "qualified",
+  "streams": [
+    {
+      "stderr": "",
+      "stdout": "{\"id\":\"baseline\",\"sourceSha256\":\"912048981ec553e7c4cbc87bea4420f323b3152a6e3790212551f1515b096e34\",\"modelContextSha256\":\"a54929bf185a3802c84d4e69f4f699a00657da4292d0a8f3af3f81497e2c396e\",\"submittedSourceSha256\":\"912048981ec553e7c4cbc87bea4420f323b3152a6e3790212551f1515b096e34\",\"observations\":[[0,0,0],[1,1,0],[1,1,0],[1,0,1],[1,0,1000],[1,1,0]],\"qualificationScope\":\"source-maintenance-only\"}\n"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"id\":\"reference\",\"sourceSha256\":\"912048981ec553e7c4cbc87bea4420f323b3152a6e3790212551f1515b096e34\",\"modelContextSha256\":\"a54929bf185a3802c84d4e69f4f699a00657da4292d0a8f3af3f81497e2c396e\",\"submittedSourceSha256\":\"9d1f1d1392df78d38d3266b149250dae1c78447c4b07948c470a2eb9b4ea05d0\",\"observations\":[[0,0,0],[1,1,0],[1,0,1],[1,0,1],[1,0,1000],[1,1,0]],\"qualificationScope\":\"source-maintenance-only\"}\n"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"id\":\"alternative-valid\",\"sourceSha256\":\"912048981ec553e7c4cbc87bea4420f323b3152a6e3790212551f1515b096e34\",\"modelContextSha256\":\"a54929bf185a3802c84d4e69f4f699a00657da4292d0a8f3af3f81497e2c396e\",\"submittedSourceSha256\":\"a9ba603960af92da22fef49e5e1e5cb458d9f6b0514ce6e8eb2f8d3337f18f07\",\"observations\":[[0,0,0],[1,1,0],[1,0,1],[1,0,1],[1,0,1000],[1,1,0]],\"qualificationScope\":\"source-maintenance-only\"}\n"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"id\":\"delete-before-upload\",\"sourceSha256\":\"912048981ec553e7c4cbc87bea4420f323b3152a6e3790212551f1515b096e34\",\"modelContextSha256\":\"a54929bf185a3802c84d4e69f4f699a00657da4292d0a8f3af3f81497e2c396e\",\"submittedSourceSha256\":\"be5636ae153833508cae254d096857c6b72889f2944b05a54a949b15d1328793\",\"observations\":[[0,0,0],[1,2,0],[1,1,0],[1,1,0],[1,1,0],[1,2,0]],\"qualificationScope\":\"source-maintenance-only\"}\n"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"id\":\"failure-path-overreach\",\"sourceSha256\":\"912048981ec553e7c4cbc87bea4420f323b3152a6e3790212551f1515b096e34\",\"modelContextSha256\":\"a54929bf185a3802c84d4e69f4f699a00657da4292d0a8f3af3f81497e2c396e\",\"submittedSourceSha256\":\"b827802828326303727ead529a92c0d2c1841e06d0e202d31343e50108c3d83d\",\"observations\":[[0,0,0],[1,1,0],[1,0,1],[1,1,0],[1,1,0],[1,1,0]],\"qualificationScope\":\"source-maintenance-only\"}\n"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"id\":\"inclusive-threshold\",\"sourceSha256\":\"912048981ec553e7c4cbc87bea4420f323b3152a6e3790212551f1515b096e34\",\"modelContextSha256\":\"a54929bf185a3802c84d4e69f4f699a00657da4292d0a8f3af3f81497e2c396e\",\"submittedSourceSha256\":\"3e69975084691296fe961a84a2a36eaa0cc88758598af53a02f7cb3f731ec29c\",\"observations\":[[0,0,0],[1,1,0],[1,0,1],[1,0,1],[1,1,0],[1,1,0]],\"qualificationScope\":\"source-maintenance-only\"}\n"
+    }
+  ],
+  "verificationBoundary": "Reviewed source-maintenance controls and retained bytes; no authenticated producer, full scope coverage, formal tests, framework runtime or Agent qualification."
+}
