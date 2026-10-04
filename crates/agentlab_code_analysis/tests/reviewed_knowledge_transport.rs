@@ -59,7 +59,10 @@ with tempfile.TemporaryDirectory() as tmp:
 "#;
     let output = Command::new("python3")
         .args(["-c", code])
-        .env("TRANSPORT", root.join("scripts/commit-reviewed-knowledge.py"))
+        .env(
+            "TRANSPORT",
+            root.join("scripts/commit-reviewed-knowledge.py"),
+        )
         .output()
         .unwrap();
     assert!(
