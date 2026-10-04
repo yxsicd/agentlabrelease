@@ -258,6 +258,15 @@ never relabel final-suite reviewer evidence as a design review. Reconsume origin
 inputs and compare the isolated upstream response, participant final message and
 lifecycle before reporting completion. Recorded consistency is not authenticated
 reviewer identity, semantic truth or execution permission.
+Separate operator capture identity from model-owned response fields. A real early
+review fixed evidence arrays and avoided automatic compaction but copied the
+prompt's reviewRequestSha256 into its response, causing strict root-field rejection.
+Present the exact allowed root fields and explicitly exclude capture digests;
+keep those digests in operator intent/capture, not in model judgments. Retain the
+rejected original and regression for the extra field rather than stripping it or
+loosening admission. A completed exchange with well-shaped evidence can still
+be rejected; its semantic opinions remain unadmitted until ordinary completion
+and content gates pass. Prospective prompt changes require a fresh enrollment.
 Enroll early-review inputs and its separate bounded budget before the first
 constructor turn. Run it with fresh reviewer state before verifier generation;
 revise/unverified or capture failure stops code, retaining findings for an explicitly
