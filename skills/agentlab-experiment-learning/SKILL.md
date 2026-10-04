@@ -263,6 +263,20 @@ for a future predeclared bounded Agent-owned repair, not operator quote editing
 or reopening the original one-attempt enrollment. A shorter completed review
 does not prove learning benefit or a universal latency improvement.
 
+For a newly enrolled citation-repair experiment, native
+`--prepare-source-suite-review-attempt-prompt --participant-evidence DIR` consumes
+review-repair-policy.json with the fixed one-repair/two-attempt, 420-second each,
+840-second total, zero-transport-retry contract. Its first canonical prompt carries
+that policy and the intent binds its compact digest. For repair, retain the original
+response.json and evidence under repair-inputs; native preparation rechecks the
+original completed exchange, same Git/rubric and policy, then computes all citation
+findings itself. Absent original policy, changed captures, passing/noncitation
+reviews and recursive repair reject. The child still requires complete content,
+original wire, same model/reasoning and all normal lesson gates. Preserve both
+attempts; do not retrofit policy into an exhausted historical capture. These native
+primitives do not schedule participants or claim exactly-once dispatch; the
+transport still needs an exclusive bounded attempt coordinator before real use.
+
 Before importing a captured automatic-review handoff, use native
 `--verify-source-suite-review-feedback` with the same source/rubric/original
 response/evidence/Git checkout and --feedback envelope. It independently replays

@@ -919,22 +919,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     if args.iter().any(|arg| {
-        arg == "--prepare-source-suite-review" || arg == "--prepare-source-suite-review-prompt"
+        arg == "--prepare-source-suite-review"
+            || arg == "--prepare-source-suite-review-prompt"
+            || arg == "--prepare-source-suite-review-attempt-prompt"
     }) {
         let checkout = if args.iter().any(|a| a == "--source-git-checkout") {
             Some(PathBuf::from(value(&args, "--source-git-checkout")?))
         } else {
             None
         };
-        if args
-            .iter()
-            .any(|arg| arg == "--prepare-source-suite-review-prompt")
-        {
-            let prompt = agentlab_code_analysis::maintainer_source_review::prompt_with_git(
-                &PathBuf::from(value(&args, "--source")?),
-                &fs::read(value(&args, "--quality-rubric")?)?,
-                checkout.as_deref(),
-            )?;
+        if args.iter().any(|arg| {
+            arg == "--prepare-source-suite-review-prompt"
+                || arg == "--prepare-source-suite-review-attempt-prompt"
+        }) {
+            let prompt = if args
+                .iter()
+                .any(|arg| arg == "--prepare-source-suite-review-attempt-prompt")
+            {
+                agentlab_code_analysis::maintainer_source_review::prompt_for_review_attempt(
+                    &PathBuf::from(value(&args, "--source")?),
+                    &fs::read(value(&args, "--quality-rubric")?)?,
+                    &PathBuf::from(value(&args, "--participant-evidence")?),
+                    checkout.as_deref(),
+                )?
+            } else {
+                agentlab_code_analysis::maintainer_source_review::prompt_with_git(
+                    &PathBuf::from(value(&args, "--source")?),
+                    &fs::read(value(&args, "--quality-rubric")?)?,
+                    checkout.as_deref(),
+                )?
+            };
             let mut file = OpenOptions::new()
                 .write(true)
                 .create_new(true)
