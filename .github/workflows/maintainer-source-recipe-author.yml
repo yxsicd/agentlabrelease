@@ -99,6 +99,11 @@ on:
         default: ''
         required: false
         type: string
+      reviewed_successor:
+        description: Exact retained-review enrollment JSON; fresh bounded successor, not reopening a legacy revision
+        default: ''
+        required: false
+        type: string
       design_first:
         description: Validate scenario expectations and exact source transformations before code generation
         default: true
@@ -147,6 +152,9 @@ jobs:
   construct:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
     timeout-minutes: ${{ inputs.independent_review && 45 || inputs.code_gateway_timeout_seconds == '240' && 25 || 20 }}
     env:
       KNOWLEDGE: ${{ inputs.knowledge_directory }}
@@ -165,6 +173,7 @@ jobs:
       CONSTRUCTION_API: ${{ inputs.api }}
       REVISION_PARENT_RUN: ${{ inputs.revision_parent_run }}
       REVISION_FEEDBACK: ${{ inputs.revision_feedback }}
+      REVIEWED_SUCCESSOR: ${{ inputs.reviewed_successor }}
       CONSTRUCTION_DESIGN_FIRST: ${{ inputs.design_first }}
       CONSTRUCTION_DESIGN_REVISIONS: ${{ inputs.design_revisions }}
       CONSTRUCTION_CODE_REVISIONS: ${{ inputs.code_revisions }}
@@ -198,6 +207,17 @@ jobs:
           assert manifest.is_file() and not manifest.is_symlink() and manifest.resolve().is_relative_to(root)
           run=os.environ['REVISION_PARENT_RUN'];feedback=os.environ['REVISION_FEEDBACK']
           assert bool(run)==bool(feedback),'Revision parent and review must be supplied together'
+          successor=os.environ['REVIEWED_SUCCESSOR']
+          if successor:
+              assert not run and len(successor.encode())<=16384
+              assert os.environ['GITHUB_RUN_ATTEMPT']=='1','Workflow rerun cannot reopen a successor enrollment'
+              assert os.environ['CONSTRUCTION_DESIGN_FIRST']=='false'
+              assert os.environ['CONSTRUCTION_DESIGN_REVISIONS']=='0' and os.environ['CONSTRUCTION_CODE_REVISIONS']=='0'
+              assert os.environ['CONSTRUCTION_GATEWAY_TIMEOUT']=='180' and os.environ['CONSTRUCTION_CODE_GATEWAY_TIMEOUT']=='inherit'
+              assert os.environ['CONSTRUCTION_MAX_OUTPUT_TOKENS']=='16384'
+              assert os.environ['CONSTRUCTION_API']=='openai-completions'
+              assert os.environ['CONSTRUCTION_THINKING_TYPE']=='default' and os.environ['CONSTRUCTION_RESPONSE_FORMAT']=='default'
+              assert isinstance(json.loads(successor),dict)
           repairs=int(os.environ['CONSTRUCTION_CODE_REVISIONS'])
           selection=os.environ['AGENTLAB_SOURCE_GUIDANCE_SELECTION']
           if selection:
@@ -357,6 +377,22 @@ jobs:
           if parent_design.exists():args+=['--parent-design',str(parent_design)]
           subprocess.run(args,check=True)
           PY
+      - name: Acquire and reconstruct completed rejected review before successor budget
+        if: inputs.reviewed_successor != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])/'recipe-author'
+          with (root/'successor-enrollment.json').open('x') as stream:stream.write(os.environ['REVIEWED_SUCCESSOR'])
+          PY
+          python3 scripts/prepare-reviewed-successor-action.py \
+            --enrollment "$RUNNER_TEMP/recipe-author/successor-enrollment.json" \
+            --output "$RUNNER_TEMP/recipe-author/retained-successor" \
+            --request "$RUNNER_TEMP/recipe-author/request.json" --repository "$GITHUB_REPOSITORY" \
+            --gate target/release/agentlab-maintainer-skill-flywheel --source-git-checkout "$RUNNER_TEMP/recipe-source"
       - name: Contain construction Agent without source or host evaluator mounts
         id: contain
         run: |
@@ -378,6 +414,7 @@ jobs:
             --author-request "$RUNNER_TEMP/recipe-author/request.json" --maximum-repairs "$CONSTRUCTION_CODE_REVISIONS" \
             --output "$RUNNER_TEMP/recipe-author/diagnostic-loop-intent.json"
       - name: Produce captured unreviewed recipe only
+        if: inputs.reviewed_successor == ''
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
           AGENTLAB_PARTICIPANT_RUNTIME_CONFIG: ${{ runner.temp }}/recipe-runtime.json
@@ -410,6 +447,28 @@ jobs:
             --thinking-type "$CONSTRUCTION_THINKING_TYPE" \
             --response-format "$CONSTRUCTION_RESPONSE_FORMAT" \
             --api "$CONSTRUCTION_API" --design-revisions "$CONSTRUCTION_DESIGN_REVISIONS" "${revision_args[@]}"
+      - name: Execute one durable feedback-bound successor
+        if: inputs.reviewed_successor != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+          AGENTLAB_PARTICIPANT_RUNTIME_CONFIG: ${{ runner.temp }}/recipe-runtime.json
+          DOCKER_CONFIG: ${{ runner.temp }}/recipe-docker-config
+        run: |
+          python3 - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])/'recipe-author';retained=root/'retained-successor'
+          inputs=json.loads((retained/'bridge-inputs.json').read_bytes())
+          command=['python3','scripts/run-reviewed-source-successor.py','--prepared-output',
+                   '--output',str(root),'--request',str(root/'request.json'),
+                   '--gate','target/release/agentlab-maintainer-skill-flywheel',
+                   '--pi',str(Path(os.environ['GITHUB_WORKSPACE'])/'scripts/run-pi-in-docker.py'),
+                   '--claim-root',str(retained/'local-claims'),'--reasoning-effort',os.environ['CONSTRUCTION_REASONING_EFFORT'],
+                   '--github-claim-repository',os.environ['GITHUB_REPOSITORY'],'--github-claim-revision',os.environ['GITHUB_SHA']]
+          for key,value in inputs.items():command+=['--'+key.replace('_','-'),value]
+          subprocess.run(command,check=True)
+          PY
       - name: Independently validate recorded participant isolation
         id: author_isolation
         if: always() && steps.contain.outcome == 'success'
@@ -428,7 +487,7 @@ jobs:
             "${labels[@]}" --output "$RUNNER_TEMP/recipe-author/runtime-validation.json"
       - name: Diagnose unchanged generated verifier baseline in a separate container
         id: baseline_diagnostic
-        if: inputs.design_first
+        if: inputs.design_first || inputs.reviewed_successor != ''
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
           AGENTLAB_PARTICIPANT_RUNTIME_CONFIG: ${{ runner.temp }}/recipe-runtime.json
@@ -441,7 +500,7 @@ jobs:
             --compiler "$compiler" --image-id "$image_id" --maximum-repairs "$CONSTRUCTION_CODE_REVISIONS"
       - name: Diagnose complete frozen control suite and fresh accepted-reference recovery
         id: control_suite
-        if: inputs.design_first
+        if: inputs.design_first || inputs.reviewed_successor != ''
         run: |
           compiler="$RUNNER_TEMP/recipe-compiler/node_modules/typescript/lib/typescript.js"
           image_id=$(docker image inspect node:24.19.0-bookworm-slim --format '{{.Id}}')

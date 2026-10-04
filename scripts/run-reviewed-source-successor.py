@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -24,7 +25,15 @@ def write_new(path, raw):
 
 def execute(args):
     output = args.output
-    output.mkdir()
+    prepared = getattr(args, 'prepared_output', False)
+    if prepared:
+        if output.is_symlink() or not output.is_dir():
+            raise ValueError('Prepared output must be an existing regular operator directory')
+        request_path = output / 'request.json'
+        if request_path.is_symlink() or not request_path.is_file() or not request_path.samefile(args.request):
+            raise ValueError('Prepared output must own the exact supplied author request')
+    else:
+        output.mkdir()
     packet_path = output / 'successor-request.json'
     terminal = dict(schema='agentlab.source_successor_construction_transport.v1',
                     dispatchIntentRecorded=False, constructorReturned=False,
@@ -66,7 +75,8 @@ def execute(args):
         design = output / 'target-design.json'
         parent = output / 'parent-design.json'
         feedback = output / 'review-feedback.json'
-        write_new(request, request_bytes)
+        if not prepared:
+            write_new(request, request_bytes)
         write_new(design, packet['targetDesignOriginal'].encode())
         write_new(parent, packet['parentDesignOriginal'].encode())
         write_new(feedback, packet['reviewFeedbackOriginal'].encode())
@@ -94,7 +104,29 @@ def execute(args):
         terminal.update(dispatchIntentRecorded=True, dispatchClaimId=claim_id,
                         successorRequestSha256=digest(packet_bytes), successorIndex=packet['successorIndex'])
         write_new(output / 'dispatch-intent.json', json.dumps(terminal, sort_keys=True).encode())
+        repository = getattr(args, 'github_claim_repository', None)
+        revision = getattr(args, 'github_claim_revision', None)
+        if bool(repository) != bool(revision):
+            raise ValueError('GitHub durable claim repository/revision must be paired')
+        if repository:
+            if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository) or not re.fullmatch(r'[0-9a-f]{40}', revision):
+                raise ValueError('Invalid durable claim repository or method revision')
+            # One atomic create per request/policy/index, even across fresh runners.
+            # Never retry an uncertain POST. A changed target cannot reuse the slot.
+            root_identity = dict(authorRequestSha256=identity['authorRequestSha256'], policySha256=identity['policySha256'])
+            root_id = digest(json.dumps(root_identity, sort_keys=True, separators=(',', ':')).encode())
+            ref = f'refs/heads/agentlab-successor-claims/{root_id}/{packet["successorIndex"]}'
+            terminal.update(durableClaimRef=ref, durableClaimIntentRecorded=True)
+            write_new(output / 'durable-claim-intent.json', json.dumps(terminal, sort_keys=True).encode())
+            created = run(['gh', 'api', '--method', 'POST', f'repos/{repository}/git/refs',
+                 '-f', 'ref=' + ref, '-f', 'sha=' + revision], 'durable-claim')
+            remote = json.loads(created.stdout)
+            if remote.get('ref') != ref or (remote.get('object') or {}).get('sha') != revision:
+                raise ValueError('Durable claim response differs from the exact enrollment')
+            terminal['durableClaimCreated'] = True
         env = dict(os.environ)
+        for secret_name in ('GH_TOKEN', 'GITHUB_TOKEN'):
+            env.pop(secret_name, None)
         env['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(output / 'runtime-receipts')
         constructor = Path(__file__).resolve().with_name('run-source-recipe-author.py')
         command = [sys.executable, str(constructor), '--request', str(request),
@@ -136,6 +168,10 @@ def main():
                  'claim-root', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--previous-successor', type=Path)
+    parser.add_argument('--prepared-output', action='store_true',
+                        help='Use an operator-prepared directory owning the exact request; other outputs remain create-new')
+    parser.add_argument('--github-claim-repository')
+    parser.add_argument('--github-claim-revision')
     parser.add_argument('--reasoning-effort', choices=('default', 'none', 'low', 'medium', 'high', 'max'), default='low')
     print(json.dumps(execute(parser.parse_args())))
 

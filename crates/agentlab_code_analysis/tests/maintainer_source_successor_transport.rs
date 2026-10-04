@@ -12,7 +12,8 @@ from unittest.mock import patch
 spec=importlib.util.spec_from_file_location('bridge',os.environ['BRIDGE_SCRIPT'])
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 with tempfile.TemporaryDirectory() as directory:
-  for scenario in ['pass','native-stop','live-stop','author-failure','timeout','changed-request','changed-design','post-stop']:
+  passing=['pass','prepared','durable']
+  for scenario in passing+['durable-reject','native-stop','live-stop','author-failure','timeout','changed-request','changed-design','post-stop']:
     root=Path(directory)/scenario;root.mkdir();claims=root/'claims';claims.mkdir()
     for name in ['gate','pi','request','rubric','response','feedback','policy']:(root/name).write_bytes(b'{}')
     for name in ['source','evidence','git']:(root/name).mkdir()
@@ -24,9 +25,19 @@ with tempfile.TemporaryDirectory() as directory:
       review_response=root/'response',review_feedback=root/'feedback',successor_policy=root/'policy',
       source=root/'source',participant_evidence=root/'evidence',source_git_checkout=root/'git',
       previous_successor=None,claim_root=claims,output=root/'output',reasoning_effort='low')
+    args.prepared_output=scenario in ['prepared','durable','durable-reject']
+    if args.prepared_output:
+      args.output.mkdir();args.request=args.output/'request.json';args.request.write_bytes(b'{}')
+    args.github_claim_repository='owner/repository' if scenario in ['durable','durable-reject'] else None
+    args.github_claim_revision='a'*40 if args.github_claim_repository else None
     authors=[];commands=[]
     def run(command,**kwargs):
       commands.append(command)
+      if command[0]=='gh':
+        assert command[1:4]==['api','--method','POST']
+        assert any(str(value).startswith('ref=refs/heads/agentlab-successor-claims/') for value in command)
+        reply=dict(ref=next(value[4:] for value in command if str(value).startswith('ref=')),object=dict(sha='a'*40))
+        return subprocess.CompletedProcess(command,1 if scenario=='durable-reject' else 0,json.dumps(reply).encode(),b'original claim response')
       out=Path(command[command.index('--output')+1])
       if '--prepare-source-reviewed-successor' in command:
         assert '--source-git-checkout' in command
@@ -45,6 +56,7 @@ with tempfile.TemporaryDirectory() as directory:
         assert command[command.index('--proposal-format-revisions')+1]=='0'
         assert kwargs['timeout']==600
         assert kwargs['env']['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']==str(args.output/'runtime-receipts')
+        assert 'GH_TOKEN' not in kwargs['env'] and 'GITHUB_TOKEN' not in kwargs['env']
         if scenario=='timeout':raise subprocess.TimeoutExpired(command,600,output=b'partial original',stderr=b'original timeout')
         if scenario=='author-failure':return subprocess.CompletedProcess(command,1,b'partial original',b'original author reject')
         stage=out/'proposal-stage';stage.mkdir(parents=True)
@@ -58,18 +70,22 @@ with tempfile.TemporaryDirectory() as directory:
       return subprocess.CompletedProcess(command,0,b'original stdout',b'original stderr')
     with patch.object(module.subprocess,'run',side_effect=run):
       try:result=module.execute(args)
-      except (ValueError,subprocess.CalledProcessError,subprocess.TimeoutExpired):assert scenario!='pass'
+      except (ValueError,subprocess.CalledProcessError,subprocess.TimeoutExpired):assert scenario not in passing
       else:
-        assert scenario=='pass' and result['constructionCompleted'] is True
+        assert scenario in passing and result['constructionCompleted'] is True
         assert result['qualified'] is False and result['knowledgeWritePerformed'] is False
     terminal=json.loads((args.output/'transport-terminal.json').read_bytes())
-    assert terminal['constructionCompleted']==(scenario=='pass')
-    expected=0 if scenario in ['native-stop','live-stop'] else 1
-    assert len(authors)==expected and len(list(claims.iterdir()))==expected
+    assert terminal['constructionCompleted']==(scenario in passing)
+    expected=0 if scenario in ['native-stop','live-stop','durable-reject'] else 1
+    expected_claims=0 if scenario in ['native-stop','live-stop'] else 1
+    assert len(authors)==expected and len(list(claims.iterdir()))==expected_claims
+    if scenario=='durable-reject':assert terminal['durableClaimIntentRecorded'] is True
     if scenario=='timeout':assert (args.output/'constructor-stdout.log').read_bytes()==b'partial original'
     if expected:
       retained=next(claims.iterdir()).read_bytes()
       args.output=root/'second-output'
+      if args.prepared_output:
+        args.output.mkdir();args.request=args.output/'request.json';args.request.write_bytes(b'{}')
       with patch.object(module.subprocess,'run',side_effect=run):
         try:module.execute(args)
         except (FileExistsError,subprocess.CalledProcessError):pass
