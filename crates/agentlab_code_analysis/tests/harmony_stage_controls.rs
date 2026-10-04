@@ -486,6 +486,9 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
             "repositories":[{"id":candidate["repositoryId"],"revision":candidate["sourceRevision"]}],
             "tableGitAuthority":{"repo":format!("fixture-knowledge-{repository}"),"revision":"a".repeat(40)},"tables":{}});
         fs::write(base.join("source-set.txt"), b"retained fixture inventory\n").unwrap();
+        cut["sourceSetSha256"] = json!(agentlab_code_analysis::digest(
+            &fs::read(base.join("source-set.txt")).unwrap()
+        ));
         let mut round = json!({"id":"initial","schema":"agentlab.maintainer_skill_refresh_round.v1",
             "roundIndex":1,"ownershipPlane":"target-operations","automaticPromotion":false,
             "coverage":{"processSkillCount":0,"semanticReadyScopeCount":0,"maintenanceReadyScopeCount":0},
@@ -707,6 +710,31 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
             }
             command.output().unwrap()
         };
+        let inventory_path = base.join("source-set.txt");
+        let original_inventory = fs::read(&inventory_path).unwrap();
+        fs::remove_file(&inventory_path).unwrap();
+        let missing_inventory_output = root.join("rejected-missing-source-inventory");
+        assert!(!invoke(
+            "--verify-lesson-source-readback",
+            &source_path,
+            None,
+            &missing_inventory_output
+        )
+        .status
+        .success());
+        assert!(!missing_inventory_output.exists());
+        fs::write(&inventory_path, b"changed-source-inventory\n").unwrap();
+        let changed_inventory_output = root.join("rejected-changed-source-inventory");
+        assert!(!invoke(
+            "--verify-lesson-source-readback",
+            &source_path,
+            None,
+            &changed_inventory_output
+        )
+        .status
+        .success());
+        assert!(!changed_inventory_output.exists());
+        fs::write(&inventory_path, original_inventory).unwrap();
         let preflight = invoke(
             "--verify-lesson-source-readback",
             &source_path,

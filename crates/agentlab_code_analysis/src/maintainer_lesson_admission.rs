@@ -71,6 +71,11 @@ pub struct ReviewedReturnInputs<'a> {
 
 impl ReviewedReturnInputs<'_> {
     fn reconstruct(&self, output: &Path) -> Result<Value, String> {
+        let cut = load(self.base, "maintainer-knowledge-cut.json")?;
+        need(
+            cut["sourceSetSha256"] == digest(&read(self.base, "source-set.txt")?),
+            "lesson return source inventory differs from committed cut",
+        )?;
         need(
             self.method_source
                 .is_none_or(|bytes| bytes.len() <= 1024 * 1024),

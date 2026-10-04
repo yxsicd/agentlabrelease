@@ -186,6 +186,17 @@ and headers; test the actual request builder, not only mocked transaction method
 Keep native admission, live transport, committed readback and next-round consumption
 separate. If transport stops before dispatch, inspect its original receipts and
 refresh authority read-only; if dispatch is uncertain, reconcile rather than retry.
+Require the portable source inventory at native return admission, including its
+committed digest, rather than discovering its absence only in the writer. If a
+published cut omitted this sidecar, recover exact digest-matching Git Blob bytes
+into a separate portable copy; preserve every original file and authority row.
+Bound network recovery to read calls and explicit sessionless identity validation;
+HTTP/business refusals and uncertain business writes remain terminal. Record safe
+failure categories without credential-bearing requests or exception strings.
+After commitment, reconsume the actual current suite through the business return
+gate, retire old executable inputs and test the next selected cut. Stored-cut
+validation is not a new semantic producer, Agent consumption or learning benefit.
+See the [reviewed-return checkpoint](../../docs/flywheel-reviewed-return-20261004.md).
 
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest

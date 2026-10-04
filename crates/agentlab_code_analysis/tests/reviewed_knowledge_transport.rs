@@ -29,6 +29,29 @@ def urlopen(request,timeout):
 with patch.object(module.urllib.request,'urlopen',urlopen):
     assert c.rpc('service_metadata',{})=={'ready':True}
 assert len(calls)==1 and c.counter==1
+with tempfile.TemporaryDirectory() as tmp:
+    for mode in ['read-network','read-http','write-network','person-select-network']:
+        c.counter=0;c.writes=0;c.root=Path(tmp)/mode;c.root.mkdir()
+        attempts=[]
+        name='skill_run_read' if mode.startswith('read') else 'skill_run_write' if mode.startswith('write') else 'person_select'
+        def flaky(request,timeout):
+            attempts.append(request)
+            if mode=='read-http':
+                raise module.urllib.error.HTTPError(request.full_url,401,'private refusal',{},None)
+            if len(attempts)<3:
+                raise module.urllib.error.URLError('private network details')
+            return io.BytesIO(json.dumps({'result':{'structuredContent':{'ready':True}}}).encode())
+        with patch.object(module.urllib.request,'urlopen',flaky), patch.object(module.time,'sleep'):
+            try:result=c.rpc(name,{'operation':'table_status'})
+            except module.urllib.error.URLError:assert mode not in ['read-network','person-select-network']
+            else:assert mode in ['read-network','person-select-network'] and result=={'ready':True}
+        assert len(attempts)==(3 if mode in ['read-network','person-select-network'] else 1)
+        assert c.counter==1
+        for path in c.root.glob('rpc-transport-failure-*.json'):
+            receipt=json.loads(path.read_text())
+            assert receipt['writeReplayAllowed'] is False
+            assert 'private' not in path.read_text()
+            if mode in ['read-http','write-network']:assert receipt['retryAllowed'] is False
 old,new='a'*40,'b'*40
 def client(root):
     c=module.StrictTransport.__new__(module.StrictTransport)
