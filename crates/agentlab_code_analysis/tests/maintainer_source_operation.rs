@@ -23,6 +23,221 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn gap_run_recovery_retains_originals_and_rejects_ambiguity_and_identity_drift() {
+    use std::os::unix::fs::PermissionsExt;
+    let base = std::env::temp_dir().join(format!(
+        "agentlab-run-recovery-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&base).unwrap();
+    let id = "a".repeat(64);
+    let method = "b".repeat(40);
+    let intent = json!({"requestId":id,"methodRevision":method,"repository":"fixture/project",
+        "workflow":"maintainer-source-recipe-author.yml","createdAt":"2026-10-04T00:00:00Z"});
+    let intent_bytes = serde_json::to_vec(&intent).unwrap();
+    fs::write(base.join("dispatch-intent.json"), &intent_bytes).unwrap();
+    let response = base.join("response.json");
+    let gh = base.join("gh");
+    fs::write(&gh, "#!/bin/sh\ncat \"$FIXTURE_RUN_RESPONSE\"\n").unwrap();
+    fs::set_permissions(&gh, fs::Permissions::from_mode(0o755)).unwrap();
+    let run = |name: &str, rows: Value| {
+        fs::write(
+            &response,
+            serde_json::to_vec(&json!({"workflow_runs":rows})).unwrap(),
+        )
+        .unwrap();
+        Command::new("bash")
+            .arg(root().join("scripts/recover-maintainer-flywheel-run.sh"))
+            .arg(&base)
+            .arg(base.join(name))
+            .env("FIXTURE_RUN_RESPONSE", &response)
+            .env(
+                "PATH",
+                format!("{}:{}", base.display(), std::env::var("PATH").unwrap()),
+            )
+            .output()
+            .unwrap()
+    };
+    let original = json!({"id":123,"display_title":format!("AgentLab gap {id}"),
+        "head_sha":method,"head_branch":"main","event":"workflow_dispatch",
+        "repository":{"full_name":"fixture/project"},"status":"in_progress","conclusion":null,
+        "html_url":"https://github.com/fixture/project/actions/runs/123"});
+    assert!(run("pending", json!([])).status.success());
+    let read = |name: &str| {
+        serde_json::from_slice::<Value>(
+            &fs::read(base.join(name).join("observation.json")).unwrap(),
+        )
+        .unwrap()
+    };
+    assert_eq!(read("pending")["dispatchAgainAllowed"], false);
+    assert!(run("running", json!([original.clone()])).status.success());
+    assert_eq!(read("running")["runId"], 123);
+    assert_eq!(read("running")["childCompletionVerified"], false);
+    let mut terminal = original.clone();
+    terminal["status"] = json!("completed");
+    terminal["conclusion"] = json!("failure");
+    assert!(run("terminal", json!([terminal])).status.success());
+    assert_eq!(read("terminal")["conclusion"], "failure");
+    assert_eq!(read("terminal")["closedLoopQualified"], false);
+    assert!(
+        !run("duplicate", json!([original.clone(), original.clone()]))
+            .status
+            .success()
+    );
+    for key in ["head_sha", "head_branch", "event"] {
+        let mut drift = original.clone();
+        drift[key] = json!("wrong");
+        assert!(!run(key, json!([drift])).status.success());
+        assert!(!base.join(key).join("observation.json").exists());
+    }
+    let mut foreign = original;
+    foreign["repository"]["full_name"] = json!("other/project");
+    assert!(!run("foreign", json!([foreign])).status.success());
+    assert_eq!(
+        fs::read(base.join("dispatch-intent.json")).unwrap(),
+        intent_bytes
+    );
+    assert!(base.join("duplicate/original-runs.json").exists());
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
+fn gap_router_dispatches_only_supported_children_and_never_repeats_uncertain_requests() {
+    use std::os::unix::fs::PermissionsExt;
+    let base = std::env::temp_dir().join(format!(
+        "agentlab-router-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&base).unwrap();
+    let fixture = base.join("fixture.json");
+    let assessment = base.join("assessment.json");
+    fs::write(&assessment, br#"{"roundIndex":1}"#).unwrap();
+    let gate = base.join("gate");
+    fs::write(
+        &gate,
+        r#"#!/bin/bash
+set -eu
+mode=$1
+while [[ $# -gt 0 ]]; do
+  if [[ $1 == --output ]]; then output=$2; fi
+  shift
+done
+if [[ $mode == --resolve-latest-assessment ]]; then
+  jq -n --arg path "$FIXTURE_ASSESSMENT" '{assessmentPath:$path}' > "$output"
+else cp "$FIXTURE_PLAN" "$output"; fi
+"#,
+    )
+    .unwrap();
+    fs::set_permissions(&gate, fs::Permissions::from_mode(0o755)).unwrap();
+    let gh = base.join("gh");
+    fs::write(
+        &gh,
+        r#"#!/bin/bash
+set -eu
+if [[ $1 == api ]]; then git rev-parse HEAD; exit; fi
+printf '%s\n' "$*" >> "$FAKE_DISPATCH_LOG"
+exit "${FAKE_DISPATCH_EXIT:-0}"
+"#,
+    )
+    .unwrap();
+    fs::set_permissions(&gh, fs::Permissions::from_mode(0o755)).unwrap();
+    let real_git = Command::new("which").arg("git").output().unwrap();
+    let git = base.join("git");
+    fs::write(
+        &git,
+        format!(
+            "#!/bin/bash\nif [[ $1 == status ]]; then exit 0; fi\nexec {} \"$@\"\n",
+            String::from_utf8(real_git.stdout).unwrap().trim()
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(&git, fs::Permissions::from_mode(0o755)).unwrap();
+    let log = base.join("dispatch.log");
+    let run = |name: &str, mode: &str, exit: &str| {
+        Command::new("bash")
+            .arg(root().join("scripts/route-maintainer-flywheel.sh"))
+            .args(["examples/maintainer-knowledge-gate/first-four", "arbitrary"])
+            .arg(base.join(name))
+            .arg(mode)
+            .current_dir(root())
+            .env("AGENTLAB_FLYWHEEL_GATE", &gate)
+            .env("FIXTURE_PLAN", &fixture)
+            .env("FIXTURE_ASSESSMENT", &assessment)
+            .env("FAKE_DISPATCH_LOG", &log)
+            .env("FAKE_DISPATCH_EXIT", exit)
+            .env("GITHUB_REPOSITORY", "fixture/project")
+            .env(
+                "PATH",
+                format!("{}:{}", base.display(), std::env::var("PATH").unwrap()),
+            )
+            .output()
+            .unwrap()
+    };
+    let plan = |lane: &str, kind: &str| {
+        json!({"decision":"propose-next-batch","nextLane":lane,
+        "scopes":[{"selected":true,"repositoryId":"arbitrary","operationKind":kind}]})
+    };
+    fs::write(
+        &fixture,
+        serde_json::to_vec(&plan("semantic-refresh", "")).unwrap(),
+    )
+    .unwrap();
+    assert!(run("semantic", "plan", "0").status.success());
+    let read = |name: &str| {
+        serde_json::from_slice::<Value>(&fs::read(base.join(name).join("request.json")).unwrap())
+            .unwrap()
+    };
+    assert_eq!(
+        read("semantic")["workflow"],
+        "maintainer-skill-agent-flywheel.yml"
+    );
+    assert_eq!(read("semantic")["inputs"]["scope_batch_size"], "1");
+    assert!(!log.exists());
+    fs::write(
+        &fixture,
+        serde_json::to_vec(&plan("operation-verification", "build-test")).unwrap(),
+    )
+    .unwrap();
+    assert!(!run("unsupported", "dispatch", "0").status.success());
+    assert!(!log.exists());
+    fs::write(
+        &fixture,
+        serde_json::to_vec(&plan("operation-verification", "source-only")).unwrap(),
+    )
+    .unwrap();
+    assert!(run("source", "plan", "0").status.success());
+    assert_eq!(read("source")["inputs"]["independent_review"], "true");
+    assert_eq!(read("source")["closedLoopQualified"], false);
+    assert!(!run("uncertain", "dispatch", "7").status.success());
+    assert!(base.join("uncertain/dispatch-intent.json").exists());
+    assert!(!base.join("uncertain/dispatch-receipt.json").exists());
+    assert!(!run("uncertain", "dispatch", "0").status.success());
+    assert_eq!(fs::read_to_string(&log).unwrap().lines().count(), 1);
+    assert!(run("accepted", "dispatch", "0").status.success());
+    let receipt: Value =
+        serde_json::from_slice(&fs::read(base.join("accepted/dispatch-receipt.json")).unwrap())
+            .unwrap();
+    assert_eq!(receipt["childCompletionVerified"], false);
+    fs::write(
+        &fixture,
+        br#"{"decision":"requested-repository-requires-review","nextLane":null}"#,
+    )
+    .unwrap();
+    assert!(run("blocked", "dispatch", "0").status.success());
+    assert!(!base.join("blocked/request.json").exists());
+    assert_eq!(fs::read_to_string(&log).unwrap().lines().count(), 2);
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn semantic_refresh_publishes_exact_successor_without_overwriting_input_or_revision() {
     let workflow =
         fs::read_to_string(root().join(".github/workflows/maintainer-skill-agent-flywheel.yml"))
