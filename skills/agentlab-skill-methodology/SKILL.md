@@ -258,6 +258,10 @@ never relabel final-suite reviewer evidence as a design review. Reconsume origin
 inputs and compare the isolated upstream response, participant final message and
 lifecycle before reporting completion. Recorded consistency is not authenticated
 reviewer identity, semantic truth or execution permission.
+Enroll early-review inputs and its separate bounded budget before the first
+constructor turn. Run it with fresh reviewer state before verifier generation;
+revise/unverified or capture failure stops code, retaining findings for an explicitly
+reviewed successor rather than reopening the same construction budget.
 
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest

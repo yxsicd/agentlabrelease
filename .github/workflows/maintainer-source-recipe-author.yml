@@ -110,6 +110,16 @@ on:
         required: true
         type: choice
         options: ['0', '1', '2']
+      design_quality_rubric:
+        description: Optional checked-in generic early design rubric; fresh targeted design-first roots only
+        default: ''
+        required: false
+        type: string
+      design_quality_rubric_sha256:
+        description: Exact early-review rubric digest enrolled before the first constructor model call
+        default: ''
+        required: false
+        type: string
       code_revisions:
         description: Fresh-root only; automatic frozen-design verifier repairs after contained baseline diagnostics
         default: '0'
@@ -150,7 +160,7 @@ jobs:
     permissions:
       contents: write
       actions: read
-    timeout-minutes: ${{ inputs.independent_review && 45 || inputs.code_gateway_timeout_seconds == '240' && 25 || 20 }}
+    timeout-minutes: ${{ (inputs.independent_review || inputs.design_quality_rubric != '') && 45 || inputs.code_gateway_timeout_seconds == '240' && 25 || 20 }}
     env:
       KNOWLEDGE: ${{ inputs.knowledge_directory }}
       AGENTLAB_SOURCE_GUIDANCE_SELECTION: ${{ inputs.guidance_selection }}
@@ -170,6 +180,8 @@ jobs:
       REVISION_FEEDBACK: ${{ inputs.revision_feedback }}
       CONSTRUCTION_DESIGN_FIRST: ${{ inputs.design_first }}
       CONSTRUCTION_DESIGN_REVISIONS: ${{ inputs.design_revisions }}
+      DESIGN_QUALITY_RUBRIC: ${{ inputs.design_quality_rubric }}
+      DESIGN_QUALITY_RUBRIC_SHA256: ${{ inputs.design_quality_rubric_sha256 }}
       CONSTRUCTION_CODE_REVISIONS: ${{ inputs.code_revisions }}
       AUTOMATIC_REVIEW_ENABLED: ${{ inputs.independent_review }}
       AUTOMATIC_REVIEW_RUBRIC: ${{ inputs.review_rubric }}
@@ -242,6 +254,16 @@ jobs:
               assert isinstance(json.loads(feedback),dict)
               if json.loads(feedback).get('schema') in ('agentlab.source_recipe_design_review.v1','agentlab.source_recipe_design_review.v2','agentlab.source_recipe_design_review.v3'):
                   assert os.environ['CONSTRUCTION_DESIGN_FIRST']=='true','Design review requires design-first'
+          early=os.environ.get('DESIGN_QUALITY_RUBRIC','');early_digest=os.environ.get('DESIGN_QUALITY_RUBRIC_SHA256','')
+          assert bool(early)==bool(early_digest),'Early design rubric and digest must be paired'
+          if early:
+              import hashlib,re
+              assert os.environ['GITHUB_RUN_ATTEMPT']=='1','Early review cannot reopen a rerun budget'
+              assert not run and not feedback and selection and os.environ['CONSTRUCTION_DESIGN_FIRST']=='true'
+              assert not early.startswith('/') and chr(92) not in early and all(p not in ('','.','..') for p in early.split('/'))
+              path=Path(early);assert path.is_file() and not path.is_symlink() and path.resolve().is_relative_to(root)
+              raw=path.read_bytes();assert len(raw)<=128*1024 and re.fullmatch('[0-9a-f]{64}',early_digest)
+              assert hashlib.sha256(raw).hexdigest()==early_digest
           PY
       - name: Bind optional guidance to the checked-in knowledge directory
         run: |
@@ -473,6 +495,10 @@ jobs:
           fi
           if test "$CONSTRUCTION_CODE_GATEWAY_TIMEOUT" != inherit; then
             revision_args+=(--code-gateway-timeout-seconds "$CONSTRUCTION_CODE_GATEWAY_TIMEOUT")
+          fi
+          if test -n "$DESIGN_QUALITY_RUBRIC"; then
+            revision_args+=(--design-quality-rubric "$GITHUB_WORKSPACE/$DESIGN_QUALITY_RUBRIC" \
+              --design-quality-rubric-sha256 "$DESIGN_QUALITY_RUBRIC_SHA256")
           fi
           python3 scripts/run-source-recipe-author.py --request "$RUNNER_TEMP/recipe-author/request.json" \
             --output "$RUNNER_TEMP/recipe-author/agent" --gate target/release/agentlab-maintainer-skill-flywheel \

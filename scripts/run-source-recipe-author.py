@@ -8,6 +8,74 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+from types import SimpleNamespace
+
+
+def freeze_design_review(args, request_bytes, participant_class):
+    """Prospective bounded enrollment, before any constructor model call."""
+    if not args.design_quality_rubric:
+        return None
+    raw = args.design_quality_rubric.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != args.design_quality_rubric_sha256:
+        raise ValueError('Design quality rubric differs from prospective digest')
+    required = {'construction-target-coverage', 'state-observation-coverage',
+                'control-discrimination', 'runtime-environment-closure'}
+    if not required.issubset({row.get('id') for row in json.loads(raw)['criteria']}):
+        raise ValueError('Design quality rubric missing generic criteria before inference')
+    if not json.loads(request_bytes).get('sourceRecipeTarget'):
+        raise ValueError('Design quality review requires original target before inference')
+    root = args.output / 'design-review-enrollment'
+    root.mkdir()
+    with (root/'rubric.json').open('xb') as stream:
+        stream.write(raw)
+    checked = subprocess.run([str(args.gate.resolve()), '--validate-source-quality-rubric',
+        '--quality-rubric', str((root/'rubric.json').resolve()),
+        '--output', str((root/'rubric-validation.json').resolve())], capture_output=True, timeout=90)
+    (root/'rubric-validation.stdout.log').write_bytes(checked.stdout)
+    (root/'rubric-validation.stderr.log').write_bytes(checked.stderr)
+    checked.check_returncode()
+    budget = participant_class.process_budget_seconds(300)
+    if budget != 420:
+        raise ValueError('Design reviewer watchdog differs from prospective budget')
+    enrollment = dict(schema='agentlab.source_design_review_enrollment.v1',
+        authorRequestSha256=hashlib.sha256(request_bytes).hexdigest(),
+        rubricSha256=args.design_quality_rubric_sha256,
+        model=os.environ['AGENTLAB_MODEL'],providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
+        reasoningEffort=args.reasoning_effort,thinkingType=args.thinking_type,
+        gatewayTimeoutSeconds=240,maxOutputTokens=args.max_output_tokens,
+        maximumReviewerAttempts=1,participantBudgetSeconds=budget,transportRetryLimit=0,
+        automaticPromotion=False,authorityWritePerformed=False,qualified=False)
+    with (root/'enrollment.json').open('x') as stream:
+        json.dump(enrollment,stream)
+    return enrollment
+
+
+def review_design_before_code(args, design_path, enrollment):
+    """Fresh reviewer state; no constructor history or repair budget inheritance."""
+    if enrollment is None:
+        return
+    if (hashlib.sha256(args.request.read_bytes()).hexdigest() != enrollment['authorRequestSha256']
+            or hashlib.sha256((args.output/'design-review-enrollment/rubric.json').read_bytes()).hexdigest() != enrollment['rubricSha256']
+            or os.environ['AGENTLAB_MODEL'] != enrollment['model']
+            or os.environ['AGENTLAB_PROVIDER_ROUTE'] != enrollment['providerRoute']):
+        raise ValueError('Prospective design review enrollment drift')
+    path = Path(__file__).resolve().parent/'run-source-suite-review.py'
+    spec = importlib.util.spec_from_file_location('design_review_transport', path)
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    config = SimpleNamespace(source=None,author_request=args.request,design=design_path,
+        rubric=args.output/'design-review-enrollment/rubric.json',output=args.output/'design-review',
+        gate=args.gate,pi=args.pi,review_repair_limit=0,source_git_checkout=None,
+        reasoning_effort=enrollment['reasoningEffort'],thinking_type=enrollment['thinkingType'],
+        gateway_timeout_seconds=enrollment['gatewayTimeoutSeconds'],max_output_tokens=enrollment['maxOutputTokens'])
+    original_root = os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']
+    try:
+        os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(Path(original_root)/'design-review')
+        result = module.run(config)
+    finally:
+        os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = original_root
+    if (result.get('completed') is not True or result.get('recordedCompletionVerified') is not True
+            or result.get('decision') != 'ready-for-execution'):
+        raise ValueError('Original design review blocks code generation; retain findings for a reviewed successor')
 
 
 def prepare_runtime_receipt_root():
@@ -343,6 +411,8 @@ def main():
                    help='Freeze source transformations and scenario contract before generating code')
     p.add_argument('--design-only', action='store_true',
                    help='Stop after validated unreviewed design; no verifier generation or proposal staging')
+    p.add_argument('--design-quality-rubric', type=Path)
+    p.add_argument('--design-quality-rubric-sha256')
     p.add_argument('--frozen-design', type=Path,
                    help='Continue verifier generation from exact existing design; not semantic approval')
     p.add_argument('--frozen-design-sha256',
@@ -358,6 +428,11 @@ def main():
     p.add_argument('--require-independent-completion', action='store_true',
                    help='Native original-wire/proposal replay for one fresh frozen-design constructor')
     args = p.parse_args()
+    if bool(args.design_quality_rubric) != bool(args.design_quality_rubric_sha256):
+        p.error('Design quality rubric and prospective digest must be paired')
+    if args.design_quality_rubric and (not args.design_first or args.design_only
+            or args.frozen_design or args.revision_request or args.parent_design or args.diagnostic_repair):
+        p.error('Early design review belongs only to a fresh design-first constructor')
     if args.require_independent_completion and (not args.frozen_design or args.guidance_selection
             or args.proposal_format_revisions != 0 or args.api != 'openai-completions'):
         p.error('Independent one-shot completion requires frozen design, no guidance/format repair and completions capture')
@@ -527,6 +602,7 @@ def main():
     spec = importlib.util.spec_from_file_location('participant', module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    design_review_enrollment = freeze_design_review(args, request_bytes, module.Participant)
     participant = module.Participant(
         evidence, args.output / 'participant-state', args.pi,
         os.environ['AGENTLAB_LM_GATEWAY_URL'], os.environ['AGENTLAB_MODEL'],
@@ -742,6 +818,7 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                     json.dump(receipt, stream)
                 print(json.dumps(receipt))
                 return
+            review_design_before_code(args, design_path, design_review_enrollment)
             interface_path = args.output / 'verifier-interface.json'
             interface = subprocess.run([str(args.gate.resolve()),
                 '--prepare-source-verifier-interface', '--author-request', str(args.request.resolve()),
