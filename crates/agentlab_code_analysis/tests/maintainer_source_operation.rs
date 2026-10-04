@@ -23,6 +23,75 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn semantic_refresh_action_accepts_fixed_successor_cut_without_path_escape() {
+    let workflow =
+        fs::read_to_string(root().join(".github/workflows/maintainer-skill-agent-flywheel.yml"))
+            .unwrap();
+    let step = workflow
+        .split("      - name: Validate explicit knowledge directory before authority admission\n")
+        .nth(1)
+        .unwrap()
+        .split("      - name:")
+        .next()
+        .unwrap();
+    let script = step
+        .split("          python3 - <<'PY'\n")
+        .nth(1)
+        .unwrap()
+        .split("          PY\n")
+        .next()
+        .unwrap()
+        .lines()
+        .map(|line| line.strip_prefix("          ").unwrap())
+        .collect::<Vec<_>>()
+        .join("\n");
+    let base = std::env::temp_dir().join(format!(
+        "agentlab-refresh-input-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&base).unwrap();
+    let current = base.join("cuts/arbitrary-committed-revision");
+    fs::create_dir_all(&current).unwrap();
+    fs::write(current.join("maintainer-knowledge-cut.json"), b"{}").unwrap();
+    let run = |selected: &str| {
+        Command::new("python3")
+            .arg("-c")
+            .arg(&script)
+            .env("KNOWLEDGE", selected)
+            .current_dir(&base)
+            .output()
+            .unwrap()
+            .status
+            .success()
+    };
+    assert!(run("cuts/arbitrary-committed-revision"));
+    for bad in [
+        "",
+        "/tmp/cut",
+        "../cut",
+        "cuts/../arbitrary-committed-revision",
+        "cuts\\arbitrary-committed-revision",
+        "cuts/missing",
+    ] {
+        assert!(!run(bad), "{bad}");
+    }
+    std::os::unix::fs::symlink(&current, base.join("linked-cut")).unwrap();
+    assert!(!run("linked-cut"));
+    fs::remove_file(current.join("maintainer-knowledge-cut.json")).unwrap();
+    std::os::unix::fs::symlink(
+        base.join("unknown"),
+        current.join("maintainer-knowledge-cut.json"),
+    )
+    .unwrap();
+    assert!(!run("cuts/arbitrary-committed-revision"));
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn automatic_review_freezes_inputs_before_budget_and_keeps_native_gate_order() {
     let code = r#"
 import hashlib,json,os,subprocess,tempfile,textwrap
