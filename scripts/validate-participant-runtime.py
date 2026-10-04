@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 
 def require(condition, message):
@@ -23,17 +23,32 @@ def load(path: Path):
     return value
 
 
+def recorded_absolute_path(value):
+    """Compare Linux capture paths without consulting a different host's filesystem."""
+    value = str(value)
+    path = PurePosixPath(value)
+    require(path.is_absolute() and str(path) == value and '..' not in path.parts
+            and '\\' not in value and '\x00' not in value,
+            "recorded path must be a canonical absolute Linux capture path")
+    return value
+
+
 def validate_runtime_receipts(
     config_path: Path,
     receipt_root: Path,
     workspace: Path,
     participant_state: Path,
     labels: list[str],
+    recorded_paths: bool = False,
 ):
     config_path = config_path.resolve(strict=True)
     receipt_root = receipt_root.resolve(strict=True)
-    workspace = workspace.resolve(strict=True)
-    participant_state = participant_state.resolve(strict=True)
+    if recorded_paths:
+        workspace = recorded_absolute_path(workspace)
+        participant_state = recorded_absolute_path(participant_state)
+    else:
+        workspace = workspace.resolve(strict=True)
+        participant_state = participant_state.resolve(strict=True)
     config = load(config_path)
     require(config.get("schema") == "agentlab.participant_docker_runtime.v1", "unsupported runtime config")
     require(config.get("executor") == "docker", "runtime executor differs")
@@ -55,10 +70,13 @@ def validate_runtime_receipts(
         and expected_user.split(":", 1)[0] not in {"", "0"},
         "qualified participant runtime requires a non-root user",
     )
+    def bound_path(value):
+        return recorded_absolute_path(value) if recorded_paths else str(Path(value).resolve(strict=True))
+
     expected_mounts = [
         {"type": "bind", "source": str(participant_state), "destination": "/agent", "rw": True},
-        {"type": "bind", "source": str(Path(config["caseInputRoot"]).resolve(strict=True)), "destination": "/agentlab/case", "rw": False},
-        {"type": "bind", "source": str(Path(config["piRuntimeRoot"]).resolve(strict=True)), "destination": "/runtime", "rw": False},
+        {"type": "bind", "source": bound_path(config["caseInputRoot"]), "destination": "/agentlab/case", "rw": False},
+        {"type": "bind", "source": bound_path(config["piRuntimeRoot"]), "destination": "/runtime", "rw": False},
         {"type": "bind", "source": str(workspace), "destination": "/workspace", "rw": True},
     ]
     expected_mounts.sort(key=lambda row: row["destination"])
@@ -199,7 +217,7 @@ def validate_runtime_receipts(
         final_state = final.get("State") or {}
         require(final_state.get("ExitCode") == 0 and final_state.get("Status") == "exited", f"{label}: final container state differs")
         validated.append({"label": label, "containerId": receipt.get("containerId"), "receiptSha256": digest(receipt_path)})
-    return {
+    result = {
         "schema": "agentlab.participant_runtime_isolation_validation.v1",
         "executor": "docker",
         "imageId": config["imageId"],
@@ -209,23 +227,30 @@ def validate_runtime_receipts(
         "networkEgressIsolationQualified": True,
         "validatedTurns": validated,
     }
+    if recorded_paths:
+        result.update(recordedPathsOnly=True, liveFilesystemRechecked=False,
+                      producerAuthenticated=False, freshRuntimeExecuted=False)
+    return result
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--receipt-root", type=Path, required=True)
-    parser.add_argument("--workspace", type=Path, required=True)
-    parser.add_argument("--participant-state", type=Path, required=True)
+    parser.add_argument("--workspace", required=True)
+    parser.add_argument("--participant-state", required=True)
     parser.add_argument("--label", action="append", required=True)
+    parser.add_argument("--recorded-paths", action="store_true",
+                        help="Reconstruct preserved Linux path bindings; does not recheck live host directories")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     result = validate_runtime_receipts(
         args.config,
         args.receipt_root,
-        args.workspace,
-        args.participant_state,
+        args.workspace if args.recorded_paths else Path(args.workspace),
+        args.participant_state if args.recorded_paths else Path(args.participant_state),
         args.label,
+        recorded_paths=args.recorded_paths,
     )
     body = json.dumps(result, indent=2, sort_keys=True) + "\n"
     if args.output:

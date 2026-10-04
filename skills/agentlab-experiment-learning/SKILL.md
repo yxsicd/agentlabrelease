@@ -219,6 +219,17 @@ does not run the source-control suite, independent reviewer or knowledge writer.
 Its process/staging result does not prove native author capture or runtime isolation;
 require those separate receipts and ordinary downstream gates before advancement.
 
+For retained Linux runtime isolation, use the validator's explicit
+`--recorded-paths` mode with original canonical absolute path bindings from the
+frozen producer workflow. Do not create replacement host directories or derive
+expected mounts from the inspected container itself. This mode reconstructs the
+same raw receipt, mount, credential and network gates without consulting the old
+runner filesystem. Its result declares recordedPathsOnly=true and live filesystem,
+fresh execution and producer authentication false. Keep ordinary live validation
+mandatory for a new participant. Historical replay cannot prove current containment,
+authorize another dispatch or authenticate the original producer. See the
+[retained isolation checkpoint](../../docs/flywheel-diagnostic-feedback-20261004.md).
+
 Business cycles accept sourceSuiteCapture directly rather than manufacturing
 legacy behavior files. Bind original stage/suite digests, source/scope/knowledge
 and current round, then reconstruct again at return. Retained capture replay is
