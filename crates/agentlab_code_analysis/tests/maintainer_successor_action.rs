@@ -79,6 +79,24 @@ with tempfile.TemporaryDirectory() as directory:
         value=Path(env['GITHUB_ENV']).read_text().split('=',1)[1].strip()
         if selected=='true':assert json.loads(value)==envelope and '\n' not in value
         else:assert value==''
+  section=workflow.split('      - name: Freeze optional independent review before construction budget\n',1)[1].split('      - name:',1)[0]
+  code=textwrap.dedent(section.split("          python3 - <<'PY'\n",1)[1].rsplit('          PY',1)[0])
+  for mode in ['fresh-design','frozen-successor','no-design']:
+    temporary=Path(directory)/('freeze-'+mode);(temporary/'recipe-author').mkdir(parents=True)
+    env=dict(AUTOMATIC_REVIEW_ENABLED='true',AUTOMATIC_REVIEW_RUBRIC='examples/maintainer-knowledge-gate/source-quality-rubric.json',
+      AUTOMATIC_REVIEW_RUBRIC_SHA256='d3276328cc1e23fc4216d0539eb7a003dc2e43d59de0d384b6476cbab4862731',
+      AUTOMATIC_REVIEW_REPAIR_LIMIT='1',GITHUB_RUN_ATTEMPT='1',CONSTRUCTION_DESIGN_FIRST='true' if mode=='fresh-design' else 'false',
+      REVIEWED_SUCCESSOR=json.dumps(envelope) if mode=='frozen-successor' else '',RUNNER_TEMP=str(temporary),GITHUB_SHA='a'*40,
+      GITHUB_RUN_ID='1',AGENTLAB_MODEL='fixture-model',AGENTLAB_PROVIDER_ROUTE='fixture-route',CONSTRUCTION_REASONING_EFFORT='low',
+      CONSTRUCTION_THINKING_TYPE='default',CONSTRUCTION_MAX_OUTPUT_TOKENS='16384')
+    with patch.dict(os.environ,env):
+      try:exec(code,{})
+      except AssertionError:assert mode=='no-design'
+      else:
+        assert mode!='no-design'
+        review=json.loads((temporary/'recipe-author/automatic-review/enrollment.json').read_bytes())
+        assert review['maximumReviewerAttempts']==2 and review['transportRetryLimit']==0
+        assert review['automaticPromotion'] is False
 "#;
     let result = Command::new("python3")
         .args(["-c", code])
