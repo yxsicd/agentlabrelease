@@ -343,7 +343,12 @@ fn behavior_lesson_requires_bound_review_and_independent_positive_negative_contr
         .join("../../examples/maintainer-knowledge-gate/first-four");
     let mut scope: Value = serde_json::from_str(
         std::fs::read_to_string(publication.join("maintainer_scope_skills.jsonl"))
-            .unwrap().lines().next().unwrap()).unwrap();
+            .unwrap()
+            .lines()
+            .next()
+            .unwrap(),
+    )
+    .unwrap();
     scope["id"] = json!("fixture-scope");
     scope["repositoryId"] = candidate["repositoryId"].clone();
     scope["sourceRevision"] = candidate["sourceRevision"].clone();
@@ -352,16 +357,23 @@ fn behavior_lesson_requires_bound_review_and_independent_positive_negative_contr
     std::fs::create_dir(base.join("operation-evidence")).unwrap();
     std::fs::create_dir(base.join("assessments")).unwrap();
     let assessment = agentlab_code_analysis::maintainer_skill_flywheel::assess_with_receipts(
-        &base.join("maintainer_scope_skills.jsonl"), Some(&base.join("program_facts.jsonl")),
-        1, None, Some(&base.join("operation-evidence"))).unwrap();
+        &base.join("maintainer_scope_skills.jsonl"),
+        Some(&base.join("program_facts.jsonl")),
+        1,
+        None,
+        Some(&base.join("operation-evidence")),
+    )
+    .unwrap();
     let assessment_bytes = serde_json::to_vec(&assessment).unwrap();
     std::fs::write(base.join("assessments/before.json"), &assessment_bytes).unwrap();
-    round["assessment"] = json!({"path":"assessments/before.json","sha256":digest(&assessment_bytes)});
+    round["assessment"] =
+        json!({"path":"assessments/before.json","sha256":digest(&assessment_bytes)});
     round["tables"]["scopeSkillsSha256"] = json!(digest(&scope_bytes));
     let history = serde_json::to_vec(&round).unwrap();
     std::fs::write(base.join("maintainer_skill_refresh_rounds.jsonl"), &history).unwrap();
     cut["automaticPromotion"] = json!(false);
-    cut["repositories"] = json!([{"id":candidate["repositoryId"],"revision":candidate["sourceRevision"]}]);
+    cut["repositories"] =
+        json!([{"id":candidate["repositoryId"],"revision":candidate["sourceRevision"]}]);
     let inventory = b"retained fixture inventory\n";
     std::fs::write(base.join("source-set.txt"), inventory).unwrap();
     cut["sourceSetSha256"] = json!(digest(inventory));
@@ -371,30 +383,45 @@ fn behavior_lesson_requires_bound_review_and_independent_positive_negative_contr
     std::fs::write(base.join("maintainer-knowledge-cut.json"), &cut_bytes).unwrap();
     let staged = root.join("return-stage");
     agentlab_code_analysis::maintainer_lesson_admission::stage(
-        &base, &promoted, &exported, "reviewed-behavior", &"a".repeat(40), &staged).unwrap();
+        &base,
+        &promoted,
+        &exported,
+        "reviewed-behavior",
+        &"a".repeat(40),
+        &staged,
+    )
+    .unwrap();
     fn copy_tree(from: &std::path::Path, to: &std::path::Path) {
         std::fs::create_dir(to).unwrap();
         for entry in std::fs::read_dir(from).unwrap() {
             let path = entry.unwrap().path();
             let target = to.join(path.file_name().unwrap());
-            if path.is_dir() { copy_tree(&path, &target); }
-            else { std::fs::copy(path, target).unwrap(); }
+            if path.is_dir() {
+                copy_tree(&path, &target);
+            } else {
+                std::fs::copy(path, target).unwrap();
+            }
         }
     }
     let next = root.join("committed-return-cut");
     copy_tree(&staged, &next);
-    let mut next_cut: Value = serde_json::from_slice(
-        &std::fs::read(next.join("maintainer-knowledge-cut.json")).unwrap()).unwrap();
+    let mut next_cut: Value =
+        serde_json::from_slice(&std::fs::read(next.join("maintainer-knowledge-cut.json")).unwrap())
+            .unwrap();
     next_cut.as_object_mut().unwrap().remove("staging");
     next_cut["tableGitAuthority"]["revision"] = json!("c".repeat(40));
     let next_bytes = serde_json::to_vec(&next_cut).unwrap();
     std::fs::write(next.join("maintainer-knowledge-cut.json"), &next_bytes).unwrap();
     let query = |directory: &std::path::Path, name: &str, revision: &str, wrapped: bool| {
         let rows: Vec<Value> = std::fs::read_to_string(directory.join(format!("{name}.jsonl")))
-            .unwrap().lines().filter(|line| !line.trim().is_empty()).map(|line| {
+            .unwrap()
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| {
                 let row: Value = serde_json::from_str(line).unwrap();
                 json!({"key":row["id"],"row":if wrapped {json!({"payload":row})} else {row}})
-            }).collect();
+            })
+            .collect();
         json!({"revision":revision,"dirty":false,"truncated":false,
             "row_count":rows.len(),"returned_count":rows.len(),"rows":rows})
     };
@@ -402,7 +429,13 @@ fn behavior_lesson_requires_bound_review_and_independent_positive_negative_contr
         "knowledgeRepository":"fixture-knowledge","previousRevision":"a".repeat(40),"revision":"c".repeat(40),
         "before":{"revision":"c".repeat(40),"dirty":false},"after":{"revision":"c".repeat(40),"dirty":false},
         "tables":{},"lessonSource":{"repository":export["repository"],"revision":export["revision"],"tablePrefix":export["tablePrefix"],"tables":{}}});
-    for name in ["maintainer_skills", "maintainer_scope_skills", "program_facts", "maintainer_skill_refresh_rounds", "evaluation_cases"] {
+    for name in [
+        "maintainer_skills",
+        "maintainer_scope_skills",
+        "program_facts",
+        "maintainer_skill_refresh_rounds",
+        "evaluation_cases",
+    ] {
         readback["tables"][name] = query(&next, name, &"c".repeat(40), true);
     }
     for name in export["tables"].as_object().unwrap().keys() {
@@ -440,22 +473,45 @@ fn behavior_lesson_requires_bound_review_and_independent_positive_negative_contr
         "transportResult":save_ref("return-transport-result.json", &transport)});
     let output = root.join("consumed-return");
     let request_ref = save_ref("return-consumer-request.json", &consumer_request);
-    let consumed_process = std::process::Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
-        .arg("--consume-reviewed-return")
-        .arg("--return-request").arg(request_ref["path"].as_str().unwrap())
-        .arg("--output").arg(&output).output().unwrap();
-    assert!(consumed_process.status.success(), "{}", String::from_utf8_lossy(&consumed_process.stderr));
+    let consumed_process =
+        std::process::Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--consume-reviewed-return")
+            .arg("--return-request")
+            .arg(request_ref["path"].as_str().unwrap())
+            .arg("--output")
+            .arg(&output)
+            .output()
+            .unwrap();
+    assert!(
+        consumed_process.status.success(),
+        "{}",
+        String::from_utf8_lossy(&consumed_process.stderr)
+    );
     let consumed: Value = serde_json::from_slice(&consumed_process.stdout).unwrap();
-    assert_eq!(consumed["businessResult"]["status"], "completed",
-        "{}", std::fs::read_to_string(output.join("business/report.json")).unwrap());
+    assert_eq!(
+        consumed["businessResult"]["status"],
+        "completed",
+        "{}",
+        std::fs::read_to_string(output.join("business/report.json")).unwrap()
+    );
     assert_eq!(consumed["committedReturnConsumed"], true);
     assert_eq!(consumed["nextRoundScheduled"], false);
-    let next_state: Value = serde_json::from_slice(
-        &std::fs::read(output.join("business/state.json")).unwrap()).unwrap();
+    let next_state: Value =
+        serde_json::from_slice(&std::fs::read(output.join("business/state.json")).unwrap())
+            .unwrap();
     assert_eq!(next_state["knowledge"]["revision"], "c".repeat(40));
     assert_eq!(next_state["guidanceSelection"], selection_ref);
-    assert_eq!(next_state["priorRoundEvidence"]["case-execution"]["sha256"], case_ref["sha256"]);
-    for key in ["candidateId", "lessonAdmission", "operationCapture", "behaviorExecution", "bootstrapReview"] {
+    assert_eq!(
+        next_state["priorRoundEvidence"]["case-execution"]["sha256"],
+        case_ref["sha256"]
+    );
+    for key in [
+        "candidateId",
+        "lessonAdmission",
+        "operationCapture",
+        "behaviorExecution",
+        "bootstrapReview",
+    ] {
         assert!(next_state.get(key).is_none(), "{key}");
     }
     let fresh_stage_output = root.join("next-maintenance-stage");
@@ -463,36 +519,63 @@ fn behavior_lesson_requires_bound_review_and_independent_positive_negative_contr
     let next_request = json!({"schema":"agentlab.flywheel_stage_request.v1","automaticPromotion":false,
         "round":1,"stage":"maintenance-verification","inputState":save_ref("next-returned-state.json", &next_state)});
     let stopped = agentlab_code_analysis::maintainer_flywheel_business::run(
-        &serde_json::to_vec(&next_request).unwrap(), &fresh_stage_output).unwrap();
+        &serde_json::to_vec(&next_request).unwrap(),
+        &fresh_stage_output,
+    )
+    .unwrap();
     assert_eq!(stopped["status"], "review-required");
     let stop_report: Value = serde_json::from_slice(
-        &std::fs::read(fresh_stage_output.join("business/report.json")).unwrap()).unwrap();
-    assert_eq!(stop_report["gap"], "revision-bound-maintenance-operation-capture-required");
+        &std::fs::read(fresh_stage_output.join("business/report.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        stop_report["gap"],
+        "revision-bound-maintenance-operation-capture-required"
+    );
     // A complete-looking producer cannot advance dirty captured authority.
     readback["after"]["dirty"] = json!(true);
     let mut bad_transport = transport.clone();
-    bad_transport["committedReturn"]["readback"] = save_ref("return-dirty-readback.json", &readback);
+    bad_transport["committedReturn"]["readback"] =
+        save_ref("return-dirty-readback.json", &readback);
     let mut bad_request = consumer_request.clone();
     bad_request["transportResult"] = save_ref("return-dirty-transport.json", &bad_transport);
     let rejected_output = root.join("rejected-consumer");
     let rejected = agentlab_code_analysis::maintainer_flywheel_business::consume_reviewed_return(
-        &serde_json::to_vec(&bad_request).unwrap(), &rejected_output).unwrap();
+        &serde_json::to_vec(&bad_request).unwrap(),
+        &rejected_output,
+    )
+    .unwrap();
     assert_eq!(rejected["committedReturnConsumed"], false);
     assert_eq!(rejected["businessResult"]["status"], "rejected");
     let unchanged: Value = serde_json::from_slice(
-        &std::fs::read(rejected_output.join("business/state.json")).unwrap()).unwrap();
+        &std::fs::read(rejected_output.join("business/state.json")).unwrap(),
+    )
+    .unwrap();
     assert_eq!(unchanged["knowledge"], state["knowledge"]);
     let mut reused_round = consumer_request.clone();
     reused_round["round"] = json!(1);
-    let old_round_result = agentlab_code_analysis::maintainer_flywheel_business::consume_reviewed_return(
-        &serde_json::to_vec(&reused_round).unwrap(), &root.join("rejected-old-round")).unwrap();
+    let old_round_result =
+        agentlab_code_analysis::maintainer_flywheel_business::consume_reviewed_return(
+            &serde_json::to_vec(&reused_round).unwrap(),
+            &root.join("rejected-old-round"),
+        )
+        .unwrap();
     assert_eq!(old_round_result["committedReturnConsumed"], false);
     for (index, pointer) in ["/reviewed", "/transportResult/sha256"].iter().enumerate() {
         let mut bad = consumer_request.clone();
-        *bad.pointer_mut(pointer).unwrap() = if *pointer == "/reviewed" {json!(false)} else {json!("0".repeat(64))};
+        *bad.pointer_mut(pointer).unwrap() = if *pointer == "/reviewed" {
+            json!(false)
+        } else {
+            json!("0".repeat(64))
+        };
         let bad_output = root.join(format!("rejected-consumer-preflight-{index}"));
-        assert!(agentlab_code_analysis::maintainer_flywheel_business::consume_reviewed_return(
-            &serde_json::to_vec(&bad).unwrap(), &bad_output).is_err());
+        assert!(
+            agentlab_code_analysis::maintainer_flywheel_business::consume_reviewed_return(
+                &serde_json::to_vec(&bad).unwrap(),
+                &bad_output
+            )
+            .is_err()
+        );
         assert!(!bad_output.exists());
     }
     let mut already_returned = state.clone();
@@ -500,8 +583,13 @@ fn behavior_lesson_requires_bound_review_and_independent_positive_negative_contr
     let mut overwrite = consumer_request.clone();
     overwrite["inputState"] = save_ref("already-returned-state.json", &already_returned);
     let overwrite_output = root.join("rejected-existing-return");
-    assert!(agentlab_code_analysis::maintainer_flywheel_business::consume_reviewed_return(
-        &serde_json::to_vec(&overwrite).unwrap(), &overwrite_output).is_err());
+    assert!(
+        agentlab_code_analysis::maintainer_flywheel_business::consume_reviewed_return(
+            &serde_json::to_vec(&overwrite).unwrap(),
+            &overwrite_output
+        )
+        .is_err()
+    );
     assert!(!overwrite_output.exists());
     std::fs::remove_dir_all(&root).unwrap();
     for (key, value) in [

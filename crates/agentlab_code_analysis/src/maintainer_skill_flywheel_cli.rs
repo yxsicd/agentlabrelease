@@ -878,10 +878,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     if args.iter().any(|arg| arg == "--consume-reviewed-return") {
-        let receipt = agentlab_code_analysis::maintainer_flywheel_business::consume_reviewed_return(
-            &fs::read(value(&args, "--return-request")?)?,
-            &output,
-        )?;
+        let receipt =
+            agentlab_code_analysis::maintainer_flywheel_business::consume_reviewed_return(
+                &fs::read(value(&args, "--return-request")?)?,
+                &output,
+            )?;
         println!("{}", receipt);
         return Ok(());
     }

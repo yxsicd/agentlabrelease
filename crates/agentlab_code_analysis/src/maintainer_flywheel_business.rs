@@ -723,7 +723,10 @@ fn load_admitted_skill(stage: &Path) -> Result<Value, String> {
 /// gate. Producer success flags are prerequisites, never semantic admission.
 /// This performs no remote mutation, participant execution or next-round dispatch.
 pub fn consume_reviewed_return(request_bytes: &[u8], output: &Path) -> Result<Value, String> {
-    need(request_bytes.len() <= 2 * 1024 * 1024, "return consumer request budget")?;
+    need(
+        request_bytes.len() <= 2 * 1024 * 1024,
+        "return consumer request budget",
+    )?;
     let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
     need(
         request["schema"] == "agentlab.reviewed_return_consumer_request.v1"
@@ -756,18 +759,31 @@ pub fn consume_reviewed_return(request_bytes: &[u8], output: &Path) -> Result<Va
         "return consumer transport references or policy differ",
     )?;
     state["lessonAdmission"]["committedReturn"] = returned.clone();
-    need(output.is_absolute(), "return consumer output must be absolute")?;
+    need(
+        output.is_absolute(),
+        "return consumer output must be absolute",
+    )?;
     need(!output.exists(), "return consumer output already exists")?;
-    for part in output.parent().ok_or("return consumer output parent absent")?.ancestors() {
+    for part in output
+        .parent()
+        .ok_or("return consumer output parent absent")?
+        .ancestors()
+    {
         need(
-            !fs::symlink_metadata(part).map_err(|e| e.to_string())?.file_type().is_symlink(),
+            !fs::symlink_metadata(part)
+                .map_err(|e| e.to_string())?
+                .file_type()
+                .is_symlink(),
             "return consumer output ancestor symlink",
         )?;
     }
     fs::create_dir(output).map_err(|e| e.to_string())?;
     save_raw(&output.join("consumer-request.json"), request_bytes)?;
     save_raw(&output.join("original-input-state.json"), &state_bytes)?;
-    save_raw(&output.join("original-transport-result.json"), &transport_bytes)?;
+    save_raw(
+        &output.join("original-transport-result.json"),
+        &transport_bytes,
+    )?;
     let input = output.join("return-input-state.json");
     let input_bytes = save(&input, &state)?;
     let stage_request = json!({"schema":"agentlab.flywheel_stage_request.v1",
