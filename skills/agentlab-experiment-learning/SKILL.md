@@ -245,6 +245,20 @@ before explicit promotion and knowledge admission. Candidate export is neither
 remote commitment, demonstrated benefit nor a next-round scheduling receipt.
 The Action does not perform lesson admission or schedule a next round.
 
+Before importing a captured automatic-review handoff, use native
+`--verify-source-suite-review-feedback` with the same source/rubric/original
+response/evidence/Git checkout and --feedback envelope. It independently replays
+the accepted completion, compares the original response and nested lesson bytes,
+every selected original raw file and candidate, reconstructs all operational rows,
+then checks the producer receipt against those verified inputs. For Git-bound v2
+responses, reconstruct the ordinary lesson from program-owned metadata and the
+unchanged interpretation/item judgments rather than requiring a nested lesson.
+Rehashed tables
+or producer acceptance flags cannot substitute for this gate. Its manifest digest
+can bind the ordinary observation-import request. Reception is read-only and does
+not authenticate runtime isolation, write knowledge or establish committed readback;
+retain those separate receipts and the exact artifact acquisition identity.
+
 A real isolated reviewer completed but miscounted source/log array indices and
 quoted arrays/booleans where the contract permits original string substrings.
 Provide the native path-to-string-pointer lookup instead of asking reviewers to
@@ -290,13 +304,21 @@ renaming fields as an operator. Zero citation errors does not cover row shape.
 
 Keep the source maintainer Skill's identity/stage separate from an experience-derived
 calibration Skill. A real reviewer fixed all row IDs but copied repository-scope
-and the existing source Skill into its proposed lesson. For Git-bound reviews,
-copy the native responseContract.lessonReviewTemplate metadata exactly, then supply
-independent interpretation, reviewer identity and unchanged item reviews. Its stable
-IDs bind the original suite and rubric, not semantic novelty or absence from active
-knowledge. Template fields do not decide accept; reject/unverified still require
-lessonReview=null. Do not repair the failed original as an operator. Existing
-lesson reconstruction, fixed-baseline admission and collision checks still apply.
+and the existing source Skill into its proposed lesson. Another real review used
+the correct template but omitted top-level automaticPromotion. Fixed metadata
+copying is not semantic work. Future Git-bound requests use response.v2: the Agent
+provides reviewerId, criterion/item judgments, unresolvedFindings and, only for
+all-pass, exactly phenomenon/cause/change/body in lessonInterpretation. Rust derives
+the aggregate verdict and assembles fixed IDs, stage, scope, bindings and the
+single original item inventory before ordinary lesson reconstruction. Unknown
+model-owned metadata overrides reject; no missing semantic judgments are filled.
+The original response remains byte-exact and must match the complete captured
+exchange and canonical prompt before export. Content-only validation cannot prove
+which request the Agent consumed. Stable IDs bind suite/rubric, not semantic
+novelty or absence from active knowledge. Nonaccept interpretation is null.
+No-Git v1 contracts remain unchanged; historical Git v1 captures need their pinned
+historical validator, not relabeling or operator correction. Fixed-baseline
+admission and collision checks remain separate.
 
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.

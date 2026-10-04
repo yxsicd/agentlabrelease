@@ -817,15 +817,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
-    if args
-        .iter()
-        .any(|arg| arg == "--export-source-suite-review-feedback")
-    {
+    if args.iter().any(|arg| {
+        arg == "--export-source-suite-review-feedback"
+            || arg == "--verify-source-suite-review-feedback"
+    }) {
         let checkout = if args.iter().any(|a| a == "--source-git-checkout") {
             Some(PathBuf::from(value(&args, "--source-git-checkout")?))
         } else {
             None
         };
+        if args
+            .iter()
+            .any(|arg| arg == "--verify-source-suite-review-feedback")
+        {
+            if args
+                .iter()
+                .any(|arg| arg == "--export-source-suite-review-feedback")
+            {
+                return Err("feedback reception and export are mutually exclusive".into());
+            }
+            let report = agentlab_code_analysis::maintainer_source_review::verify_feedback_export(
+                &PathBuf::from(value(&args, "--source")?),
+                &fs::read(value(&args, "--quality-rubric")?)?,
+                &PathBuf::from(value(&args, "--participant-evidence")?),
+                &fs::read(value(&args, "--review-response")?)?,
+                checkout.as_deref(),
+                &PathBuf::from(value(&args, "--feedback")?),
+            )?;
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&output)?;
+            file.write_all(&serde_json::to_vec_pretty(&report)?)?;
+            file.write_all(b"\n")?;
+            println!("{}", serde_json::to_string(&report)?);
+            return Ok(());
+        }
         let report = agentlab_code_analysis::maintainer_source_review::export_accepted_feedback(
             &PathBuf::from(value(&args, "--source")?),
             &fs::read(value(&args, "--quality-rubric")?)?,

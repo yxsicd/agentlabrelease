@@ -1,5 +1,77 @@
 # Source-recipe knowledge consumption and equal-task treatments
 
+## Semantic reviewer output separated from deterministic lesson assembly
+
+Fresh real review 37169061437 at method d9b42439094a96c5156d41eb2097bf4b90eb927c
+terminated failure. Its original ZIP 11289843617 matches SHA256
+4992f6f4cc956f75388ca11a6955b5001d9672de073689c9c99b9be271fde887.
+Native stderr is `independent review response field set differs`: top-level
+automaticPromotion is absent. The nested stage/identity template is now correct;
+the participant declares six passing criteria, but subsequent native semantic
+gates were not reached. Native lifecycle reports 175342 ms, exit zero, no timeout,
+zero retries; the separate runtime-isolation validation passed. No original reply
+was corrected, accepted feedback exported, knowledge admitted or attempt reopened.
+
+For future Git-bound requests, response.v2 has exactly eight fields: schema,
+reviewerId, criterionReviews, scenarioReviews, checkReviews, controlReviews,
+unresolvedFindings and lessonInterpretation. The model emits no copied hashes,
+bindings, aggregate verdict, promotion policy or nested duplicate inventories.
+Rust derives verdict with the same fail/unverified precedence; all-pass requires
+exactly four independent bounded strings (phenomenon/cause/change/body), otherwise
+interpretation is null. It assembles the ordinary source_suite_lesson_review.v1
+from verified metadata, interpretation and original judgments and applies the
+unchanged native lesson gate. Export and reception independently use that same
+assembly. Original response bytes are preserved, never rewritten into v1.
+
+Canonical prompt, intent and full original upstream/final-response agreement still
+bind the reviewer to the exact request before export. Content-only and citation-only
+validation are not recorded execution or request provenance. The native prompt
+still supplies its digest to the operator transport; v2 forbids copying it into
+model output. No-Git v1 packet/prompt contracts are unchanged. Older Git-bound v1
+captures require the historical method validator; the new request requires fresh
+enrollment, not reuse or reclassification of exhausted captures.
+
+Synthetic Rust Git/wire tests exercise original completion, assembly, export and
+receiver reconstruction, reject metadata overrides, missing/extra fields, missing
+items, empty interpretations, unsupported quotes and changed original wire text.
+They preserve negative/unverified outcomes. These are not real accepted reviews,
+committed knowledge return, measured benefit or completed loops. Maturity remains
+74%; accepted complete automatic five-stage loops remain zero.
+
+## Native feedback reception before operational persistence
+
+PR254 merged as d9b42439094a96c5156d41eb2097bf4b90eb927c after all eleven
+applicable checks passed. A single fresh template review was enrolled before
+dispatch as run 37169061437 using the unchanged source/rubric/model/budgets.
+Its original captures and final verdict must be inspected independently; a
+dispatch receipt alone establishes neither acceptance nor export.
+
+`--verify-source-suite-review-feedback --source OBSERVATIONS --quality-rubric
+RUBRIC --review-response ORIGINAL_RESPONSE --participant-evidence DIR
+[--source-git-checkout CHECKOUT] --feedback ENVELOPE --output NEW_FILE` is the
+read-only receiver for an automatic-review export. It reruns original native
+content/completion gates and requires accept before examining producer flags.
+It compares the saved original response bytes, independently reconstructed compact
+completion receipt, nested lesson bytes, exact raw inventory, every original
+selected source/suite file and candidate, then uses ordinary operational-source
+reconstruction for every analytical row. The envelope receipt must equal a native
+receipt built from verified inputs, not merely declare completed/accepted.
+
+The returned lessonManifestSha256 can bind the existing observation-import request.
+Reception writes only an exclusive local verification receipt, performs no authority
+transaction and does not claim committed readback, runtime isolation, authenticated
+reviewer, quotation-to-claim truth, benefit or a qualified case. Exact Action
+metadata/ZIP identity and on-run runtime isolation remain separate evidence.
+Ordinary revision-fenced persistence, raw recovery, explicit promotion/admission and
+next-round scheduling still follow; do not label receiver success a complete loop.
+
+Rust transport fixtures exercise actual CLI export/reception, original capture and
+full native source reconstruction. Changed response/completion/lesson/raw files,
+forged Git-binding receipt, rehashed changed rows/manifest/producer receipt, changed
+wire status and output overwrite all reject without producing a receiving receipt.
+These fixtures are not a real accepted automatic reviewer or authority write.
+Overall maturity remains 74%; complete accepted automatic five-stage loops remain zero.
+
 ## Real handoff trial 37167877729 and native lesson metadata
 
 PR253 merged as 37156d590103eaf3b38b7c163d69a98b3cd3ce8a after all eleven
