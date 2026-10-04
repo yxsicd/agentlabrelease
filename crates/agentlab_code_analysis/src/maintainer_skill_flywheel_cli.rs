@@ -877,6 +877,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }
+    if args.iter().any(|arg| arg == "--consume-reviewed-return") {
+        let receipt =
+            agentlab_code_analysis::maintainer_flywheel_business::consume_reviewed_return(
+                &fs::read(value(&args, "--return-request")?)?,
+                &output,
+            )?;
+        println!("{}", receipt);
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--execute-flywheel-cycles") {
         let recipe = fs::read(value(&args, "--recipe")?)?;
         let result = if args.iter().any(|arg| arg == "--cycle-checkpoint") {
