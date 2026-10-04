@@ -1,5 +1,42 @@
 # Source-recipe knowledge consumption and equal-task treatments
 
+## Accepted independent review to operational lesson export
+
+PR252 merged as 1ad15f1a08ecb3f68a8282dad7583bceddac89ce after all eleven
+applicable checks passed. Its field-name guide has not yet been tested by a fresh
+real reviewer; the unchanged 37166267802 response remains rejected.
+
+The native `--export-source-suite-review-feedback --source OBSERVATIONS
+--quality-rubric RUBRIC --review-response ORIGINAL_RESPONSE --participant-evidence
+DIR [--source-git-checkout CHECKOUT] --output NEW_DIR` revalidates the complete
+original content, canonical prompt, intent, lifecycle and upstream/final response
+before requiring an accepted verdict. Valid reject/unverified feedback, malformed
+content or changed captures create no handoff directory. Accepted content without
+recorded completion cannot produce a lesson through this command.
+
+The handoff calls the existing source-suite lesson exporter with the unchanged
+nested lesson object. It preserves response bytes exactly and retains a digest-bound
+completion receipt as siblings of `lesson-export`, leaving its ordinary operational
+inventory and downstream reconstruction protocol unchanged. Existing output is
+never overwritten; filesystem errors retain partial output rather than restarting
+the participant or replacing previous evidence. No credentials or full Agent home
+are added to that selected operational export.
+
+The review Action runs this handoff only after successful native review capture
+and separate runtime-isolation validation. A read-only verdict dispatch skips
+reject/unverified; the native exporter independently revalidates accepted content,
+so a modified producer validation flag cannot grant export. Standalone export
+reports runtimeIsolationVerified=false: its own content/wire gate does not inspect
+the Docker environment. The Action's separate receipt supplies that evidence.
+
+Rust transport fixtures exercise the actual CLI and native downstream source
+reconstruction, exact original-response preservation, rejected/unverified/malformed
+outputs, changed wire status/budget and no overwrite. These are fixture tests,
+not a real accepted Agent review or committed knowledge return. Operational
+persistence, explicit promotion/admission, independent committed readback and
+next-round scheduling remain separate missing automatic connections. Overall
+maturity stays 74%; accepted complete automatic five-stage loops remain zero.
+
 Overall maturity remains **74%**, an engineering estimate; accepted complete
 automatic five-stage business loops remain **zero**. This implements the missing
 source-constructor integration, not a new real Agent run or demonstrated benefit.
