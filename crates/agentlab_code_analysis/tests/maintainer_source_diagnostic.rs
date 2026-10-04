@@ -2169,6 +2169,22 @@ fn independent_review_response_retains_negative_feedback_without_promoting() {
     assert_eq!(completed["verdict"], "unverified");
     assert_eq!(completed["reviewerAuthenticated"], false);
     assert_eq!(completed["qualified"], false);
+    let successor_policy = json!({"schema":"agentlab.source_successor_policy.v1",
+        "reviewed":true,"maximumSuccessors":2,"participantBudgetSeconds":420,
+        "designRevisionLimit":0,"codeRevisionLimit":0,"transportRetryLimit":0,
+        "automaticPromotion":false});
+    let rejection = reviewer::prepare_reviewed_successor(
+        &observation,
+        &rubric_bytes,
+        &evidence,
+        &serde_json::to_vec(&response).unwrap(),
+        None,
+        b"{}",
+        &serde_json::to_vec(&successor_policy).unwrap(),
+        None,
+    )
+    .unwrap_err();
+    assert!(rejection.contains("requires complete rejected review"));
     let completion_output = base.join("review-completion.json");
     let cli = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
         .args(["--verify-source-suite-review-completion", "--source"])
