@@ -210,3 +210,11 @@ failure; the successor protocol now shares the existing feedback input and is
 selected by parsed schema, not fragile JSON whitespace matching. Revalidation,
 full cloud tests and real dispatch are pending. Overall maturity
 remains 75%, full automatic five-stage rounds zero.
+
+The next Rust run 37198994571 exposed test-runner CWD drift: Cargo starts this
+integration test in the crate, while the actual Action's relative knowledge path
+and root containment check require the Release checkout root. Reproducing from
+the crate locally failed identically. The test command now explicitly uses the
+Release root, matching Action execution without removing its manifest/path gate.
+Workflow lint passed in job 111426646683 before this fix; final-head full Rust and
+cloud qualification still need fresh verification. Original failed runs remain.

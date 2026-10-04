@@ -82,6 +82,7 @@ with tempfile.TemporaryDirectory() as directory:
 "#;
     let result = Command::new("python3")
         .args(["-c", code])
+        .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."))
         .env(
             "ACTION_SCRIPT",
             Path::new(env!("CARGO_MANIFEST_DIR"))
