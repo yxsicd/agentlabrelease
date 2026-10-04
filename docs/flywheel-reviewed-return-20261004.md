@@ -79,6 +79,17 @@ No old source-suite capture was reused as next-round work. Local evidence root:
 
 ## Next highest-value work
 
+The consumer publication now stages the exact 65-file committed export at
+`examples/maintainer-knowledge-gate/cuts/e516a65af86b5291b4d617c860124c4d57be77bb`.
+Fresh live fixed-cut queries bracketed by clean table-status reads matched all
+five tables again. The maintained TableGit exporter materialized this publication
+with business writes explicitly forbidden, then compared every file's SHA256
+with the accepted committed export. No additional authority transaction occurred.
+The published ordered-attribute selection serializes the same reviewed selection
+content and binds the exact admitted cut and Skill row. Its public file framing is
+separate from the unchanged original continuation-selection capture. Default-branch
+availability still requires merge and public Git readback, not only a pushed PR.
+
 Publish the exact committed knowledge snapshot through the maintained export path,
 then connect a fresh revision-bound maintenance/case producer to this selected
 guidance. Verify actual Agent consumption and fresh execution before claiming a

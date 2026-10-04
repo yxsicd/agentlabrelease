@@ -1,0 +1,71 @@
+{
+  "automaticPromotion": false,
+  "catalogSha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953",
+  "repositories": [
+    {
+      "assignedFileCount": 1512,
+      "codeLineCount": 52446,
+      "externalDependencyCount": 44,
+      "repositoryId": "code-workshop",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+      "sampleProjectRootCount": 0,
+      "scopeSkillCount": 25,
+      "sourceFileCount": 614,
+      "strategy": "harmony-multi-product-modules",
+      "testFileCount": 87,
+      "trackedFileCount": 1512,
+      "treeOid": "ab156e6aa2fc9c64f400ee119e142fded5573271",
+      "unassignedFileCount": 0
+    },
+    {
+      "assignedFileCount": 39298,
+      "codeLineCount": 1100861,
+      "externalDependencyCount": 580,
+      "repositoryId": "guide-snippets",
+      "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sampleProjectRootCount": 410,
+      "scopeSkillCount": 416,
+      "sourceFileCount": 13736,
+      "strategy": "harmony-sample-project-corpus",
+      "testFileCount": 4491,
+      "trackedFileCount": 39298,
+      "treeOid": "20bc24c3933662e0f7a55022bf918015407a94b2",
+      "unassignedFileCount": 0
+    },
+    {
+      "assignedFileCount": 44,
+      "codeLineCount": 1512,
+      "externalDependencyCount": 7,
+      "repositoryId": "harmony-iap-client",
+      "revision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+      "sampleProjectRootCount": 0,
+      "scopeSkillCount": 14,
+      "sourceFileCount": 11,
+      "strategy": "harmony-small-app-source-units",
+      "testFileCount": 0,
+      "trackedFileCount": 44,
+      "treeOid": "418b08c0b5de0e08c3ab7840986f93e6fa622a88",
+      "unassignedFileCount": 0
+    },
+    {
+      "assignedFileCount": 3713,
+      "codeLineCount": 329976,
+      "externalDependencyCount": 1503,
+      "repositoryId": "hms-cordova-iap",
+      "revision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9",
+      "sampleProjectRootCount": 0,
+      "scopeSkillCount": 34,
+      "sourceFileCount": 2665,
+      "strategy": "cordova-plugin-monorepo",
+      "testFileCount": 158,
+      "trackedFileCount": 3713,
+      "treeOid": "51a14d55393617e1c80b922187fc9c4ee798df60",
+      "unassignedFileCount": 0
+    }
+  ],
+  "repositoryCount": 4,
+  "schema": "agentlab.maintainer_skill_catalog_summary.v1",
+  "scopeSkillCount": 489,
+  "sourceSpecSha256": "58c882f60b136ec517fe0b42dae4c2f8b035ec548e144dc36e8b968b703b7911",
+  "trackedFilesAssignedExactlyOnce": true
+}
