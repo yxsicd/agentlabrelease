@@ -167,3 +167,38 @@ Maturity remains **76% (+0)**: this closes a reception interface gap, but the
 review Action is not yet wired to restore context and execute that retained
 completion automatically. Independent reviewer, accepted return, next round,
 multiple automatic rounds and cross-repository transfer remain unproven.
+
+## Automated retained replay and review Action integration
+
+The review Action has an explicit retained-completion mode with frozen original
+host Node and compiler acquisition versions. It builds the current validator in
+the staging ABI, acquires the exact original artifact through native completion
+admission, checks out the source and original knowledge producer, restores frozen
+dependency bytes and paths, and calls the maintained diagnostic/control scripts.
+The resulting fresh observations enter the existing independent-review preflight,
+contained reviewer and feedback export. The default completed-observation path
+is preserved. No author invocation, repair-budget reset or automatic knowledge
+write is added. This adapter currently covers Linux x64 Node with one TypeScript
+compiler dependency; unsupported environments fail explicitly.
+
+hwlinux operation `exec-00000000000002d9` completed the retained replay in 16,762ms,
+exit 0: original completion admission, frozen-context static staging, successful
+baseline, complete controls/recovery and observation export. The original request
+SHA256 remained unchanged. The preceding operation `exec-00000000000002d8` failed
+before output ownership or execution because hwlinux's Python lacks
+`hashlib.file_digest`; streaming SHA256 replaced that version-specific API, with
+no altered dependency identity or admission. The failed operation is preserved.
+
+The acquisition helper was separately exercised from a fresh private local output:
+official Node 22.23.3 and TypeScript 5.9.3 archives yielded exactly the original
+policy digests; five knowledge JSONL tables were restored from producer commit
+`6ee9e6b966ac0d7c72eb90667c3691a2658f3972`. Acquisition does not execute those binaries.
+Rust guard test `maintainer_retained_replay` passed on hwlinux in operation
+`exec-00000000000002da`, exit 0, and rustfmt check passed in `...02db`.
+The guard found and fixed traversal admission before publication; it also covers
+dependency-byte drift, archive symlinks, member budgets and retained archive bytes.
+
+Maturity remains **76% (+0)** pending actual review-Action execution and acceptance.
+The real replay is an automated partial chain, not a complete five-stage round.
+Independent reviewer verdict, accepted committed return, fresh next-round work,
+multiple rounds, cross-repository business acceptance and Agent benefit remain open.

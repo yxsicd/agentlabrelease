@@ -153,6 +153,13 @@ revision sidecars so native admission can reject them; do not filter suspicious
 members to obtain a pass. Require native completion verification before reporting
 reception complete. This does not qualify the frozen design, candidate execution,
 independent review or knowledge return, and does not reopen an author budget.
+For the Linux x64 Node/TypeScript replay adapter, declare acquisition versions
+explicitly but admit their recovered bytes only by the original policy digests.
+Build the current native validator in the staging image's ABI and record its
+identity separately from the producer. Restore knowledge from the exact producer
+Git object, not today's working tree. The replay adapter invokes existing native
+staging, baseline and complete-control gates with zero new author calls; its
+successful observation export still needs independent review and committed return.
 
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest
