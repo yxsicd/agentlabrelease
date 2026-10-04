@@ -28,6 +28,7 @@ pub mod maintainer_operation_stage;
 pub mod maintainer_partial_calibration;
 pub mod maintainer_semantic_round;
 pub mod maintainer_skill_flywheel;
+pub mod maintainer_source_design_quality;
 pub mod maintainer_source_diagnostic;
 pub mod maintainer_source_operation;
 pub mod maintainer_source_operation_loop;

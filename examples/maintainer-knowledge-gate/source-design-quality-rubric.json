@@ -1,0 +1,28 @@
+{
+  "schema": "agentlab.prospective_source_quality_review.v1",
+  "repositoryAgnostic": true,
+  "frozenBeforeDispatch": true,
+  "verdicts": ["pass", "fail", "unverified"],
+  "criteria": [
+    {
+      "id": "construction-target-coverage",
+      "requirement": "Account for every clause of the original frozen construction demand using explicit scenarios and scored observations. A declared limitation cannot waive a demanded observable. Missing support is fail or unverified, not inferred coverage.",
+      "evidence": "Original demand, original source and exact scenario/check records; trace requirements to measurements, not check counts."
+    },
+    {
+      "id": "state-observation-coverage",
+      "requirement": "Trace actual initial state, ordered operations, exceptions, earlier effects and later skipped effects. Explain the source-supported observation mechanism; do not classify reachable state as unobservable merely because it is absent from the returned value.",
+      "evidence": "Original field initialization, tested body, scenario initialState/inputs/expectedObservations and corresponding checks."
+    },
+    {
+      "id": "control-discrimination",
+      "requirement": "Trace every valid alternative and wrong control through the declared scenarios. A textual mutation is insufficient: its changed effect must be reachable and distinguishable by a scored observation. An unchanged fallback or unexercised branch cannot support a predicted failure set.",
+      "evidence": "Original operation, exact edits, scenario state and inputs, and every predicted check difference; static opinion remains subject to real control execution."
+    },
+    {
+      "id": "runtime-environment-closure",
+      "requirement": "Account for source-loading and transitive module initialization as well as tested method execution. Explain exact imports, required globals, declared seams and pinned compiler/runtime limitations. Do not invent default platform stubs or claim device behavior from host execution.",
+      "evidence": "Loaded source and read-only dependency inventory, import/global usages, design seam outcomes and explicit proposed environment; unavailable execution proof remains unverified where required."
+    }
+  ]
+}
