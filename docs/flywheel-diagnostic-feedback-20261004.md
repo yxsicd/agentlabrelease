@@ -97,6 +97,33 @@ lane, original-review isolation admission, durable budget ownership, next source
 construction and automatic evidence return still need integration and real runs.
 These changes are not yet validated or published by this checkpoint.
 
+PR #280 subsequently validated the native preparation at head
+0f2d55dd2d7c3833332d479f6a3f3ede593f6be0 and merged as
+a33ed05f22c8acaca7830a8a4246f3ccc5befade. Rust workflow 37196311700,
+component workflow 37196311665 and public workflow 37196311694 all completed
+successfully. This validates the preparation contract, not a real successor.
+
+## Construction bridge
+
+`scripts/run-reviewed-source-successor.py` takes the same native original-review
+inputs, requires `--source-git-checkout`, and adds `--request`, `--pi`, `--gate`,
+an existing persistent `--claim-root`, a fresh `--output` and optional
+`--reasoning-effort`. It reproduces the exact derived design against current
+source/knowledge before model budget, rechecks the original capture, reserves a
+digest-bound immutable dispatch claim and invokes the existing frozen-design
+constructor with no design or proposal-format repairs. Each execution retains
+its own runtime receipt root. Failures and timeouts retain terminal receipts,
+partial stdout/stderr and the claim; no recovery restarts the participant.
+
+After successful construction it again reconstructs the original feedback and
+checks the actual staged request/design. This is not control-suite execution,
+native author-capture qualification, runtime isolation, independent review,
+knowledge return or a complete round. Claim protection is local to the selected
+operator directory, not global exactly-once or proof that earlier history was
+not omitted. Rust-hosted transport regressions mock subprocesses; they do not
+replace native semantic regressions or a real captured participant run.
+Cloud validation and Action integration of this bridge are pending.
+
 Overall maturity remains 75%; accepted complete automatic five-stage rounds remain
 zero. Multi-round productive closure, cross-repository transfer, measured guidance
 benefit and Harmony/ohosTest runtime qualification remain unproved.
