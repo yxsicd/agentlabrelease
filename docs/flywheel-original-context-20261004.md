@@ -141,3 +141,29 @@ Action artifact; the original failed run cannot contain this later local suite.
 Do not relabel the local ZIP as that original artifact or dispatch the old
 incomplete artifact. Preserve producer and current-validator identities separately
 and bridge retained completion to execution/review without another author budget.
+
+## Reception implementation checkpoint
+
+The acquisition CLI now exposes `--artifact-kind unguided-completion --gate ...`.
+It requires the original frozen request, proposal, design, repair packet and
+completion sidecars, retains all matching wire/revision members, excludes Agent
+home directories, and invokes the native completion gate before recording
+successful reception. Original Action/artifact/digest fences remain in force;
+this mode requires the original first run attempt. Native admission is distinct
+from semantic acceptance and authority writes.
+
+The Rust completion regression now constructs ZIPs and runs actual extraction
+before native consumption across two unrelated repository identifiers and all
+existing completion/drift variants. hwlinux operation `exec-00000000000002d2`
+passed, exit 0. This is synthetic boundary coverage, not cross-repository business
+acceptance. The full original ZIP was also extracted locally (21 selected files,
+33,660,126 bytes). A transfer of that full ZIP failed and a read-only target check
+confirmed no destination file; it was not retried or claimed as received.
+The already-retained original selected ZIP then passed the new extractor and
+actual native gate on hwlinux in `exec-00000000000002d5`, exit 0, with original
+request SHA256 unchanged and no new author call. `caseQualified` remained false.
+
+Maturity remains **76% (+0)**: this closes a reception interface gap, but the
+review Action is not yet wired to restore context and execute that retained
+completion automatically. Independent reviewer, accepted return, next round,
+multiple automatic rounds and cross-repository transfer remain unproven.

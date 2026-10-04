@@ -146,6 +146,14 @@ Do not simply admit extra exchanges, disable permitted tools to fit the verifier
 or reopen the consumed attempt. Recorded chain consistency is not authentication
 of tool effects or semantic acceptance of the generated candidate.
 
+For post-generation reception, retained unguided frozen completions have a
+separate acquisition mode (`unguided-completion`) with required original prompt,
+intent, lifecycle, final response and wire sidecars. Preserve extra exchanges and
+revision sidecars so native admission can reject them; do not filter suspicious
+members to obtain a pass. Require native completion verification before reporting
+reception complete. This does not qualify the frozen design, candidate execution,
+independent review or knowledge return, and does not reopen an author budget.
+
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest
 and restore frozen paths inside an isolated namespace rather than overwriting
