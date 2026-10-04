@@ -108,7 +108,8 @@ print('baseline transport identity, native stops, durable slot and failure prese
         .args(["-c", code])
         .env(
             "CONTINUATION_SCRIPT",
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/run-baseline-continuation.py"),
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../scripts/run-baseline-continuation.py"),
         )
         .output()
         .unwrap();
