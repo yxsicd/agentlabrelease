@@ -54,12 +54,19 @@ knowledge authority; this file is a Release-pinned sampling plan.
 
 The [reviewed return cut](cuts/e516a65af86b5291b4d617c860124c4d57be77bb/maintainer-knowledge-cut.json)
 publishes exact committed knowledge, including portable inventory, assessments
-and operation sidecars. The [ordered-attribute selection](reviewed-guidance/toggle-ordered-attributes-e516a65a.json)
+and operation sidecars. The [ordered-attribute selection](reviewed-guidance/toggle-generate-ordered-attributes-e516a65a.json)
 selects its admitted source-suite lesson for fresh calibration construction.
 Use these explicit `knowledge_directory` and `guidance_selection` paths in the
 source-recipe Action after their publication merges; live exact-revision preflight
 still applies. Historical cuts and selections remain unchanged. This publication
 does not itself execute an Agent or establish a qualified case or learning benefit.
+
+The original `toggle-ordered-attributes-e516a65a.json` remains historical: its
+demand incorrectly named `toString`, whereas the pinned class defines
+`generate(attributes)`. The new selection corrects the prospective executable
+target and explicitly asks to observe ordered updates around parse exceptions.
+It retains the same committed knowledge and selected lesson identity; it does
+not edit the admitted lesson or retroactively change any captured experiment.
 
 Oversized scope remediation starts with
 [`scope_decomposition.py`](scope_decomposition.py). It reads one scope row and
