@@ -4374,6 +4374,138 @@ fn diagnostic_code_repair_staging_and_approval_recheck_real_source_and_frozen_pa
     )
     .is_err());
     assert!(!dir.join("changed-design").exists());
+    // The prospective continuation packet has its own single successor budget,
+    // not an inherited repair-loop intent. Cross staging, approval and diagnostic
+    // preparation with the real native implementations, not a mocked stage.
+    let baseline_capture = dir.join("mock-completed-baseline-capture");
+    fs::create_dir(&baseline_capture).unwrap();
+    let execution_bytes = fs::read(inputs.join("request.json")).unwrap();
+    let execution: Value = serde_json::from_slice(&execution_bytes).unwrap();
+    let observed = json!({"state":{"value":0}});
+    let verifier_stdout = serde_json::to_string(&observed).unwrap();
+    let stdout = serde_json::to_vec(&json!({"id":execution["id"],
+        "submittedSource":execution["submittedSource"],"submittedSourceSha256":execution["submittedSourceSha256"],
+        "observations":observed,"verifierStdout":verifier_stdout,"verifierStdoutSha256":digest(verifier_stdout.as_bytes())})).unwrap();
+    fs::write(baseline_capture.join("request.json"), &execution_bytes).unwrap();
+    fs::write(baseline_capture.join("worker-stdout.log"), &stdout).unwrap();
+    fs::write(baseline_capture.join("worker-stderr.log"), b"").unwrap();
+    let mut process: Value =
+        serde_json::from_slice(&fs::read(capture.join("process.json")).unwrap()).unwrap();
+    process["exitCode"] = json!(0);
+    process["stdoutSha256"] = json!(digest(&stdout));
+    process["stderrSha256"] = json!(digest(b""));
+    fs::write(
+        baseline_capture.join("process.json"),
+        serde_json::to_vec(&process).unwrap(),
+    )
+    .unwrap();
+    let mut enrollment = json!({"schema":"agentlab.source_recipe_diagnostic_continuation_enrollment.v1",
+        "enrollmentId":"native-stage-continuation","maximumSuccessors":1,"participantBudgetSeconds":420,
+        "transportRetryLimit":0,"designRevisionLimit":0,"codeRevisionLimit":0,
+        "reviewed":true,"automaticPromotion":false});
+    for (field, path) in [
+        ("authorRequestSha256", stage.join("request.json")),
+        ("parentStageReceiptSha256", stage.join("stage-receipt.json")),
+        ("parentDesignSha256", stage.join("design.json")),
+        ("parentProposalSha256", stage.join("proposal.json")),
+        ("diagnosticIntentSha256", inputs.join("intent.json")),
+        (
+            "diagnosticProcessSha256",
+            baseline_capture.join("process.json"),
+        ),
+        (
+            "diagnosticStdoutSha256",
+            baseline_capture.join("worker-stdout.log"),
+        ),
+        (
+            "diagnosticStderrSha256",
+            baseline_capture.join("worker-stderr.log"),
+        ),
+    ] {
+        enrollment[field] = json!(digest(&fs::read(path).unwrap()));
+    }
+    let continuation_path = dir.join("prospective-continuation.json");
+    repair::prepare_continuation(
+        &stage,
+        &inputs,
+        &baseline_capture,
+        &serde_json::to_vec(&enrollment).unwrap(),
+        &continuation_path,
+    )
+    .unwrap();
+    let continuation_bytes = fs::read(&continuation_path).unwrap();
+    let continuation: Value = serde_json::from_slice(&continuation_bytes).unwrap();
+    assert!(continuation["loopIntentOriginal"].is_null());
+    let continuation_stage = dir.join("prospective-continuation-stage");
+    let continued = author::stage_with_diagnostic_repair(
+        &request_bytes,
+        &successor_bytes,
+        &design_bytes,
+        &continuation_bytes,
+        &continuation_stage,
+    )
+    .unwrap();
+    assert_eq!(
+        continued["diagnosticRepairPacketSha256"],
+        digest(&continuation_bytes)
+    );
+    assert!(continued.get("diagnosticLoopIntentSha256").is_none());
+    assert!(!continuation_stage
+        .join("diagnostic-loop-intent.json")
+        .exists());
+    assert_eq!(
+        fs::read(continuation_stage.join("request.json")).unwrap(),
+        request_bytes
+    );
+    assert_eq!(
+        fs::read(continuation_stage.join("design.json")).unwrap(),
+        design_bytes
+    );
+    assert_eq!(continued["executionPerformed"], false);
+    assert_eq!(continued["reviewed"], false);
+    diagnostic::prepare(
+        &continuation_stage,
+        &compiler,
+        &root().join("scripts/source-recipe-diagnostic-worker.cjs"),
+        &format!("sha256:{}", "a".repeat(64)),
+        &dir.join("prospective-diagnostic-inputs"),
+    )
+    .unwrap();
+    author::approve(
+        &continuation_stage,
+        &digest(&successor_bytes),
+        true,
+        &dir.join("prospective-approved-recipe.json"),
+    )
+    .unwrap();
+    for (label, changed_packet) in [
+        ("extended-budget", {
+            let mut p = continuation.clone();
+            p["maximumRepairs"] = json!(2);
+            p
+        }),
+        ("inherited-loop", {
+            let mut p = continuation.clone();
+            p["loopIntentOriginal"] = json!(String::from_utf8(intent_bytes.clone()).unwrap());
+            p
+        }),
+        ("legacy-null-loop", {
+            let mut p: Value = serde_json::from_slice(&packet).unwrap();
+            p["loopIntentOriginal"] = Value::Null;
+            p
+        }),
+    ] {
+        let rejected = dir.join(label);
+        assert!(author::stage_with_diagnostic_repair(
+            &request_bytes,
+            &successor_bytes,
+            &design_bytes,
+            &serde_json::to_vec(&changed_packet).unwrap(),
+            &rejected,
+        )
+        .is_err());
+        assert!(!rejected.exists());
+    }
     fs::write(next.join("diagnostic-repair.json"), b"{}").unwrap();
     assert!(diagnostic::prepare(
         &next,
