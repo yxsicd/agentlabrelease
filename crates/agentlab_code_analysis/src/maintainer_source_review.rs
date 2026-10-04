@@ -135,6 +135,7 @@ pub fn prepare_with_git(
     });
     if let Some(checkout) = checkout {
         result["independentGitSourceIdentity"] = verify_git_identity(&result, checkout)?;
+        result["responseContract"]["lessonReviewTemplate"] = lesson_template(&result)?;
     }
     need(
         serde_json::to_vec_pretty(&result)
@@ -144,6 +145,52 @@ pub fn prepare_with_git(
         "independent review request budget exceeded; no truncation permitted",
     )?;
     Ok(result)
+}
+
+/// Operational lesson identities are not the repository's existing maintainer Skill.
+/// No interpretation, evidence or acceptance judgment is supplied by this template.
+fn lesson_template(packet: &Value) -> Result<Value, String> {
+    let identity = digest(
+        &serde_json::to_vec(&json!({
+            "reviewBindings":packet["reviewBindings"],
+            "qualityRubricSha256":packet["qualityRubricSha256"]
+        }))
+        .map_err(|e| e.to_string())?,
+    );
+    let mut template = json!({
+        "schema":"agentlab.source_suite_lesson_review.v1","reviewed":true,
+        "verdict":"accept","automaticPromotion":false,"unresolvedFindings":[],
+        "id":format!("lesson-source-suite-{identity}"),
+        "factId":format!("fact-source-suite-{identity}"),
+        "skillId":format!("skill-source-suite-{identity}"),
+        "skillStage":"calibration",
+        "scope":format!("Source-suite calibration for {} at {}",packet["scope"]["id"].as_str().ok_or("review lesson source scope absent")?,packet["source"]["revision"].as_str().ok_or("review lesson source revision absent")?)
+    });
+    need(
+        bounded_text(&template["scope"]),
+        "review lesson template scope exceeds existing text budget; no truncation",
+    )?;
+    for (key, value) in packet["reviewBindings"]
+        .as_object()
+        .ok_or("review bindings absent")?
+    {
+        template
+            .as_object_mut()
+            .unwrap()
+            .insert(key.clone(), value.clone());
+    }
+    Ok(template)
+}
+
+fn validate_lesson_template(template: &Value, lesson: &Value) -> Result<(), String> {
+    for (key, expected) in template
+        .as_object()
+        .ok_or("review lesson template absent")?
+    {
+        need(lesson[key] == *expected,
+            &format!("independent review lesson field differs at /lessonReview/{key}; copy the exact responseContract.lessonReviewTemplate value; repository scope identity and stage are not lesson targets"))?;
+    }
+    Ok(())
 }
 
 fn verify_git_identity(packet: &Value, checkout: &Path) -> Result<Value, String> {
@@ -439,6 +486,9 @@ pub fn validate_response_with_git(
     )?;
     if verdict == "accept" {
         let lesson = &response["lessonReview"];
+        if checkout.is_some() {
+            validate_lesson_template(&packet["responseContract"]["lessonReviewTemplate"], lesson)?;
+        }
         need(
             lesson["reviewerId"] == response["reviewerId"]
                 && ["scenarioReviews", "checkReviews", "controlReviews"]
@@ -627,7 +677,10 @@ pub fn prompt_with_git(
                 "fields":fields,"acceptedType":"boolean or null","sourceEvidenceFields":["path","quote"]}));
         }
         let guide = serde_json::to_string_pretty(&field_guide).map_err(|e| e.to_string())?;
-        let guide = format!("REVIEW ROW FIELD GUIDE (field names and allowed identities, not judgments):\n{guide}\nUse id for EVERY scenario/check/control review row. controlId/scenarioId/checkId describe other evidence formats and are not aliases here. For accept, copy all three completed top-level review arrays unchanged into lessonReview, preserving the same field names and values.\n");
+        let lesson =
+            serde_json::to_string_pretty(&packet["responseContract"]["lessonReviewTemplate"])
+                .map_err(|e| e.to_string())?;
+        let guide = format!("REVIEW ROW FIELD GUIDE (field names and allowed identities, not judgments):\n{guide}\nUse id for EVERY scenario/check/control review row. controlId/scenarioId/checkId describe other evidence formats and are not aliases here. For accept, copy all three completed top-level review arrays unchanged into lessonReview, preserving the same field names and values.\nLESSON REVIEW TEMPLATE (required identity/binding fields ONLY IF your independent verdict is accept):\n{lesson}\nCopy every template field exactly. Add reviewerId equal to your top-level reviewerId, your own phenomenon/cause/change/body strings, and the three unchanged review arrays. The new calibration Skill is not the repository maintainer Skill: never copy source.scope.id into skillId or source.scope.stage into skillStage. These fixed metadata fields do not decide your verdict or supply interpretation or evidence. For reject/unverified lessonReview must remain null, not this template.\n");
         let prompt = [guide.as_bytes(), prompt.as_slice()].concat();
         [b"REVIEW SCOPE: Unique control definitions are in design.controls; reconstructedSuite.controls are execution observations. An explicitly recorded referenceRecovery is an additional execution, not another control definition. Distinguish verified Git-source binding from producer authentication and rubric-freeze authentication; the independentGitSourceIdentity does not claim either authentication. Review acceptance is a scoped judgment, not Harmony/formal-case qualification, promotion, or already-completed downstream lesson validation. Disclosed out-of-scope behavior is a limitation, not automatically a defect within the stated claims; contradicting those claims still rejects. Missing actual evidence remains unverified; do not infer truth from these distinctions.\n".as_slice(), prompt.as_slice()].concat()
     } else {
@@ -866,6 +919,77 @@ mod git_identity_tests {
         sync::atomic::{AtomicU64, Ordering},
     };
     static NEXT: AtomicU64 = AtomicU64::new(0);
+
+    #[test]
+    fn lesson_templates_separate_scope_and_experience_and_bind_inputs_for_unrelated_sources() {
+        let mut previous = None;
+        for repository_id in ["unrelated-one", "unrelated-two"] {
+            let packet = json!({"scope":{"id":format!("maintainer-{repository_id}"),"stage":"repository-scope"},
+                "source":{"revision":"1".repeat(40)},
+                "reviewBindings":{"scopeSha256":digest(repository_id.as_bytes()),"requestSha256":"a".repeat(64),
+                    "designSha256":"b".repeat(64),"proposalSha256":"c".repeat(64),"suiteResultSha256":"d".repeat(64),"inputInventorySha256":"e".repeat(64)},
+                "qualityRubricSha256":"f".repeat(64)});
+            let template = lesson_template(&packet).unwrap();
+            assert_eq!(template, lesson_template(&packet).unwrap());
+            assert_eq!(template["skillStage"], "calibration");
+            assert_ne!(template["skillId"], packet["scope"]["id"]);
+            assert_ne!(template["factId"], template["skillId"]);
+            for key in [
+                "body",
+                "phenomenon",
+                "cause",
+                "change",
+                "reviewerId",
+                "scenarioReviews",
+                "checkReviews",
+                "controlReviews",
+            ] {
+                assert!(
+                    template.get(key).is_none(),
+                    "template supplies no judgment: {key}"
+                );
+            }
+            let mut interpreted = template.clone();
+            interpreted["body"] = json!("Independent interpretation, not operator template text.");
+            validate_lesson_template(&template, &interpreted).unwrap();
+            for key in template.as_object().unwrap().keys() {
+                let mut changed = interpreted.clone();
+                changed.as_object_mut().unwrap().remove(key);
+                assert!(validate_lesson_template(&template, &changed)
+                    .unwrap_err()
+                    .contains(&format!("/lessonReview/{key}")));
+            }
+            interpreted["skillStage"] = packet["scope"]["stage"].clone();
+            assert!(validate_lesson_template(&template, &interpreted)
+                .unwrap_err()
+                .contains("/lessonReview/skillStage"));
+            if let Some(previous) = previous {
+                assert_ne!(template["skillId"], previous);
+            }
+            previous = Some(template["skillId"].clone());
+            for key in [
+                "scopeSha256",
+                "requestSha256",
+                "designSha256",
+                "proposalSha256",
+                "suiteResultSha256",
+                "inputInventorySha256",
+            ] {
+                let mut changed = packet.clone();
+                changed["reviewBindings"][key] = json!("0".repeat(64));
+                assert_ne!(
+                    lesson_template(&changed).unwrap()["skillId"],
+                    template["skillId"]
+                );
+            }
+            let mut changed = packet.clone();
+            changed["qualityRubricSha256"] = json!("0".repeat(64));
+            assert_ne!(
+                lesson_template(&changed).unwrap()["skillId"],
+                template["skillId"]
+            );
+        }
+    }
 
     #[test]
     fn independent_git_binding_checks_full_blobs_and_preserves_authentication_limits() {
