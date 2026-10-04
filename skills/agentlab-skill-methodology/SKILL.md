@@ -137,6 +137,15 @@ changed captures rather than recreating them from another request or weakening
 native checks. Keep download mocks separate from real extraction/admission tests.
 See the [diagnostic checkpoint](../../docs/flywheel-diagnostic-feedback-20261004.md).
 
+Do not equate one participant turn with one Gateway exchange when its declared
+tool budget permits a call. A real frozen constructor completed one tool and
+then its final response, but a one-exchange admission rejected it before staging.
+Validate the bounded causal chain: original tool-call response, matching execution
+events/result, unchanged original request history/policy and final completion.
+Do not simply admit extra exchanges, disable permitted tools to fit the verifier,
+or reopen the consumed attempt. Recorded chain consistency is not authentication
+of tool effects or semantic acceptance of the generated candidate.
+
 When a clean-runner gate exceeds its budget, inspect the individual test and a
 completed comparison run before calling it a hang. Repeated exact-byte executable
 hashing can dominate debug builds, especially when one platform has a small loader
