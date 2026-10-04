@@ -198,6 +198,14 @@ gate, retire old executable inputs and test the next selected cut. Stored-cut
 validation is not a new semantic producer, Agent consumption or learning benefit.
 See the [reviewed-return checkpoint](../../docs/flywheel-reviewed-return-20261004.md).
 
+Before spending a fresh constructor budget, check explicit method names in the
+selected demand against the exact loaded source body, not just path/digest
+binding. A published target named `toString` while the pinned class defined
+`generate(attributes)`; the generic identity gate did not establish symbol
+correctness. Correct a prospective selection under a new path, preserving the
+old selection, admitted lesson and captured requests. This check prevents a
+misdirected task; it is not independent Oracle review or evidence of learning.
+
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest
 and restore frozen paths inside an isolated namespace rather than overwriting

@@ -1,0 +1,28 @@
+{
+  "automaticPromotion": false,
+  "knowledgeCutSha256": "60186c77ceacc92a88a7b1df88742c4ee858d201016d5db96e5d1ecb5d729d18",
+  "knowledgeRevision": "e516a65af86b5291b4d617c860124c4d57be77bb",
+  "schema": "agentlab.maintainer_guidance_selection.v1",
+  "skills": [
+    {
+      "applicabilityReason": "Select this reviewed ToggleCodeGenerator lesson for fresh source-seam calibration at the exact source cut: trace constructed state, frozen ordered inputs, throw-before-later-assignment behavior and entity mapping. Retain scope limits. This selection does not authorize reuse of old captures, changed scoring, Harmony qualification or a guidance-benefit claim.",
+      "id": "skill-source-suite-db551ff85120153e3c713abcd10a14ffddc6e1e096543127a9538eb395d8c109",
+      "objectId": "lesson-source-suite-db551ff85120153e3c713abcd10a14ffddc6e1e096543127a9538eb395d8c109",
+      "rowSha256": "3e94c1f0a0bc650a9e4996d27492630a067da4075681c45f9845757e79adea7e"
+    }
+  ],
+  "sourceRecipeTarget": {
+    "demand": "Construct fresh source-seam calibration for ToggleCodeGenerator.generate(attributes) at this exact revision. Explicitly exercise ordered attributes and exception ordering against actual initial state, including observation of earlier assignments and skipped later assignments after a parse exception; distinguish source characterization from intended correctness and retain declared framework/dependency limitations.",
+    "scopeSkillId": "skill-scope-code-workshop-componentlibrary-input-display",
+    "sourcePaths": [
+      "features/componentlibrary/src/main/ets/componentdetailview/toggleview/viewmodel/ToggleCodeGenerator.ets"
+    ]
+  },
+  "sources": [
+    {
+      "repositoryId": "code-workshop",
+      "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    }
+  ],
+  "stage": "calibration"
+}
