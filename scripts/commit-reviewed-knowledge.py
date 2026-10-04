@@ -242,11 +242,20 @@ def main():
         method_path = root / 'reviewed-method-source.md'
         method_path.write_bytes(method_bytes)
         method_args = ['--method-source', str(method_path)]
+    guidance_args = []
+    if request.get('nextGuidanceIntent') is not None:
+        reference = request['nextGuidanceIntent']
+        guidance_bytes = read(Path(reference['path']), 1024 * 1024)
+        if hashlib.sha256(guidance_bytes).hexdigest() != reference['sha256']:
+            raise ValueError('Reviewed guidance intent drift')
+        guidance_path = root / 'reviewed-next-guidance-intent.json'
+        guidance_path.write_bytes(guidance_bytes)
+        guidance_args = ['--next-guidance-intent', str(guidance_path)]
     stage = root / 'staged-admission'
     common = ['--knowledge', str(base),
                '--proposal', request['proposalDirectory'], '--lesson-source', request['lessonSourceDirectory'],
                '--lesson-id', request['lessonId'], '--expected-knowledge-revision',
-               request['expectedKnowledgeRevision'], *method_args]
+               request['expectedKnowledgeRevision'], *method_args, *guidance_args]
     command = [str(tool), '--verify-lesson-source-readback', *common,
                '--readback', str(root / 'lesson-source-readback.json'), '--output', str(stage)]
     result = subprocess.run(command, capture_output=True, timeout=60)
@@ -267,6 +276,8 @@ def main():
     retained[root / 'lesson-source-readback.json'] = read(root / 'lesson-source-readback.json')
     if method_args:
         retained[method_path] = method_bytes
+    if guidance_args:
+        retained[guidance_path] = guidance_bytes
     def prewrite():
         if (hashlib.sha256(read(tool, 256 * 1024 * 1024)).hexdigest() != request['flywheelToolSha256']
                 or read(writer_path) != writer_bytes
@@ -300,10 +311,25 @@ def main():
     (root / 'native-return.stderr').write_bytes(result.stderr)
     if result.returncode:
         raise ValueError('Committed native return rejected; recover read-only, do not replay writer')
-    save(root, 'result.json', {'revision': client.current, 'authorityWrites': client.writes,
+    outcome = {'revision': client.current, 'authorityWrites': client.writes,
          'committedExportExact': True, 'committedReadbackVerified': True,
          'sourceReadbackVerified': True, 'remoteCaptureAuthenticated': False,
-         'automaticFiveStageLoopCompleted': False})
+         'nextGuidanceBound': bool(guidance_args), 'automaticFiveStageLoopCompleted': False}
+    if guidance_args:
+        for key, filename in [('nextGuidanceSelection', 'guidance-selection.json'),
+                              ('nextGuidancePacket', 'guidance-packet.json')]:
+            path = root / 'return-reconstruction' / filename
+            outcome[key] = {'path': str(path), 'sha256': hashlib.sha256(read(path)).hexdigest()}
+        knowledge = root / 'committed-knowledge'
+        readback_path = root / 'committed-readback.json'
+        # This is the existing business gate's input, not a next-round state or
+        # scheduling receipt. That gate reconstructs current-round evidence again.
+        outcome['committedReturn'] = {'reviewed': True,
+            'knowledge': {'directory': str(knowledge), 'revision': client.current,
+                          'cutSha256': hashlib.sha256(read(knowledge / 'maintainer-knowledge-cut.json')).hexdigest()},
+            'guidanceSelection': outcome['nextGuidanceSelection'],
+            'readback': {'path': str(readback_path), 'sha256': hashlib.sha256(read(readback_path)).hexdigest()}}
+    save(root, 'result.json', outcome)
     print(json.dumps({'revision': client.current, 'authorityWrites': client.writes}))
 
 

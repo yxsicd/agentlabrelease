@@ -558,6 +558,13 @@ knowledge reads with real clean statuses and invokes
 Keep historical methodSource explicit. A post-write verification failure needs
 read-only recovery at the confirmed revision, never another writer invocation.
 Readback verification alone does not select guidance or schedule fresh work.
+For predeclared next guidance, pass a digest-bound reviewed continuation intent
+with the original baseline cut/revision and explicit stage, sources, Skill rows
+and applicability reasons. Native staging validates all ordinary row/provenance
+requirements before transport; only verified committed return emits a new
+fixed-cut selection/packet. It must include the admitted Skill. Staged previews
+never become consumer packets. Rebinding hashes does not authenticate review,
+prove model consumption or authorize a new task beyond the explicit selection.
 
 For a single-source stage calibration, use the main-only Maintainer guidance real
 consumption Action rather than adding unrelated repositories to a multi-repo

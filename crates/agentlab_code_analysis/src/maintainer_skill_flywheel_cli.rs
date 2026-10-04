@@ -1373,18 +1373,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             method_source: method.as_deref(),
         };
         let capture = fs::read(value(&args, "--readback")?)?;
+        let guidance_intent = optional(&args, "--next-guidance-intent")
+            .map(fs::read)
+            .transpose()?;
         let receipt = if args
             .iter()
             .any(|arg| arg == "--verify-lesson-source-readback")
         {
-            inputs.verify_source_readback(&capture, &output)?
+            inputs.verify_source_readback_with_guidance(
+                &capture,
+                guidance_intent.as_deref(),
+                &output,
+            )?
         } else {
-            inputs.verify_committed_return(
+            inputs.verify_committed_return_with_guidance(
                 &PathBuf::from(value(&args, "--committed-knowledge")?),
                 &capture,
+                guidance_intent.as_deref(),
                 &output,
             )?
         };
+        if let Some(guidance) = receipt.get("nextGuidance") {
+            for (key, filename) in [
+                ("selection", "guidance-selection.json"),
+                ("packet", "guidance-packet.json"),
+            ] {
+                let mut file = OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(output.join(filename))?;
+                file.write_all(&serde_json::to_vec(&guidance[key])?)?;
+            }
+        }
         let mut file = OpenOptions::new()
             .write(true)
             .create_new(true)

@@ -483,6 +483,7 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         fs::create_dir(&base).unwrap();
         let mut cut = json!({"schema":"agentlab.maintainer_knowledge_cut.v1",
             "automaticPromotion":false,
+            "repositories":[{"id":candidate["repositoryId"],"revision":candidate["sourceRevision"]}],
             "tableGitAuthority":{"repo":format!("fixture-knowledge-{repository}"),"revision":"a".repeat(40)},"tables":{}});
         fs::write(base.join("source-set.txt"), b"retained fixture inventory\n").unwrap();
         let mut round = json!({"id":"initial","schema":"agentlab.maintainer_skill_refresh_round.v1",
@@ -832,12 +833,20 @@ for table in export['tables']:
 snapshot=root/'transport-source-snapshot.json';snapshot.write_text(json.dumps(source_capture))
 credentials=root/'transport-private-fixture.env';credentials.write_text('MCPGIT_BASIC_USERNAME=fixture\nMCPGIT_BASIC_VERIFY=fixture\nMCPGIT_DEFAULT_PERSON_SHOWNAME=Fixture\n')
 credentials.chmod(0o600)
+skill=json.loads((proposal/'maintainer_skills.jsonl').read_text())
+intent=dict(schema='agentlab.reviewed_guidance_continuation.v1',reviewed=True,automaticPromotion=False,
+    baselineKnowledgeCutSha256=sha(base/'maintainer-knowledge-cut.json'),baselineKnowledgeRevision=old,
+    stage=skill['stage'],sources=[dict(repositoryId=skill['repositoryId'],sourceRevision=skill['sourceRevision'])],
+    skills=[dict(id=skill['id'],rowSha256=hashlib.sha256(encoded(skill)).hexdigest(),objectId=skill['objectId'],
+                 applicabilityReason='Explicit fixture review of the original operation contract')])
+intent_path=root/'reviewed-next-guidance.json';intent_path.write_text(json.dumps(intent))
 request=dict(schema='agentlab.reviewed_knowledge_store_request.v1',reviewed=True,automaticPromotion=False,
     endpoint='http://127.0.0.1:'+str(server.server_port),knowledgeRepository=json.loads((base/'maintainer-knowledge-cut.json').read_text())['tableGitAuthority']['repo'],
     expectedKnowledgeRevision=old,knowledgeDirectory=str(base),proposalDirectory=str(proposal),lessonSourceDirectory=str(source),
     lessonId=json.loads((source/'experiment_lessons.jsonl').read_text())['id'],flywheelTool=str(tool),flywheelToolSha256=sha(tool),
     tablegitWriterSha256=sha(script.with_name('maintainer-skill-tablegit.py')),outputDirectory=str(root/'transport-return'),
-    runId='fixture-return',githubRepository='fixture/transport',lessonSourceReadback=dict(path=str(snapshot),sha256=sha(snapshot)))
+    runId='fixture-return',githubRepository='fixture/transport',lessonSourceReadback=dict(path=str(snapshot),sha256=sha(snapshot)),
+    nextGuidanceIntent=dict(path=str(intent_path),sha256=sha(intent_path)))
 request_path=root/'transport-request.json';request_path.write_text(json.dumps(request))
 try:
     result=subprocess.run([sys.executable,str(script),'--request',str(request_path),'--credentials',str(credentials)],capture_output=True,timeout=60)
@@ -845,6 +854,19 @@ try:
     outcome=json.loads((root/'transport-return/result.json').read_text())
     assert writes==1 and outcome['committedReadbackVerified'] and outcome['sourceReadbackVerified']
     assert outcome['automaticFiveStageLoopCompleted'] is False
+    assert outcome['nextGuidanceBound'] is True
+    selected=pathlib.Path(outcome['nextGuidanceSelection']['path'])
+    assert sha(selected)==outcome['nextGuidanceSelection']['sha256']
+    selection=json.loads(selected.read_text())
+    assert selection['knowledgeRevision']==new and selection['skills']==intent['skills']
+    packet=json.loads(pathlib.Path(outcome['nextGuidancePacket']['path']).read_text())
+    assert packet['selectionSha256']==sha(selected) and packet['agentConsumptionVerified'] is False
+    assert packet['guidance'][0]['skill']['id']==skill['id']
+    returned=outcome['committedReturn']
+    assert returned['guidanceSelection']==outcome['nextGuidanceSelection']
+    assert returned['knowledge']['cutSha256']==selection['knowledgeCutSha256']
+    assert returned['knowledge']['revision']==new and returned['reviewed'] is True
+    assert returned['readback']['sha256']==sha(pathlib.Path(returned['readback']['path']))
     assert (root/'transport-return/committed-knowledge/source-set.txt').read_bytes()==(base/'source-set.txt').read_bytes()
     for name in names:
         assert (root/'transport-return/committed-knowledge'/(name+'.jsonl')).read_bytes()==(root/'transport-return/staged-admission'/(name+'.jsonl')).read_bytes()
@@ -857,6 +879,22 @@ try:
     rejected=subprocess.run([sys.executable,str(script),'--request',str(request_path),'--credentials',str(credentials)],capture_output=True,timeout=60)
     assert rejected.returncode!=0 and writes==1 and len(trace)==observed
     assert not (root/'transport-rejected-source/result.json').exists()
+    # Valid source but stale/unreviewed/wrong/omitted guidance cannot reach MCP.
+    source_capture['tables']=json.loads((root/'transport-return/original-source-snapshot.json').read_text())['tables']
+    snapshot.write_text(json.dumps(source_capture));request['lessonSourceReadback']['sha256']=sha(snapshot)
+    for index,mode in enumerate(['unreviewed','stale-baseline','wrong-row','omitted-skill','wrong-stage','borrowed-source']):
+        rejected_intent=json.loads(json.dumps(intent))
+        if mode=='unreviewed':rejected_intent['reviewed']=False
+        elif mode=='stale-baseline':rejected_intent['baselineKnowledgeCutSha256']='0'*64
+        elif mode=='wrong-row':rejected_intent['skills'][0]['rowSha256']='0'*64
+        elif mode=='omitted-skill':rejected_intent['skills'][0]['id']='other-skill'
+        elif mode=='wrong-stage':rejected_intent['stage']='repository-analysis'
+        else:rejected_intent['sources'][0]['repositoryId']='borrowed-repository'
+        intent_path.write_text(json.dumps(rejected_intent));request['nextGuidanceIntent']['sha256']=sha(intent_path)
+        request['outputDirectory']=str(root/('transport-rejected-guidance-'+str(index)))
+        request_path.write_text(json.dumps(request))
+        rejected=subprocess.run([sys.executable,str(script),'--request',str(request_path),'--credentials',str(credentials)],capture_output=True,timeout=60)
+        assert rejected.returncode!=0 and writes==1 and len(trace)==observed,mode
 finally:
     server.shutdown();server.server_close();thread.join()
 "#;
