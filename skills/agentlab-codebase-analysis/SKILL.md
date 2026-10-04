@@ -77,6 +77,13 @@ Use the returned owner IDs for focused analysis; the packet neither updates
 knowledge nor grants edits. Later facts and successor construction inputs still
 need their existing admission gates. Unchanged reordered selection must reproduce
 the same packet; raw source packets stay in the operator artifact archive.
+Before consuming a retained packet, run `--validate-construction-context` with
+the same `--knowledge` and `--source-worktree`, plus `--context-packet ABSOLUTE_PACKET`
+and `--output FRESH_RECEIPT`. It reconstructs the entire packet, including owner
+knowledge, rather than trusting embedded hashes or text. A passing receipt grants
+neither edits nor runtime imports. Inspect module initialization and required
+globals as well as named exports: loaded dependency text alone cannot establish
+an executable dependency contract.
 
 For proposed cross-scope host/test changes, prepare a separate Rust
 `--prepare-construction-edit-boundary` packet with the same knowledge/source/repository

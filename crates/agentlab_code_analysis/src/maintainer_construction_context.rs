@@ -328,6 +328,45 @@ fn git(source: &Path, args: &[&str]) -> Result<Vec<u8>, String> {
     Ok(output.stdout)
 }
 
+/// Reconsume read-only context against source and knowledge authority. Embedded
+/// hashes, source text and owners are claims until the whole packet is rebuilt.
+pub fn validate_context(base: &Path, source: &Path, packet_bytes: &[u8]) -> Result<Value, String> {
+    need(
+        packet_bytes.len() <= 1024 * 1024,
+        "context packet exceeds budget",
+    )?;
+    let packet: Value = serde_json::from_slice(packet_bytes).map_err(|e| e.to_string())?;
+    let repository = packet["repository"]["id"]
+        .as_str()
+        .ok_or("context packet repository absent")?;
+    let files = packet["selectedFiles"]
+        .as_array()
+        .ok_or("context packet files absent")?;
+    let paths = files
+        .iter()
+        .map(|file| {
+            file["path"]
+                .as_str()
+                .map(str::to_owned)
+                .ok_or("context packet path absent".to_owned())
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let expected = prepare(base, source, repository, &paths)?;
+    need(
+        packet == expected,
+        "context packet differs from reconstructed source and knowledge",
+    )?;
+    Ok(
+        json!({"schema":"agentlab.case_construction_context_validation.v1",
+        "packetSha256":digest(packet_bytes),"knowledgeCutSha256":expected["knowledgeCutSha256"],
+        "tableGitRevision":expected["tableGitRevision"],"repository":expected["repository"],
+        "selectedFileCount":paths.len(),"ownerScopeSkillIds":expected["ownerScopeSkillIds"],
+        "sourceGitBindingVerified":true,"knowledgeBindingVerified":true,
+        "grantsEditablePaths":false,"executionPerformed":false,"authorityWritePerformed":false,
+        "semanticQualified":false,"executionQualified":false,"automaticPromotion":false}),
+    )
+}
+
 /// No semantic qualification, Agent execution, edit grant or authority write occurs here.
 pub fn prepare(
     base: &Path,

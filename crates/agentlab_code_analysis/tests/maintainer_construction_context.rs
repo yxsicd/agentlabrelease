@@ -1,7 +1,8 @@
 use agentlab_code_analysis::{
     digest,
     maintainer_construction_context::{
-        bind_candidate_paths, prepare, prepare_edit_boundary, validate_edit_boundary,
+        bind_candidate_paths, prepare, prepare_edit_boundary, validate_context,
+        validate_edit_boundary,
     },
 };
 use serde_json::{json, Value};
@@ -384,6 +385,97 @@ impl Drop for Fixture {
     fn drop(&mut self) {
         fs::remove_dir_all(&self.root).unwrap();
     }
+}
+
+#[test]
+fn readonly_context_consumer_reconstructs_all_claims_and_rejects_drift() {
+    let f = Fixture::new();
+    let packet = prepare(
+        &f.knowledge,
+        &f.source,
+        "arbitrary",
+        &["pkg/main.rs".into()],
+    )
+    .unwrap();
+    let bytes = serde_json::to_vec_pretty(&packet).unwrap();
+    let receipt = validate_context(&f.knowledge, &f.source, &bytes).unwrap();
+    assert_eq!(receipt["packetSha256"], digest(&bytes));
+    assert_eq!(receipt["sourceGitBindingVerified"], true);
+    assert_eq!(receipt["knowledgeBindingVerified"], true);
+    assert_eq!(receipt["grantsEditablePaths"], false);
+    assert_eq!(receipt["executionPerformed"], false);
+    for (pointer, value) in [
+        ("/selectedFiles/0/contentUtf8", json!("invented")),
+        ("/selectedFiles/0/sha256", json!("b".repeat(64))),
+        ("/selectedFiles/0/ownerScopeSkillId", json!("root")),
+        ("/selectedFiles/0/access", json!("editable")),
+        ("/grantsEditablePaths", json!(true)),
+        ("/knowledgeCutSha256", json!("b".repeat(64))),
+        ("/tableGitRevision", json!("b".repeat(40))),
+        ("/ownerKnowledge/0/scopeSkill/pathBoundary", json!(".")),
+    ] {
+        let mut changed = packet.clone();
+        *changed.pointer_mut(pointer).unwrap() = value;
+        assert!(
+            validate_context(
+                &f.knowledge,
+                &f.source,
+                &serde_json::to_vec(&changed).unwrap()
+            )
+            .is_err(),
+            "{pointer}"
+        );
+    }
+    let mut extra = packet.clone();
+    extra["implicitImportsAllowed"] = json!(true);
+    assert!(validate_context(
+        &f.knowledge,
+        &f.source,
+        &serde_json::to_vec(&extra).unwrap()
+    )
+    .is_err());
+    fs::write(f.source.join("pkg/main.rs"), "pub fn value() -> u8 { 2 }\n").unwrap();
+    assert!(validate_context(&f.knowledge, &f.source, &bytes).is_err());
+}
+
+#[test]
+fn context_validation_cli_binds_stdout_and_preserves_receipts_on_repeat() {
+    let f = Fixture::new();
+    let packet = prepare(&f.knowledge, &f.source, "arbitrary", &["build.cfg".into()]).unwrap();
+    let input = f.root.join("context.json");
+    let output = f.root.join("validation.json");
+    fs::write(&input, serde_json::to_vec_pretty(&packet).unwrap()).unwrap();
+    let run = || {
+        Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--validate-construction-context")
+            .arg("--knowledge")
+            .arg(&f.knowledge)
+            .arg("--source-worktree")
+            .arg(&f.source)
+            .arg("--context-packet")
+            .arg(&input)
+            .arg("--output")
+            .arg(&output)
+            .output()
+            .unwrap()
+    };
+    let result = run();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let bytes = fs::read(&output).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<Value>(&result.stdout).unwrap(),
+        serde_json::from_slice::<Value>(&bytes).unwrap()
+    );
+    assert!(!run().status.success());
+    assert_eq!(bytes, fs::read(&output).unwrap());
+    // A previously valid packet cannot be reused after a knowledge projection changes.
+    f.scopes(|scopes| scopes[0]["maintenanceContract"] = json!("changed owner guidance"));
+    assert!(validate_context(&f.knowledge, &f.source, &fs::read(&input).unwrap()).is_err());
+    assert_eq!(bytes, fs::read(output).unwrap());
 }
 
 #[test]
