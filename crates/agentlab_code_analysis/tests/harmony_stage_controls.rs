@@ -682,59 +682,116 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         let source_path = root.join("source-readback.json");
         fs::write(&source_path, serde_json::to_vec(&source_capture).unwrap()).unwrap();
         let invoke = |mode: &str, capture: &Path, next: Option<&Path>, output: &Path| {
-            let mut command = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"));
-            command.args([mode, "--knowledge"]).arg(&base)
-                .arg("--proposal").arg(&fenced)
-                .arg("--lesson-source").arg(&lesson_output)
-                .args(["--lesson-id", review["id"].as_str().unwrap(),
-                    "--expected-knowledge-revision", &"a".repeat(40)])
-                .arg("--readback").arg(capture).arg("--output").arg(output);
+            let mut command =
+                Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"));
+            command
+                .args([mode, "--knowledge"])
+                .arg(&base)
+                .arg("--proposal")
+                .arg(&fenced)
+                .arg("--lesson-source")
+                .arg(&lesson_output)
+                .args([
+                    "--lesson-id",
+                    review["id"].as_str().unwrap(),
+                    "--expected-knowledge-revision",
+                    &"a".repeat(40),
+                ])
+                .arg("--readback")
+                .arg(capture)
+                .arg("--output")
+                .arg(output);
             if let Some(next) = next {
                 command.arg("--committed-knowledge").arg(next);
             }
             command.output().unwrap()
         };
-        let preflight = invoke("--verify-lesson-source-readback", &source_path, None,
-            &root.join("source-return-stage"));
-        assert!(preflight.status.success(), "{}", String::from_utf8_lossy(&preflight.stderr));
+        let preflight = invoke(
+            "--verify-lesson-source-readback",
+            &source_path,
+            None,
+            &root.join("source-return-stage"),
+        );
+        assert!(
+            preflight.status.success(),
+            "{}",
+            String::from_utf8_lossy(&preflight.stderr)
+        );
         let mut bad_source = source_capture.clone();
         bad_source["tables"] = json!({});
         fs::write(&source_path, serde_json::to_vec(&bad_source).unwrap()).unwrap();
-        assert!(!invoke("--verify-lesson-source-readback", &source_path, None,
-            &root.join("rejected-source-return-stage")).status.success());
+        assert!(!invoke(
+            "--verify-lesson-source-readback",
+            &source_path,
+            None,
+            &root.join("rejected-source-return-stage")
+        )
+        .status
+        .success());
         let next = root.join("committed-return-cut");
-        assert!(Command::new("cp").arg("-R").arg(&staged).arg(&next)
-            .status().unwrap().success());
-        let mut next_cut: Value = serde_json::from_slice(
-            &fs::read(next.join("maintainer-knowledge-cut.json")).unwrap()).unwrap();
+        assert!(Command::new("cp")
+            .arg("-R")
+            .arg(&staged)
+            .arg(&next)
+            .status()
+            .unwrap()
+            .success());
+        let mut next_cut: Value =
+            serde_json::from_slice(&fs::read(next.join("maintainer-knowledge-cut.json")).unwrap())
+                .unwrap();
         next_cut.as_object_mut().unwrap().remove("staging");
         next_cut["tableGitAuthority"]["revision"] = json!("b".repeat(40));
-        fs::write(next.join("maintainer-knowledge-cut.json"),
-            serde_json::to_vec(&next_cut).unwrap()).unwrap();
+        fs::write(
+            next.join("maintainer-knowledge-cut.json"),
+            serde_json::to_vec(&next_cut).unwrap(),
+        )
+        .unwrap();
         let mut return_capture = json!({"schema":"agentlab.reviewed_lesson_committed_readback.v1",
             "knowledgeRepository":cut["tableGitAuthority"]["repo"],
             "previousRevision":"a".repeat(40),"revision":"b".repeat(40),
             "before":{"revision":"b".repeat(40),"dirty":false},
             "after":{"revision":"b".repeat(40),"dirty":false},
             "tables":{},"lessonSource":source_capture});
-        for name in ["maintainer_skills", "maintainer_scope_skills", "program_facts",
-            "maintainer_skill_refresh_rounds", "evaluation_cases"] {
+        for name in [
+            "maintainer_skills",
+            "maintainer_scope_skills",
+            "program_facts",
+            "maintainer_skill_refresh_rounds",
+            "evaluation_cases",
+        ] {
             return_capture["tables"][name] = query(&next, name, &"b".repeat(40), true);
         }
         let capture_path = root.join("committed-return-readback.json");
         fs::write(&capture_path, serde_json::to_vec(&return_capture).unwrap()).unwrap();
-        let returned = invoke("--verify-committed-lesson-return", &capture_path, Some(&next),
-            &root.join("committed-return-stage"));
-        assert!(returned.status.success(), "{}", String::from_utf8_lossy(&returned.stderr));
+        let returned = invoke(
+            "--verify-committed-lesson-return",
+            &capture_path,
+            Some(&next),
+            &root.join("committed-return-stage"),
+        );
+        assert!(
+            returned.status.success(),
+            "{}",
+            String::from_utf8_lossy(&returned.stderr)
+        );
         let receipt: Value = serde_json::from_slice(&returned.stdout).unwrap();
         assert_eq!(receipt["committedReadbackVerified"], true);
         assert_eq!(receipt["guidanceConsumed"], false);
-        for (index, pointer) in ["/before/dirty", "/tables/program_facts/truncated"].iter().enumerate() {
+        for (index, pointer) in ["/before/dirty", "/tables/program_facts/truncated"]
+            .iter()
+            .enumerate()
+        {
             let mut bad = return_capture.clone();
             *bad.pointer_mut(pointer).unwrap() = json!(true);
             fs::write(&capture_path, serde_json::to_vec(&bad).unwrap()).unwrap();
-            assert!(!invoke("--verify-committed-lesson-return", &capture_path, Some(&next),
-                &root.join(format!("rejected-return-{index}"))).status.success());
+            assert!(!invoke(
+                "--verify-committed-lesson-return",
+                &capture_path,
+                Some(&next),
+                &root.join(format!("rejected-return-{index}"))
+            )
+            .status
+            .success());
         }
         let assessed: Value = serde_json::from_slice(
             &fs::read(staged.join(manifest["assessment"].as_str().unwrap())).unwrap(),

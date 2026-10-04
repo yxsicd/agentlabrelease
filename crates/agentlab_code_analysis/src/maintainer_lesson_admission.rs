@@ -72,7 +72,8 @@ pub struct ReviewedReturnInputs<'a> {
 impl ReviewedReturnInputs<'_> {
     fn reconstruct(&self, output: &Path) -> Result<Value, String> {
         need(
-            self.method_source.is_none_or(|bytes| bytes.len() <= 1024 * 1024),
+            self.method_source
+                .is_none_or(|bytes| bytes.len() <= 1024 * 1024),
             "historical method budget",
         )?;
         stage_with_method(
@@ -88,11 +89,7 @@ impl ReviewedReturnInputs<'_> {
 
     /// Reconstruct admission and verify full operational readback before a writer.
     /// Captured bytes do not authenticate remote transport or reviewer identity.
-    pub fn verify_source_readback(
-        &self,
-        capture: &[u8],
-        output: &Path,
-    ) -> Result<Value, String> {
+    pub fn verify_source_readback(&self, capture: &[u8], output: &Path) -> Result<Value, String> {
         need(capture.len() <= 32 * 1024 * 1024, "source readback budget")?;
         let evidence: Value = serde_json::from_slice(capture).map_err(|e| e.to_string())?;
         need(
@@ -101,10 +98,12 @@ impl ReviewedReturnInputs<'_> {
         )?;
         self.reconstruct(output)?;
         crate::maintainer_lesson_return::verify_source(self.source, &evidence)?;
-        Ok(json!({"schema":"agentlab.reviewed_lesson_source_verification.v1",
+        Ok(
+            json!({"schema":"agentlab.reviewed_lesson_source_verification.v1",
             "sourceReadbackVerified":true,"readbackSha256":digest(capture),
             "authorityWritePerformed":false,"remoteCaptureAuthenticated":false,
-            "automaticFiveStageLoopCompleted":false}))
+            "automaticFiveStageLoopCompleted":false}),
+        )
     }
 
     /// Always reconstruct the original reviewed stage again before committed
@@ -115,7 +114,10 @@ impl ReviewedReturnInputs<'_> {
         capture: &[u8],
         output: &Path,
     ) -> Result<Value, String> {
-        need(capture.len() <= 32 * 1024 * 1024, "committed readback budget")?;
+        need(
+            capture.len() <= 32 * 1024 * 1024,
+            "committed readback budget",
+        )?;
         self.reconstruct(output)?;
         crate::maintainer_lesson_return::verify(output, self.source, next, capture)
     }

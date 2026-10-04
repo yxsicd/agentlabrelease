@@ -1355,8 +1355,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let source = PathBuf::from(value(&args, "--lesson-source")?);
         let lesson_id = value(&args, "--lesson-id")?;
         let expected_revision = value(&args, "--expected-knowledge-revision")?;
-        let method = optional(&args, "--method-source").map(fs::read).transpose()?;
-        if method.as_ref().is_some_and(|bytes| bytes.len() > 1024 * 1024) {
+        let method = optional(&args, "--method-source")
+            .map(fs::read)
+            .transpose()?;
+        if method
+            .as_ref()
+            .is_some_and(|bytes| bytes.len() > 1024 * 1024)
+        {
             return Err("historical method budget".into());
         }
         let inputs = agentlab_code_analysis::maintainer_lesson_admission::ReviewedReturnInputs {
@@ -1368,7 +1373,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             method_source: method.as_deref(),
         };
         let capture = fs::read(value(&args, "--readback")?)?;
-        let receipt = if args.iter().any(|arg| arg == "--verify-lesson-source-readback") {
+        let receipt = if args
+            .iter()
+            .any(|arg| arg == "--verify-lesson-source-readback")
+        {
             inputs.verify_source_readback(&capture, &output)?
         } else {
             inputs.verify_committed_return(
@@ -1377,7 +1385,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &output,
             )?
         };
-        let mut file = OpenOptions::new().write(true).create_new(true)
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
             .open(output.join("return-verification.json"))?;
         file.write_all(&serde_json::to_vec_pretty(&receipt)?)?;
         file.write_all(b"\n")?;
