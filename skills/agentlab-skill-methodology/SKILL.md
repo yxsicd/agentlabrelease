@@ -216,6 +216,9 @@ target/rubric bindings before spending reviewer budget. Keep legacy requests and
 rubrics unchanged; never backfill targets into prior captures or reopen attempts.
 For a retained parent that already froze a target, restore its original request
 bytes only after verifying every non-target field matches fresh local preparation.
+When extending a structured request, exercise every affected acquisition/continuation
+lane with valid original JSON and the actual native consumer. A byte-only transport
+fixture can hide a new parsing boundary; touched-file tests alone miss those callers.
 This establishes review input completeness, not automatic semantic truth or a
 successful business round.
 

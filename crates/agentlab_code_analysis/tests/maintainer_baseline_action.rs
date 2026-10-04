@@ -50,7 +50,7 @@ print('one-shot constructor normalized prompt and native budget intent retained 
 #[test]
 fn baseline_action_retains_exact_inputs_and_routes_existing_downstream_gates() {
     let code = r#"
-import argparse,importlib.util,json,os,stat,subprocess,tempfile,textwrap,warnings,zipfile
+import argparse,hashlib,importlib.util,json,os,stat,subprocess,tempfile,textwrap,warnings,zipfile
 from pathlib import Path
 from unittest.mock import patch
 repo=Path(os.environ['REPOSITORY_ROOT'])
@@ -93,9 +93,16 @@ with tempfile.TemporaryDirectory() as temporary:
             assert scenario=='good' and not (out/'agent/participant-state').exists()
             for name in required:assert (out/name).read_text()=='original '+name
     # Exercise real preparation routing, with only network/native execution mocked.
-    for scenario in ['good','request-drift','native-reject','unknown-envelope']:
+    for scenario in ['good','request-drift','native-reject','unknown-envelope','targeted','target-non-target-drift','target-existing-drift']:
         case=root/scenario;case.mkdir();(case/'gate').write_text('fixture')
-        (case/'request').write_text('original request')
+        original_request=dict(schema='agentlab.source_recipe_author_request.v1',scope=dict(id='fixture-scope'),
+            sourceFiles=[dict(path='unit.js',content='module.exports={};',sha256=hashlib.sha256(b'module.exports={};').hexdigest())])
+        current_request=json.loads(json.dumps(original_request))
+        target=dict(scopeSkillId='fixture-scope',sourcePaths=['unit.js'],demand='Exercise the frozen source result.')
+        if scenario.startswith('target'):original_request['sourceRecipeTarget']=target
+        if scenario=='target-non-target-drift':current_request['unexpected']='changed preparation'
+        if scenario=='target-existing-drift':current_request['sourceRecipeTarget']=dict(target,demand='Different demand')
+        (case/'request').write_text(json.dumps(current_request))
         envelope=dict(schema='agentlab.baseline_continuation_action_enrollment.v1',parentRun='123',
             parentArtifact='456',parentMethodRevision='a'*40,parentArchiveSha256='b'*64,
             continuationEnrollment={'schema':'native-owned-policy'})
@@ -105,27 +112,37 @@ with tempfile.TemporaryDirectory() as temporary:
         def acquire(args):
             acquired.append(args);args.output.mkdir()
             retained=args.output/'baseline-inputs';stage=retained/'agent/proposal-stage';stage.mkdir(parents=True)
-            (stage/'request.json').write_text('changed' if scenario=='request-drift' else 'original request')
+            (stage/'request.json').write_text(json.dumps({'changed':True} if scenario=='request-drift' else original_request))
             (retained/'baseline-diagnostic/contained-input-original').mkdir(parents=True)
             (retained/'successor-request.json').write_text('original successor')
             (retained/'successor-enrollment.json').write_text('original review')
             (args.output/'original-artifact.zip').write_bytes(b'original archive')
         def run(command,**kwargs):
             commands.append(command);assert kwargs['timeout']==60
+            if '--restore-source-recipe-author-target' in command:
+                # Real native target restoration; only acquisition/next dispatch are mocked.
+                return actual_run([os.environ['NATIVE_GATE'],*command[1:]],**kwargs,capture_output=True)
             assert '--prepare-source-recipe-diagnostic-continuation' in command
             assert '--stage' in command and '--worker-capture' in command
             if scenario=='native-reject':raise subprocess.CalledProcessError(1,command)
             Path(command[command.index('--output')+1]).write_text('native packet')
+        actual_run=subprocess.run
         with patch.object(acquisition,'acquire',side_effect=acquire),patch.object(preparation,'module_from_spec',return_value=acquisition),patch.object(preparation,'spec_from_file_location') as spec,patch.object(preparation.subprocess,'run',side_effect=run):
             spec.return_value.loader.exec_module=lambda module:None
             args=argparse.Namespace(enrollment=case/'enrollment',output=case/'prepared',request=case/'request',gate=case/'gate',repository='arbitrary/repo')
             try:inputs=preparation.prepare(args)
-            except (ValueError,subprocess.CalledProcessError):assert scenario!='good'
+            except (ValueError,subprocess.CalledProcessError):assert scenario not in ['good','targeted']
             else:
-                assert scenario=='good' and inputs['parent_run']=='123' and inputs['parent_artifact']=='456'
+                assert scenario in ['good','targeted'] and inputs['parent_run']=='123' and inputs['parent_artifact']=='456'
                 assert Path(inputs['successor_request']).read_text()=='original successor'
                 assert (args.output/'local-claims').is_dir()
+                assert args.request.read_bytes()==(args.output/'acquired/baseline-inputs/agent/proposal-stage/request.json').read_bytes()
             if scenario in ['request-drift','unknown-envelope']:assert commands==[]
+            if scenario in ['target-non-target-drift','target-existing-drift']:
+                assert len(commands)==1 and '--restore-source-recipe-author-target' in commands[0]
+                assert not (args.output/'local-claims').exists()
+                assert json.loads(args.request.read_bytes())==current_request
+            if scenario=='targeted':assert len(commands)==2 and '--restore-source-recipe-author-target' in commands[0]
             if acquired:assert acquired[0].artifact_kind=='baseline'
             assert not any(c[0]=='gh' or '--pi' in c for c in commands)
     workflow=(repo/'.github/workflows/maintainer-source-recipe-author.yml').read_text()
@@ -177,6 +194,10 @@ print('baseline Action selected originals, native preparation and existing downs
         .env(
             "REPOSITORY_ROOT",
             Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."),
+        )
+        .env(
+            "NATIVE_GATE",
+            env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"),
         )
         .output()
         .unwrap();

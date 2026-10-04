@@ -50,6 +50,30 @@ The three affected integration suites passed: 17 guidance, 32 diagnostic and
 3 Action tests. Skill validation and formatting passed. One initial test compile
 failed due to an incorrect fixture signature; corrected before the passing run.
 
+The exact-head full Rust CI 37231794116 subsequently failed at
+`maintainer_baseline_action`: an older transport fixture used non-JSON strings
+as the author request, so the new target lookup rejected it before the expected
+mocked continuation path. The failed CI is retained. Its fixture now uses valid
+original JSON and additionally exercises actual native target restoration through
+the real baseline acquisition adapter, including non-target and existing-target
+drift rejection before claims/dispatch. Both baseline Action tests passed locally.
+This exposes an omitted caller in the earlier targeted regression scope; it is
+not a reason to skip the full suite or relax target validation.
+Public validation 37231794102 reported the same baseline-fixture failure;
+the analysis component 37231794142 passed. A subsequent full local Rust run
+identified two more transport-test gaps: missing original parent request in a
+revision mock and inherited `GITHUB_OUTPUT`/`GITHUB_ENV` in a preflight test.
+They now supply complete structured parent inputs and isolated output paths;
+the revision test also runs actual native target restoration. Both individual
+regressions passed without changing production admission or frozen captures.
+The repaired full `cargo test --locked --offline -p agentlab_code_analysis` run
+then exited **0**, with **423 passed tests** and no failed or ignored tests.
+Its retained stdout SHA256 is
+`5e4d2453f8b1e53cd5ca2383c489c6f5280ee623ad0848afdd8f8d939ae3f926`;
+stderr SHA256 is
+`870968191369c7cc97e4343cb4c1af3be3c332bd8699bfdd02ff0535ddce412a`.
+This is full local regression evidence, not exact-head CI or an Agent outcome.
+
 Next: deliver this method and prospectively enroll a fresh real constructor using
 the new frozen rubric, then complete baseline, wrong/reference controls, review
 and committed return. Measure repeated outcomes and transfer to another repository
