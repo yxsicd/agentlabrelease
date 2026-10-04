@@ -845,10 +845,16 @@ fn design_review_contract(
     let protected_controls = review["schema"] == "agentlab.source_recipe_design_review.v3";
     let exact = protected_controls || review["schema"] == "agentlab.source_recipe_design_review.v2";
     need(
-        review
-            .as_object()
-            .is_some_and(|o| o.len() == if protected_controls { 11 } else if exact { 10 } else { 8 })
-            && (exact || review["schema"] == "agentlab.source_recipe_design_review.v1")
+        review.as_object().is_some_and(|o| {
+            o.len()
+                == if protected_controls {
+                    11
+                } else if exact {
+                    10
+                } else {
+                    8
+                }
+        }) && (exact || review["schema"] == "agentlab.source_recipe_design_review.v1")
             && request["schema"] == "agentlab.source_recipe_author_request.v1"
             && parent["scopeSkillId"] == request["scope"]["id"]
             && review["parentRequestSha256"] == digest(request_bytes)
@@ -894,10 +900,14 @@ fn design_review_contract(
     }
     if protected_controls {
         let mut reviewed = parent.clone();
-        reviewed["checks"] = reviewed_checks(&json!({"contract":{"checks":parent["checks"]}}), &review)?;
+        reviewed["checks"] =
+            reviewed_checks(&json!({"contract":{"checks":parent["checks"]}}), &review)?;
         reviewed["scenarios"] = reviewed_scenarios(&parent, &review)?;
         reviewed["controls"] = reviewed_controls(&parent, &review)?;
-        design(request_bytes, &serde_json::to_vec(&reviewed).map_err(|error| error.to_string())?)?;
+        design(
+            request_bytes,
+            &serde_json::to_vec(&reviewed).map_err(|error| error.to_string())?,
+        )?;
     }
     Ok(
         json!({"schema":if protected_controls {"agentlab.source_recipe_design_review_admission.v3"} else if exact {"agentlab.source_recipe_design_review_admission.v2"} else {"agentlab.source_recipe_design_review_admission.v1"},
