@@ -274,8 +274,19 @@ findings itself. Absent original policy, changed captures, passing/noncitation
 reviews and recursive repair reject. The child still requires complete content,
 original wire, same model/reasoning and all normal lesson gates. Preserve both
 attempts; do not retrofit policy into an exhausted historical capture. These native
-primitives do not schedule participants or claim exactly-once dispatch; the
-transport still needs an exclusive bounded attempt coordinator before real use.
+primitives do not schedule participants or claim exactly-once dispatch.
+The independent reviewer Action now accepts review_repair_limit=0|1 (default zero).
+The thin transport reserves fresh directories, records the policy before inference
+and routes only native citation findings to one fresh participant. A native parent
+completion/eligibility gate runs before the repair is launched. Each attempt has
+its own runtime receipt directory; validate both isolation captures independently.
+Keep initial response/capture untouched and select the native-valid final attempt
+through attempt-coordinator.json; selected path is restricted to . or repair-attempt.
+Export revalidates its original wire and complete retained parent chain. Missing
+policy, noncitation rejection, incomplete capture, exhausted repair and existing
+capture stop without launching extra participants. Failed and valid nonaccept
+outcomes remain evidence, not knowledge writes. Transport fixtures are synthetic;
+require a fresh real enrolled Action before reporting successful Agent repair.
 
 Before importing a captured automatic-review handoff, use native
 `--verify-source-suite-review-feedback` with the same source/rubric/original

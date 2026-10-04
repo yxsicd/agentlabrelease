@@ -7,6 +7,8 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
+import copy
 
 
 def load_module(name, path):
@@ -30,11 +32,13 @@ def gate(args, flag, output, *extra):
         raise RuntimeError(f'Native review gate {flag} rejected input; retained original stderr')
 
 
-def run(args, participant_class=None):
+def run_attempt(args, participant_class=None):
     if not os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'):
         raise ValueError('Independent review requires the contained participant runtime')
     output = args.output.absolute()
+    args._capture_created = False
     output.mkdir()  # Exclusive fresh capture, never resume the constructor session.
+    args._capture_created = True
     evidence = output / 'evidence'
     workspace = output / 'workspace'
     evidence.mkdir()
@@ -43,8 +47,26 @@ def run(args, participant_class=None):
                     completed=False, automaticPromotion=False, authorityWritePerformed=False,
                     qualified=False)
     try:
+        repair_enabled = getattr(args, 'review_repair_limit', 0) == 1
+        if repair_enabled:
+            review_policy = dict(schema='agentlab.review_repair_policy.v1', reviewRepairLimit=1,
+                                 maximumReviewerAttempts=2, participantBudgetSeconds=420,
+                                 totalParticipantBudgetSeconds=840, transportRetryLimit=0)
+            with (evidence / 'review-repair-policy.json').open('x') as stream:
+                json.dump(review_policy, stream)
+            parent = getattr(args, 'repair_parent', None)
+            if parent is not None:
+                retained = evidence / 'repair-inputs'
+                retained.mkdir()
+                shutil.copyfile(parent / 'response.json', retained / 'response.json')
+                shutil.copytree(parent / 'evidence', retained / 'evidence',
+                                symlinks=True, ignore=shutil.ignore_patterns('source-suite-review-events.jsonl'))
         gate(args, '--prepare-source-suite-review', output / 'request.json')
-        gate(args, '--prepare-source-suite-review-prompt', output / 'prompt.txt')
+        if repair_enabled:
+            gate(args, '--prepare-source-suite-review-attempt-prompt', output / 'prompt.txt',
+                 '--participant-evidence', str(evidence))
+        else:
+            gate(args, '--prepare-source-suite-review-prompt', output / 'prompt.txt')
         prompt = (output / 'prompt.txt').read_text()
         packet = json.loads((output / 'request.json').read_bytes())
         # Request digest is emitted by the native prompt, not reimplemented here.
@@ -76,6 +98,11 @@ def run(args, participant_class=None):
                       participantIdentity=dict(model=os.environ['AGENTLAB_MODEL'],
                                                providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
                                                providerReasoningEffort=effort))
+        if repair_enabled:
+            if intent['participantBudgetSeconds'] != 420:
+                raise ValueError('Native participant watchdog differs from declared repair policy')
+            compact = json.dumps(review_policy, sort_keys=True, separators=(',', ':')).encode()
+            intent['reviewRepairPolicySha256'] = hashlib.sha256(compact).hexdigest()
         with (evidence / 'review-intent.json').open('x') as stream:
             json.dump(intent, stream)
         helpers.require_pi_retry_policy(output / 'participant-state', workspace, policy)
@@ -114,11 +141,67 @@ def run(args, participant_class=None):
             stream.write('\n')
 
 
+def run(args, participant_class=None):
+    limit = getattr(args, 'review_repair_limit', 0)
+    if limit not in (0, 1):
+        raise ValueError('Review repair limit must be zero or one')
+    if limit and getattr(args, 'source_git_checkout', None) is None:
+        raise ValueError('Citation repair requires independently verified Git source')
+    root = args.output.absolute()
+    original_runtime_root = os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT')
+    coordinator = dict(schema='agentlab.review_attempt_coordinator.v1', completed=False,
+                       reviewRepairLimit=limit, maximumReviewerAttempts=1+limit,
+                       totalParticipantBudgetSeconds=420*(1+limit), transportRetryLimit=0,
+                       attempts=[], automaticPromotion=False, authorityWritePerformed=False,
+                       qualified=False)
+    try:
+        if limit and original_runtime_root:
+            os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(Path(original_runtime_root) / 'initial')
+        coordinator['attempts'].append('initial')
+        try:
+            result = run_attempt(args, participant_class)
+            selected = '.'
+        except RuntimeError:
+            if not limit:
+                raise
+            # Routing only; native preparation must recheck original complete
+            # exchange/policy and compute eligible findings before any inference.
+            diagnostic_path = root / 'citation-diagnostic.json'
+            if not diagnostic_path.is_file() or json.loads(diagnostic_path.read_bytes()).get('citationFindingCount', 0) == 0:
+                raise
+            repaired = copy.copy(args)
+            repaired.output = root / 'repair-attempt'
+            repaired.repair_parent = root
+            if original_runtime_root:
+                os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(Path(original_runtime_root) / 'repair-1')
+            coordinator['attempts'].append('repair-1')
+            result = run_attempt(repaired, participant_class)
+            selected = 'repair-attempt'
+        coordinator.update(completed=True, selectedAttempt=selected, verdict=result['verdict'],
+                           recordedCompletionVerified=result['recordedCompletionVerified'])
+        return coordinator
+    except Exception as error:
+        coordinator.update(errorType=type(error).__name__, error=str(error))
+        raise
+    finally:
+        if original_runtime_root is not None:
+            os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = original_runtime_root
+        else:
+            os.environ.pop('AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT', None)
+        # Only the fresh invocation owns this directory. Never replace receipts
+        # when a second invocation finds an existing capture.
+        if getattr(args, '_capture_created', False) and not (root / 'attempt-coordinator.json').exists():
+            with (root / 'attempt-coordinator.json').open('x') as stream:
+                json.dump(coordinator, stream, indent=2)
+                stream.write('\n')
+
+
 def main():
     parser = argparse.ArgumentParser()
     for name in ('source', 'rubric', 'output', 'gate', 'pi'):
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--source-git-checkout', type=Path)
+    parser.add_argument('--review-repair-limit', type=int, choices=[0, 1], default=0)
     parser.add_argument('--reasoning-effort', choices=['default', 'none', 'low', 'medium', 'high', 'max'], default='default')
     parser.add_argument('--thinking-type', choices=['default', 'enabled', 'disabled'], default='disabled')
     parser.add_argument('--gateway-timeout-seconds', type=int, choices=[180, 240], default=240)
