@@ -36,9 +36,23 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
     return sources.get(relativePath);
   }
   function loadModule(relativePath, imports = {}, globals = {}) {
+    return loadText(relativePath, source(relativePath), imports, globals);
+  }
+  const readOnlySources = new Map();
+  for (const file of manifest.readOnlyFiles || []) {
+    if (sources.has(file.path) || readOnlySources.has(file.path) || file.access !== 'read-only' ||
+        typeof file.contentUtf8 !== 'string' ||
+        crypto.createHash('sha256').update(Buffer.from(file.contentUtf8, 'utf8')).digest('hex') !== file.sha256)
+      throw new Error('invalid frozen read-only context');
+    readOnlySources.set(file.path, file.contentUtf8);
+  }
+  function loadReadOnlyModule(relativePath, imports = {}, globals = {}) {
+    if (!readOnlySources.has(relativePath)) throw new Error('unselected read-only source');
+    return loadText(relativePath, readOnlySources.get(relativePath), imports, globals);
+  }
+  function loadText(relativePath, text, imports, globals) {
     if (!compiler || typeof compiler.transpileModule !== 'function')
       throw new Error('explicit compiler required');
-    const text = source(relativePath);
     const parsed = compiler.createSourceFile(relativePath, text,
       compiler.ScriptTarget.ES2020, true, compiler.ScriptKind.TS);
     if (parsed.parseDiagnostics.length) throw new Error('source syntax diagnostics');
@@ -164,7 +178,7 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
         if (violations.size) throw new Error([...violations].join('; '));
       }});
   }
-  return Object.freeze({source, loadModule, scenarioInputs, assertInitialState, assertInitialFields, createSeams});
+  return Object.freeze({source, loadModule, loadReadOnlyModule, scenarioInputs, assertInitialState, assertInitialFields, createSeams});
 };
 
 // Explicit convenience entry for the pinned compiler invocation protocol.
