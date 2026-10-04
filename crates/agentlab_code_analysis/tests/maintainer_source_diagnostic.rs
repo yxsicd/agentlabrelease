@@ -829,6 +829,13 @@ fn git_bound_review_native_template_keeps_source_evidence_and_independent_verdic
     let parent_prompt =
         reviewer::prompt_for_review_attempt(&observation, &rubric, &parent, Some(&checkout))
             .unwrap();
+    assert_eq!(
+        std::str::from_utf8(&parent_prompt)
+            .unwrap()
+            .trim()
+            .as_bytes(),
+        parent_prompt
+    );
     let capture = |dir: &Path, reply: &Value, prompt: &[u8]| {
         fs::create_dir_all(dir.join("gateway")).unwrap();
         fs::write(dir.join("source-suite-review-prompt.txt"), prompt).unwrap();
@@ -887,6 +894,13 @@ fn git_bound_review_native_template_keeps_source_evidence_and_independent_verdic
     let repair_prompt =
         reviewer::prompt_for_review_attempt(&observation, &rubric, &child, Some(&checkout))
             .unwrap();
+    assert_eq!(
+        std::str::from_utf8(&repair_prompt)
+            .unwrap()
+            .trim()
+            .as_bytes(),
+        repair_prompt
+    );
     let prompt_output = base.join("native-repair-prompt.txt");
     let rubric_path = base.join("repair-rubric.json");
     fs::write(&rubric_path, &rubric).unwrap();
@@ -943,6 +957,22 @@ fn git_bound_review_native_template_keeps_source_evidence_and_independent_verdic
         repaired_completion["reviewRepair"]["originalResponseSha256"],
         digest(&serde_json::to_vec(&unsupported).unwrap())
     );
+    // Whitespace stability belongs to generation, not permissive wire verification.
+    let child_wire_path = child.join("gateway/1.upstream-request.json");
+    let child_wire_bytes = fs::read(&child_wire_path).unwrap();
+    let mut child_wire: Value = serde_json::from_slice(&child_wire_bytes).unwrap();
+    child_wire["messages"][0]["content"] =
+        json!(format!("{}\n", String::from_utf8(repair_prompt).unwrap()));
+    file(&child_wire_path, &child_wire);
+    assert!(reviewer::verify_completion_with_git(
+        &observation,
+        &rubric,
+        &child,
+        &response_bytes,
+        Some(&checkout)
+    )
+    .is_err());
+    fs::write(child_wire_path, child_wire_bytes).unwrap();
     let expect_repair_reject = || {
         assert!(
             reviewer::prompt_for_review_attempt(&observation, &rubric, &child, Some(&checkout))
@@ -1023,7 +1053,8 @@ class Participant:
             value=json.loads(text);value.pop('reviewerId');text=json.dumps(value)
         (self.evidence/(label+'-prompt.txt')).write_text(prompt)
         (self.evidence/(label+'-events.jsonl')).write_text('original events retained outside repair input')
-        put(self.evidence/'gateway/1.upstream-request.json',dict(model=self.model,providerId=self.route,stream=False,messages=[dict(role='user',content=prompt)]))
+        # Match the pinned Pi stdin behavior, not an idealized raw-byte transport.
+        put(self.evidence/'gateway/1.upstream-request.json',dict(model=self.model,providerId=self.route,stream=False,messages=[dict(role='user',content=[dict(type='text',text=prompt.strip())])]))
         raw=json.dumps(dict(choices=[dict(index=0,message=dict(content=text),finish_reason='stop')])).encode()
         (self.evidence/'gateway/1.response').write_bytes(raw)
         put(self.evidence/'gateway/1.status.json',dict(exchangeId='1',durationMs=1,status=200,upstreamEof=True,

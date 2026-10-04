@@ -288,6 +288,15 @@ capture stop without launching extra participants. Failed and valid nonaccept
 outcomes remain evidence, not knowledge writes. Transport fixtures are synthetic;
 require a fresh real enrolled Action before reporting successful Agent repair.
 
+Keep canonical attempt prompts stable through the pinned launcher's actual stdin
+normalization. A real policy-bearing review passed content validation but failed
+full-prompt capture because Pi removed the generator's final newline. Generate
+initial and repair prompts without outer whitespace; exercise the actual thin
+coordinator with trimmed stdin and array text-message content in regressions.
+Never trim recorded requests or weaken byte equality to accept a historical
+failure. Retain the failed method/capture and require a new enrollment for changed
+prompt bytes. Transport repair is not accepted review, knowledge gain or benefit.
+
 Before importing a captured automatic-review handoff, use native
 `--verify-source-suite-review-feedback` with the same source/rubric/original
 response/evidence/Git checkout and --feedback envelope. It independently replays

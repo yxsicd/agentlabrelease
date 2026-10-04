@@ -878,3 +878,36 @@ all inventories and disagreement in nested lesson arrays. Git-bound prompt chang
 need a new prospective enrollment; no-proof historical prompts remain unchanged.
 This is format feedback, not accepted semantic review, measured benefit or a
 complete automatic cycle. Maturity remains 74%.
+
+## Bounded reviewer: content accepted, full prompt transport rejected
+
+Real run 37171893421 at method
+1309a646f7dc236d9a02e862f8bb8b4dc0dca0bb completed with failure at
+2026-10-04T02:46:07Z. Its initial participant completed in 108558 ms,
+exit zero, no timeout and zero transport retries. Separate filesystem, egress
+and external-credential isolation checks passed. The coordinator retained one
+initial attempt and stopped at the native full-prompt gate; no repair launched.
+
+Artifact 11291119367 contains 4473584 bytes; original ZIP SHA256 is
+ac5ddc126fb365b1c36b28eea4dd48f05cb745056f7da7b7e5b8afbcd7c6380f.
+Exact bounded native acquisition retained the complete ZIP outside Release under
+flywheel-review-bounded-repair-V7Y3ur. The original response SHA256 is
+bbc8f5f9891da794cfd18555369aa749fdc6e2d61fb6fbb029392a0e4fd43810.
+Content-only native replay returns accept and citation diagnostics report zero
+findings, but execution/full completion remains unverified and qualified=false.
+Neither that replay nor runtime isolation overrides the original failed gate.
+
+The canonical policy-bearing prompt is 304094 UTF-8 bytes; the actual upstream
+user text, retained as array text content, is 304093 bytes. It equals the prompt
+only after removing outer whitespace: Pi trimmed the generator's final LF.
+Native rejection is "consumption has no completed full-prompt exchange".
+This is a generator/launcher contract defect, not an invalid model citation.
+
+The successor removes the final LF from both initial-policy and repair appendices,
+without trimming source, recorded requests or response bytes and without changing
+the exact-byte verifier. Regression now uses the actual thin coordinator with
+Pi-like stdin trimming and array text-message content, including the bounded
+repair/export/reception path. Original failed captures stay pinned to their old
+method; a changed prompt requires a new prospective enrollment. No lesson export,
+knowledge admission, next-round benefit or complete automatic loop occurred.
+Overall engineering maturity remains 74%; accepted full automatic loops remain zero.
