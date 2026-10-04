@@ -77,7 +77,14 @@ def extract_observations(archive, output, feedback=False):
 
 
 def validate_run_identity(run, args, feedback):
-    constructor = (run['name'] == 'Maintainer source recipe construction'
+    request_id = getattr(args, 'coordinator_request_id', None)
+    if request_id:
+        require(re.fullmatch(r'[0-9a-f]{64}', request_id), 'Invalid coordinator request identity')
+        constructor_name = (run['name'] == 'AgentLab gap ' + request_id
+                            and run.get('display_title') == 'AgentLab gap ' + request_id)
+    else:
+        constructor_name = run['name'] == 'Maintainer source recipe construction'
+    constructor = (constructor_name
                    and run['path'] == '.github/workflows/maintainer-source-recipe-author.yml')
     reviewer = (run['name'] == 'Maintainer independent source suite review'
                 and run['path'] == '.github/workflows/maintainer-source-suite-review.yml')
@@ -154,6 +161,7 @@ def main():
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--artifact-kind', choices=['source', 'review-feedback'], default='source')
+    parser.add_argument('--coordinator-request-id')
     print(json.dumps(acquire(parser.parse_args())))
 
 

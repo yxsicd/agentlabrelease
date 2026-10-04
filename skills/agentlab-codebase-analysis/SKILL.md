@@ -176,6 +176,15 @@ Recover that original request with
 Keep each original bounded run listing and require a unique request title,
 repository, method and main-branch match. Missing visibility means wait, not
 failure or redispatch; ambiguous matches stop for explicit inspection.
+For source-only children, continue with
+`bash scripts/collect-maintainer-flywheel-review.sh DISPATCH_OUTPUT FRESH_OUTPUT EXACT_SOURCE_CHECKOUT`.
+It waits for the original terminal run, binds the artifact digest and reuses the
+strict acquisition and native reception gates. Never execute downloaded content,
+rewrite rejected responses or treat reception as knowledge admission.
+An unbound verifier import is a construction/runtime dependency-binding gap,
+not application behavior feedback. Preserve the original diagnostic, bind the
+necessary dependency explicitly in a new frozen construction, and never solve
+it by granting implicit imports or reopening an exhausted repair budget.
 
 Route bounded work by capability: source behavior, configuration/asset, or
 repository contract. Require only evidence dimensions that the mode can prove;
