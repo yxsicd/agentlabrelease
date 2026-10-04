@@ -813,6 +813,182 @@ fn git_bound_review_native_template_keeps_source_evidence_and_independent_verdic
     assert_eq!(derived["skillId"], template["skillId"]);
     assert_eq!(derived["body"], response["lessonInterpretation"]["body"]);
     assert_eq!(derived["controlReviews"], response["controlReviews"]);
+    // Predeclared native repair fixture, never an operator-corrected real review.
+    let policy = json!({"schema":"agentlab.review_repair_policy.v1","reviewRepairLimit":1,
+        "maximumReviewerAttempts":2,"participantBudgetSeconds":420,"totalParticipantBudgetSeconds":840,"transportRetryLimit":0});
+    let parent = base.join("policy-parent");
+    fs::create_dir(&parent).unwrap();
+    file(&parent.join("review-repair-policy.json"), &policy);
+    let parent_prompt =
+        reviewer::prompt_for_review_attempt(&observation, &rubric, &parent, Some(&checkout))
+            .unwrap();
+    let capture = |dir: &Path, reply: &Value, prompt: &[u8]| {
+        fs::create_dir_all(dir.join("gateway")).unwrap();
+        fs::write(dir.join("source-suite-review-prompt.txt"), prompt).unwrap();
+        let mut intent: Value =
+            serde_json::from_slice(&fs::read(evidence.join("review-intent.json")).unwrap())
+                .unwrap();
+        intent["reviewRepairPolicySha256"] = json!(digest(&serde_json::to_vec(&policy).unwrap()));
+        intent["promptSha256"] = json!(digest(prompt));
+        file(&dir.join("review-intent.json"), &intent);
+        file(
+            &dir.join("gateway/1.upstream-request.json"),
+            &json!({"model":"fixture","providerId":"fixture","stream":false,
+            "messages":[{"role":"user","content":String::from_utf8(prompt.to_vec()).unwrap()}]}),
+        );
+        let text = serde_json::to_string(reply).unwrap();
+        let raw = serde_json::to_vec(
+            &json!({"choices":[{"index":0,"message":{"content":text},"finish_reason":"stop"}]}),
+        )
+        .unwrap();
+        fs::write(dir.join("gateway/1.response"), &raw).unwrap();
+        file(
+            &dir.join("gateway/1.status.json"),
+            &json!({"exchangeId":"1","durationMs":1,"status":200,"upstreamEof":true,
+            "semanticComplete":true,"outcome":"completed","streamError":null,"responseBytes":raw.len()}),
+        );
+        let final_path = dir.join("source-suite-review-final-assistant-message.json");
+        file(
+            &final_path,
+            &json!({"role":"assistant","stopReason":"stop","content":[{"type":"text","text":text}]}),
+        );
+        file(
+            &dir.join("source-suite-review-lifecycle.json"),
+            &json!({"label":"source-suite-review","captureAuthority":"operator",
+            "exitCode":0,"timedOut":false,"finalAssistantMessagePresent":true,"participantBudgetSeconds":420,
+            "participantBudgetScope":"native-process-watchdog","transportRetryLimit":0,"finalAssistantMessageSha256":digest(&fs::read(final_path).unwrap())}),
+        );
+    };
+    capture(&parent, &unsupported, &parent_prompt);
+    let child = base.join("repair-child");
+    let retained = child.join("repair-inputs/evidence");
+    fs::create_dir_all(retained.join("gateway")).unwrap();
+    file(&child.join("review-repair-policy.json"), &policy);
+    for name in [
+        "review-repair-policy.json",
+        "review-intent.json",
+        "source-suite-review-prompt.txt",
+        "source-suite-review-final-assistant-message.json",
+        "source-suite-review-lifecycle.json",
+        "gateway/1.upstream-request.json",
+        "gateway/1.response",
+        "gateway/1.status.json",
+    ] {
+        fs::copy(parent.join(name), retained.join(name)).unwrap();
+    }
+    file(&child.join("repair-inputs/response.json"), &unsupported);
+    let repair_prompt =
+        reviewer::prompt_for_review_attempt(&observation, &rubric, &child, Some(&checkout))
+            .unwrap();
+    let prompt_output = base.join("native-repair-prompt.txt");
+    let rubric_path = base.join("repair-rubric.json");
+    fs::write(&rubric_path, &rubric).unwrap();
+    let cli = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+        .args(["--prepare-source-suite-review-attempt-prompt", "--source"])
+        .arg(&observation)
+        .arg("--quality-rubric")
+        .arg(&rubric_path)
+        .arg("--participant-evidence")
+        .arg(&child)
+        .arg("--source-git-checkout")
+        .arg(&checkout)
+        .arg("--output")
+        .arg(&prompt_output)
+        .output()
+        .unwrap();
+    assert!(
+        cli.status.success(),
+        "{}",
+        String::from_utf8_lossy(&cli.stderr)
+    );
+    assert_eq!(fs::read(prompt_output).unwrap(), repair_prompt);
+    assert!(String::from_utf8(repair_prompt.clone())
+        .unwrap()
+        .contains("/criterionReviews/0/evidence/0"));
+    capture(&child, &response, &repair_prompt);
+    let repaired_envelope = base.join("repair-envelope");
+    reviewer::export_accepted_feedback(
+        &observation,
+        &rubric,
+        &child,
+        &response_bytes,
+        Some(&checkout),
+        &repaired_envelope,
+    )
+    .unwrap();
+    assert_eq!(
+        reviewer::verify_feedback_export(
+            &observation,
+            &rubric,
+            &child,
+            &response_bytes,
+            Some(&checkout),
+            &repaired_envelope
+        )
+        .unwrap()["candidateReadyForObservationImport"],
+        true
+    );
+    let repaired_completion: Value =
+        serde_json::from_slice(&fs::read(repaired_envelope.join("completion.json")).unwrap())
+            .unwrap();
+    assert_eq!(repaired_completion["reviewRepair"]["repairIndex"], 1);
+    assert_eq!(
+        repaired_completion["reviewRepair"]["originalResponseSha256"],
+        digest(&serde_json::to_vec(&unsupported).unwrap())
+    );
+    let expect_repair_reject = || {
+        assert!(
+            reviewer::prompt_for_review_attempt(&observation, &rubric, &child, Some(&checkout))
+                .is_err()
+        )
+    };
+    // Forged policy cannot grant allowance to an original one-attempt capture.
+    fs::remove_file(retained.join("review-repair-policy.json")).unwrap();
+    expect_repair_reject();
+    file(&retained.join("review-repair-policy.json"), &policy);
+    let original_prompt = fs::read(retained.join("source-suite-review-prompt.txt")).unwrap();
+    fs::write(
+        retained.join("source-suite-review-prompt.txt"),
+        reviewer::prompt_with_git(&observation, &rubric, Some(&checkout)).unwrap(),
+    )
+    .unwrap();
+    expect_repair_reject();
+    fs::write(
+        retained.join("source-suite-review-prompt.txt"),
+        original_prompt,
+    )
+    .unwrap();
+    fs::create_dir(retained.join("repair-inputs")).unwrap();
+    expect_repair_reject();
+    fs::remove_dir(retained.join("repair-inputs")).unwrap();
+    file(&child.join("repair-inputs/response.json"), &response);
+    expect_repair_reject();
+    file(&child.join("repair-inputs/response.json"), &unsupported);
+    let status_bytes = fs::read(retained.join("gateway/1.status.json")).unwrap();
+    let mut status: Value = serde_json::from_slice(&status_bytes).unwrap();
+    status["semanticComplete"] = json!(false);
+    file(&retained.join("gateway/1.status.json"), &status);
+    expect_repair_reject();
+    fs::write(retained.join("gateway/1.status.json"), status_bytes).unwrap();
+    capture(&retained, &response, &parent_prompt);
+    file(&child.join("repair-inputs/response.json"), &response);
+    expect_repair_reject(); // A passing review never enters repair.
+    capture(&retained, &unsupported, &parent_prompt);
+    file(&child.join("repair-inputs/response.json"), &unsupported);
+    let child_intent_path = child.join("review-intent.json");
+    let child_intent_bytes = fs::read(&child_intent_path).unwrap();
+    let mut child_intent: Value = serde_json::from_slice(&child_intent_bytes).unwrap();
+    child_intent["participantBudgetSeconds"] = json!(421);
+    file(&child_intent_path, &child_intent);
+    assert!(reviewer::verify_completion_with_git(
+        &observation,
+        &rubric,
+        &child,
+        &response_bytes,
+        Some(&checkout)
+    )
+    .is_err());
+    fs::write(child_intent_path, child_intent_bytes).unwrap();
     // Valid changed interpretation without corresponding original upstream text rejects.
     let mut changed = response.clone();
     changed["lessonInterpretation"]["body"] = json!("Changed independent interpretation.");

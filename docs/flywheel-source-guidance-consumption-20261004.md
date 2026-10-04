@@ -1,5 +1,36 @@
 # Source-recipe knowledge consumption and equal-task treatments
 
+## Native predeclared bounded citation-repair primitives
+
+PR256 merged as 82163f290ebc84b0caa7dfa19490bae01c82fb51 after all eleven
+applicable checks passed. Native review repair separates original transport
+completion from content acceptance internally, without allowing transport-only
+records to export lessons. An exact optional review-repair-policy.json declares
+one repair, two attempts, 420 seconds each and 840 total, zero transport retries.
+It appears in the first canonical prompt; each intent binds its compact digest
+and exact attempt budget. Original captures without this consumed policy cannot
+gain a repair by adding a file afterward.
+
+The attempt-prompt CLI prepares the initial policy-bearing prompt or the sole
+child using repair-inputs/response.json and repair-inputs/evidence. It verifies
+original completion against unchanged initial prompt, Git source, frozen rubric
+and policy; only native source/criterion citation rejections with nonzero
+independently recomputed diagnostics are eligible. Passing/noncitation responses,
+incomplete/drifted captures and recursive repair stop. The child receives original
+interpretation and native diagnostics, not operator replacement quotes or passing
+judgments. Complete content/capture/lesson verification reruns at export/reception
+with the same model/route/reasoning treatment. No-policy prompts remain unchanged.
+
+Rust Git/wire fixtures exercise original rejection, canonical repair CLI, complete
+repaired response and ordinary export/reception; negatives cover missing/retrofitted
+policy, changed prompt/response, recursive repair, incomplete completion,
+already-passing parent and budget drift. Responses are synthetic. No real review
+is repaired or reopened. Native primitives do not launch participants, reserve
+external dispatches or prove exactly-once scheduling. The Action/transport still
+needs predeclared enrollment, exclusive attempts and separate isolation validation
+for both captures before real Agent use. Maturity remains 74%; accepted complete
+automatic five-stage loops remain zero.
+
 ## Real v2 review and bounded original-artifact reception acquisition
 
 PR255 merged as 909e8a221863b57a88df7252902b1a0ccb28341e after all eleven
