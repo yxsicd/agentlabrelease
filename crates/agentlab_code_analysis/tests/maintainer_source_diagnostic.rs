@@ -780,6 +780,27 @@ fn independent_review_response_retains_negative_feedback_without_promoting() {
     assert_eq!(accepted["reviewerExecuted"], false);
     assert_eq!(accepted["quotationClaimSupportVerified"], false);
     assert_eq!(accepted["qualified"], false);
+    for (key, alias) in [
+        ("scenarioReviews", "scenarioId"),
+        ("checkReviews", "checkId"),
+        ("controlReviews", "controlId"),
+    ] {
+        let mut aliased = response.clone();
+        let row = aliased[key][0].as_object_mut().unwrap();
+        let id = row.remove("id").unwrap();
+        row.insert(alias.into(), id);
+        let error = validate(&aliased).unwrap_err();
+        assert!(error.contains(&format!("/{key}/0/id")), "{error}");
+    }
+    let mut nested_alias = response.clone();
+    let row = nested_alias["lessonReview"]["controlReviews"][0]
+        .as_object_mut()
+        .unwrap();
+    let id = row.remove("id").unwrap();
+    row.insert("controlId".into(), id);
+    assert!(validate(&nested_alias)
+        .unwrap_err()
+        .contains("lesson inventory"));
     let clean_diagnostic = reviewer::diagnose_citations(
         &observation,
         &rubric_bytes,
