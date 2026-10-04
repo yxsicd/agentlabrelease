@@ -221,19 +221,39 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
                         json!({"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"echo ok\"}"}}]},"finish_reason":"tool_calls"}]})).into_bytes()
                 };
                 match mode {
-                    "chain-history-drift" => second["messages"][0]["content"] = json!("different constructor"),
+                    "chain-history-drift" => {
+                        second["messages"][0]["content"] = json!("different constructor")
+                    }
                     "chain-policy-drift" => second["max_tokens"] = json!(123),
-                    "chain-args-drift" => second["messages"][1]["tool_calls"][0]["function"]["arguments"] = json!("{}"),
+                    "chain-args-drift" => {
+                        second["messages"][1]["tool_calls"][0]["function"]["arguments"] =
+                            json!("{}")
+                    }
                     "chain-id-drift" => second["messages"][2]["tool_call_id"] = json!("other-call"),
-                    "chain-result-drift" => second["messages"][2]["content"] = json!("fabricated result"),
+                    "chain-result-drift" => {
+                        second["messages"][2]["content"] = json!("fabricated result")
+                    }
                     "chain-event-args-drift" => events[0]["args"] = json!({}),
                     "chain-event-result-drift" => events[1]["result"]["content"] = json!([]),
                     "chain-event-duplicate" => events.push(events[1].clone()),
                     "chain-event-order" => events.swap(0, 1),
-                    "chain-undeclared-tool" => { first["tools"] = json!([]); second["tools"] = json!([]); }
-                    "chain-missing-done" => tool_raw = tool_raw[..tool_raw.len() - b"data: [DONE]\n\n".len()].to_vec(),
+                    "chain-undeclared-tool" => {
+                        first["tools"] = json!([]);
+                        second["tools"] = json!([]);
+                    }
+                    "chain-missing-done" => {
+                        tool_raw = tool_raw[..tool_raw.len() - b"data: [DONE]\n\n".len()].to_vec()
+                    }
                     "chain-after-done" => tool_raw.extend_from_slice(b"data: {\"choices\":[]}\n\n"),
-                    "chain-non-tool-terminal" => tool_raw = String::from_utf8(tool_raw).unwrap().replace("\"finish_reason\":\"tool_calls\"", "\"finish_reason\":\"stop\"").into_bytes(),
+                    "chain-non-tool-terminal" => {
+                        tool_raw = String::from_utf8(tool_raw)
+                            .unwrap()
+                            .replace(
+                                "\"finish_reason\":\"tool_calls\"",
+                                "\"finish_reason\":\"stop\"",
+                            )
+                            .into_bytes()
+                    }
                     _ => {}
                 }
                 lifecycle["maxToolCalls"] = json!(if mode == "chain-tool-budget" { 2 } else { 1 });
@@ -242,23 +262,50 @@ fn one_shot_source_completion_replays_original_wire_proposal_and_stops_on_drift(
                 lifecycle["toolCallBudgetExceeded"] = json!(false);
                 lifecycle["toolErrors"] = json!(if mode == "chain-tool-error" { 1 } else { 0 });
                 lifecycle["nativeParseErrors"] = json!(0);
-                fs::write(evidence.join(format!("{label}-lifecycle.json")), serde_json::to_vec(&lifecycle).unwrap()).unwrap();
+                fs::write(
+                    evidence.join(format!("{label}-lifecycle.json")),
+                    serde_json::to_vec(&lifecycle).unwrap(),
+                )
+                .unwrap();
                 if mode != "chain-missing-events" {
-                    fs::write(evidence.join(format!("{label}-events.jsonl")), events.iter().map(|e| serde_json::to_string(e).unwrap() + "\n").collect::<String>()).unwrap();
+                    fs::write(
+                        evidence.join(format!("{label}-events.jsonl")),
+                        events
+                            .iter()
+                            .map(|e| serde_json::to_string(e).unwrap() + "\n")
+                            .collect::<String>(),
+                    )
+                    .unwrap();
                 }
                 let mut first_status = status.clone();
                 first_status["responseBytes"] = json!(tool_raw.len());
                 let mut second_status = status.clone();
                 second_status["exchangeId"] = json!("0002");
                 for (name, bytes) in [
-                    ("0001.upstream-request.json", serde_json::to_vec(&first).unwrap()),
-                    ("0001.status.json", serde_json::to_vec(&first_status).unwrap()),
+                    (
+                        "0001.upstream-request.json",
+                        serde_json::to_vec(&first).unwrap(),
+                    ),
+                    (
+                        "0001.status.json",
+                        serde_json::to_vec(&first_status).unwrap(),
+                    ),
                     ("0001.response", tool_raw),
-                    ("0002.upstream-request.json", serde_json::to_vec(&second).unwrap()),
-                    ("0002.status.json", serde_json::to_vec(&second_status).unwrap()),
+                    (
+                        "0002.upstream-request.json",
+                        serde_json::to_vec(&second).unwrap(),
+                    ),
+                    (
+                        "0002.status.json",
+                        serde_json::to_vec(&second_status).unwrap(),
+                    ),
                     ("0002.response", raw.clone()),
-                ] { fs::write(gateway.join(name), bytes).unwrap(); }
-                if mode == "chain-extra-exchange" { fs::write(gateway.join("0003.upstream-request.json"), b"{}").unwrap(); }
+                ] {
+                    fs::write(gateway.join(name), bytes).unwrap();
+                }
+                if mode == "chain-extra-exchange" {
+                    fs::write(gateway.join("0003.upstream-request.json"), b"{}").unwrap();
+                }
             }
             if mode == "second-wire" {
                 fs::write(gateway.join("0002.upstream-request.json"), b"{}").unwrap();
