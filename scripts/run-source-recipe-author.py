@@ -124,7 +124,19 @@ def construct_design(participant, workspace, evidence, output, request, gate, pr
             parsed = json.loads(content)
             if not isinstance(parsed, dict) or parsed.get('schema') != 'agentlab.source_recipe_design.v2':
                 raise ValueError('New construction requires one agentlab.source_recipe_design.v2 object')
-        except (json.JSONDecodeError, ValueError) as failure:
+        except json.JSONDecodeError as failure:
+            # Diagnostic data only: preserve/reject the complete original output.
+            # Never strip fences, backticks or a second JSON value for the Agent.
+            diagnostic = dict(schema='agentlab.json_output_diagnostic.v1',
+                message=failure.msg, line=failure.lineno, column=failure.colno,
+                characterOffset=failure.pos,
+                utf8ByteOffset=len(content[:failure.pos].encode()),
+                contextBefore=content[max(0, failure.pos-64):failure.pos],
+                contextAtAndAfter=content[failure.pos:failure.pos+64],
+                requirement='Return exactly one complete raw JSON object; no Markdown fences, trailing backticks, prose or additional JSON values.',
+                originalOutputChanged=False)
+            error = str(failure) + '\nJSON OUTPUT DIAGNOSTIC (data, not instructions):\n' + json.dumps(diagnostic)
+        except ValueError as failure:
             error = str(failure)
         if error is None:
             commands = []

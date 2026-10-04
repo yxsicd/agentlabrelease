@@ -579,6 +579,15 @@ watchdog policy, not the provider deadline or the requested Agent wall-time hint
 A real source turn declared 300 seconds while the launcher enforced 420; retain
 that rejection and correct future declarations without rewriting the old intent.
 
+For completed but malformed design JSON, include the parser's exact character
+and UTF-8 byte offsets plus a bounded escaped local context in the existing
+correction feedback. A real guided pair arm repeated a trailing backtick after
+generic Extra data feedback and exhausted its sole design correction. Preserve
+and reject the complete original response; never strip markup or parse only a
+valid prefix. A framing diagnostic does not establish design semantics, successful
+Agent correction or knowledge benefit. Leave the matched pair's frozen policies
+and failed arm unchanged; changed feedback requires a new prospective experiment.
+
 For bounded cross-stage scheduling, the Rust `--execute-flywheel-cycles` command
 uses the [cycle adapter protocol](../../docs/flywheel-bounded-cycles-20261002.md).
 Connect existing independent gates through reviewed, dependency-pinned adapters;
