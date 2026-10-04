@@ -358,8 +358,10 @@ pub fn validate_response_with_git(
     ] {
         let expected = ids(&packet["design"], declared)?;
         let mut seen = BTreeSet::new();
-        for row in rows(&response, key)? {
-            let id = row["id"].as_str().ok_or("review item ID absent")?;
+        for (row_index, row) in rows(&response, key)?.iter().enumerate() {
+            let id = row["id"].as_str().ok_or_else(|| format!(
+                "review item ID absent at /{key}/{row_index}/id; every review row requires the string field id, not controlId, scenarioId or checkId"
+            ))?;
             need(
                 expected.contains(id)
                     && seen.insert(id.to_owned())
@@ -611,6 +613,22 @@ pub fn prompt_with_git(
         serde_json::to_string_pretty(&packet).map_err(|e| e.to_string())?).into_bytes();
     let prompt = [b"SOURCE-EVIDENCE CONTRACT: scenarioReviews/checkReviews/controlReviews.sourceEvidence uses an EXACT repository-relative path from a loaded-source catalog entry and a verbatim quote of that source. It must explain source semantics, not merely report passing observations. Never put JSON pointers, raw worker file paths, runtimeSource, or reconstructedSuite fields in sourceEvidence.path. Runtime and worker string evidence belongs only in criterionReviews.evidence with pointer/quote. If source support is unavailable, accepted=null with sourceEvidence=[] and explain the gap; do not invent acceptance.\n".as_slice(), prompt.as_slice()].concat();
     let prompt = if checkout.is_some() {
+        let mut field_guide = serde_json::Map::new();
+        for (key, declared) in [
+            ("scenarioReviews", "scenarios"),
+            ("checkReviews", "checks"),
+            ("controlReviews", "controls"),
+        ] {
+            let mut fields = vec!["id", "accepted", "rationale", "sourceEvidence"];
+            if key == "controlReviews" {
+                fields.push("exercisedByScenarioIds");
+            }
+            field_guide.insert(key.into(), json!({"identityField":"id","allowedIds":ids(&packet["design"],declared)?,
+                "fields":fields,"acceptedType":"boolean or null","sourceEvidenceFields":["path","quote"]}));
+        }
+        let guide = serde_json::to_string_pretty(&field_guide).map_err(|e| e.to_string())?;
+        let guide = format!("REVIEW ROW FIELD GUIDE (field names and allowed identities, not judgments):\n{guide}\nUse id for EVERY scenario/check/control review row. controlId/scenarioId/checkId describe other evidence formats and are not aliases here. For accept, copy all three completed top-level review arrays unchanged into lessonReview, preserving the same field names and values.\n");
+        let prompt = [guide.as_bytes(), prompt.as_slice()].concat();
         [b"REVIEW SCOPE: Unique control definitions are in design.controls; reconstructedSuite.controls are execution observations. An explicitly recorded referenceRecovery is an additional execution, not another control definition. Distinguish verified Git-source binding from producer authentication and rubric-freeze authentication; the independentGitSourceIdentity does not claim either authentication. Review acceptance is a scoped judgment, not Harmony/formal-case qualification, promotion, or already-completed downstream lesson validation. Disclosed out-of-scope behavior is a limitation, not automatically a defect within the stated claims; contradicting those claims still rejects. Missing actual evidence remains unverified; do not infer truth from these distinctions.\n".as_slice(), prompt.as_slice()].concat()
     } else {
         prompt

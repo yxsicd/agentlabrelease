@@ -590,3 +590,35 @@ Future proof-bearing replays require an independently available exact checkout.
 This integration still requires a fresh main Action after delivery. No lesson
 admission, formal case, measured benefit or complete automatic cycle is claimed;
 overall maturity stays 74%.
+
+## Git-bound reviewer: declared accept rejected for row identity format
+
+PR251 merged as b82ea3f27c201b2b445dab9c87469d19bc09fe0d after eleven applicable
+CI checks passed. Fresh run 37166267802 / job 111329680596 acquired the exact
+source and its native preflight verified all 49 loaded Git Blobs. Its isolated
+reviewer completed in 189513 ms, exit zero, no timeout/tool calls/transport retry
+and empty prior context. On-run filesystem, egress and credential isolation passed.
+
+The unchanged reply declares accept and six criterion passes, but every top-level
+and nested control review uses controlId instead of the required id. Native content
+validation rejects "review item ID absent"; citation-only diagnostic finds zero
+errors. Neither declared acceptance nor valid citations establish accepted review
+content or completion. No lesson was exported or knowledge admitted.
+
+Artifact 11288694878 is 52850071 bytes, original ZIP SHA256
+68661f701058eea8d16d453b5a15558d731b04ff605fc8123ee5de394e664d16.
+Original response SHA256 is
+500c8a67b094057bbb89d23541d5ab2e67aa14977cc9b33ec098cc0b1ffcc3aa.
+Full captures remain outside Release under flywheel-review-git-bound-05QDz1;
+the participant events JSONL is about 500 MiB while the raw Gateway response is
+2344781 bytes. Preserve both; their size difference is an observation, not proven
+provider or capture causality. No event truncation or historical field correction
+is performed.
+
+The generic successor supplies native review-row field names and exact allowed
+IDs for all three inventories, without verdicts or source answers. Identity
+rejection now names the exact /inventory/index/id; regressions reject aliases in
+all inventories and disagreement in nested lesson arrays. Git-bound prompt changes
+need a new prospective enrollment; no-proof historical prompts remain unchanged.
+This is format feedback, not accepted semantic review, measured benefit or a
+complete automatic cycle. Maturity remains 74%.

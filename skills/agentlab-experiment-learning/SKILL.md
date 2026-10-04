@@ -268,6 +268,14 @@ recovery is a fresh execution of an existing control, not a duplicate definition
 Retain valid unverified feedback and independently inspect its claimed gaps;
 well-formed quotes and a completed isolated turn do not make every judgment true.
 
+Keep evidence-format identities separate from review-format identities. A real
+review declared accept but used controlId in every control review; this contract
+requires id for scenario, check and control rows, including the identical arrays
+inside lessonReview. Supply the native field-name/allowed-ID guide without
+prejudging acceptance. Report the exact /inventory/index/id on rejection, preserve
+the original reply, and require a newly enrolled model experiment rather than
+renaming fields as an operator. Zero citation errors does not cover row shape.
+
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.
 Reconstruct all rows from the retained suite and optional review, preserving the
