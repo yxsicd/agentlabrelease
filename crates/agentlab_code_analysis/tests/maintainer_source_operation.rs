@@ -23,6 +23,171 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn semantic_refresh_publishes_exact_successor_without_overwriting_input_or_revision() {
+    let workflow =
+        fs::read_to_string(root().join(".github/workflows/maintainer-skill-agent-flywheel.yml"))
+            .unwrap();
+    let step = workflow
+        .split("      - name: Publish successor cut without overwriting immutable input\n")
+        .nth(1)
+        .unwrap()
+        .split("      - name:")
+        .next()
+        .unwrap();
+    let script = step
+        .split("          python3 - <<'PY'\n")
+        .nth(1)
+        .unwrap()
+        .split("          PY\n")
+        .next()
+        .unwrap()
+        .lines()
+        .map(|line| line.strip_prefix("          ").unwrap())
+        .collect::<Vec<_>>()
+        .join("\n");
+    let base = std::env::temp_dir().join(format!(
+        "agentlab-refresh-publication-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&base).unwrap();
+    let capture = base.join("capture");
+    let source = capture.join("committed-knowledge");
+    fs::create_dir_all(&source).unwrap();
+    fs::create_dir(capture.join("run")).unwrap();
+    let revision = "a".repeat(40);
+    fs::write(
+        source.join("maintainer-knowledge-cut.json"),
+        serde_json::to_vec(&json!({"tableGitAuthority":{"revision":revision}})).unwrap(),
+    )
+    .unwrap();
+    fs::write(source.join("payload.jsonl"), b"original successor").unwrap();
+    let receipt = capture.join("run/tablegit-sync-receipt.json");
+    fs::write(
+        &receipt,
+        serde_json::to_vec(&json!({"revision":revision,"authorityVerified":true})).unwrap(),
+    )
+    .unwrap();
+    let old = base
+        .join("examples/maintainer-knowledge-gate/cuts")
+        .join("b".repeat(40));
+    fs::create_dir_all(&old).unwrap();
+    fs::write(old.join("original"), b"historical input").unwrap();
+    let env = base.join("github-env");
+    let run = || {
+        Command::new("python3")
+            .arg("-c")
+            .arg(&script)
+            .env("AGENTLAB_ROOT", &capture)
+            .env("GITHUB_ENV", &env)
+            .current_dir(&base)
+            .output()
+            .unwrap()
+            .status
+            .success()
+    };
+    assert!(run());
+    let published = base
+        .join("examples/maintainer-knowledge-gate/cuts")
+        .join(&revision);
+    assert_eq!(
+        fs::read(published.join("payload.jsonl")).unwrap(),
+        b"original successor"
+    );
+    assert_eq!(fs::read(old.join("original")).unwrap(), b"historical input");
+    assert!(fs::read_to_string(&env).unwrap().contains(&format!(
+        "KNOWLEDGE=examples/maintainer-knowledge-gate/cuts/{revision}"
+    )));
+    assert!(run());
+    fs::write(source.join("payload.jsonl"), b"conflicting successor").unwrap();
+    assert!(!run());
+    assert_eq!(
+        fs::read(published.join("payload.jsonl")).unwrap(),
+        b"original successor"
+    );
+    fs::write(
+        &receipt,
+        serde_json::to_vec(&json!({"revision":"../escape","authorityVerified":true})).unwrap(),
+    )
+    .unwrap();
+    assert!(!run());
+    assert_eq!(fs::read(old.join("original")).unwrap(), b"historical input");
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
+fn semantic_refresh_action_accepts_fixed_successor_cut_without_path_escape() {
+    let workflow =
+        fs::read_to_string(root().join(".github/workflows/maintainer-skill-agent-flywheel.yml"))
+            .unwrap();
+    let step = workflow
+        .split("      - name: Validate explicit knowledge directory before authority admission\n")
+        .nth(1)
+        .unwrap()
+        .split("      - name:")
+        .next()
+        .unwrap();
+    let script = step
+        .split("          python3 - <<'PY'\n")
+        .nth(1)
+        .unwrap()
+        .split("          PY\n")
+        .next()
+        .unwrap()
+        .lines()
+        .map(|line| line.strip_prefix("          ").unwrap())
+        .collect::<Vec<_>>()
+        .join("\n");
+    let base = std::env::temp_dir().join(format!(
+        "agentlab-refresh-input-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&base).unwrap();
+    let current = base.join("cuts/arbitrary-committed-revision");
+    fs::create_dir_all(&current).unwrap();
+    fs::write(current.join("maintainer-knowledge-cut.json"), b"{}").unwrap();
+    let run = |selected: &str| {
+        Command::new("python3")
+            .arg("-c")
+            .arg(&script)
+            .env("KNOWLEDGE", selected)
+            .current_dir(&base)
+            .output()
+            .unwrap()
+            .status
+            .success()
+    };
+    assert!(run("cuts/arbitrary-committed-revision"));
+    for bad in [
+        "",
+        "/tmp/cut",
+        "../cut",
+        "cuts/../arbitrary-committed-revision",
+        "cuts\\arbitrary-committed-revision",
+        "cuts/missing",
+    ] {
+        assert!(!run(bad), "{bad}");
+    }
+    std::os::unix::fs::symlink(&current, base.join("linked-cut")).unwrap();
+    assert!(!run("linked-cut"));
+    fs::remove_file(current.join("maintainer-knowledge-cut.json")).unwrap();
+    std::os::unix::fs::symlink(
+        base.join("unknown"),
+        current.join("maintainer-knowledge-cut.json"),
+    )
+    .unwrap();
+    assert!(!run("cuts/arbitrary-committed-revision"));
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn automatic_review_freezes_inputs_before_budget_and_keeps_native_gate_order() {
     let code = r#"
 import hashlib,json,os,subprocess,tempfile,textwrap

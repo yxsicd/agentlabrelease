@@ -98,6 +98,14 @@ evidence that its Maintainer Skill needs rebuilding. Repeated conclusions are
 not a productive refresh, and a changed prompt is not measured downstream benefit.
 
 Build knowledge through repeated evidence rounds, not a single repository read.
+For the Maintainer Skill Agent Action, explicitly select knowledge_directory
+from the published committed cut for the next round. Its historical default is
+not a moving latest alias. Keep exact live authority admission before model
+budget; a different directory never authorizes rebasing or bootstrap writes.
+Export committed successors to a fresh staging directory, then publish under
+their exact authority revision without overwriting the input snapshot. Feed the
+new path to downstream consumers only after exact readback and byte comparison;
+an existing conflicting revision stops publication, not another Agent dispatch.
 First freeze the structural scope catalog, then bind revision-matched program
 facts, assess universal evidence dimensions, and use the resulting gap queue to
 drive the next targeted analysis and Skill refresh. Only an independent

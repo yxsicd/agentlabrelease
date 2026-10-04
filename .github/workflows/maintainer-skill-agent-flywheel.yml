@@ -14,6 +14,11 @@ on:
         type: choice
         options: [auto, code-workshop, guide-snippets, harmony-iap-client, hms-cordova-iap]
         default: code-workshop
+      knowledge_directory:
+        description: Exact checked-in committed knowledge cut; live revision admission remains mandatory
+        required: true
+        default: examples/maintainer-knowledge-gate/first-four
+        type: string
       iterations:
         description: Bounded hard-gated batches committed atomically to TableGit
         required: true
@@ -62,7 +67,7 @@ jobs:
     timeout-minutes: 50
     env:
       AGENTLAB_ROOT: /tmp/maintainer-skill-agent-flywheel
-      KNOWLEDGE: examples/maintainer-knowledge-gate/first-four
+      KNOWLEDGE: ${{ inputs.knowledge_directory }}
       REPOSITORY_SELECTOR: ${{ inputs.repository }}
       ITERATIONS: ${{ inputs.iterations }}
       AGENTLAB_SCOPE_BATCH_SIZE: ${{ inputs.scope_batch_size }}
@@ -75,6 +80,19 @@ jobs:
       AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Validate explicit knowledge directory before authority admission
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          selected=os.environ['KNOWLEDGE']
+          assert selected and not selected.startswith('/') and chr(92) not in selected
+          assert all(p not in ('','.','..') for p in selected.split('/'))
+          root=Path.cwd().resolve();cut=Path(selected)
+          assert cut.is_dir() and not cut.is_symlink() and cut.resolve().is_relative_to(root)
+          manifest=cut/'maintainer-knowledge-cut.json'
+          assert manifest.is_file() and not manifest.is_symlink() and manifest.resolve().is_relative_to(root)
+          PY
       - name: Admit only an exact current TableGit input before Agent execution
         run: |
           set -euo pipefail
@@ -135,10 +153,36 @@ jobs:
           test -n "$AGENTLAB_TABLEGIT_PERSON_ID"
           python3 scripts/maintainer-skill-tablegit.py sync \
             --base "$KNOWLEDGE" --snapshot '${{ steps.loop.outputs.snapshot || steps.focused.outputs.snapshot || steps.rewrite.outputs.snapshot }}' \
-            --export "$KNOWLEDGE" --receipt "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" \
+            --export "$AGENTLAB_ROOT/committed-knowledge" --receipt "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" \
             --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY"
           jq '{repo,revision,authorityVerified,mirror,tables}' \
             "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish successor cut without overwriting immutable input
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,re,shutil
+          from pathlib import Path
+          workspace=Path.cwd().resolve();root=Path(os.environ['AGENTLAB_ROOT'])
+          source=root/'committed-knowledge'
+          receipt=json.loads((root/'run/tablegit-sync-receipt.json').read_bytes())
+          manifest=json.loads((source/'maintainer-knowledge-cut.json').read_bytes())
+          revision=receipt['revision'];assert re.fullmatch('[0-9a-f]{40}',revision)
+          assert receipt['authorityVerified'] is True and manifest['tableGitAuthority']['revision']==revision
+          publication=workspace/'examples/maintainer-knowledge-gate/cuts'
+          assert not publication.is_symlink() and publication.resolve().is_relative_to(workspace)
+          publication.mkdir(parents=True,exist_ok=True)
+          def inventory(directory):
+              assert directory.is_dir() and not directory.is_symlink()
+              entries=list(directory.rglob('*'));assert all(not p.is_symlink() and (p.is_file() or p.is_dir()) for p in entries)
+              return {str(p.relative_to(directory)):hashlib.sha256(p.read_bytes()).hexdigest() for p in entries if p.is_file()}
+          original=inventory(source);destination=publication/revision
+          if destination.exists():
+              assert inventory(destination)==original,'Existing immutable revision differs; retain committed export and stop'
+          else:shutil.copytree(source,destination)
+          assert inventory(source)==original and inventory(destination)==original
+          with Path(os.environ['GITHUB_ENV']).open('a') as stream:stream.write('KNOWLEDGE='+str(destination.relative_to(workspace))+'\n')
+          print(json.dumps(dict(revision=revision,inputCutPreserved=True,publication=str(destination.relative_to(workspace)),authorityWritePerformed=False)))
+          PY
       - name: Derive a focused successor without rewriting the parent candidate
         if: inputs.mode == 'focused-refresh'
         run: |

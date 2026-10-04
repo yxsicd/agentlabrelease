@@ -77,6 +77,26 @@ removed. Native acceptance stays unchanged. This is a prospective output-economy
 hypothesis, not measured speedup or a completed automatic feedback round.
 Engineering maturity remains 75%; accepted full automatic five-stage loops zero.
 
+### Compact review completed transport but exhausted citation repair
+
+Fresh review 37178180186 at method 4ae88cb56874d2e89904ff7cee096d559c82fcb1
+consumed the same original constructor ZIP without redispatching construction.
+Its initial and sole fresh repair both completed transport: lifecycles record
+exit zero, no watchdog timeout and 70834 / 54175 ms. Original response sizes are
+16783 / 16900 bytes. This one observation does not establish causal latency
+improvement or a provider throughput guarantee.
+
+Initial native citation diagnostics rejected three non-string worker pointers.
+The Agent repair changed those to content pointers, but two quotations still
+did not occur in their original targets. Both responses and native rejections
+remain unchanged; no further repair, accepted export or knowledge write occurred.
+Artifact 11293942909 is 3950442 bytes, SHA256
+b8d743be549d32d072a2ea4557745dee7dbbd019fc65fa3dd1148a86cd1692b3.
+Strict artifact acquisition completed, which proves input availability, not
+review acceptance. External enrollment/captures are in flywheel-compact-review-ZLvwIl.
+Maturity stays 75%; this separate reviewer dispatch is not automatic five-stage
+closure or demonstrated guidance benefit.
+
 PR257 merged as f8cd1c6e57740429d957325e0506958f102cda23 after all eleven
 applicable checks passed. The review workflow accepts review_repair_limit=0|1,
 default zero, and freezes max attempts and total process budget before inference.
