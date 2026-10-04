@@ -1178,6 +1178,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args.iter().any(|a| {
+        a == "--prepare-source-design-quality-review"
+            || a == "--validate-source-design-quality-review"
+    }) {
+        let request = fs::read(value(&args, "--author-request")?)?;
+        let design = fs::read(value(&args, "--design")?)?;
+        let rubric = fs::read(value(&args, "--quality-rubric")?)?;
+        let report = if args
+            .iter()
+            .any(|a| a == "--validate-source-design-quality-review")
+        {
+            agentlab_code_analysis::maintainer_source_design_quality::validate_response(
+                &request,
+                &design,
+                &rubric,
+                &fs::read(value(&args, "--review-response")?)?,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_source_design_quality::prepare(
+                &request, &design, &rubric,
+            )?
+        };
+        let mut bytes = serde_json::to_vec_pretty(&report)?;
+        bytes.push(b'\n');
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?
+            .write_all(&bytes)?;
+        println!(
+            "{}",
+            serde_json::json!({"decision":report.get("decision"),"reviewerAuthenticated":false,"qualified":false,"executionPerformed":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|arg| {
         arg == "--export-source-suite-lesson" || arg == "--export-source-suite-observation"
     }) {

@@ -242,6 +242,18 @@ even when the import strategy changes. Present the native-admitted immutable
 proposal fields directly in repair context and report the offending field at
 admission. Prompt guidance does not prove model compliance or dependency closure.
 
+Review design quality before spending another verifier-construction budget when
+retained failures expose an Oracle or demand-coverage gap. Use the separate native
+design-quality packet and rubric, preserving original target/source/design bytes.
+Account for every demand clause and link all scenarios, checks and controls to
+original evidence. Missing observations cannot be waived as author limitations;
+a wrong fallback must be distinguished by reachable state, not mutation text alone.
+Content validation derives revise/unverified/ready-for-execution, but none proves
+reviewer identity, actual reviewer consumption, runtime closure or semantic truth.
+Do not use content-only all-pass as an execution permission or a replacement for
+complete controls, independent final review and committed return. See the
+[pre-execution review contract](../../docs/flywheel-design-quality-review-20261005.md).
+
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest
 and restore frozen paths inside an isolated namespace rather than overwriting

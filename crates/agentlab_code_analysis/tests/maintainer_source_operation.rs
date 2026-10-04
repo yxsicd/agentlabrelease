@@ -2798,6 +2798,102 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     author::validate_request(&targeted_bytes).unwrap();
     let targeted_design = author::design(&targeted_bytes, &design_bytes).unwrap();
     assert_eq!(targeted_design["requestSha256"], digest(&targeted_bytes));
+    let quality_rubric = fs::read(
+        root().join("examples/maintainer-knowledge-gate/source-design-quality-rubric.json"),
+    )
+    .unwrap();
+    let quality = agentlab_code_analysis::maintainer_source_design_quality::prepare(
+        &targeted_bytes,
+        &design_bytes,
+        &quality_rubric,
+    )
+    .unwrap();
+    assert_eq!(
+        quality["constructionTarget"],
+        targeted["sourceRecipeTarget"]
+    );
+    assert_eq!(
+        quality["originalRequestUtf8"],
+        std::str::from_utf8(&targeted_bytes).unwrap()
+    );
+    assert_eq!(
+        quality["originalDesignUtf8"],
+        std::str::from_utf8(&design_bytes).unwrap()
+    );
+    assert_eq!(quality["qualified"], false);
+    assert!(
+        agentlab_code_analysis::maintainer_source_design_quality::prepare(
+            &request_bytes,
+            &design_bytes,
+            &quality_rubric
+        )
+        .is_err()
+    );
+    let review_request_path = dir.join("design-quality-author-request.json");
+    let review_design_path = dir.join("design-quality-design.json");
+    fs::write(&review_request_path, &targeted_bytes).unwrap();
+    fs::write(&review_design_path, &design_bytes).unwrap();
+    let quality_path = dir.join("design-quality-request.json");
+    let cli = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+        .args(["--prepare-source-design-quality-review", "--author-request"])
+        .arg(&review_request_path)
+        .arg("--design")
+        .arg(&review_design_path)
+        .arg("--quality-rubric")
+        .arg(root().join("examples/maintainer-knowledge-gate/source-design-quality-rubric.json"))
+        .arg("--output")
+        .arg(&quality_path)
+        .output()
+        .unwrap();
+    assert!(
+        cli.status.success(),
+        "{}",
+        String::from_utf8_lossy(&cli.stderr)
+    );
+    let actual: Value = serde_json::from_slice(&fs::read(&quality_path).unwrap()).unwrap();
+    assert_eq!(actual, quality);
+    let item = |entry: &Value| {
+        json!({"id":entry["id"],"verdict":"pass",
+        "rationale":"Fixture binding only, not semantic approval.",
+        "sourceEvidence":[{"path":"src/state.json","quote":body}],"scenarioIds":["state"]})
+    };
+    let response = json!({"schema":"agentlab.source_design_quality_response.v1","reviewerId":"fixture",
+        "criterionReviews":quality["rubric"]["criteria"].as_array().unwrap().iter().map(|c|json!({
+            "id":c["id"],"verdict":"pass","rationale":"Fixture binding only.",
+            "evidence":[{"pointer":"/constructionTarget/demand","quote":targeted["sourceRecipeTarget"]["demand"]}]})).collect::<Vec<_>>(),
+        "scenarioReviews":design["scenarios"].as_array().unwrap().iter().map(item).collect::<Vec<_>>(),
+        "checkReviews":design["checks"].as_array().unwrap().iter().map(item).collect::<Vec<_>>(),
+        "controlReviews":design["controls"].as_array().unwrap().iter().map(item).collect::<Vec<_>>(),
+        "unresolvedFindings":[]});
+    let response_path = dir.join("design-quality-response.json");
+    fs::write(&response_path, serde_json::to_vec(&response).unwrap()).unwrap();
+    let quality_verdict_path = dir.join("design-quality-content-validation.json");
+    let cli = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+        .args([
+            "--validate-source-design-quality-review",
+            "--author-request",
+        ])
+        .arg(&review_request_path)
+        .arg("--design")
+        .arg(&review_design_path)
+        .arg("--quality-rubric")
+        .arg(root().join("examples/maintainer-knowledge-gate/source-design-quality-rubric.json"))
+        .arg("--review-response")
+        .arg(&response_path)
+        .arg("--output")
+        .arg(&quality_verdict_path)
+        .output()
+        .unwrap();
+    assert!(
+        cli.status.success(),
+        "{}",
+        String::from_utf8_lossy(&cli.stderr)
+    );
+    let verdict: Value = serde_json::from_slice(&fs::read(&quality_verdict_path).unwrap()).unwrap();
+    assert_eq!(verdict["decision"], "ready-for-execution");
+    assert_eq!(verdict["qualified"], false);
+    assert_eq!(verdict["executionPermissionGranted"], false);
+    assert_eq!(verdict["reviewerAuthenticated"], false);
     let targeted_stage = dir.join("targeted-reproduction-stage");
     author::stage(&targeted_bytes, &proposal_bytes, &targeted_stage).unwrap();
     assert_eq!(
