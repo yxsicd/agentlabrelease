@@ -19,6 +19,16 @@ the exact seven response fields and explicitly excludes operator capture digests
 the same strict gate rejects such extra metadata in a Rust regression. Do not
 strip the historical field or retry the consumed reviewer to manufacture admission.
 
+The root-shape follow-up full local regression exited 101 at
+operational_observations_do_not_invent_review_or_drop_failed_calibration,
+export_observation returning File exists (os error 17). Its test output naming
+used PID and wall-clock nanoseconds without a unique sequence. A test-only
+atomic sequence removes that shared-name collision opportunity while preserving
+the exporter's exclusive-directory gate; all 20 behavior-check tests then passed.
+The exact failed collision path was not captured, so this is not proof of its
+precise cause. Preserve the failed full-run receipt; focused success does not
+replace a new full package regression or exact-head cloud qualification.
+
 Real run [37239237427](https://github.com/yxsicd/agentlabrelease/actions/runs/37239237427)
 at method `249175ebaeaac01b70192a0e8227546cf082ca1f` completed two design
 turns and one early-review generation. Native content admission failed with
