@@ -127,3 +127,41 @@ Cloud validation and Action integration of this bridge are pending.
 Overall maturity remains 75%; accepted complete automatic five-stage rounds remain
 zero. Multi-round productive closure, cross-repository transfer, measured guidance
 benefit and Harmony/ohosTest runtime qualification remain unproved.
+
+## Bridge delivery and retained isolation replay
+
+PR #281 passed all final-head workflows at
+0159b932d03f14cec89a55ad2d7d8d07135b91a3: Rust 37197174321, component
+37197174412 and public validation 37197174349. It merged as
+5feda22b6931922765d2305de71192d75d5cabee. This is source delivery, not a
+formal release or a real successor execution.
+
+Integration exposed an old-runner dependency in runtime receipt validation:
+historical workspace, participant-state, case and runtime paths were resolved
+against the current host. The proposed explicit `--recorded-paths` lane compares
+canonical absolute Linux capture paths without creating substitute directories.
+Default live validation remains unchanged. Receipt hashes, exact mounts,
+credential exclusion, non-root configuration, network policy and final container
+state retain their original gates. Recorded replay explicitly reports
+`liveFilesystemRechecked=false`, `producerAuthenticated=false` and
+`freshRuntimeExecuted=false`; its isolation verdict describes retained evidence,
+not the current machine or an authenticated producer.
+
+Both initial and repair isolation captures from real rejected review run
+37193453468 replayed successfully using original path bindings on a different
+host. Original archive SHA256 is
+db9938f459d50ea7b1935349edb9a3e1294d0dee3a7c47119f696e8a040da50d.
+Validated receipt SHA256 values are respectively
+6ea64fee2a426660bff34d05e3808d608a3d03c5aa5fb4fd086e61629415751d and
+8170490d0270d2f87caabe882056e9a0627cfc615f7f70f83492b4a628ac0141.
+Raw archives, extracted inputs and replay outputs remain private operational
+artifacts; they are not included in this release repository.
+
+Seven existing Python isolation tests and the extracted new Rust-hosted
+portability regression passed locally. The latter checks CLI replay, rejection
+of retired directories in live mode, wrong and noncanonical paths, and rehashed
+extra mounts, credentials and host networking. Full Rust/cloud validation of this
+change remains pending. Next integration must bind original paths to the frozen
+producer workflow, perform fresh runtime validation independently and preserve
+the original reject verdict. Recorded replay alone cannot authorize dispatch,
+establish durable budget ownership or complete the five-stage loop.
