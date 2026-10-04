@@ -276,6 +276,10 @@ fn suite_fixture_with_binding(wrongs: usize, binding: Option<&Value>) -> PathBuf
         request["scope"]["sourceRevision"] = binding["source"]["revision"].clone();
         request["knowledgeCutSha256"] = binding["cutSha256"].clone();
         request["authorityRevision"] = binding["revision"].clone();
+        if let Some(blob) = binding["gitBlobOid"].as_str() {
+            request["sourceFiles"][0]["gitBlobOid"] = json!(blob);
+            request["scope"]["stage"] = json!("repository-scope");
+        }
         file(&stage.join("request.json"), &request);
     }
     let mut controls = json!([
@@ -304,6 +308,11 @@ fn suite_fixture_with_binding(wrongs: usize, binding: Option<&Value>) -> PathBuf
     )
     .unwrap();
     manifest["controls"] = controls.clone();
+    if binding.is_some_and(|b| b["gitBlobOid"].is_string()) {
+        let request: Value =
+            serde_json::from_slice(&fs::read(stage.join("request.json")).unwrap()).unwrap();
+        manifest["files"] = request["sourceFiles"].clone();
+    }
     fs::write(
         stage.join("design-runtime.cjs"),
         format!("const manifest = {manifest};\nmodule.exports=()=>({{}});"),
@@ -599,6 +608,105 @@ for name in ['traversal','absolute','backslash','duplicate','symlink','missing']
     assert!(!base.join("selected/agent").exists());
     assert!(!base.join("escape").exists());
     fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
+fn git_bound_review_native_template_keeps_source_evidence_and_independent_verdicts() {
+    use agentlab_code_analysis::{
+        maintainer_source_review as reviewer, maintainer_source_suite_lesson as lesson,
+    };
+    let git_root = fixture();
+    let checkout = git_root.join("checkout");
+    fs::create_dir(&checkout).unwrap();
+    fs::write(checkout.join("unit.js"), "module.exports={};\n").unwrap();
+    let git = |args: &[&str]| {
+        let out = Command::new("git")
+            .args(args)
+            .current_dir(&checkout)
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        String::from_utf8(out.stdout).unwrap().trim().to_owned()
+    };
+    git(&["init", "-q"]);
+    let repository = "https://example.invalid/unrelated-template-source.git";
+    git(&["remote", "add", "origin", repository]);
+    git(&["add", "unit.js"]);
+    git(&[
+        "-c",
+        "user.name=Fixture",
+        "-c",
+        "user.email=fixture@example.invalid",
+        "commit",
+        "-qm",
+        "frozen source",
+    ]);
+    let binding = json!({"source":{"repository":repository,"repositoryId":"unrelated-template-source","revision":git(&["rev-parse", "HEAD"])},
+        "gitBlobOid":git(&["rev-parse", "HEAD:unit.js"]),"cutSha256":"a".repeat(64),"revision":"b".repeat(40)});
+    let base = suite_fixture_with_binding(2, Some(&binding));
+    let observation = base.join("git-observations");
+    lesson::export(&base.join("stage"), &base.join("suite"), None, &observation).unwrap();
+    let rubric = serde_json::to_vec(&json!({"schema":"agentlab.prospective_source_quality_review.v1","repositoryAgnostic":true,
+        "frozenBeforeDispatch":true,"verdicts":["pass","fail","unverified"],
+        "criteria":[{"id":"semantics","requirement":"Fixture source membership.","evidence":"Original source."}]})).unwrap();
+    let packet = reviewer::prepare_with_git(&observation, &rubric, Some(&checkout)).unwrap();
+    let template = &packet["responseContract"]["lessonReviewTemplate"];
+    assert_eq!(template["skillStage"], "calibration");
+    assert_ne!(template["skillId"], packet["scope"]["id"]);
+    let mut review = suite_lesson_review(&observation);
+    for (key, value) in template.as_object().unwrap() {
+        review
+            .as_object_mut()
+            .unwrap()
+            .insert(key.clone(), value.clone());
+    }
+    let mut response = json!({"schema":"agentlab.independent_source_suite_review_response.v1",
+        "reviewerId":review["reviewerId"],"reviewRequestSha256":digest(&serde_json::to_vec(&packet).unwrap()),
+        "qualityRubricSha256":packet["qualityRubricSha256"],"reviewBindings":packet["reviewBindings"],
+        "automaticPromotion":false,"verdict":"accept","unresolvedFindings":[],"lessonReview":review,
+        "scenarioReviews":review["scenarioReviews"],"checkReviews":review["checkReviews"],"controlReviews":review["controlReviews"],
+        "criterionReviews":[{"id":"semantics","verdict":"pass","rationale":"Synthetic fixture membership only.",
+            "evidence":[{"pointer":"/originalSourceFiles/0/content","quote":"module.exports"}]}]});
+    let validate = |r: &Value| {
+        reviewer::validate_response_with_git(
+            &observation,
+            &rubric,
+            &serde_json::to_vec(r).unwrap(),
+            Some(&checkout),
+        )
+    };
+    assert_eq!(validate(&response).unwrap()["lessonContentVerified"], true);
+    for key in ["skillId", "skillStage"] {
+        let mut wrong = response.clone();
+        wrong["lessonReview"][key] =
+            packet["scope"][if key == "skillId" { "id" } else { "stage" }].clone();
+        assert!(validate(&wrong)
+            .unwrap_err()
+            .contains(&format!("/lessonReview/{key}")));
+    }
+    let mut unsupported = response.clone();
+    unsupported["criterionReviews"][0]["evidence"][0]["quote"] = json!("fabricated quote");
+    assert!(validate(&unsupported).is_err());
+    response["verdict"] = json!("unverified");
+    response["lessonReview"] = Value::Null;
+    response["unresolvedFindings"] = json!(["Synthetic reviewer has insufficient support."]);
+    response["criterionReviews"][0]["verdict"] = json!("unverified");
+    response["criterionReviews"][0]["evidence"] = json!([]);
+    assert_eq!(validate(&response).unwrap()["verdict"], "unverified");
+    let legacy = reviewer::prepare(&observation, &rubric).unwrap();
+    assert!(legacy["responseContract"]
+        .get("lessonReviewTemplate")
+        .is_none());
+    let prompt = reviewer::prompt_with_git(&observation, &rubric, Some(&checkout)).unwrap();
+    assert!(String::from_utf8(prompt)
+        .unwrap()
+        .contains(&serde_json::to_string_pretty(template).unwrap()));
+    fs::remove_dir_all(base).unwrap();
+    fs::remove_dir_all(git_root).unwrap();
 }
 
 #[test]

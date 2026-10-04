@@ -1,5 +1,56 @@
 # Source-recipe knowledge consumption and equal-task treatments
 
+## Real handoff trial 37167877729 and native lesson metadata
+
+PR253 merged as 37156d590103eaf3b38b7c163d69a98b3cd3ce8a after all eleven
+applicable checks passed. Fresh independent review 37167877729 used the exact
+original dispatch JSON/source/rubric/model/budgets. Its participant completed in
+160149 ms, exit zero, no timeout, under the 420-second zero-retry policy. Independent
+runtime isolation passed. All six declared criterion verdicts are pass, and all
+control rows now use id correctly; citation diagnostics report zero findings.
+
+The unchanged response still fails native content acceptance: its nested lesson
+uses skillStage=repository-scope rather than calibration and reuses the original
+source-scope maintainer Skill ID. These are different knowledge objects and stages.
+The native gate rejects stage. The copied identity is present in the separate
+maintainer_scope_skills table, not in the current 17-row maintainer_skills table;
+an actual admission collision is not established. Future templates separate these
+object namespaces explicitly. No original response was edited, lesson exported, knowledge
+written or previous attempt reopened. Local unchanged replay reproduces exit one.
+
+Artifact 11290482028 is 30790906 bytes. Its original ZIP SHA256 matches
+ec37cd7a498c52d4d8b468d3d76158c6cb98e5ab37a4decce8521059b0e0f932.
+Original response SHA256 is
+07dfa25590036159189b2d540a61518a968bc67d05a52d3f3f313376fb190975.
+Full original captures, dispatch and terminal receipts remain outside Release under
+flywheel-review-feedback-auto-F7j8va. Read-only live authority checks also confirmed
+the clean b6b48e7f operational and 4bba501a knowledge cuts; status is not a complete
+table readback or admission result.
+
+For future Git-bound reviews, the native request supplies lessonReviewTemplate:
+existing schema/policy/stage, source-bound scope, all six bindings, and deterministic
+distinct lesson/fact/Skill IDs derived from those bindings plus the frozen rubric.
+The prompt presents the whole metadata object together; the validator independently
+requires every template field unchanged for accept. No interpretation, evidence,
+reviewer identity or item verdict is supplied. Reviewer-owned phenomenon/cause/change/
+body and all complete item reviews remain subject to the existing native gate.
+Nonaccept keeps lessonReview=null. These IDs do not prove semantic novelty or grant
+admission if a target already exists. No repository-specific branch is introduced.
+
+Older no-Git requests/prompts remain unchanged. A new Git-bound request has a new
+digest and needs a fresh enrolled review; do not relabel older captured requests.
+The real failed trial remains a rejection, not a passing template regression.
+Overall maturity stays 74%; accepted complete automatic five-stage loops remain zero.
+
+Local validation passes 47 Rust tests: two native Git/template unit tests, 27
+source-diagnostic, 15 guidance and three observation-store tests. The Git-bound
+fixture exercises full response validation and original lesson reconstruction,
+rejects copied source Skill/stage and fabricated quotes, and preserves unverified
+feedback. Actual retained preparation verifies all 49 original files and preserves
+the complete prior request except the explicit template; every original review
+binding remains equal. The future canonical prompt is 305544 bytes. These checks
+are not a new reviewer execution, accepted real review or knowledge admission.
+
 ## Accepted independent review to operational lesson export
 
 PR252 merged as 1ad15f1a08ecb3f68a8282dad7583bceddac89ce after all eleven

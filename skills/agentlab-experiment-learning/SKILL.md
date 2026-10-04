@@ -288,6 +288,16 @@ prejudging acceptance. Report the exact /inventory/index/id on rejection, preser
 the original reply, and require a newly enrolled model experiment rather than
 renaming fields as an operator. Zero citation errors does not cover row shape.
 
+Keep the source maintainer Skill's identity/stage separate from an experience-derived
+calibration Skill. A real reviewer fixed all row IDs but copied repository-scope
+and the existing source Skill into its proposed lesson. For Git-bound reviews,
+copy the native responseContract.lessonReviewTemplate metadata exactly, then supply
+independent interpretation, reviewer identity and unchanged item reviews. Its stable
+IDs bind the original suite and rubric, not semantic novelty or absence from active
+knowledge. Template fields do not decide accept; reject/unverified still require
+lessonReview=null. Do not repair the failed original as an operator. Existing
+lesson reconstruction, fixed-baseline admission and collision checks still apply.
+
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.
 Reconstruct all rows from the retained suite and optional review, preserving the
