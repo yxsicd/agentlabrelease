@@ -1347,6 +1347,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args.iter().any(|arg| {
+        arg == "--verify-lesson-source-readback" || arg == "--verify-committed-lesson-return"
+    }) {
+        let base = PathBuf::from(value(&args, "--knowledge")?);
+        let proposal = PathBuf::from(value(&args, "--proposal")?);
+        let source = PathBuf::from(value(&args, "--lesson-source")?);
+        let lesson_id = value(&args, "--lesson-id")?;
+        let expected_revision = value(&args, "--expected-knowledge-revision")?;
+        let method = optional(&args, "--method-source")
+            .map(fs::read)
+            .transpose()?;
+        if method
+            .as_ref()
+            .is_some_and(|bytes| bytes.len() > 1024 * 1024)
+        {
+            return Err("historical method budget".into());
+        }
+        let inputs = agentlab_code_analysis::maintainer_lesson_admission::ReviewedReturnInputs {
+            base: &base,
+            proposal: &proposal,
+            source: &source,
+            lesson_id: &lesson_id,
+            expected_revision: &expected_revision,
+            method_source: method.as_deref(),
+        };
+        let capture = fs::read(value(&args, "--readback")?)?;
+        let receipt = if args
+            .iter()
+            .any(|arg| arg == "--verify-lesson-source-readback")
+        {
+            inputs.verify_source_readback(&capture, &output)?
+        } else {
+            inputs.verify_committed_return(
+                &PathBuf::from(value(&args, "--committed-knowledge")?),
+                &capture,
+                &output,
+            )?
+        };
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output.join("return-verification.json"))?;
+        file.write_all(&serde_json::to_vec_pretty(&receipt)?)?;
+        file.write_all(b"\n")?;
+        println!("{}", receipt);
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--stage-lesson-admission") {
         let manifest = agentlab_code_analysis::maintainer_lesson_admission::stage(
             &PathBuf::from(value(&args, "--knowledge")?),

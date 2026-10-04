@@ -12,6 +12,7 @@ old,new='a'*40,'b'*40
 def client(root):
     c=module.StrictTransport.__new__(module.StrictTransport)
     c.root=root;c.current=old;c.writes=0;c.counter=0;c.lock=threading.RLock()
+    c.readbacks={};c.postcommit_before=None
     c.request=dict(knowledgeRepository='any-repository')
     c.allowed={name:{name+'-id':dict(payload={'id':name+'-id'})} for name in ['maintainer_skills','program_facts','maintainer_skill_refresh_rounds']}
     return c
@@ -56,6 +57,21 @@ with tempfile.TemporaryDirectory() as tmp:
             assert mode=='complete' and len(result['rows'])==101 and result['truncated'] is False
             assert offsets==[0,50,100] and result['pagedReadback'] is True
         assert c.writes==0
+    for mode in ['clean','dirty']:
+        directory=root/('postcommit-'+mode);directory.mkdir();c=client(directory)
+        c.current=new;c.writes=1;operations=[]
+        def one(runner,skill,operation,args):
+            c.counter+=1;operations.append(operation)
+            if operation=='table_status':return dict(revision=new,dirty=mode=='dirty')
+            return dict(revision=new,dirty=False,offset=0,returned_count=0,
+                matched_count=0,row_count=0,rows=[],truncated=False)
+        c.one=one
+        try:c.call('skill_run_read','table.query','table_query',dict(repo='any-repository',path='program_facts',view=dict(revision=new)))
+        except ValueError:assert mode=='dirty' and operations==['table_status']
+        else:
+            assert mode=='clean' and operations==['table_status','table_query']
+            assert c.postcommit_before==dict(revision=new,dirty=False)
+            assert c.readbacks[(new,'program_facts')]['rows']==[]
 "#;
     let output = Command::new("python3")
         .args(["-c", code])

@@ -1041,6 +1041,10 @@ def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
     files = {"operation-stage-manifest.json": read("stage-manifest.json"),
              "operation-baseline.json": read("operation-baseline.json"),
              "operation-result.json": read("operation-result.json")}
+    if kind == "reviewed-lesson":
+        # The committed-return gate requires the exact inherited source inventory.
+        # Reject a nonportable stage before the transaction, not after admission.
+        files["source-set.txt"] = read("source-set.txt")
     result = json.loads(files["operation-result.json"])
     if kind in ("verified-semantic", "reviewed-lesson") and result.get("strictOperationEvidencePolicy") is not True:
         raise RuntimeError("semantic stage result is not strict receipt policy")
@@ -1104,7 +1108,7 @@ def write_exact_export_table(export: Path, snapshot: Path, table: str,
             or len({row["id"] for row in exact_rows}) != len(exact_rows)
             or sorted(exact_rows, key=lambda row: row["id"]) != sorted(expected, key=lambda row: row["id"])):
         raise RuntimeError(f"{table} exact-revision export differs from the staged cut")
-    if preserve_assessed_bytes and table in ("maintainer_scope_skills", "program_facts"):
+    if preserve_assessed_bytes:
         # Original assessed bytes, not merely equivalent decoded rows, bind the
         # durable report and the next strict dispatch. Keep Unicode/key encoding.
         (export / filename).write_bytes((snapshot / filename).read_bytes())

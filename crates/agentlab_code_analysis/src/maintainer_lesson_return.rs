@@ -214,8 +214,20 @@ pub(crate) fn verify(
             "lesson return inherited evidence changed",
         )?;
     }
+    verify_source(source, &evidence["lessonSource"])?;
+    Ok(
+        json!({"schema":"agentlab.reviewed_lesson_return_verification.v1","committedReadbackVerified":true,
+        "knowledgeRepository":repo,"previousRevision":before,"revision":revision,
+        "knowledgeCutSha256":digest(&next_bytes),"readbackSha256":digest(capture),"tables":counts,
+        "sourceReadbackVerified":true,"authorityWritePerformed":false,"remoteCaptureAuthenticated":false,
+        "formalCaseQualified":false,"guidanceConsumed":false,"learningBenefitVerified":false,"qualified":false}),
+    )
+}
+
+/// Shared pre-write and post-write source gate. Ordinary admission reconstruction
+/// remains the caller's prerequisite; source metadata alone never qualifies rows.
+pub(crate) fn verify_source(source: &Path, source_evidence: &Value) -> Result<(), String> {
     let export = load(source, "export.json")?;
-    let source_evidence = &evidence["lessonSource"];
     need(
         source_evidence["repository"] == export["repository"]
             && source_evidence["revision"] == export["revision"]
@@ -245,13 +257,7 @@ pub(crate) fn verify(
             "lesson return committed lesson rows differ",
         )?;
     }
-    Ok(
-        json!({"schema":"agentlab.reviewed_lesson_return_verification.v1","committedReadbackVerified":true,
-        "knowledgeRepository":repo,"previousRevision":before,"revision":revision,
-        "knowledgeCutSha256":digest(&next_bytes),"readbackSha256":digest(capture),"tables":counts,
-        "sourceReadbackVerified":true,"authorityWritePerformed":false,"remoteCaptureAuthenticated":false,
-        "formalCaseQualified":false,"guidanceConsumed":false,"learningBenefitVerified":false,"qualified":false}),
-    )
+    Ok(())
 }
 
 #[cfg(test)]

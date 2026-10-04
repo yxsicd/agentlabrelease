@@ -59,6 +59,70 @@ fn oid(value: &Value) -> bool {
     })
 }
 
+/// Original reviewed inputs, not a producer-supplied staged success receipt.
+pub struct ReviewedReturnInputs<'a> {
+    pub base: &'a Path,
+    pub proposal: &'a Path,
+    pub source: &'a Path,
+    pub lesson_id: &'a str,
+    pub expected_revision: &'a str,
+    pub method_source: Option<&'a [u8]>,
+}
+
+impl ReviewedReturnInputs<'_> {
+    fn reconstruct(&self, output: &Path) -> Result<Value, String> {
+        need(
+            self.method_source
+                .is_none_or(|bytes| bytes.len() <= 1024 * 1024),
+            "historical method budget",
+        )?;
+        stage_with_method(
+            self.base,
+            self.proposal,
+            self.source,
+            self.lesson_id,
+            self.expected_revision,
+            output,
+            self.method_source,
+        )
+    }
+
+    /// Reconstruct admission and verify full operational readback before a writer.
+    /// Captured bytes do not authenticate remote transport or reviewer identity.
+    pub fn verify_source_readback(&self, capture: &[u8], output: &Path) -> Result<Value, String> {
+        need(capture.len() <= 32 * 1024 * 1024, "source readback budget")?;
+        let evidence: Value = serde_json::from_slice(capture).map_err(|e| e.to_string())?;
+        need(
+            evidence["schema"] == "agentlab.reviewed_lesson_source_readback.v1",
+            "source readback schema differs",
+        )?;
+        self.reconstruct(output)?;
+        crate::maintainer_lesson_return::verify_source(self.source, &evidence)?;
+        Ok(
+            json!({"schema":"agentlab.reviewed_lesson_source_verification.v1",
+            "sourceReadbackVerified":true,"readbackSha256":digest(capture),
+            "authorityWritePerformed":false,"remoteCaptureAuthenticated":false,
+            "automaticFiveStageLoopCompleted":false}),
+        )
+    }
+
+    /// Always reconstruct the original reviewed stage again before committed
+    /// comparison. A caller cannot substitute an edited intermediate stage.
+    pub fn verify_committed_return(
+        &self,
+        next: &Path,
+        capture: &[u8],
+        output: &Path,
+    ) -> Result<Value, String> {
+        need(
+            capture.len() <= 32 * 1024 * 1024,
+            "committed readback budget",
+        )?;
+        self.reconstruct(output)?;
+        crate::maintainer_lesson_return::verify(output, self.source, next, capture)
+    }
+}
+
 /// Assemble an independently reassessed snapshot for the existing writer.
 /// Declared source commits still require separate remote readback verification.
 pub fn stage(

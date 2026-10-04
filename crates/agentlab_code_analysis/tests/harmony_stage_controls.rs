@@ -482,7 +482,9 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         let base = root.join("admission-baseline");
         fs::create_dir(&base).unwrap();
         let mut cut = json!({"schema":"agentlab.maintainer_knowledge_cut.v1",
+            "automaticPromotion":false,
             "tableGitAuthority":{"repo":format!("fixture-knowledge-{repository}"),"revision":"a".repeat(40)},"tables":{}});
+        fs::write(base.join("source-set.txt"), b"retained fixture inventory\n").unwrap();
         let mut round = json!({"id":"initial","schema":"agentlab.maintainer_skill_refresh_round.v1",
             "roundIndex":1,"ownershipPlane":"target-operations","automaticPromotion":false,
             "coverage":{"processSkillCount":0,"semanticReadyScopeCount":0,"maintenanceReadyScopeCount":0},
@@ -655,6 +657,243 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
             &staged,
         )
         .unwrap();
+        // Exercise both native CLI gates with a fully reconstructed real lesson,
+        // not a synthetic stage-status flag or mocked admission function.
+        let query = |directory: &Path, name: &str, revision: &str, wrapped: bool| {
+            let rows: Vec<Value> = fs::read_to_string(directory.join(format!("{name}.jsonl")))
+                .unwrap()
+                .lines()
+                .filter(|line| !line.trim().is_empty())
+                .map(|line| {
+                    let row: Value = serde_json::from_str(line).unwrap();
+                    let id = row["id"].clone();
+                    json!({"key":id,"row":if wrapped {json!({"payload":row})} else {row}})
+                })
+                .collect();
+            json!({"revision":revision,"dirty":false,"truncated":false,
+                "row_count":rows.len(),"returned_count":rows.len(),"rows":rows})
+        };
+        let mut source_capture = json!({"schema":"agentlab.reviewed_lesson_source_readback.v1",
+            "repository":committed["repository"],"revision":committed["revision"],
+            "tablePrefix":committed["tablePrefix"],"tables":{}});
+        for name in committed["tables"].as_object().unwrap().keys() {
+            source_capture["tables"][name] = query(&lesson_output, name, &"f".repeat(40), false);
+        }
+        let source_path = root.join("source-readback.json");
+        fs::write(&source_path, serde_json::to_vec(&source_capture).unwrap()).unwrap();
+        let invoke = |mode: &str, capture: &Path, next: Option<&Path>, output: &Path| {
+            let mut command =
+                Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"));
+            command
+                .args([mode, "--knowledge"])
+                .arg(&base)
+                .arg("--proposal")
+                .arg(&fenced)
+                .arg("--lesson-source")
+                .arg(&lesson_output)
+                .args([
+                    "--lesson-id",
+                    review["id"].as_str().unwrap(),
+                    "--expected-knowledge-revision",
+                    &"a".repeat(40),
+                ])
+                .arg("--readback")
+                .arg(capture)
+                .arg("--output")
+                .arg(output);
+            if let Some(next) = next {
+                command.arg("--committed-knowledge").arg(next);
+            }
+            command.output().unwrap()
+        };
+        let preflight = invoke(
+            "--verify-lesson-source-readback",
+            &source_path,
+            None,
+            &root.join("source-return-stage"),
+        );
+        assert!(
+            preflight.status.success(),
+            "{}",
+            String::from_utf8_lossy(&preflight.stderr)
+        );
+        let mut bad_source = source_capture.clone();
+        bad_source["tables"] = json!({});
+        fs::write(&source_path, serde_json::to_vec(&bad_source).unwrap()).unwrap();
+        assert!(!invoke(
+            "--verify-lesson-source-readback",
+            &source_path,
+            None,
+            &root.join("rejected-source-return-stage")
+        )
+        .status
+        .success());
+        let next = root.join("committed-return-cut");
+        assert!(Command::new("cp")
+            .arg("-R")
+            .arg(&staged)
+            .arg(&next)
+            .status()
+            .unwrap()
+            .success());
+        let mut next_cut: Value =
+            serde_json::from_slice(&fs::read(next.join("maintainer-knowledge-cut.json")).unwrap())
+                .unwrap();
+        next_cut.as_object_mut().unwrap().remove("staging");
+        next_cut["tableGitAuthority"]["revision"] = json!("b".repeat(40));
+        fs::write(
+            next.join("maintainer-knowledge-cut.json"),
+            serde_json::to_vec(&next_cut).unwrap(),
+        )
+        .unwrap();
+        let mut return_capture = json!({"schema":"agentlab.reviewed_lesson_committed_readback.v1",
+            "knowledgeRepository":cut["tableGitAuthority"]["repo"],
+            "previousRevision":"a".repeat(40),"revision":"b".repeat(40),
+            "before":{"revision":"b".repeat(40),"dirty":false},
+            "after":{"revision":"b".repeat(40),"dirty":false},
+            "tables":{},"lessonSource":source_capture});
+        for name in [
+            "maintainer_skills",
+            "maintainer_scope_skills",
+            "program_facts",
+            "maintainer_skill_refresh_rounds",
+            "evaluation_cases",
+        ] {
+            return_capture["tables"][name] = query(&next, name, &"b".repeat(40), true);
+        }
+        let capture_path = root.join("committed-return-readback.json");
+        fs::write(&capture_path, serde_json::to_vec(&return_capture).unwrap()).unwrap();
+        let returned = invoke(
+            "--verify-committed-lesson-return",
+            &capture_path,
+            Some(&next),
+            &root.join("committed-return-stage"),
+        );
+        assert!(
+            returned.status.success(),
+            "{}",
+            String::from_utf8_lossy(&returned.stderr)
+        );
+        let receipt: Value = serde_json::from_slice(&returned.stdout).unwrap();
+        assert_eq!(receipt["committedReadbackVerified"], true);
+        assert_eq!(receipt["guidanceConsumed"], false);
+        // Run the actual thin entrypoint, its constructor/discovery/person flow,
+        // existing exporter and both native gates against an isolated local server.
+        // This is transport integration, not a live authority or Agent experiment.
+        let transport = r#"
+import hashlib,http.server,json,pathlib,subprocess,sys,threading
+root,base,proposal,source,tool,script=map(pathlib.Path,sys.argv[1:])
+def encoded(value):return json.dumps(value,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()
+def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
+names=['maintainer_skills','maintainer_scope_skills','program_facts','maintainer_skill_refresh_rounds','evaluation_cases']
+tables={name:[dict(key=row['id'],row_version=1,row=dict(payload=row,payloadSha256=hashlib.sha256(encoded(row)).hexdigest())) for row in map(json.loads,(base/(name+'.jsonl')).read_text().splitlines())] for name in names}
+old,new='a'*40,'b'*40
+revision=old;writes=0;trace=[]
+class Handler(http.server.BaseHTTPRequestHandler):
+    def log_message(self,*args):pass
+    def do_POST(self):
+        global revision,writes
+        packet=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+        name=packet['params']['name'];args=packet['params']['arguments'];trace.append(name)
+        if name in ['service_metadata','skill_list']:value={}
+        elif name=='skill_get':
+            operations=['worktree_table_batch_transaction'] if args['skill_id']=='table.author' else ['table_status','table_query']
+            value=dict(outcome='loaded',skill=dict(summary=dict(operation_names=operations,skill_version='fixture-v1')))
+        elif name=='person_status':value=dict(selectable_persons=[dict(showname='Fixture',person_id='fixture-person')])
+        elif name=='person_select':value=dict(outcome='person_context_validated')
+        else:
+            operation=args['operation'];a=args['arguments']
+            assert args['caller_person_id']=='fixture-person'
+            if operation=='table_status':result=dict(revision=revision,dirty=False)
+            elif operation=='table_query':
+                assert a['view']['revision']==revision
+                rows=tables[a['path']];offset=a['offset'];page=rows[offset:offset+a['limit']]
+                result=dict(revision=revision,dirty=False,rows=page,offset=offset,row_count=len(rows),matched_count=len(rows),returned_count=len(page),truncated=offset+len(page)<len(rows))
+            else:
+                assert name=='skill_run_write' and operation=='worktree_table_batch_transaction'
+                assert writes==0 and a['expected_revision']==old
+                for group in a['tables']:
+                    for change in group['operations']:
+                        assert change['op']=='insert'
+                        tables[group['path']].append(dict(key=change['key'],row_version=1,row=change['row']))
+                writes+=1;revision=new
+                result=dict(previous_revision=old,revision=new,outcome='applied',conflicts=[])
+            value=dict(outcome='executed',result=result)
+        body=json.dumps(dict(jsonrpc='2.0',id=packet['id'],result=dict(structuredContent=value))).encode()
+        self.send_response(200);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
+server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler)
+thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+source_capture=json.loads((root/'source-readback.json').read_text())
+source_capture['schema']='agentlab.observation_store_snapshot.v1'
+export=json.loads((source/'export.json').read_text());source_capture['tables']={}
+for table in export['tables']:
+    rows=[dict(key=row['id'],row=row) for row in map(json.loads,(source/(table+'.jsonl')).read_text().splitlines())]
+    source_capture['tables'][table]=dict(revision='f'*40,dirty=False,truncated=False,row_count=len(rows),returned_count=len(rows),rows=rows)
+snapshot=root/'transport-source-snapshot.json';snapshot.write_text(json.dumps(source_capture))
+credentials=root/'transport-private-fixture.env';credentials.write_text('MCPGIT_BASIC_USERNAME=fixture\nMCPGIT_BASIC_VERIFY=fixture\nMCPGIT_DEFAULT_PERSON_SHOWNAME=Fixture\n')
+credentials.chmod(0o600)
+request=dict(schema='agentlab.reviewed_knowledge_store_request.v1',reviewed=True,automaticPromotion=False,
+    endpoint='http://127.0.0.1:'+str(server.server_port),knowledgeRepository=json.loads((base/'maintainer-knowledge-cut.json').read_text())['tableGitAuthority']['repo'],
+    expectedKnowledgeRevision=old,knowledgeDirectory=str(base),proposalDirectory=str(proposal),lessonSourceDirectory=str(source),
+    lessonId=json.loads((source/'experiment_lessons.jsonl').read_text())['id'],flywheelTool=str(tool),flywheelToolSha256=sha(tool),
+    tablegitWriterSha256=sha(script.with_name('maintainer-skill-tablegit.py')),outputDirectory=str(root/'transport-return'),
+    runId='fixture-return',githubRepository='fixture/transport',lessonSourceReadback=dict(path=str(snapshot),sha256=sha(snapshot)))
+request_path=root/'transport-request.json';request_path.write_text(json.dumps(request))
+try:
+    result=subprocess.run([sys.executable,str(script),'--request',str(request_path),'--credentials',str(credentials)],capture_output=True,timeout=60)
+    assert result.returncode==0,(result.stdout,result.stderr)
+    outcome=json.loads((root/'transport-return/result.json').read_text())
+    assert writes==1 and outcome['committedReadbackVerified'] and outcome['sourceReadbackVerified']
+    assert outcome['automaticFiveStageLoopCompleted'] is False
+    assert (root/'transport-return/committed-knowledge/source-set.txt').read_bytes()==(base/'source-set.txt').read_bytes()
+    for name in names:
+        assert (root/'transport-return/committed-knowledge'/(name+'.jsonl')).read_bytes()==(root/'transport-return/staged-admission'/(name+'.jsonl')).read_bytes()
+    # A complete main invocation rejects missing operational rows before any MCP
+    # discovery or transaction, rather than relying on the classmethod fixture.
+    observed=len(trace);source_capture['tables']={};snapshot.write_text(json.dumps(source_capture))
+    request['lessonSourceReadback']['sha256']=sha(snapshot)
+    request['outputDirectory']=str(root/'transport-rejected-source')
+    request_path.write_text(json.dumps(request))
+    rejected=subprocess.run([sys.executable,str(script),'--request',str(request_path),'--credentials',str(credentials)],capture_output=True,timeout=60)
+    assert rejected.returncode!=0 and writes==1 and len(trace)==observed
+    assert not (root/'transport-rejected-source/result.json').exists()
+finally:
+    server.shutdown();server.server_close();thread.join()
+"#;
+        let integrated = Command::new("python3")
+            .args(["-c", transport])
+            .arg(root.canonicalize().unwrap())
+            .arg(base.canonicalize().unwrap())
+            .arg(fenced.canonicalize().unwrap())
+            .arg(lesson_output.canonicalize().unwrap())
+            .arg(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../scripts/commit-reviewed-knowledge.py"),
+            )
+            .output()
+            .unwrap();
+        assert!(
+            integrated.status.success(),
+            "{}",
+            String::from_utf8_lossy(&integrated.stderr)
+        );
+        for (index, pointer) in ["/before/dirty", "/tables/program_facts/truncated"]
+            .iter()
+            .enumerate()
+        {
+            let mut bad = return_capture.clone();
+            *bad.pointer_mut(pointer).unwrap() = json!(true);
+            fs::write(&capture_path, serde_json::to_vec(&bad).unwrap()).unwrap();
+            assert!(!invoke(
+                "--verify-committed-lesson-return",
+                &capture_path,
+                Some(&next),
+                &root.join(format!("rejected-return-{index}"))
+            )
+            .status
+            .success());
+        }
         let assessed: Value = serde_json::from_slice(
             &fs::read(staged.join(manifest["assessment"].as_str().unwrap())).unwrap(),
         )
@@ -673,7 +912,7 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
             &staged
         )
         .is_err());
-        let validator = "import importlib.util,pathlib,sys; s=importlib.util.spec_from_file_location('tablegit',sys.argv[1]); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); f=m.operation_evidence_files(pathlib.Path(sys.argv[2])); assert 'operation-baseline.json' in f";
+        let validator = "import importlib.util,pathlib,sys; s=importlib.util.spec_from_file_location('tablegit',sys.argv[1]); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); f=m.operation_evidence_files(pathlib.Path(sys.argv[2])); assert 'operation-baseline.json' in f and f['source-set.txt']==b'retained fixture inventory\\n'";
         let validate = || {
             Command::new("python3")
                 .arg("-c")

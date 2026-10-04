@@ -550,6 +550,14 @@ reconstructs the lesson stage before the existing writer is restricted to one
 insert-only transaction. Preserve complete serial page captures and uncertainty
 after intent; never fall back to bootstrap, updates or conflict rebasing. This
 adapter alone does not publish a consumer cut or schedule the next round.
+Supply a digest-bound complete operational source snapshot before write. The
+transport reconstructs admission and validates its selected source rows through
+`--verify-lesson-source-readback`; after the one commit it brackets complete
+knowledge reads with real clean statuses and invokes
+`--verify-committed-lesson-return`, reconstructing the original stage again.
+Keep historical methodSource explicit. A post-write verification failure needs
+read-only recovery at the confirmed revision, never another writer invocation.
+Readback verification alone does not select guidance or schedule fresh work.
 
 For a single-source stage calibration, use the main-only Maintainer guidance real
 consumption Action rather than adding unrelated repositories to a multi-repo
