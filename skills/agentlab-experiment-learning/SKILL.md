@@ -244,6 +244,21 @@ separate isolation receipt. Persist/read back this ordinary operational export
 before explicit promotion and knowledge admission. Candidate export is neither
 remote commitment, demonstrated benefit nor a next-round scheduling receipt.
 The Action does not perform lesson admission or schedule a next round.
+For fresh construction-to-review integration, the constructor Action optionally
+accepts independent_review, review_rubric, review_rubric_sha256 and
+review_repair_limit. Freeze its exact common rubric and reviewer policy before
+construction; a workflow rerun cannot reopen that enrollment. It invokes the
+existing fresh contained reviewer after the original control suite, independently
+validates each review attempt's isolation, exports accepted feedback and runs native
+reception automatically. Nonaccept stays feedback only; constructor failure never
+receives a fictitious review suite. Preserve source and review artifacts separately.
+Validate frozen rubric criteria with the native shared validator before constructor
+model budget; this is structural preflight, not proof of semantic completeness.
+This same-run source handoff is not acquisition of a preexisting Action ZIP;
+acquisition checks that explicit enrollment against the trusted constructor run.
+See the source-guidance checkpoint for inputs/budgets. Integration fixtures are
+not a real automatic business round; committed operational/knowledge return,
+next-round benefit and cross-repository validation remain separate.
 Record the scheduler at each handoff: a successful automatic review/export followed
 by an operator-triggered import is not an automatic business cycle. Require the
 native reception receipt before transport, then committed raw recovery and an

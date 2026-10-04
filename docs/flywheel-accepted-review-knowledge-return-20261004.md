@@ -114,3 +114,26 @@ byte offsets and escaped local context; strict whole-response parsing, original
 capture bytes and correction budgets remain unchanged. Rust transport fixtures
 exercise successful framing correction and repeated rejection, not real Agent
 improvement. Do not reopen this pair after changing the feedback method.
+
+### Original independent review subsequently completed
+
+Run 37175323326 completed successfully at the unchanged c2c63ae method. The initial
+response failed two quotation-membership checks; its predeclared sole fresh repair
+was selected and accepted. Both original attempts remain captured and separate
+on-run isolation validators passed. Artifact 11292822444 is 7184628 bytes, SHA256
+4bbdf33afafa16f1ffb9fff02ff130c7510cd0332455c4ee2e9cbf0de59825c8.
+Independent local native reception verified original repair/parent capture,
+source Git, unchanged response and full feedback reconstruction. Original response
+SHA256 is a18ee9e4077fa73bdc6e3f0c05677b4755eb559b88b40c7e2a563ba097d89816;
+lesson manifest SHA256 is
+012d70a03fef85d1ed73ce7a228ff0da1c7a6b8b7e88af6604854ad0bedebff3.
+This proves one real bounded citation-review repair, not successful guided
+construction, measured benefit, authenticated semantic truth or knowledge return.
+
+The retained pair enrollment's reviewPolicy.responseFormat said default, while
+the pinned reviewer transport actually enforces json_object. Preserve that original
+enrollment discrepancy; do not retrospectively edit it or call this a fully
+policy-qualified benefit pair. The new automatic handoff declares its real protocol
+explicitly. No source or reviewer attempt is reopened. PR262 merged as
+10b18794858e022f18e3f866773f18ebdfcfb6ac after eleven applicable CI checks passed.
+Overall maturity remains 75%; accepted full automatic loops remain zero.

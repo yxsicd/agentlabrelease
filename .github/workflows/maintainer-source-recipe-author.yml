@@ -100,6 +100,27 @@ on:
         required: true
         type: choice
         options: ['0', '1', '2']
+      independent_review:
+        description: Freeze a common rubric before construction and automatically review the completed original suite
+        default: false
+        required: true
+        type: boolean
+      review_rubric:
+        description: Checked-in repository-independent quality rubric; required only for automatic review
+        default: ''
+        required: false
+        type: string
+      review_rubric_sha256:
+        description: Exact rubric bytes SHA256 frozen before any model call
+        default: ''
+        required: false
+        type: string
+      review_repair_limit:
+        description: Shared existing bounded independent citation-repair policy; no constructor retries
+        default: '0'
+        required: true
+        type: choice
+        options: ['0', '1']
 permissions:
   contents: read
   actions: read
@@ -110,7 +131,7 @@ jobs:
   construct:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ inputs.code_gateway_timeout_seconds == '240' && 25 || 20 }}
+    timeout-minutes: ${{ inputs.independent_review && 45 || inputs.code_gateway_timeout_seconds == '240' && 25 || 20 }}
     env:
       KNOWLEDGE: ${{ inputs.knowledge_directory }}
       AGENTLAB_SOURCE_GUIDANCE_SELECTION: ${{ inputs.guidance_selection }}
@@ -130,6 +151,10 @@ jobs:
       CONSTRUCTION_DESIGN_FIRST: ${{ inputs.design_first }}
       CONSTRUCTION_DESIGN_REVISIONS: ${{ inputs.design_revisions }}
       CONSTRUCTION_CODE_REVISIONS: ${{ inputs.code_revisions }}
+      AUTOMATIC_REVIEW_ENABLED: ${{ inputs.independent_review }}
+      AUTOMATIC_REVIEW_RUBRIC: ${{ inputs.review_rubric }}
+      AUTOMATIC_REVIEW_RUBRIC_SHA256: ${{ inputs.review_rubric_sha256 }}
+      AUTOMATIC_REVIEW_REPAIR_LIMIT: ${{ inputs.review_repair_limit }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
       AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
@@ -184,6 +209,43 @@ jobs:
           cat "$RUNNER_TEMP/recipe-author/authority-preflight-stdout.log"
           cat "$RUNNER_TEMP/recipe-author/authority-preflight-stderr.log" >&2
           exit "$preflight_status"
+      - name: Freeze optional independent review before construction budget
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,re
+          from pathlib import Path
+          enabled=os.environ['AUTOMATIC_REVIEW_ENABLED']=='true'
+          rubric=os.environ['AUTOMATIC_REVIEW_RUBRIC'];digest=os.environ['AUTOMATIC_REVIEW_RUBRIC_SHA256']
+          repairs=int(os.environ['AUTOMATIC_REVIEW_REPAIR_LIMIT']);assert repairs in (0,1)
+          if not enabled:
+              assert not rubric and not digest and repairs==0,'Review inputs require independent_review'
+              raise SystemExit(0)
+          assert os.environ['GITHUB_RUN_ATTEMPT']=='1','Automatic review enrollment cannot reopen a rerun budget'
+          assert os.environ['CONSTRUCTION_DESIGN_FIRST']=='true','Automatic review requires a complete design/control suite'
+          assert rubric and not rubric.startswith('/') and chr(92) not in rubric
+          assert all(p not in ('','.','..') for p in rubric.split('/'))
+          path=Path(rubric);workspace=Path.cwd().resolve()
+          assert path.is_file() and not path.is_symlink() and path.resolve().is_relative_to(workspace)
+          raw=path.read_bytes();assert len(raw)<=128*1024 and re.fullmatch('[0-9a-f]{64}',digest)
+          assert hashlib.sha256(raw).hexdigest()==digest
+          policy=json.loads(raw);assert policy['schema']=='agentlab.prospective_source_quality_review.v1'
+          assert policy['repositoryAgnostic'] is True and policy['frozenBeforeDispatch'] is True
+          root=Path(os.environ['RUNNER_TEMP'])/'recipe-author/automatic-review';root.mkdir()
+          with (root/'rubric.json').open('xb') as stream:stream.write(raw)
+          enrollment=dict(schema='agentlab.independent_source_suite_review_enrollment.v1',
+              mode='same-run-constructor-review',methodRevision=os.environ['GITHUB_SHA'],
+              sourceRun=os.environ['GITHUB_RUN_ID'],sourceMethodRevision=os.environ['GITHUB_SHA'],
+              sourceArtifact=None,artifactSha256=None,rubricSha256=digest,
+              model=os.environ['AGENTLAB_MODEL'],providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
+              reasoningEffort=os.environ['CONSTRUCTION_REASONING_EFFORT'],thinkingType=os.environ['CONSTRUCTION_THINKING_TYPE'],
+              responseFormat='json_object',api='openai-completions',
+              gatewayTimeoutSeconds=240,maxOutputTokens=int(os.environ['CONSTRUCTION_MAX_OUTPUT_TOKENS']),
+              reviewRepairLimit=repairs,maximumReviewerAttempts=1+repairs,
+              totalParticipantBudgetSeconds=420*(1+repairs),transportRetryLimit=0,
+              sourceAcquisition='native same-run original observation export; not a preexisting Action ZIP',
+              automaticPromotion=False,authorityWritePerformed=False,qualified=False)
+          with (root/'enrollment.json').open('x') as stream:json.dump(enrollment,stream,indent=2)
+          PY
       - name: Build native producer and isolated runtime
         run: |
           cargo build --locked --release -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
@@ -193,6 +255,12 @@ jobs:
           npm ci --prefix "$RUNNER_TEMP/recipe-pi" --no-audit --no-fund
           npm ci --prefix "$RUNNER_TEMP/recipe-compiler" --no-audit --no-fund
           docker pull node:24.19.0-bookworm-slim
+      - name: Validate frozen review criteria before constructor model budget
+        if: inputs.independent_review
+        run: |
+          target/release/agentlab-maintainer-skill-flywheel --validate-source-quality-rubric \
+            --quality-rubric "$RUNNER_TEMP/recipe-author/automatic-review/rubric.json" \
+            --output "$RUNNER_TEMP/recipe-author/automatic-review/rubric-validation.json"
       - name: Select operation gap and prepare bounded original-source request
         run: |
           python3 - <<'PY'
@@ -341,11 +409,107 @@ jobs:
           python3 scripts/run-source-recipe-control-suite.py \
             --root "$RUNNER_TEMP/recipe-author" --gate target/release/agentlab-maintainer-skill-flywheel \
             --compiler "$compiler" --image-id "$image_id"
+      - name: Prepare independent reviewer on the same original suite
+        id: review_contain
+        if: inputs.independent_review
+        run: |
+          root="$RUNNER_TEMP/recipe-author/automatic-review"
+          mkdir "$root/source"
+          cp -R "$RUNNER_TEMP/recipe-author/observation-export" "$root/source/observations"
+          target/release/agentlab-maintainer-skill-flywheel --prepare-source-suite-review \
+            --source "$root/source/observations" --quality-rubric "$root/rubric.json" \
+            --source-git-checkout "$RUNNER_TEMP/recipe-source" --output "$root/preflight.json"
+          mkdir "$RUNNER_TEMP/recipe-review-case" "$RUNNER_TEMP/recipe-review-docker-config"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          (root/'recipe-review-case/manifest.json').write_text(json.dumps(dict(schema='agentlab.blind_case_participant_bundle.v1',reviewOnly=True,automaticPromotion=False)))
+          (root/'recipe-review-docker-config/config.json').write_text('{"auths":{}}')
+          PY
+          image_id=$(docker image inspect node:24.19.0-bookworm-slim --format '{{.Id}}')
+          python3 scripts/prepare-participant-runtime.py --image "$image_id" --pi-runtime "$RUNNER_TEMP/recipe-pi" \
+            --case-input "$RUNNER_TEMP/recipe-review-case" --forbid "$GITHUB_WORKSPACE" \
+            --forbid "$RUNNER_TEMP/recipe-source" --forbid "$RUNNER_TEMP/recipe-author" \
+            --output "$RUNNER_TEMP/recipe-review-runtime.json"
+          mkdir "$root/runtime-inputs"
+          cp "$RUNNER_TEMP/recipe-review-runtime.json" "$root/runtime-inputs/config.json"
+          cp "$RUNNER_TEMP/recipe-review-case/manifest.json" "$root/runtime-inputs/manifest.json"
+          cp "$RUNNER_TEMP/recipe-pi/package-lock.json" "$root/runtime-inputs/package-lock.json"
+      - name: Automatically capture a fresh independent reviewer
+        if: inputs.independent_review
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+          AGENTLAB_PARTICIPANT_RUNTIME_CONFIG: ${{ runner.temp }}/recipe-review-runtime.json
+          AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT: ${{ runner.temp }}/recipe-author/automatic-review/runtime-receipts
+          DOCKER_CONFIG: ${{ runner.temp }}/recipe-review-docker-config
+        run: |
+          root="$RUNNER_TEMP/recipe-author/automatic-review"
+          python3 scripts/run-source-suite-review.py --source "$root/source/observations" \
+            --rubric "$root/rubric.json" --output "$root/agent" \
+            --source-git-checkout "$RUNNER_TEMP/recipe-source" \
+            --gate target/release/agentlab-maintainer-skill-flywheel --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py" \
+            --reasoning-effort "$CONSTRUCTION_REASONING_EFFORT" --thinking-type "$CONSTRUCTION_THINKING_TYPE" \
+            --gateway-timeout-seconds 240 --max-output-tokens "$CONSTRUCTION_MAX_OUTPUT_TOKENS" \
+            --review-repair-limit "$AUTOMATIC_REVIEW_REPAIR_LIMIT"
+      - name: Independently validate automatic reviewer isolation
+        id: review_isolation
+        if: always() && steps.review_contain.outcome == 'success'
+        run: |
+          root="$RUNNER_TEMP/recipe-author/automatic-review"
+          cmp "$RUNNER_TEMP/recipe-review-runtime.json" "$root/runtime-inputs/config.json"
+          receipts="$root/runtime-receipts"
+          if [[ "$AUTOMATIC_REVIEW_REPAIR_LIMIT" == 1 ]]; then receipts="$receipts/initial"; fi
+          python3 scripts/validate-participant-runtime.py --config "$root/runtime-inputs/config.json" \
+            --receipt-root "$receipts" --workspace "$root/agent/workspace" \
+            --participant-state "$root/agent/participant-state" --label source-suite-review \
+            --output "$root/runtime-validation.json"
+          if [[ -d "$root/agent/repair-attempt" ]]; then
+            python3 scripts/validate-participant-runtime.py --config "$root/runtime-inputs/config.json" \
+              --receipt-root "$root/runtime-receipts/repair-1" --workspace "$root/agent/repair-attempt/workspace" \
+              --participant-state "$root/agent/repair-attempt/participant-state" --label source-suite-review \
+              --output "$root/runtime-repair-validation.json"
+          fi
+      - name: Automatically export and independently receive accepted feedback
+        if: success() && inputs.independent_review && steps.review_isolation.outcome == 'success'
+        run: |
+          root="$RUNNER_TEMP/recipe-author/automatic-review"
+          selected=$(jq -er 'select(.completed == true) | .selectedAttempt' "$root/agent/attempt-coordinator.json")
+          case "$selected" in
+            .) agent="$root/agent" ;;
+            repair-attempt) agent="$root/agent/repair-attempt" ;;
+            *) echo "Unexpected selected review attempt" >&2; exit 1 ;;
+          esac
+          verdict=$(jq -er '.verdict' "$agent/validation.json")
+          case "$verdict" in
+            reject|unverified) echo "Completed feedback has no accepted lesson; nothing exported."; exit 0 ;;
+            accept) ;;
+            *) echo "Unexpected native review verdict" >&2; exit 1 ;;
+          esac
+          target/release/agentlab-maintainer-skill-flywheel --export-source-suite-review-feedback \
+            --source "$root/source/observations" --quality-rubric "$root/rubric.json" \
+            --participant-evidence "$agent/evidence" --review-response "$agent/response.json" \
+            --source-git-checkout "$RUNNER_TEMP/recipe-source" --output "$root/feedback"
+          target/release/agentlab-maintainer-skill-flywheel --verify-source-suite-review-feedback \
+            --source "$root/source/observations" --quality-rubric "$root/rubric.json" \
+            --participant-evidence "$agent/evidence" --review-response "$agent/response.json" \
+            --source-git-checkout "$RUNNER_TEMP/recipe-source" --feedback "$root/feedback" \
+            --output "$root/native-reception.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: unreviewed-source-recipe-${{ github.run_id }}
-          path: ${{ runner.temp }}/recipe-author
+          path: |
+            ${{ runner.temp }}/recipe-author
+            !${{ runner.temp }}/recipe-author/automatic-review
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && inputs.independent_review
+        with:
+          name: independent-source-suite-review-${{ github.run_id }}
+          path: ${{ runner.temp }}/recipe-author/automatic-review
           if-no-files-found: error
           retention-days: 14
           include-hidden-files: true

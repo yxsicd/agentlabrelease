@@ -24,12 +24,9 @@ pub fn prepare(root: &Path, rubric_bytes: &[u8]) -> Result<Value, String> {
     prepare_with_git(root, rubric_bytes, None)
 }
 
-/// Reconsume an independently acquired checkout; never trust a producer proof flag.
-pub fn prepare_with_git(
-    root: &Path,
-    rubric_bytes: &[u8],
-    checkout: Option<&Path>,
-) -> Result<Value, String> {
+/// Validate the same rubric contract before either constructor or reviewer budget.
+/// This checks structure, not criterion completeness or semantic quality.
+pub fn validate_rubric(rubric_bytes: &[u8]) -> Result<Value, String> {
     need(
         rubric_bytes.len() <= 128 * 1024,
         "independent review rubric budget",
@@ -57,6 +54,22 @@ pub fn prepare_with_git(
             "independent review criteria malformed or duplicate",
         )?;
     }
+    Ok(rubric)
+}
+
+/// Reconsume an independently acquired checkout; never trust a producer proof flag.
+pub fn prepare_with_git(
+    root: &Path,
+    rubric_bytes: &[u8],
+    checkout: Option<&Path>,
+) -> Result<Value, String> {
+    let rubric = validate_rubric(rubric_bytes)?;
+    let ids: BTreeSet<_> = rubric["criteria"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|criterion| criterion["id"].as_str().unwrap())
+        .collect();
     // Reconstruct all original rows and raw inventory first; a rehashed projection
     // or producer-declared successful suite cannot supply independent review input.
     let binding = maintainer_observation_store::reconstructed_source_binding(root)?;
