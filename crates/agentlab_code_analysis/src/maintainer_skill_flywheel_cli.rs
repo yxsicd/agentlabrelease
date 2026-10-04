@@ -328,6 +328,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args.iter().any(|a| a == "--validate-construction-context") {
+        let report = agentlab_code_analysis::maintainer_construction_context::validate_context(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &fs::read(value(&args, "--context-packet")?)?,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!("{}", report);
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--prepare-construction-context") {
         let paths = args
             .windows(2)
