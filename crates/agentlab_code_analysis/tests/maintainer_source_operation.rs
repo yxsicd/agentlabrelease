@@ -23,6 +23,82 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn early_design_review_routes_isolated_feedback_and_blocks_code() {
+    // Transport/routing fixtures only. Native original-wire admission has separate tests.
+    let result = Command::new("/usr/bin/python3").arg("-c").arg(r#"
+import argparse,hashlib,importlib.util,json,os,tempfile
+from pathlib import Path
+from unittest.mock import patch
+repo=Path(os.environ['FIXTURE_REPO'])
+def load(name,path):
+    spec=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
+review=load('review',repo/'scripts/run-source-suite-review.py')
+author=load('author',repo/'scripts/run-source-recipe-author.py')
+with tempfile.TemporaryDirectory() as temporary:
+    base=Path(temporary).resolve();os.environ.update(AGENTLAB_PARTICIPANT_RUNTIME_CONFIG=str(base/'runtime'),
+        AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT=str(base/'receipts'),AGENTLAB_MODEL='fixture',
+        AGENTLAB_PROVIDER_ROUTE='fixture',AGENTLAB_LM_GATEWAY_URL='http://fixture.invalid')
+    request=base/'request.json';request.write_text('{}');design=base/'design.json';design.write_text('{}')
+    packet={'rubricSha256':hashlib.sha256(b'rubric').hexdigest()}
+    digest=hashlib.sha256(json.dumps(packet,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    calls=[]
+    def gate(args,flag,output,*extra):
+        calls.append(flag)
+        if flag=='--prepare-source-design-quality-review':output.write_text(json.dumps(packet))
+        elif flag=='--source-design-quality-review-prompt':output.write_text('reviewRequestSha256 is '+digest+'. fixture data')
+        elif flag=='--verify-source-design-quality-review-completion':
+            assert '--evidence' in extra and '--participant-evidence' not in extra
+            output.write_text(json.dumps(dict(decision=args.fixture_decision,recordedCompletionVerified=True)))
+        else:raise AssertionError(flag)
+    class Participant:
+        @staticmethod
+        def process_budget_seconds(wall):return 420
+        def __init__(self,evidence,state,*args,**kwargs):self.evidence=evidence;state.mkdir()
+        def turn(self,label,workspace,**kwargs):
+            assert label=='source-design-review' and not list(workspace.iterdir())
+            assert kwargs['transport_retry_limit']==0
+            intent=json.loads((self.evidence/'review-intent.json').read_text())
+            assert intent['schema']=='agentlab.independent_source_design_review_intent.v1'
+            assert intent['reviewRequestSha256']==digest and intent['qualityRubricSha256']==packet['rubricSha256']
+            return dict(content='{}')
+    for decision in ('ready-for-execution','revise','unverified'):
+        args=argparse.Namespace(source=None,author_request=request,design=design,rubric=base/'rubric',
+            output=base/decision,gate=base/'gate',pi=base/'pi',gateway_timeout_seconds=240,
+            thinking_type='disabled',reasoning_effort='default',max_output_tokens=16384,fixture_decision=decision)
+        with patch.object(review,'gate',gate):result=review.run(args,Participant)
+        assert result['decision']==decision and result['completed'] and result['qualified'] is False
+        assert (args.output/'response.json').read_bytes()==b'{}'
+        args.source=base/'suite'
+        try:review.run(args,Participant);raise AssertionError('mixed lane admitted')
+        except ValueError:pass
+        args.source=None;args.review_repair_limit=1
+        try:review.run(args,Participant);raise AssertionError('repair lane admitted')
+        except ValueError:pass
+        enrollment=dict(authorRequestSha256=hashlib.sha256(request.read_bytes()).hexdigest(),model='fixture',
+            rubricSha256=hashlib.sha256(b'rubric').hexdigest(),
+            providerRoute='fixture',reasoningEffort='default',thinkingType='disabled',gatewayTimeoutSeconds=240,maxOutputTokens=16384)
+        constructor=argparse.Namespace(request=request,output=base/'constructor',gate=base/'gate',pi=base/'pi')
+        (constructor.output/'design-review-enrollment').mkdir(parents=True,exist_ok=True)
+        (constructor.output/'design-review-enrollment/rubric.json').write_bytes(b'rubric')
+        original=os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']
+        fake=argparse.Namespace(run=lambda config:result)
+        with patch.object(author.importlib.util,'module_from_spec',return_value=fake), patch.object(author.importlib.util,'spec_from_file_location',
+                return_value=argparse.Namespace(loader=argparse.Namespace(exec_module=lambda module:None))):
+            if decision=='ready-for-execution':author.review_design_before_code(constructor,design,enrollment)
+            else:
+                try:author.review_design_before_code(constructor,design,enrollment);raise AssertionError('negative review admitted')
+                except ValueError:pass
+        assert os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']==original
+    assert all('suite-review' not in flag for flag in calls)
+"#).env("FIXTURE_REPO",root()).output().unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn dependency_inventory_distinguishes_context_gaps_without_resolving_or_loading_them() {
     use agentlab_code_analysis::maintainer_source_recipe_author::source_dependency_inventory;
     let content = "import {Ctor as Local} from '../shared'; import {Missing} from './missing'; import {Other} from 'external'; import {Pending} from './pending'; import {Dual} from './dual';";
@@ -894,6 +970,88 @@ fn source_action_accepts_explicit_checked_in_cuts_and_rejects_path_escape() {
             "directory={directory}: {}",
             String::from_utf8_lossy(&result.stderr)
         );
+    }
+    let rubric = "examples/maintainer-knowledge-gate/source-design-quality-rubric.json";
+    let rubric_digest = digest(&fs::read(root().join(rubric)).unwrap());
+    let selection = "examples/maintainer-knowledge-gate/reviewed-guidance/toggle-generate-ordered-attributes-e516a65a.json";
+    for variant in 0..6 {
+        let mut enrollment = json!({"schema":"agentlab.source_design_review_action_enrollment.v1",
+            "rubric":rubric,"rubricSha256":rubric_digest});
+        match variant {
+            1 => enrollment["rubricSha256"] = json!("0".repeat(64)),
+            2 => enrollment["extra"] = json!(true),
+            3 => enrollment["rubric"] = json!("../escape.json"),
+            _ => {}
+        }
+        let environment = fixture_root.join(format!("early-environment-{variant}"));
+        let result = Command::new("bash")
+            .args(["-e", "-c", &script])
+            .current_dir(root())
+            .env("KNOWLEDGE", "examples/maintainer-knowledge-gate/first-four")
+            .env("REVISION_PARENT_RUN", if variant == 4 { "123" } else { "" })
+            .env(
+                "REVISION_FEEDBACK",
+                serde_json::to_string(&enrollment).unwrap(),
+            )
+            .env("CONSTRUCTION_CODE_REVISIONS", "0")
+            .env("AGENTLAB_SOURCE_GUIDANCE_SELECTION", selection)
+            .env("CONSTRUCTION_DESIGN_FIRST", "true")
+            .env("GITHUB_RUN_ATTEMPT", if variant == 5 { "2" } else { "1" })
+            .env(
+                "GITHUB_OUTPUT",
+                fixture_root.join(format!("early-output-{variant}")),
+            )
+            .env("GITHUB_ENV", &environment)
+            .output()
+            .unwrap();
+        assert_eq!(
+            result.status.success(),
+            variant == 0,
+            "early variant {variant}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        if variant == 0 {
+            let exported = fs::read_to_string(&environment).unwrap();
+            assert!(exported.contains(&format!("DESIGN_QUALITY_RUBRIC={rubric}\n")));
+            assert!(exported.contains(&format!("DESIGN_QUALITY_RUBRIC_SHA256={rubric_digest}\n")));
+            // Execute the workflow's actual request-argument builder. This is command
+            // routing evidence, not native target admission or a model experiment.
+            let target_builder = workflow
+                .split("          target_args=[]\n")
+                .nth(1)
+                .unwrap()
+                .split("          PY\n")
+                .next()
+                .unwrap();
+            let python = format!("import os,json\nfrom pathlib import Path\ntarget_args=[]\nknowledge=Path('fixture-knowledge');source=Path('fixture-source');output=Path('fixture-output');context_args=[]\ndef run(*args): print(json.dumps([str(a) for a in args]))\n{}", target_builder.lines().map(|l| l.strip_prefix("          ").unwrap_or(l)).collect::<Vec<_>>().join("\n"));
+            let built = Command::new("python3")
+                .args(["-c", &python])
+                .current_dir(root())
+                .env("AGENTLAB_SOURCE_GUIDANCE_SELECTION", selection)
+                .env("REVISION_PARENT_RUN", "")
+                .env(
+                    "REVISION_FEEDBACK",
+                    serde_json::to_string(&enrollment).unwrap(),
+                )
+                .env("DESIGN_QUALITY_RUBRIC", rubric)
+                .env("REPOSITORY_SELECTOR", "code-workshop")
+                .output()
+                .unwrap();
+            assert!(
+                built.status.success(),
+                "{}",
+                String::from_utf8_lossy(&built.stderr)
+            );
+            let arguments: Vec<String> = serde_json::from_slice(&built.stdout).unwrap();
+            let index = arguments
+                .iter()
+                .position(|a| a == "--source-construction-selection")
+                .unwrap();
+            assert_eq!(
+                arguments[index + 1],
+                root().join(selection).display().to_string()
+            );
+        }
     }
     fs::remove_dir_all(fixture_root).unwrap();
 }

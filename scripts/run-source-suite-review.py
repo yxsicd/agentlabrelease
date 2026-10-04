@@ -19,8 +19,13 @@ def load_module(name, path):
 
 
 def gate(args, flag, output, *extra):
-    command = [str(args.gate.resolve()), flag, '--source', str(args.source.resolve()),
+    command = [str(args.gate.resolve()), flag,
                '--quality-rubric', str(args.rubric.resolve()), '--output', str(output), *extra]
+    if getattr(args, 'author_request', None) is not None:
+        command.extend(['--author-request', str(args.author_request.resolve()),
+                        '--design', str(args.design.resolve())])
+    else:
+        command.extend(['--source', str(args.source.resolve())])
     if getattr(args, 'source_git_checkout', None) is not None:
         command.extend(['--source-git-checkout', str(args.source_git_checkout.resolve())])
     result = subprocess.run(command, capture_output=True, timeout=90)
@@ -43,7 +48,10 @@ def run_attempt(args, participant_class=None):
     workspace = output / 'workspace'
     evidence.mkdir()
     workspace.mkdir()
-    terminal = dict(schema='agentlab.independent_source_suite_review_transport.v1',
+    design_review = getattr(args, 'author_request', None) is not None
+    label = 'source-design-review' if design_review else 'source-suite-review'
+    terminal = dict(schema=('agentlab.independent_source_design_review_transport.v1' if design_review
+                           else 'agentlab.independent_source_suite_review_transport.v1'),
                     completed=False, automaticPromotion=False, authorityWritePerformed=False,
                     qualified=False)
     try:
@@ -61,12 +69,14 @@ def run_attempt(args, participant_class=None):
                 shutil.copyfile(parent / 'response.json', retained / 'response.json')
                 shutil.copytree(parent / 'evidence', retained / 'evidence',
                                 symlinks=True, ignore=shutil.ignore_patterns('source-suite-review-events.jsonl'))
-        gate(args, '--prepare-source-suite-review', output / 'request.json')
+        gate(args, '--prepare-source-design-quality-review' if design_review else
+             '--prepare-source-suite-review', output / 'request.json')
         if repair_enabled:
             gate(args, '--prepare-source-suite-review-attempt-prompt', output / 'prompt.txt',
                  '--participant-evidence', str(evidence))
         else:
-            gate(args, '--prepare-source-suite-review-prompt', output / 'prompt.txt')
+            gate(args, '--source-design-quality-review-prompt' if design_review else
+                 '--prepare-source-suite-review-prompt', output / 'prompt.txt')
         prompt = (output / 'prompt.txt').read_text()
         packet = json.loads((output / 'request.json').read_bytes())
         # Request digest is emitted by the native prompt, not reimplemented here.
@@ -89,9 +99,10 @@ def run_attempt(args, participant_class=None):
         policy = helpers.freeze_pi_retry_policy(output / 'participant-state', workspace, evidence)
         effort = None if args.reasoning_effort == 'default' else args.reasoning_effort
         wall_time = max(240, args.gateway_timeout_seconds + 60)
-        intent = dict(schema='agentlab.independent_source_suite_review_intent.v1',
+        intent = dict(schema=('agentlab.independent_source_design_review_intent.v1' if design_review
+                              else 'agentlab.independent_source_suite_review_intent.v1'),
                       reviewRequestSha256=request_digest,
-                      qualityRubricSha256=packet['qualityRubricSha256'],
+                      qualityRubricSha256=packet['rubricSha256' if design_review else 'qualityRubricSha256'],
                       promptSha256=hashlib.sha256(prompt.encode()).hexdigest(),
                       participantBudgetSeconds=participant.process_budget_seconds(wall_time),
                       transportRetryLimit=0,
@@ -106,7 +117,7 @@ def run_attempt(args, participant_class=None):
         with (evidence / 'review-intent.json').open('x') as stream:
             json.dump(intent, stream)
         helpers.require_pi_retry_policy(output / 'participant-state', workspace, policy)
-        result = participant.turn('source-suite-review', workspace, prompt=prompt,
+        result = participant.turn(label, workspace, prompt=prompt,
                                   wall_time_limit_seconds=wall_time, tool_call_limit=1,
                                   transport_retry_limit=0, require_completed_tool_call=False,
                                   reasoning_effort=effort)
@@ -117,9 +128,13 @@ def run_attempt(args, participant_class=None):
         with (output / 'response.json').open('xb') as stream:
             stream.write(content.encode())  # No fences stripped, operator repairs or JSON rewriting.
         try:
-            gate(args, '--verify-source-suite-review-completion', output / 'validation.json',
-                 '--review-response', str(output / 'response.json'), '--participant-evidence', str(evidence))
+            gate(args, '--verify-source-design-quality-review-completion' if design_review else
+                 '--verify-source-suite-review-completion', output / 'validation.json',
+                 '--review-response', str(output / 'response.json'),
+                 '--evidence' if design_review else '--participant-evidence', str(evidence))
         except RuntimeError:
+            if design_review:
+                raise  # No citation repair or final-suite relabeling for this phase.
             # Complete diagnostics are feedback, never a replacement acceptance gate.
             try:
                 gate(args, '--diagnose-source-suite-review-citations', output / 'citation-diagnostic.json',
@@ -128,8 +143,8 @@ def run_attempt(args, participant_class=None):
                 pass  # Invalid JSON/identity retains the original rejection and both logs.
             raise
         validated = json.loads((output / 'validation.json').read_bytes())
-        terminal.update(completed=True, verdict=validated['verdict'],
-                        recordedCompletionVerified=validated['recordedCompletionVerified'])
+        terminal.update(completed=True, recordedCompletionVerified=validated['recordedCompletionVerified'])
+        terminal['decision' if design_review else 'verdict'] = validated['decision' if design_review else 'verdict']
         # Reject/unverified are completed feedback. No lesson extraction or writer here.
         return terminal
     except Exception as error:
@@ -143,13 +158,21 @@ def run_attempt(args, participant_class=None):
 
 def run(args, participant_class=None):
     limit = getattr(args, 'review_repair_limit', 0)
+    design_review = getattr(args, 'author_request', None) is not None
+    if design_review:
+        if (getattr(args, 'design', None) is None or getattr(args, 'source', None) is not None
+                or getattr(args, 'source_git_checkout', None) is not None or limit):
+            raise ValueError('Design review requires paired original request/design, no suite or repair lane')
+    elif getattr(args, 'design', None) is not None or getattr(args, 'source', None) is None:
+        raise ValueError('Select exactly one original design or suite review lane')
     if limit not in (0, 1):
         raise ValueError('Review repair limit must be zero or one')
     if limit and getattr(args, 'source_git_checkout', None) is None:
         raise ValueError('Citation repair requires independently verified Git source')
     root = args.output.absolute()
     original_runtime_root = os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT')
-    coordinator = dict(schema='agentlab.review_attempt_coordinator.v1', completed=False,
+    coordinator = dict(schema=('agentlab.design_review_attempt_coordinator.v1' if design_review
+                               else 'agentlab.review_attempt_coordinator.v1'), completed=False,
                        reviewRepairLimit=limit, maximumReviewerAttempts=1+limit,
                        totalParticipantBudgetSeconds=420*(1+limit), transportRetryLimit=0,
                        attempts=[], automaticPromotion=False, authorityWritePerformed=False,
@@ -177,8 +200,9 @@ def run(args, participant_class=None):
             coordinator['attempts'].append('repair-1')
             result = run_attempt(repaired, participant_class)
             selected = 'repair-attempt'
-        coordinator.update(completed=True, selectedAttempt=selected, verdict=result['verdict'],
+        coordinator.update(completed=True, selectedAttempt=selected,
                            recordedCompletionVerified=result['recordedCompletionVerified'])
+        coordinator['decision' if design_review else 'verdict'] = result['decision' if design_review else 'verdict']
         return coordinator
     except Exception as error:
         coordinator.update(errorType=type(error).__name__, error=str(error))
@@ -198,8 +222,11 @@ def run(args, participant_class=None):
 
 def main():
     parser = argparse.ArgumentParser()
-    for name in ('source', 'rubric', 'output', 'gate', 'pi'):
+    for name in ('rubric', 'output', 'gate', 'pi'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--source', type=Path)
+    parser.add_argument('--author-request', type=Path)
+    parser.add_argument('--design', type=Path)
     parser.add_argument('--source-git-checkout', type=Path)
     parser.add_argument('--review-repair-limit', type=int, choices=[0, 1], default=0)
     parser.add_argument('--reasoning-effort', choices=['default', 'none', 'low', 'medium', 'high', 'max'], default='default')
