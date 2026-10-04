@@ -244,6 +244,12 @@ separate isolation receipt. Persist/read back this ordinary operational export
 before explicit promotion and knowledge admission. Candidate export is neither
 remote commitment, demonstrated benefit nor a next-round scheduling receipt.
 The Action does not perform lesson admission or schedule a next round.
+Record the scheduler at each handoff: a successful automatic review/export followed
+by an operator-triggered import is not an automatic business cycle. Require the
+native reception receipt before transport, then committed raw recovery and an
+unchanged repeat before using that export for explicit knowledge staging. Preserve
+the frozen method body when later method edits change the admission tool's embedded
+digest; do not relabel a staged historical candidate to the newer method.
 
 Acquire an exact completed reviewer artifact with the existing thin transport's
 `--artifact-kind review-feedback`, naming repository/run/artifact/method revision
