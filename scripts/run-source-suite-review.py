@@ -19,6 +19,8 @@ def load_module(name, path):
 def gate(args, flag, output, *extra):
     command = [str(args.gate.resolve()), flag, '--source', str(args.source.resolve()),
                '--quality-rubric', str(args.rubric.resolve()), '--output', str(output), *extra]
+    if getattr(args, 'source_git_checkout', None) is not None:
+        command.extend(['--source-git-checkout', str(args.source_git_checkout.resolve())])
     result = subprocess.run(command, capture_output=True, timeout=90)
     with output.with_suffix(output.suffix + '.stdout.log').open('xb') as stream:
         stream.write(result.stdout)
@@ -116,6 +118,7 @@ def main():
     parser = argparse.ArgumentParser()
     for name in ('source', 'rubric', 'output', 'gate', 'pi'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--source-git-checkout', type=Path)
     parser.add_argument('--reasoning-effort', choices=['default', 'none', 'low', 'medium', 'high', 'max'], default='default')
     parser.add_argument('--thinking-type', choices=['default', 'enabled', 'disabled'], default='disabled')
     parser.add_argument('--gateway-timeout-seconds', type=int, choices=[180, 240], default=240)

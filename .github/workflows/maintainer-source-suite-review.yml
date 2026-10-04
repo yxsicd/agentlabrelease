@@ -111,10 +111,18 @@ jobs:
             --output "$RUNNER_TEMP/source-suite-review/source"
       - name: Reconstruct original evidence before installing or dispatching reviewer
         run: |
+          request="$RUNNER_TEMP/source-suite-review/source/observations/source-stage/request.json"
+          source_repository=$(jq -er '.source.repository' "$request")
+          [[ "$source_repository" == https://* && "$source_repository" != *@* ]]
+          source_revision=$(jq -er '.source.revision' "$request")
+          scope_boundary=$(jq -er '.scope.pathBoundary' "$request")
+          bash scripts/checkout-maintainer-scope.sh "$source_repository" "$source_revision" "$scope_boundary" \
+            "$RUNNER_TEMP/review-source-git" "$request"
           cargo build --locked --release -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
           target/release/agentlab-maintainer-skill-flywheel --prepare-source-suite-review \
             --source "$RUNNER_TEMP/source-suite-review/source/observations" \
             --quality-rubric "$RUNNER_TEMP/source-suite-review/rubric.json" \
+            --source-git-checkout "$RUNNER_TEMP/review-source-git" \
             --output "$RUNNER_TEMP/source-suite-review/preflight.json"
       - name: Install the pinned replaceable participant runtime
         run: |
@@ -136,7 +144,8 @@ jobs:
           image_id=$(docker image inspect node:24.19.0-bookworm-slim --format '{{.Id}}')
           python3 scripts/prepare-participant-runtime.py --image "$image_id" --pi-runtime "$RUNNER_TEMP/review-pi" \
             --case-input "$RUNNER_TEMP/review-case" --forbid "$GITHUB_WORKSPACE" \
-            --forbid "$RUNNER_TEMP/source-suite-review" --output "$RUNNER_TEMP/review-runtime.json"
+            --forbid "$RUNNER_TEMP/source-suite-review" --forbid "$RUNNER_TEMP/review-source-git" \
+            --output "$RUNNER_TEMP/review-runtime.json"
           mkdir "$RUNNER_TEMP/source-suite-review/runtime-inputs"
           cp "$RUNNER_TEMP/review-runtime.json" "$RUNNER_TEMP/source-suite-review/runtime-inputs/config.json"
           cp "$RUNNER_TEMP/review-case/manifest.json" "$RUNNER_TEMP/source-suite-review/runtime-inputs/manifest.json"
@@ -150,6 +159,7 @@ jobs:
         run: |
           python3 scripts/run-source-suite-review.py --source "$RUNNER_TEMP/source-suite-review/source/observations" \
             --rubric "$RUNNER_TEMP/source-suite-review/rubric.json" --output "$RUNNER_TEMP/source-suite-review/agent" \
+            --source-git-checkout "$RUNNER_TEMP/review-source-git" \
             --gate target/release/agentlab-maintainer-skill-flywheel --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py" \
             --reasoning-effort "$REVIEW_REASONING_EFFORT" --thinking-type "$REVIEW_THINKING_TYPE" \
             --gateway-timeout-seconds "$REVIEW_GATEWAY_TIMEOUT" --max-output-tokens "$REVIEW_MAX_OUTPUT_TOKENS"
