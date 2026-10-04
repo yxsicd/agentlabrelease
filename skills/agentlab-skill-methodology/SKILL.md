@@ -253,6 +253,11 @@ reviewer identity, actual reviewer consumption, runtime closure or semantic trut
 Do not use content-only all-pass as an execution permission or a replacement for
 complete controls, independent final review and committed return. See the
 [pre-execution review contract](../../docs/flywheel-design-quality-review-20261005.md).
+Bind early review to its own canonical prompt, intent schema and capture label;
+never relabel final-suite reviewer evidence as a design review. Reconsume original
+inputs and compare the isolated upstream response, participant final message and
+lifecycle before reporting completion. Recorded consistency is not authenticated
+reviewer identity, semantic truth or execution permission.
 
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest

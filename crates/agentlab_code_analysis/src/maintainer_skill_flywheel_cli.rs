@@ -1181,11 +1181,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.iter().any(|a| {
         a == "--prepare-source-design-quality-review"
             || a == "--validate-source-design-quality-review"
+            || a == "--source-design-quality-review-prompt"
+            || a == "--verify-source-design-quality-review-completion"
     }) {
         let request = fs::read(value(&args, "--author-request")?)?;
         let design = fs::read(value(&args, "--design")?)?;
         let rubric = fs::read(value(&args, "--quality-rubric")?)?;
+        if args
+            .iter()
+            .any(|a| a == "--source-design-quality-review-prompt")
+        {
+            let bytes = agentlab_code_analysis::maintainer_source_design_quality::prompt(
+                &request, &design, &rubric,
+            )?;
+            OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&output)?
+                .write_all(&bytes)?;
+            println!(
+                "{}",
+                serde_json::json!({"reviewerExecuted":false,"qualified":false})
+            );
+            return Ok(());
+        }
         let report = if args
+            .iter()
+            .any(|a| a == "--verify-source-design-quality-review-completion")
+        {
+            agentlab_code_analysis::maintainer_source_design_quality::verify_completion(
+                &request,
+                &design,
+                &rubric,
+                &PathBuf::from(value(&args, "--evidence")?),
+                &fs::read(value(&args, "--review-response")?)?,
+            )?
+        } else if args
             .iter()
             .any(|a| a == "--validate-source-design-quality-review")
         {

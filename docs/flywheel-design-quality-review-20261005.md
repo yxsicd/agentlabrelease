@@ -61,6 +61,22 @@ failed evidence. This feature is not yet wired into Action, and content-only
 ready-for-execution must not be used as that gate. Real complete controls and
 final suite review remain mandatory even after a future authenticated early review.
 
+The follow-up adds `--source-design-quality-review-prompt` and
+`--verify-source-design-quality-review-completion` (the latter also requires
+`--evidence` and `--review-response`). Both reconstruct the same live native packet.
+The capture intent is `agentlab.independent_source_design_review_intent.v1`,
+using `reviewRequestSha256`, `qualityRubricSha256`, `promptSha256`, bounded
+`participantBudgetSeconds`, zero `transportRetryLimit` and participant identity.
+Capture label is `source-design-review`, not `source-suite-review`. The existing
+isolated original-wire verifier checks exact prompt/history, one exchange,
+lifecycle, complete upstream response and participant final message. Design review
+has no enrolled repair lane. Completion records reviewer execution and recorded
+context separation only; authentication, semantic qualification and execution
+permission remain false. This adds no model dispatch or Action gate by itself.
+Synthetic Rust capture tests reject a different phase intent, changed prompt
+digest, changed actual upstream prompt, malformed response and missing lifecycle.
+These transport fixtures are not a real independent reviewer outcome.
+
 Local validation: two Rust content-contract tests exercise unrelated identities,
 rejection precedence, missing/duplicate IDs, invalid citations and scenario links,
 read-only citations and whole-scenario pointers. The actual source/knowledge
