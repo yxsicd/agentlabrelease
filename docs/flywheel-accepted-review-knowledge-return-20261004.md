@@ -77,3 +77,40 @@ cut and the same task/model/budgets; verify actual guidance transmission, indepe
 case outcomes and repeated feedback. Connect the existing validated boundaries
 into the coordinator without treating stored-cut reproduction as fresh repository
 understanding or program analysis. Test another repository before claiming transfer.
+
+## First prospective matched pair: contradictory construction outcomes
+
+Pair enrollment preceded both dispatches at method c2c63ae8c7c8d9a81cd8507811352df81fd742de,
+the same f41c1bdf knowledge cut/selection, source/task, model/route/reasoning and
+output/time/repair budgets. The unchanged six-criterion rubric SHA256 is
+d3276328cc1e23fc4216d0539eb7a003dc2e43d59de0d384b6476cbab4862731.
+Unguided omits the selected new Skill, not common repository knowledge.
+
+Guided run 37174812033 failed after its two completed design turns: both unchanged
+responses end with an extra backtick after JSON, so neither design was accepted.
+Participant durations were 72525 and 59672 ms, exit zero, no timeout. No code
+generation/control suite followed and the sole design correction remains exhausted.
+Original artifact 11292664018 is 1383548 bytes, SHA256
+50ab87538fefadd79c1f59294ee19fb9589609f38bf014a39e642fed6cbdc2c8.
+The observation-only acquirer retained that exact ZIP but correctly rejected
+missing observation export; no workers were rerun to manufacture one.
+
+Unguided run 37174831762 succeeded with one design and one code turn, 98689 and
+71652 ms, exit zero, no timeout or transport retry. Artifact 11293310376 is
+2162250 bytes, SHA256
+680a09e0d01149e95aff3427268c1ead91e91cdf80f52a8e7c0bae9c53931b33.
+Independent local native replays verified original unguided completion and all six
+control definitions plus fresh reference recovery. Its design has six scenarios
+and eighteen checks; these counts are not comparative quality scores.
+Independent review 37175323326 was dispatched once with the frozen common rubric
+and review policy at the same c2c63ae method; its terminal result is still pending.
+Guided has no reviewable suite, so no fictitious review input was supplied.
+
+External enrollment, original ZIPs, receipts and native replays remain in
+flywheel-knowledge-guidance-pair-bzseii. This one pair does not establish benefit,
+regression causality, Harmony qualification or a full automatic loop. Maturity
+remains 75%. Future JSON correction feedback now reports exact character/UTF-8
+byte offsets and escaped local context; strict whole-response parsing, original
+capture bytes and correction budgets remain unchanged. Rust transport fixtures
+exercise successful framing correction and repeated rejection, not real Agent
+improvement. Do not reopen this pair after changing the feedback method.

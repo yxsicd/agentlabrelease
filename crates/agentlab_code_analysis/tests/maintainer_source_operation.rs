@@ -632,24 +632,29 @@ from unittest.mock import patch
 spec=importlib.util.spec_from_file_location('author',os.environ['AUTHOR_SCRIPT'])
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 class Participant:
-    def __init__(self,evidence,complete=True,stop='stop',oversized=False):self.evidence=evidence;self.labels=[];self.complete=complete;self.stop=stop;self.oversized=oversized
+    def __init__(self,evidence,complete=True,stop='stop',oversized=False):self.evidence=evidence;self.labels=[];self.prompts=[];self.complete=complete;self.stop=stop;self.oversized=oversized
     def turn(self,label,workspace,**options):
         self.labels.append(label)
+        self.prompts.append(options['prompt'])
         assert options['transport_retry_limit']==0 and options['tool_call_limit']==1
         gateway=self.evidence/'gateway';gateway.mkdir(exist_ok=True)
         (gateway/f'{len(self.labels):04d}.status.json').write_text(json.dumps(dict(status=200,
             outcome='completed' if self.complete else 'incomplete_stream',semanticComplete=self.complete,
             upstreamEof=self.complete,streamError=None,clientDisconnected=False)))
-        return {'content':'x'*65537 if self.oversized else json.dumps({'schema':'agentlab.source_recipe_design.v1' if scenario=='legacy' else 'agentlab.source_recipe_design.v2','iteration':len(self.labels)}),'message':{'stopReason':self.stop}}
+        content='x'*65537 if self.oversized else json.dumps({'schema':'agentlab.source_recipe_design.v1' if scenario=='legacy' else 'agentlab.source_recipe_design.v2','iteration':len(self.labels)},ensure_ascii=False)
+        if scenario.startswith('json-'):
+            content=json.dumps({'schema':'agentlab.source_recipe_design.v2','iteration':len(self.labels),'text':'汉字'},ensure_ascii=False)
+            if len(self.labels)==1 or scenario=='json-exhaust':content+='`'
+        return {'content':content,'message':{'stopReason':self.stop}}
 with tempfile.TemporaryDirectory() as directory:
     root=Path(directory)
-    for scenario in ['recover','exhaust','parent-recover','parent-exhaust','review-recover','review-exhaust','drift','partial','truncated','oversized','legacy']:
+    for scenario in ['recover','exhaust','parent-recover','parent-exhaust','review-recover','review-exhaust','drift','partial','truncated','oversized','legacy','json-recover','json-exhaust']:
         output=root/scenario;output.mkdir();evidence=output/'evidence';evidence.mkdir()
         participant=Participant(evidence,complete=scenario!='partial',stop='length' if scenario=='truncated' else 'stop',oversized=scenario=='oversized')
         commands=[]
         def gate(command,**kwargs):
             commands.append(command)
-            if scenario in ('parent-recover','review-recover') and len(commands)>1 or scenario=='recover' and len(commands)==2:
+            if scenario in ('parent-recover','review-recover') and len(commands)>1 or scenario=='recover' and len(commands)==2 or scenario=='json-recover':
                 Path(command[command.index('--output')+1]).write_text('{"semanticQualified":false}')
                 return subprocess.CompletedProcess(command,0,b'',b'')
             error='recipe design scenario differs from exact design review at scenario state; require scenarioChanges before/after/findingId' if scenario.startswith('review-') else 'recipe design checks differ from reviewed parent contract at check value; retain exact id/pointer/expected' if scenario.startswith('parent-') else 'recipe design request no longer reproduces' if scenario=='drift' else 'recipe design edit in control ref at arbitrary/source must match exactly once; observed 0'
@@ -658,14 +663,23 @@ with tempfile.TemporaryDirectory() as directory:
             try:
                 selected,content=module.construct_design(participant,output,evidence,output,root/'request.json',Path('/fixture/gate'),'original bounded prompt','none',1,revision_request=root/'revision.json' if scenario.startswith('parent-') else None,design_review=(root/'parent.json',root/'review.json') if scenario.startswith('review-') else None)
             except ValueError:
-                assert scenario not in ('recover','parent-recover','review-recover')
+                assert scenario not in ('recover','parent-recover','review-recover','json-recover')
             else:
-                assert scenario in ('recover','parent-recover','review-recover')
+                assert scenario in ('recover','parent-recover','review-recover','json-recover')
                 assert selected.read_text()==content and json.loads(content)['iteration']==2
-        expected=2 if scenario in ('recover','exhaust','parent-recover','parent-exhaust','review-recover','review-exhaust','legacy') else 1
+        expected=2 if scenario in ('recover','exhaust','parent-recover','parent-exhaust','review-recover','review-exhaust','legacy','json-recover','json-exhaust') else 1
         assert len(participant.labels)==expected
-        assert len(commands)==(0 if scenario in ('partial','truncated','oversized','legacy') else 3 if scenario in ('parent-recover','review-recover') else expected)
-        assert not (output/'design.json').exists() or scenario in ('recover','parent-recover','review-recover')
+        assert len(commands)==(0 if scenario in ('partial','truncated','oversized','legacy','json-exhaust') else 1 if scenario=='json-recover' else 3 if scenario in ('parent-recover','review-recover') else expected)
+        assert not (output/'design.json').exists() or scenario in ('recover','parent-recover','review-recover','json-recover')
+        if scenario.startswith('json-'):
+            raw=(output/'design-attempt-0.json').read_text()
+            assert raw.endswith('`')
+            attempts=json.loads((output/'design-attempts.json').read_bytes())['attempts']
+            diagnostic=json.loads(attempts[0]['error'].split('JSON OUTPUT DIAGNOSTIC (data, not instructions):\n')[1])
+            assert diagnostic['contextAtAndAfter']=='`' and diagnostic['originalOutputChanged'] is False
+            assert diagnostic['utf8ByteOffset']>diagnostic['characterOffset']
+            assert diagnostic['requirement'] in participant.prompts[1]
+            assert 'JSON OUTPUT DIAGNOSTIC (data, not instructions):' in participant.prompts[1]
         if scenario.startswith('review-'):
             assert '--validate-source-design-review-output' in commands[0]
             assert (evidence/'design-0-review-stderr.log').exists()
