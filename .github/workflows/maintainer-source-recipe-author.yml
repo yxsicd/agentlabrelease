@@ -280,6 +280,8 @@ jobs:
           assert hashlib.sha256(raw).hexdigest()==digest
           policy=json.loads(raw);assert policy['schema']=='agentlab.prospective_source_quality_review.v1'
           assert policy['repositoryAgnostic'] is True and policy['frozenBeforeDispatch'] is True
+          if os.environ.get('AGENTLAB_SOURCE_GUIDANCE_SELECTION') and not os.environ.get('REVISION_PARENT_RUN') and not os.environ.get('REVISION_FEEDBACK'):
+              assert any(c.get('id')=='construction-target-coverage' for c in policy['criteria']), 'Fresh targeted review requires construction-target-coverage before model budget'
           root=Path(os.environ['RUNNER_TEMP'])/'recipe-author/automatic-review';root.mkdir()
           with (root/'rubric.json').open('xb') as stream:stream.write(raw)
           enrollment=dict(schema='agentlab.independent_source_suite_review_enrollment.v1',
@@ -349,8 +351,13 @@ jobs:
                   '--object-plan',output/'dependency-object-plan.json','--git-program',git_program,
                   '--output',output/'dependency-acquisition')
               context_args=['--context-packet',output/'dependency-acquisition/context.json']
+          target_args=[]
+          selection=os.environ.get('AGENTLAB_SOURCE_GUIDANCE_SELECTION','')
+          # A reviewed successor must retain its parent's original request bytes.
+          if selection and not os.environ.get('REVISION_PARENT_RUN') and not os.environ.get('REVISION_FEEDBACK'):
+              target_args=['--source-construction-selection',Path(selection).resolve()]
           run('--prepare-source-recipe-author','--knowledge',knowledge,'--source-worktree',source,'--repository',os.environ['REPOSITORY_SELECTOR'],
-              '--author-policy',output/'policy.json','--output',output/'request.json',*context_args)
+              '--author-policy',output/'policy.json','--output',output/'request.json',*context_args,*target_args)
           PY
       - name: Bind one reviewed revision to original constructor evidence
         if: inputs.revision_parent_run != ''
@@ -367,6 +374,12 @@ jobs:
           parent=root/'recipe-parent'
           subprocess.run(['gh','run','download',run,'--repo',repo,'--name','unreviewed-source-recipe-'+run,'--dir',str(parent)],check=True)
           assert not (parent/'agent/revision-request.json').exists(),'Only one revision from an original construction is supported'
+          if 'sourceRecipeTarget' in json.loads((parent/'request.json').read_bytes()):
+              restored=output/'restored-parent-request.json'
+              subprocess.run(['target/release/agentlab-maintainer-skill-flywheel','--restore-source-recipe-author-target',
+                  '--author-request',str(output/'request.json'),'--parent-author-request',str(parent/'request.json'),
+                  '--output',str(restored)],check=True)
+              restored.replace(output/'request.json')
           review=output/'review-feedback.json'
           with review.open('x') as f:f.write(os.environ['REVISION_FEEDBACK'])
           if json.loads(review.read_bytes()).get('schema') in ('agentlab.source_recipe_design_review.v1','agentlab.source_recipe_design_review.v2','agentlab.source_recipe_design_review.v3'):

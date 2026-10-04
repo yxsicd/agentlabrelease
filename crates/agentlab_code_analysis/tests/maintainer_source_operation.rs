@@ -832,6 +832,15 @@ with tempfile.TemporaryDirectory() as directory:
 
 #[test]
 fn source_action_accepts_explicit_checked_in_cuts_and_rejects_path_escape() {
+    let fixture_root = std::env::temp_dir().join(format!(
+        "source-action-input-mode-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&fixture_root).unwrap();
     let workflow =
         fs::read_to_string(root().join(".github/workflows/maintainer-source-recipe-author.yml"))
             .unwrap();
@@ -875,6 +884,8 @@ fn source_action_accepts_explicit_checked_in_cuts_and_rejects_path_escape() {
             .env("CONSTRUCTION_CODE_REVISIONS", "0")
             .env("AGENTLAB_SOURCE_GUIDANCE_SELECTION", "")
             .env("CONSTRUCTION_DESIGN_FIRST", "true")
+            .env("GITHUB_OUTPUT", fixture_root.join("outputs"))
+            .env("GITHUB_ENV", fixture_root.join("environment"))
             .output()
             .unwrap();
         assert_eq!(
@@ -884,6 +895,7 @@ fn source_action_accepts_explicit_checked_in_cuts_and_rejects_path_escape() {
             String::from_utf8_lossy(&result.stderr)
         );
     }
+    fs::remove_dir_all(fixture_root).unwrap();
 }
 
 #[test]
@@ -1447,7 +1459,7 @@ check(good, False)
 #[test]
 fn workflow_revision_forwards_retained_parent_design_without_downgrading() {
     let code = r#"
-import json,os,subprocess,tempfile,textwrap
+import hashlib,json,os,subprocess,tempfile,textwrap
 from pathlib import Path
 from unittest.mock import patch
 workflow=Path(os.environ['WORKFLOW']).read_text()
@@ -1455,14 +1467,23 @@ section=workflow.split('      - name: Bind one reviewed revision to original con
 body=section.split('        run: |\n',1)[1].split('      - name:',1)[0]
 script=textwrap.dedent(body).split("python3 - <<'PY'\n",1)[1].rsplit('\nPY',1)[0]
 with tempfile.TemporaryDirectory() as directory:
-    for mode,has_design in [('legacy-no-design',False),('legacy-design',True),('design-review',True),('design-review-v2',True)]:
+    for mode,has_design in [('legacy-no-design',False),('legacy-design',True),('design-review',True),('design-review-v2',True),('target-legacy-design',True)]:
         root=Path(directory)/mode;(root/'recipe-author').mkdir(parents=True)
+        request=dict(schema='agentlab.source_recipe_author_request.v1',scope=dict(id='fixture-scope'),
+            sourceFiles=[dict(path='unit.js',content='module.exports={};',sha256=hashlib.sha256(b'module.exports={};').hexdigest())])
+        (root/'recipe-author/request.json').write_text(json.dumps(request))
         commands=[]
+        actual_run=subprocess.run
         def run(command,**kwargs):
             commands.append(command)
             if command[:3]==['gh','run','download']:
                 parent=Path(command[command.index('--dir')+1]);(parent/'agent').mkdir(parents=True)
+                original=json.loads(json.dumps(request))
+                if mode.startswith('target-'):original['sourceRecipeTarget']=dict(scopeSkillId='fixture-scope',sourcePaths=['unit.js'],demand='Preserve original behavior.')
+                (parent/'request.json').write_text(json.dumps(original))
                 if has_design:(parent/'agent/design.json').write_text('original-parent-design')
+            if '--restore-source-recipe-author-target' in command:
+                return actual_run([os.environ['NATIVE_GATE'],*command[1:]],**kwargs,capture_output=True)
             return subprocess.CompletedProcess(command,0)
         info=json.dumps(dict(workflowName='Maintainer source recipe construction',event='workflow_dispatch',status='completed')).encode()
         feedback=json.dumps({'schema':'agentlab.source_recipe_design_review.v2' if mode=='design-review-v2' else 'agentlab.source_recipe_design_review.v1' if mode=='design-review' else 'fixture-proposal-review'})
@@ -1480,12 +1501,19 @@ with tempfile.TemporaryDirectory() as directory:
             assert ('--parent-design' in command)==has_design
             if has_design:assert Path(command[command.index('--parent-design')+1]).read_text()=='original-parent-design'
         assert (root/'recipe-author/review-feedback.json').read_text()==feedback
+        if mode.startswith('target-'):
+            assert len(commands)==3 and '--restore-source-recipe-author-target' in commands[1]
+            assert (root/'recipe-author/request.json').read_bytes()==(root/'recipe-parent/request.json').read_bytes()
 "#;
     let result = Command::new("python3")
         .args(["-c", code])
         .env(
             "WORKFLOW",
             root().join(".github/workflows/maintainer-source-recipe-author.yml"),
+        )
+        .env(
+            "NATIVE_GATE",
+            env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"),
         )
         .output()
         .unwrap();

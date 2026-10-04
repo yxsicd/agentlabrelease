@@ -33,6 +33,12 @@ def prepare(args):
         artifact_kind='baseline', coordinator_request_id=None))
     retained = acquired / 'baseline-inputs'
     stage = retained / 'agent/proposal-stage'
+    if 'sourceRecipeTarget' in json.loads((stage / 'request.json').read_bytes()):
+        restored = root / 'restored-parent-request.json'
+        subprocess.run([str(args.gate.resolve(strict=True)), '--restore-source-recipe-author-target',
+            '--author-request', str(args.request), '--parent-author-request', str(stage / 'request.json'),
+            '--output', str(restored)], check=True, timeout=60)
+        restored.replace(args.request)
     acquisition.require(args.request.read_bytes() == (stage / 'request.json').read_bytes(),
                         'Current Action request differs from original failed baseline')
     policy = root / 'continuation-enrollment.json'

@@ -80,6 +80,15 @@ pub fn prepare_with_git(
     let read = |name: &str| diagnostic::read(&root.join(name), 4 * 1024 * 1024);
     let request_bytes = read("source-stage/request.json")?;
     let request = parse(&request_bytes)?;
+    let target = crate::maintainer_guidance::frozen_source_recipe_target(&request)?;
+    need(
+        !ids.contains("construction-target-coverage") || target.is_some(),
+        "construction-target-coverage requires a frozen original request target",
+    )?;
+    need(
+        target.is_none() || ids.contains("construction-target-coverage"),
+        "frozen construction target requires construction-target-coverage rubric",
+    )?;
     let design_bytes = read("source-stage/design.json")?;
     let design = parse(&design_bytes)?;
     let proposal_bytes = read("source-stage/proposal.json")?;
@@ -146,6 +155,10 @@ pub fn prepare_with_git(
         "reviewPreparedOnly":true,"reviewerExecuted":false,"semanticQualified":false,
         "formalCaseQualified":false,"learningBenefitVerified":false,"qualified":false
     });
+    if let Some(target) = target {
+        // Preserve old canonical packets exactly; absent is not null.
+        result["constructionTarget"] = target;
+    }
     if let Some(checkout) = checkout {
         result["independentGitSourceIdentity"] = verify_git_identity(&result, checkout)?;
         result["responseContract"]["lessonReviewTemplate"] = lesson_template(&result)?;

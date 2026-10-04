@@ -349,6 +349,9 @@ fn suite_fixture_with_outcome(
         request["scope"]["sourceRevision"] = binding["source"]["revision"].clone();
         request["knowledgeCutSha256"] = binding["cutSha256"].clone();
         request["authorityRevision"] = binding["revision"].clone();
+        if let Some(target) = binding.get("sourceRecipeTarget") {
+            request["sourceRecipeTarget"] = target.clone();
+        }
         if let Some(blob) = binding["gitBlobOid"].as_str() {
             request["sourceFiles"][0]["gitBlobOid"] = json!(blob);
             request["scope"]["stage"] = json!("repository-scope");
@@ -964,6 +967,61 @@ for name in ['traversal','absolute','backslash','duplicate','symlink','missing']
 }
 
 #[test]
+fn original_construction_target_survives_export_into_independent_review() {
+    use agentlab_code_analysis::{
+        maintainer_source_review as reviewer, maintainer_source_suite_lesson as lesson,
+    };
+    let rubric = fs::read(
+        root().join("examples/maintainer-knowledge-gate/source-target-quality-rubric.json"),
+    )
+    .unwrap();
+    let legacy = suite_fixture_with_binding(2, None);
+    let observation = legacy.join("observations");
+    lesson::export(
+        &legacy.join("stage"),
+        &legacy.join("suite"),
+        None,
+        &observation,
+    )
+    .unwrap();
+    assert!(reviewer::prepare(&observation, &rubric)
+        .unwrap_err()
+        .contains("requires a frozen original request target"));
+    for repository in ["unrelated-target-one", "independent-target-two"] {
+        let target = json!({"scopeSkillId":"scope","sourcePaths":["unit.js"],"demand":"Exercise the source mechanism and verify its declared result; preserve runtime limitations."});
+        let binding = json!({"source":{"repositoryId":repository,"revision":"1".repeat(40)},
+            "cutSha256":"a".repeat(64),"revision":"b".repeat(40),"sourceRecipeTarget":target});
+        let base = suite_fixture_with_binding(2, Some(&binding));
+        let observation = base.join("observations");
+        lesson::export(&base.join("stage"), &base.join("suite"), None, &observation).unwrap();
+        let original = fs::read(base.join("stage/request.json")).unwrap();
+        assert_eq!(
+            fs::read(observation.join("source-stage/request.json")).unwrap(),
+            original
+        );
+        let packet = reviewer::prepare(&observation, &rubric).unwrap();
+        let old_rubric =
+            fs::read(root().join("examples/maintainer-knowledge-gate/source-quality-rubric.json"))
+                .unwrap();
+        assert!(reviewer::prepare(&observation, &old_rubric)
+            .unwrap_err()
+            .contains("requires construction-target-coverage rubric"));
+        assert_eq!(packet["constructionTarget"], target);
+        assert_eq!(packet["reviewBindings"]["requestSha256"], digest(&original));
+        let prompt = reviewer::prompt(&observation, &rubric).unwrap();
+        let prompt = String::from_utf8(prompt).unwrap();
+        let presented: Value =
+            serde_json::from_str(prompt.split("\nORIGINAL REVIEW REQUEST:\n").nth(1).unwrap())
+                .unwrap();
+        assert_eq!(presented["constructionTarget"], target);
+        assert_eq!(packet["semanticQualified"], false);
+        assert_eq!(packet["reviewerExecuted"], false);
+        fs::remove_dir_all(base).unwrap();
+    }
+    fs::remove_dir_all(legacy).unwrap();
+}
+
+#[test]
 fn git_bound_review_native_template_keeps_source_evidence_and_independent_verdicts() {
     use agentlab_code_analysis::{
         maintainer_source_review as reviewer, maintainer_source_suite_lesson as lesson,
@@ -1007,6 +1065,7 @@ fn git_bound_review_native_template_keeps_source_evidence_and_independent_verdic
         "frozenBeforeDispatch":true,"verdicts":["pass","fail","unverified"],
         "criteria":[{"id":"semantics","requirement":"Fixture source membership.","evidence":"Original source."}]})).unwrap();
     let packet = reviewer::prepare_with_git(&observation, &rubric, Some(&checkout)).unwrap();
+    assert!(packet.get("constructionTarget").is_none());
     let prompt = String::from_utf8(
         reviewer::prompt_with_git(&observation, &rubric, Some(&checkout)).unwrap(),
     )

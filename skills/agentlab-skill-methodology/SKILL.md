@@ -206,6 +206,22 @@ correctness. Correct a prospective selection under a new path, preserving the
 old selection, admitted lesson and captured requests. This check prevents a
 misdirected task; it is not independent Oracle review or evidence of learning.
 
+For fresh targeted construction, freeze the reviewed scope, loaded paths and
+original demand in `sourceRecipeTarget` before inference. Preserve these bytes
+through observation export into independent review as `constructionTarget`.
+Use the separately frozen target-quality rubric: account for each demand clause
+against original source, exercised scenarios and scored results. Path inclusion,
+check counts and internal consistency do not prove task coverage. Reject missing
+target/rubric bindings before spending reviewer budget. Keep legacy requests and
+rubrics unchanged; never backfill targets into prior captures or reopen attempts.
+For a retained parent that already froze a target, restore its original request
+bytes only after verifying every non-target field matches fresh local preparation.
+When extending a structured request, exercise every affected acquisition/continuation
+lane with valid original JSON and the actual native consumer. A byte-only transport
+fixture can hide a new parsing boundary; touched-file tests alone miss those callers.
+This establishes review input completeness, not automatic semantic truth or a
+successful business round.
+
 For cross-host continuation, inventory the author host executable separately
 from the participant/worker image. Recover dependencies by original byte digest
 and restore frozen paths inside an isolated namespace rather than overwriting

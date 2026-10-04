@@ -41,13 +41,73 @@ assert null!=empty and null['properties']['notContains']=={'type':'null'}
 base['checks'][0]['expected']={'nested':{'present':[]}}
 nested=author.observation_contract_guide(base)[0]['shape']['properties']['nested']
 assert nested['required']==['present'] and nested['additionalProperties'] is False
-print('per-check shapes, nonmutation and answer exclusion passed')
+request={key:{} for key in ('scope','source','sourceFiles','semanticFacts','selectedGap')}
+legacy=author.source_context(request)
+assert legacy==request and 'sourceRecipeTarget' not in legacy
+target={'scopeSkillId':'scope','sourcePaths':['unit.js'],'demand':'Exercise original behavior and verify its result.'}
+request['sourceRecipeTarget']=target
+original=copy.deepcopy(request)
+assert author.source_context(request)['sourceRecipeTarget']==target
+assert request==original
+print('per-check shapes, nonmutation, answer exclusion and frozen target context passed')
 "#;
     let result = Command::new("python3")
         .args(["-c", code])
         .env(
             "AUTHOR_SCRIPT",
             Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/run-source-recipe-author.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn targeted_action_freezes_target_and_requires_coverage_before_model_budget() {
+    let code = r#"
+import hashlib,json,os,subprocess,tempfile,textwrap
+from pathlib import Path
+workflow=Path(os.environ['WORKFLOW']).read_text()
+section=workflow.split('      - name: Freeze optional independent review before construction budget\n',1)[1].split('      - name:',1)[0]
+enroll=textwrap.dedent(section.split("python3 - <<'PY'\n",1)[1].rsplit('          PY',1)[0])
+for targeted,parent,feedback,new_rubric,success in [
+    (False,'','',False,True), (True,'','',False,False), (True,'','',True,True),
+    (True,'123','{}',False,True), (True,'','{}',False,True)]:
+    path=Path('examples/maintainer-knowledge-gate')/('source-target-quality-rubric.json' if new_rubric else 'source-quality-rubric.json')
+    with tempfile.TemporaryDirectory() as scratch:
+        (Path(scratch)/'recipe-author').mkdir()
+        env=dict(os.environ,AUTOMATIC_REVIEW_ENABLED='true',AUTOMATIC_REVIEW_RUBRIC=str(path),
+            AUTOMATIC_REVIEW_RUBRIC_SHA256=hashlib.sha256(path.read_bytes()).hexdigest(),AUTOMATIC_REVIEW_REPAIR_LIMIT='1',
+            GITHUB_RUN_ATTEMPT='1',CONSTRUCTION_DESIGN_FIRST='true',GITHUB_SHA='a'*40,GITHUB_RUN_ID='42',
+            AGENTLAB_MODEL='fixture',AGENTLAB_PROVIDER_ROUTE='fixture',CONSTRUCTION_REASONING_EFFORT='low',
+            CONSTRUCTION_THINKING_TYPE='disabled',CONSTRUCTION_MAX_OUTPUT_TOKENS='16384',RUNNER_TEMP=scratch,
+            AGENTLAB_SOURCE_GUIDANCE_SELECTION='selection.json' if targeted else '',REVISION_PARENT_RUN=parent,REVISION_FEEDBACK=feedback)
+        result=subprocess.run(['python3','-c',enroll],env=env,capture_output=True,text=True)
+        assert (result.returncode==0)==success,result.stderr
+        assert (Path(scratch)/'recipe-author/automatic-review/enrollment.json').exists()==success
+# Execute the actual target-argument block, not a second implementation.
+section=workflow.split('      - name: Select operation gap and prepare bounded original-source request\n',1)[1].split('      - name:',1)[0]
+tail='target_args=[]\n'+textwrap.dedent(section.split('          target_args=[]\n',1)[1].rsplit('          PY',1)[0])
+for selection,parent,feedback,expected in [('selection.json','','',True),('selection.json','123','{}',False),('selection.json','','{}',False),('','','',False)]:
+    env=dict(os.environ,AGENTLAB_SOURCE_GUIDANCE_SELECTION=selection,REVISION_PARENT_RUN=parent,REVISION_FEEDBACK=feedback,REPOSITORY_SELECTOR='unrelated')
+    captured=[]
+    from unittest.mock import patch
+    with patch.dict(os.environ,env,clear=True):
+        exec(tail,dict(os=os,Path=Path,run=lambda *args:captured.append(args),knowledge=Path('knowledge'),source=Path('source'),output=Path('output'),context_args=[]))
+    assert ('--source-construction-selection' in captured[0])==expected
+print('actual workflow fresh-target enrollment and legacy request preservation passed')
+"#;
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .current_dir(&root)
+        .env(
+            "WORKFLOW",
+            root.join(".github/workflows/maintainer-source-recipe-author.yml"),
         )
         .output()
         .unwrap();

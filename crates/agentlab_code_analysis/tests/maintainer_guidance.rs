@@ -1,7 +1,8 @@
 use agentlab_code_analysis::{
     digest,
     maintainer_guidance::{
-        bind, bind_source_recipe, consumption, source_recipe_completion, source_recipe_consumption,
+        bind, bind_source_recipe, consumption, freeze_source_recipe_target,
+        frozen_source_recipe_target, source_recipe_completion, source_recipe_consumption,
         source_recipe_target, source_recipe_unguided_completion, stage_proposal,
     },
 };
@@ -439,6 +440,85 @@ fn source_guidance_is_cut_and_target_bound_for_two_unrelated_repositories() {
             selection["sourceRecipeTarget"]
         );
         assert_eq!(packet["agentConsumptionVerified"], false);
+        assert_eq!(frozen_source_recipe_target(&request).unwrap(), None);
+        let frozen = freeze_source_recipe_target(
+            &f.root,
+            &request,
+            &serde_json::to_vec(&selection).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            frozen_source_recipe_target(&frozen).unwrap(),
+            Some(selection["sourceRecipeTarget"].clone())
+        );
+        let rebound = checked(&frozen, &selection).unwrap();
+        let original_bytes = serde_json::to_vec_pretty(&frozen).unwrap();
+        let current_bytes = serde_json::to_vec_pretty(&request).unwrap();
+        let restore = agentlab_code_analysis::maintainer_guidance::restore_source_recipe_target;
+        assert_eq!(
+            restore(&current_bytes, &original_bytes).unwrap(),
+            original_bytes
+        );
+        assert_eq!(
+            restore(&original_bytes, &original_bytes).unwrap(),
+            original_bytes
+        );
+        for pointer in [
+            "/source/repositoryId",
+            "/knowledgeCutSha256",
+            "/sourceFiles/0/content",
+        ] {
+            let mut drift = request.clone();
+            *drift.pointer_mut(pointer).unwrap() = json!("unrelated drift");
+            assert!(restore(&serde_json::to_vec(&drift).unwrap(), &original_bytes).is_err());
+        }
+        assert!(restore(&original_bytes, &current_bytes).is_err());
+        let current_path = f.root.join("restore-current.json");
+        let parent_path = f.root.join("restore-parent.json");
+        let output_path = f.root.join("restored.json");
+        fs::write(&current_path, &current_bytes).unwrap();
+        fs::write(&parent_path, &original_bytes).unwrap();
+        let run = || {
+            Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+                .args(["--restore-source-recipe-author-target", "--author-request"])
+                .arg(&current_path)
+                .arg("--parent-author-request")
+                .arg(&parent_path)
+                .arg("--output")
+                .arg(&output_path)
+                .output()
+                .unwrap()
+        };
+        assert!(run().status.success());
+        assert_eq!(fs::read(&output_path).unwrap(), original_bytes);
+        assert!(!run().status.success());
+        assert_eq!(
+            rebound["sourceRecipeBinding"]["authorRequestSha256"],
+            digest(&serde_json::to_vec(&frozen).unwrap())
+        );
+        assert_ne!(
+            rebound["sourceRecipeBinding"]["authorRequestSha256"],
+            packet["sourceRecipeBinding"]["authorRequestSha256"]
+        );
+        assert_eq!(
+            freeze_source_recipe_target(&f.root, &frozen, &serde_json::to_vec(&selection).unwrap())
+                .unwrap(),
+            frozen
+        );
+        let mut changed = frozen.clone();
+        changed["sourceRecipeTarget"]["demand"] = json!("A different otherwise valid demand.");
+        assert!(frozen_source_recipe_target(&changed).is_ok());
+        assert!(checked(&changed, &selection).is_err());
+        for target in [
+            Value::Null,
+            json!({}),
+            json!({"scopeSkillId":"wrong","sourcePaths":["src/Thing.ets"],"demand":"Demand"}),
+            json!({"scopeSkillId":"scope-source","sourcePaths":["../Thing.ets"],"demand":"Demand"}),
+        ] {
+            let mut changed = frozen.clone();
+            changed["sourceRecipeTarget"] = target;
+            assert!(frozen_source_recipe_target(&changed).is_err());
+        }
         let proposal = json!({"scopeSkillId":"scope-source","sourcePaths":["src/Thing.ets"]});
         assert!(source_recipe_target(&packet, &serde_json::to_vec(&proposal).unwrap()).is_ok());
         let omitted = json!({"scopeSkillId":"scope-source","sourcePaths":["src/Other.ets"]});

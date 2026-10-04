@@ -721,7 +721,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let context = optional(&args, "--context-packet")
             .map(fs::read)
             .transpose()?;
-        let request =
+        let mut request =
             agentlab_code_analysis::maintainer_source_recipe_author::prepare_with_context(
                 &PathBuf::from(value(&args, "--knowledge")?),
                 &PathBuf::from(value(&args, "--source-worktree")?),
@@ -729,6 +729,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &fs::read(value(&args, "--author-policy")?)?,
                 context.as_deref(),
             )?;
+        if let Some(selection) = optional(&args, "--source-construction-selection") {
+            request = agentlab_code_analysis::maintainer_guidance::freeze_source_recipe_target(
+                &PathBuf::from(value(&args, "--knowledge")?),
+                &request,
+                &fs::read(selection)?,
+            )?;
+        }
         let mut bytes = serde_json::to_vec_pretty(&request)?;
         bytes.push(b'\n');
         OpenOptions::new()
@@ -739,6 +746,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!(
             "{}",
             serde_json::json!({"scopeSkillId":request["scope"]["id"],"reviewed":false,"executionPerformed":false})
+        );
+        return Ok(());
+    }
+    if args
+        .iter()
+        .any(|a| a == "--restore-source-recipe-author-target")
+    {
+        let bytes = agentlab_code_analysis::maintainer_guidance::restore_source_recipe_target(
+            &fs::read(value(&args, "--author-request")?)?,
+            &fs::read(value(&args, "--parent-author-request")?)?,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&bytes)?;
+        println!(
+            "{}",
+            serde_json::json!({"originalRequestRestored":true,"executionPerformed":false,"qualified":false})
         );
         return Ok(());
     }

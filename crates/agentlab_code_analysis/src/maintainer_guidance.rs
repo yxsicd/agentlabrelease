@@ -296,6 +296,81 @@ pub fn bind_source_recipe(
         "source guidance author cut, stage or source differs",
     )?;
     let target = &selection["sourceRecipeTarget"];
+    validate_construction_target(&request, target)?;
+    if let Some(frozen) = request.get("sourceRecipeTarget") {
+        need(
+            frozen == target,
+            "source guidance frozen construction target differs",
+        )?;
+    }
+    packet["sourceRecipeBinding"] = json!({"authorRequestSha256":digest(request_bytes),
+        "target":target,"reviewerAuthenticated":false,"semanticQualified":false});
+    Ok(packet)
+}
+
+/// Freeze a reviewed target before inference, not after a generated outcome.
+pub fn freeze_source_recipe_target(
+    knowledge: &Path,
+    request: &Value,
+    selection_bytes: &[u8],
+) -> Result<Value, String> {
+    let bytes = serde_json::to_vec(request).map_err(|e| e.to_string())?;
+    let packet = bind_source_recipe(knowledge, &bytes, selection_bytes)?;
+    let mut frozen = request.clone();
+    frozen["sourceRecipeTarget"] = packet["sourceRecipeBinding"]["target"].clone();
+    let bytes = serde_json::to_vec(&frozen).map_err(|e| e.to_string())?;
+    bind_source_recipe(knowledge, &bytes, selection_bytes)?;
+    Ok(frozen)
+}
+
+/// Legacy requests have no target; never synthesize one during replay/review.
+pub fn frozen_source_recipe_target(request: &Value) -> Result<Option<Value>, String> {
+    request
+        .get("sourceRecipeTarget")
+        .map(|target| {
+            validate_construction_target(request, target)?;
+            Ok(target.clone())
+        })
+        .transpose()
+}
+
+/// Rehydrate only a parent's already-frozen target into a fresh local preparation.
+/// All other fields must agree; return exact parent bytes, never rewrite history.
+pub fn restore_source_recipe_target(
+    current_bytes: &[u8],
+    parent_bytes: &[u8],
+) -> Result<Vec<u8>, String> {
+    need(
+        current_bytes.len() <= 512 * 1024 && parent_bytes.len() <= 512 * 1024,
+        "source target restore request budget",
+    )?;
+    let mut current: Value = serde_json::from_slice(current_bytes).map_err(|e| e.to_string())?;
+    let parent: Value = serde_json::from_slice(parent_bytes).map_err(|e| e.to_string())?;
+    need(
+        current["schema"] == "agentlab.source_recipe_author_request.v1"
+            && parent["schema"] == current["schema"],
+        "source target restore request schema differs",
+    )?;
+    if current_bytes == parent_bytes {
+        frozen_source_recipe_target(&parent)?;
+        return Ok(parent_bytes.to_vec());
+    }
+    let target = frozen_source_recipe_target(&parent)?
+        .ok_or("source target restore requires original frozen target")?;
+    need(
+        current.get("sourceRecipeTarget").is_none(),
+        "source target restore cannot replace an existing target",
+    )?;
+    validate_construction_target(&current, &target)?;
+    current["sourceRecipeTarget"] = target;
+    need(
+        current == parent,
+        "source target restore changed non-target author fields",
+    )?;
+    Ok(parent_bytes.to_vec())
+}
+
+fn validate_construction_target(request: &Value, target: &Value) -> Result<(), String> {
     let scope_id = text(&request["scope"], "id")?;
     need(
         target.as_object().is_some_and(|o| o.len() == 3)
@@ -338,9 +413,7 @@ pub fn bind_source_recipe(
             "source guidance target bytes differ",
         )?;
     }
-    packet["sourceRecipeBinding"] = json!({"authorRequestSha256":digest(request_bytes),
-        "target":target,"reviewerAuthenticated":false,"semanticQualified":false});
-    Ok(packet)
+    Ok(())
 }
 
 /// A named target must survive generated-proposal staging. Path inclusion is
