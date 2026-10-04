@@ -287,6 +287,14 @@ rejected originals and unchanged admission rules; do not fill in Agent output
 or move expected results into dependency inputs to obtain a pass. Diagnostic
 regressions establish feedback mechanics, not successful model correction or
 semantic qualification.
+For verifier generation, expose required object keys and disallow undeclared
+properties in the shape-only guide, recursively. A real baseline passed five
+checks but failed two because the verifier emitted an extra empty field absent
+from their frozen expectations. Missing, empty and null are distinct under the
+existing exact-value contract; do not repair this by changing expected results
+after execution. Preserve the failed worker and malformed bounded repair. These
+shape hints disclose types/presence, not expected scalar values, and do not prove
+that the Agent interprets the contract or source semantics correctly.
 
 After static correction succeeds, review executable source contracts separately.
 For the compiler-backed frozen-runtime protocol, the explicit
