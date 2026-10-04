@@ -807,7 +807,9 @@ pub fn prepare_reviewed_successor(
             && policy.as_object().is_some_and(|fields| fields.len() == 8)
             && policy["schema"] == "agentlab.source_successor_policy.v1"
             && policy["reviewed"] == true
-            && policy["maximumSuccessors"].as_u64().is_some_and(|n| (1..=8).contains(&n))
+            && policy["maximumSuccessors"]
+                .as_u64()
+                .is_some_and(|n| (1..=8).contains(&n))
             && policy["participantBudgetSeconds"] == 420
             && policy["designRevisionLimit"] == 0
             && policy["codeRevisionLimit"] == 0
@@ -825,13 +827,18 @@ pub fn prepare_reviewed_successor(
     let changes = parse(feedback)?;
     let findings = rows(&changes, "findings")?;
     let unresolved = rows(&completion, "unresolvedFindings")?;
-    let observed: BTreeSet<_> = findings.iter().map(|finding| finding["observed"].clone().to_string()).collect();
+    let observed: BTreeSet<_> = findings
+        .iter()
+        .map(|finding| finding["observed"].clone().to_string())
+        .collect();
     let original: BTreeSet<_> = unresolved.iter().map(Value::to_string).collect();
     need(
         !original.is_empty() && observed == original,
         "successor findings must retain every original unresolved finding without operator paraphrase",
     )?;
-    let target = crate::maintainer_source_recipe_author::reviewed_design_target(&request, &parent, feedback)?;
+    let target = crate::maintainer_source_recipe_author::reviewed_design_target(
+        &request, &parent, feedback,
+    )?;
     need(
         target != parse(&parent)?,
         "successor has no exact reviewed design change",
@@ -839,19 +846,34 @@ pub fn prepare_reviewed_successor(
     let target_bytes = serde_json::to_vec(&target).map_err(|error| error.to_string())?;
     let mut history = Vec::new();
     if let Some(bytes) = previous {
-        need(bytes.len() <= 2 * 1024 * 1024, "previous successor packet budget")?;
-        let previous = parse(bytes)?;
-        let previous_request = previous["authorRequestOriginal"].as_str().ok_or("previous successor request absent")?;
-        let previous_parent = previous["parentDesignOriginal"].as_str().ok_or("previous successor design absent")?;
-        let previous_feedback = previous["reviewFeedbackOriginal"].as_str().ok_or("previous successor feedback absent")?;
-        let previous_target = crate::maintainer_source_recipe_author::reviewed_design_target(
-            previous_request.as_bytes(), previous_parent.as_bytes(), previous_feedback.as_bytes(),
+        need(
+            bytes.len() <= 2 * 1024 * 1024,
+            "previous successor packet budget",
         )?;
-        let previous_target_bytes = serde_json::to_vec(&previous_target).map_err(|error| error.to_string())?;
+        let previous = parse(bytes)?;
+        let previous_request = previous["authorRequestOriginal"]
+            .as_str()
+            .ok_or("previous successor request absent")?;
+        let previous_parent = previous["parentDesignOriginal"]
+            .as_str()
+            .ok_or("previous successor design absent")?;
+        let previous_feedback = previous["reviewFeedbackOriginal"]
+            .as_str()
+            .ok_or("previous successor feedback absent")?;
+        let previous_target = crate::maintainer_source_recipe_author::reviewed_design_target(
+            previous_request.as_bytes(),
+            previous_parent.as_bytes(),
+            previous_feedback.as_bytes(),
+        )?;
+        let previous_target_bytes =
+            serde_json::to_vec(&previous_target).map_err(|error| error.to_string())?;
         need(
             previous["schema"] == "agentlab.source_reviewed_successor_request.v1"
-                && previous["policyOriginal"] == std::str::from_utf8(policy_bytes).map_err(|error| error.to_string())?
-                && previous["targetDesignOriginal"] == std::str::from_utf8(&previous_target_bytes).map_err(|error| error.to_string())?
+                && previous["policyOriginal"]
+                    == std::str::from_utf8(policy_bytes).map_err(|error| error.to_string())?
+                && previous["targetDesignOriginal"]
+                    == std::str::from_utf8(&previous_target_bytes)
+                        .map_err(|error| error.to_string())?
                 && previous["targetDesignSha256"] == digest(&previous_target_bytes)
                 && previous_request.as_bytes() == request
                 && previous["targetDesignSha256"] == digest(&parent)
@@ -859,47 +881,86 @@ pub fn prepare_reviewed_successor(
             "successor parent design, request or enrolled policy differs",
         )?;
         history = rows(&previous, "history")?.clone();
-        need(!history.is_empty() && history.len() <= 8, "successor history budget")?;
-        need(previous["successorIndex"] == history.len() as u64
-            && previous["maximumSuccessors"] == policy["maximumSuccessors"],
-            "successor previous counter or maximum differs")?;
+        need(
+            !history.is_empty() && history.len() <= 8,
+            "successor history budget",
+        )?;
+        need(
+            previous["successorIndex"] == history.len() as u64
+                && previous["maximumSuccessors"] == policy["maximumSuccessors"],
+            "successor previous counter or maximum differs",
+        )?;
         let mut prior = Value::Null;
         let mut prior_target = None;
         for (index, entry) in history.iter().enumerate() {
             let mut body = entry.clone();
-            let object = body.as_object_mut().ok_or("successor history entry malformed")?;
-            let retained_hash = object.remove("entrySha256").ok_or("successor history hash missing")?;
+            let object = body
+                .as_object_mut()
+                .ok_or("successor history entry malformed")?;
+            let retained_hash = object
+                .remove("entrySha256")
+                .ok_or("successor history hash missing")?;
             need(
-                object.len() == 9 && entry["index"] == (index + 1) as u64
+                object.len() == 9
+                    && entry["index"] == (index + 1) as u64
                     && entry["previousEntrySha256"] == prior
                     && entry["policySha256"] == digest(policy_bytes)
                     && entry["authorRequestSha256"] == digest(&request)
-                    && ["parentDesignSha256", "targetDesignSha256", "reviewRequestSha256", "reviewResponseSha256", "reviewFeedbackSha256"]
-                        .iter().all(|key| entry[*key].as_str().is_some_and(|value| value.len() == 64
-                            && value.bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))))
-                    && retained_hash == digest(&serde_json::to_vec(&body).map_err(|error| error.to_string())?)
-                    && prior_target.as_ref().is_none_or(|target| entry["parentDesignSha256"] == *target),
+                    && [
+                        "parentDesignSha256",
+                        "targetDesignSha256",
+                        "reviewRequestSha256",
+                        "reviewResponseSha256",
+                        "reviewFeedbackSha256",
+                    ]
+                    .iter()
+                    .all(|key| {
+                        entry[*key].as_str().is_some_and(|value| {
+                            value.len() == 64
+                                && value.bytes().all(|byte| {
+                                    byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)
+                                })
+                        })
+                    })
+                    && retained_hash
+                        == digest(&serde_json::to_vec(&body).map_err(|error| error.to_string())?)
+                    && prior_target
+                        .as_ref()
+                        .is_none_or(|target| entry["parentDesignSha256"] == *target),
                 "successor declared history drift or budget reset",
             )?;
             prior = retained_hash;
             prior_target = Some(entry["targetDesignSha256"].clone());
         }
-        need(prior_target == Some(json!(digest(&parent))), "successor history does not end at actual parent")?;
+        need(
+            prior_target == Some(json!(digest(&parent))),
+            "successor history does not end at actual parent",
+        )?;
         let last = history.last().unwrap();
-        need(last["parentDesignSha256"] == digest(previous_parent.as_bytes())
-            && last["reviewFeedbackSha256"] == digest(previous_feedback.as_bytes())
-            && previous["reviewResponseOriginal"].as_str().is_some_and(|original|
-                last["reviewResponseSha256"] == digest(original.as_bytes())),
-            "successor history differs from retained previous originals")?;
+        need(
+            last["parentDesignSha256"] == digest(previous_parent.as_bytes())
+                && last["reviewFeedbackSha256"] == digest(previous_feedback.as_bytes())
+                && previous["reviewResponseOriginal"]
+                    .as_str()
+                    .is_some_and(|original| {
+                        last["reviewResponseSha256"] == digest(original.as_bytes())
+                    }),
+            "successor history differs from retained previous originals",
+        )?;
     }
     let index = history.len() + 1;
-    need(index as u64 <= policy["maximumSuccessors"].as_u64().unwrap(), "successor budget exhausted")?;
+    need(
+        index as u64 <= policy["maximumSuccessors"].as_u64().unwrap(),
+        "successor budget exhausted",
+    )?;
     let mut entry = json!({"index":index,"authorRequestSha256":digest(&request),
         "parentDesignSha256":digest(&parent),"targetDesignSha256":digest(&target_bytes),
         "reviewRequestSha256":completion["reviewRequestSha256"],"reviewResponseSha256":digest(response),
         "reviewFeedbackSha256":digest(feedback),"policySha256":digest(policy_bytes),
         "previousEntrySha256":history.last().map(|entry| entry["entrySha256"].clone()).unwrap_or(Value::Null)});
-    entry["entrySha256"] = json!(digest(&serde_json::to_vec(&entry).map_err(|error| error.to_string())?));
+    entry["entrySha256"] = json!(digest(
+        &serde_json::to_vec(&entry).map_err(|error| error.to_string())?
+    ));
     history.push(entry);
     let packet = json!({"schema":"agentlab.source_reviewed_successor_request.v1",
         "authorRequestOriginal":std::str::from_utf8(&request).map_err(|error| error.to_string())?,
@@ -917,8 +978,13 @@ pub fn prepare_reviewed_successor(
         "oldBudgetReopened":false,"historicalFeedbackCaptureVerified":false,
         "runtimeIsolationVerified":false,"reviewerAuthenticated":false,
         "semanticQualified":false,"learningBenefitVerified":false,"authorityWritePerformed":false});
-    need(serde_json::to_vec(&packet).map_err(|error| error.to_string())?.len() <= 2 * 1024 * 1024,
-        "successor packet budget; no truncation")?;
+    need(
+        serde_json::to_vec(&packet)
+            .map_err(|error| error.to_string())?
+            .len()
+            <= 2 * 1024 * 1024,
+        "successor packet budget; no truncation",
+    )?;
     Ok(packet)
 }
 

@@ -2949,8 +2949,12 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     assert_eq!(control_receipt["semanticQualified"], false);
     assert_eq!(control_receipt["executionPerformed"], false);
     assert_eq!(
-        author::reviewed_design_target(&request_bytes, &control_parent_bytes, &control_review_bytes)
-            .unwrap(),
+        author::reviewed_design_target(
+            &request_bytes,
+            &control_parent_bytes,
+            &control_review_bytes
+        )
+        .unwrap(),
         control_successor
     );
     // Review/readback reconstruct retained bytes without reopening an old runner.
@@ -2962,12 +2966,21 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     portable_control_review["parentRequestSha256"] = json!(digest(&unavailable_bytes));
     let portable_control_review_bytes = serde_json::to_vec(&portable_control_review).unwrap();
     assert_eq!(
-        author::reviewed_design_target(&unavailable_bytes, &control_parent_bytes,
-            &portable_control_review_bytes).unwrap(),
+        author::reviewed_design_target(
+            &unavailable_bytes,
+            &control_parent_bytes,
+            &portable_control_review_bytes
+        )
+        .unwrap(),
         control_successor
     );
-    author::check_design_review_output(&unavailable_bytes, &control_parent_bytes,
-        &portable_control_review_bytes, &control_successor_bytes).unwrap();
+    author::check_design_review_output(
+        &unavailable_bytes,
+        &control_parent_bytes,
+        &portable_control_review_bytes,
+        &control_successor_bytes,
+    )
+    .unwrap();
     // The live author preflight still requires independently reproduced source.
     assert!(author::design(&unavailable_bytes, &control_successor_bytes).is_err());
     for field in ["before", "findingId"] {

@@ -979,7 +979,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         arg == "--prepare-source-reviewed-successor" || arg == "--check-source-reviewed-successor"
     }) {
         let checkout = optional(&args, "--source-git-checkout").map(PathBuf::from);
-        let previous = optional(&args, "--previous-successor").map(fs::read).transpose()?;
+        let previous = optional(&args, "--previous-successor")
+            .map(fs::read)
+            .transpose()?;
         let packet = agentlab_code_analysis::maintainer_source_review::prepare_reviewed_successor(
             &PathBuf::from(value(&args, "--source")?),
             &fs::read(value(&args, "--quality-rubric")?)?,
@@ -990,10 +992,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &fs::read(value(&args, "--successor-policy")?)?,
             previous.as_deref(),
         )?;
-        let result = if args.iter().any(|arg| arg == "--check-source-reviewed-successor") {
+        let result = if args
+            .iter()
+            .any(|arg| arg == "--check-source-reviewed-successor")
+        {
             let bytes = fs::read(value(&args, "--successor-request")?)?;
-            if bytes.len() > 2 * 1024 * 1024 || serde_json::from_slice::<serde_json::Value>(&bytes)? != packet {
-                return Err("successor request differs from original feedback reconstruction".into());
+            if bytes.len() > 2 * 1024 * 1024
+                || serde_json::from_slice::<serde_json::Value>(&bytes)? != packet
+            {
+                return Err(
+                    "successor request differs from original feedback reconstruction".into(),
+                );
             }
             serde_json::json!({"schema":"agentlab.source_reviewed_successor_reconstruction.v1",
                 "successorRequestSha256":agentlab_code_analysis::digest(&bytes),
@@ -1003,10 +1012,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else {
             packet
         };
-        OpenOptions::new().write(true).create_new(true).open(&output)?
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?
             .write_all(&serde_json::to_vec_pretty(&result)?)?;
-        println!("{}", serde_json::json!({"successorIndex":result["successorIndex"],
-            "dispatchPerformed":false,"qualified":false}));
+        println!(
+            "{}",
+            serde_json::json!({"successorIndex":result["successorIndex"],
+            "dispatchPerformed":false,"qualified":false})
+        );
         return Ok(());
     }
     if args.iter().any(|arg| {

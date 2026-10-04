@@ -931,7 +931,8 @@ pub fn reviewed_design_target(
         feedback["schema"] == "agentlab.source_recipe_design_review.v3",
         "reviewed target requires exact checks, scenarios and controls",
     )?;
-    target["checks"] = reviewed_checks(&json!({"contract":{"checks":target["checks"]}}), &feedback)?;
+    target["checks"] =
+        reviewed_checks(&json!({"contract":{"checks":target["checks"]}}), &feedback)?;
     target["scenarios"] = reviewed_scenarios(&target, &feedback)?;
     target["controls"] = reviewed_controls(&target, &feedback)?;
     let bytes = serde_json::to_vec(&target).map_err(|error| error.to_string())?;
