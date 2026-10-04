@@ -25,6 +25,12 @@ partial, altered or absent exports cannot pass it. Reviewer launch additionally
 requires successful preparation, and feedback export requires completed capture
 and separate isolation validation. Cancellation suppresses these launches.
 
+Standalone acquisition also needs the explicit coordinator identity for tagged
+constructor runs. The optional source_coordinator_request_id is frozen in review
+enrollment and forwarded unchanged to the existing exact-run acquisition gate.
+Missing or borrowed tags still reject; this is not display-name inference or
+permission to replay an exhausted constructor.
+
 Reject/unverified remain feedback only. Claimed acceptance still faces the unchanged
 matched-complete-control lesson gate; a diagnostic review cannot make a failed
 execution green, restart workers or authorize knowledge. Rust regression coverage

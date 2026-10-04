@@ -2089,7 +2089,11 @@ fn complete_failed_suite_is_reviewable_but_cannot_be_promoted_or_rehashed() {
     )
     .is_err());
     assert!(!base.join("forged-acceptance").exists());
-    fs::write(observation.join("source-stage/controls.cjs"), "changed observer").unwrap();
+    fs::write(
+        observation.join("source-stage/controls.cjs"),
+        "changed observer",
+    )
+    .unwrap();
     assert!(reviewer::prepare(&observation, &rubric).is_err());
     fs::remove_dir_all(base).unwrap();
 }

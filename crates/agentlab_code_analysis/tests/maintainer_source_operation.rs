@@ -568,6 +568,69 @@ fn semantic_refresh_action_accepts_fixed_successor_cut_without_path_escape() {
 }
 
 #[test]
+fn standalone_review_forwards_exact_optional_coordinator_identity() {
+    use std::os::unix::fs::PermissionsExt;
+    let workflow =
+        fs::read_to_string(root().join(".github/workflows/maintainer-source-suite-review.yml"))
+            .unwrap();
+    let body = workflow
+        .split("      - name: Acquire only the exact original source Action artifact\n")
+        .nth(1)
+        .unwrap()
+        .split("      - name:")
+        .next()
+        .unwrap()
+        .split("        run: |\n")
+        .nth(1)
+        .unwrap();
+    let script = body
+        .lines()
+        .map(|line| line.strip_prefix("          ").unwrap_or(line))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let base = std::env::temp_dir().join(format!(
+        "review-identity-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&base).unwrap();
+    let stub = base.join("python3");
+    fs::write(&stub, "#!/bin/sh\nprintf '%s\\n' \"$@\"\n").unwrap();
+    fs::set_permissions(&stub, fs::Permissions::from_mode(0o700)).unwrap();
+    for identity in [String::new(), "c".repeat(64)] {
+        let output = Command::new("/bin/bash")
+            .args(["-e", "-c", &script])
+            .env("PATH", &base)
+            .env("RUNNER_TEMP", &base)
+            .env("GITHUB_REPOSITORY", "fixture/repository")
+            .env("REVIEW_SOURCE_RUN", "123")
+            .env("REVIEW_SOURCE_ARTIFACT", "456")
+            .env("REVIEW_SOURCE_REVISION", "a".repeat(40))
+            .env("REVIEW_ARTIFACT_SHA256", "b".repeat(64))
+            .env("REVIEW_SOURCE_COORDINATOR_REQUEST_ID", &identity)
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        let args: Vec<_> = stdout.lines().collect();
+        assert_eq!(args[0], "scripts/acquire-source-suite-review-input.py");
+        let position = args.iter().position(|arg| *arg == "--coordinator-request-id");
+        if identity.is_empty() {
+            assert!(position.is_none());
+        } else {
+            assert_eq!(args[position.unwrap() + 1], identity);
+        }
+        assert_eq!(args[2], "fixture/repository");
+        assert_eq!(args[4], "123");
+        assert_eq!(args[6], "456");
+    }
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn automatic_review_freezes_inputs_before_budget_and_keeps_native_gate_order() {
     let code = r#"
 import hashlib,json,os,subprocess,tempfile,textwrap

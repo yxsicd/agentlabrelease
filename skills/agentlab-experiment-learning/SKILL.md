@@ -231,8 +231,11 @@ authentication. Quote membership is not semantic support; full completion still
 does not grant knowledge authority, formal-case acceptance or measured benefit.
 
 The main-only `maintainer-source-suite-review.yml` consumes one explicit completed
-source Action run/artifact/method commit and predeclared ZIP/rubric digests. Its
-fresh contained reviewer uses the existing operator Gateway and canonical native
+source Action run/artifact/method commit and predeclared ZIP/rubric digests. The
+optional source_coordinator_request_id must bind a tagged gap constructor's exact
+identity; retain it in enrollment and forward it to ordinary artifact acquisition.
+Do not infer the tag from a display name or weaken acquisition to accept any run.
+A fresh contained reviewer uses the existing operator Gateway and canonical native
 prompt, not the constructor session or an operator-corrected reply. Preserve the
 original response on schema/capture rejection; do not restart an exhausted review
 or infer acceptance from workflow success. A valid reject/unverified verdict is
