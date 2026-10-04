@@ -165,3 +165,56 @@ change remains pending. Next integration must bind original paths to the frozen
 producer workflow, perform fresh runtime validation independently and preserve
 the original reject verdict. Recorded replay alone cannot authorize dispatch,
 establish durable budget ownership or complete the five-stage loop.
+
+## Reviewed successor Action integration
+
+The constructor workflow accepts a schema-selected enrollment in its existing
+`revision_feedback` input, with `revision_parent_run` empty:
+`agentlab.source_reviewed_successor_enrollment.v1` with exact `reviewRun`,
+`reviewArtifact`, `reviewMethodRevision`, `reviewArtifactSha256`,
+`reviewFeedback` and `successorPolicy`. Legacy revision inputs are mutually
+exclusive. The new lane requires the first workflow attempt, design_first=false,
+zero design/code repairs and the existing 180-second/16384-token code policy.
+It does not reopen an old run or delete its revision markers.
+
+`prepare-reviewed-successor-action.py` uses the existing exact artifact acquisition,
+replays initial/repair recorded isolation independently, selects the retained
+review attempt and invokes native successor preparation against the actual source
+checkout. Current request bytes must equal the original enrollment. Unknown
+enrollment fields, isolation failure, native rejection or request drift stop before
+dispatch inputs are emitted. This transport supports the existing untagged
+constructor and independent-review acquisition identities, not tagged gap runs.
+
+The bridge's explicit `--prepared-output` mode requires an existing regular
+operator directory owning the supplied request. Other outputs remain create-new.
+With paired `--github-claim-repository`/`--github-claim-revision`, after live native
+preflight it creates one remote Git ref under
+`refs/heads/agentlab-successor-claims/<request-policy-digest>/<index>` before model
+budget. Existing slots reject even when target bytes change. The POST is not
+retried after failure or timeout, and successful response ref/SHA must match.
+Local claims and uncertain remote intent are retained. GitHub tokens are removed
+from the constructor environment. This is durable slot reservation, not
+authenticated predecessor captures or global exactly-once business writes;
+changing reviewed policy establishes another enrollment identity.
+
+The workflow runs ordinary live isolation, baseline diagnosis, complete control
+suite and optional independent review on the resulting original staging. Complete
+disagreements retain their failed step and diagnostic feedback. Knowledge admission
+and next-round benefit still require their separate downstream gates.
+
+Local extracted Rust-hosted regressions cover prepared output, successful/rejected
+remote claim transport and pre-budget acquisition/isolation/native/request stops.
+They mock transport and do not prove a GitHub claim or real Agent successor.
+The first cloud lint rejected a separate 26th workflow input (limit 25). Keep the
+failure; the successor protocol now shares the existing feedback input and is
+selected by parsed schema, not fragile JSON whitespace matching. Revalidation,
+full cloud tests and real dispatch are pending. Overall maturity
+remains 75%, full automatic five-stage rounds zero.
+
+The next Rust run 37198994571 exposed test-runner CWD drift: Cargo starts this
+integration test in the crate, while the actual Action's relative knowledge path
+and root containment check require the Release checkout root. Reproducing from
+the crate locally failed identically. The test command now explicitly uses the
+Release root, matching Action execution without removing its manifest/path gate.
+Workflow lint passed in job 111426646683 before this fix; final-head full Rust and
+cloud qualification still need fresh verification. Original failed runs remain.
