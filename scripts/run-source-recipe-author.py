@@ -84,7 +84,8 @@ def observation_contract_guide(design):
             return {'type': 'array', 'length': len(value),
                     'items': [shape(item) for item in value]}
         if isinstance(value, dict):
-            return {'type': 'object', 'properties': {
+            return {'type': 'object', 'required': list(value),
+                    'additionalProperties': False, 'properties': {
                 key: shape(item) for key, item in value.items()}}
         raise ValueError('Non-JSON frozen observation shape')
     return [dict(id=check['id'], pointer=check['pointer'],

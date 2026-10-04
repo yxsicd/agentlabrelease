@@ -18,7 +18,7 @@ assert design==original
 assert [(row['id'],row['pointer']) for row in guide]==[(row['id'],row['pointer']) for row in design['checks']]
 assert guide[0]['shape']=={'type':'array','length':2,'items':[{'type':'string'},{'type':'string'}]}
 assert guide[1]['shape']=={'type':'array','length':1,'items':[{'type':'string'}]}
-assert guide[2]['shape']=={'type':'object','properties':{'flag':{'type':'boolean'},'count':{'type':'number'},'missing':{'type':'null'},'nested':{'type':'array','length':1,'items':[{'type':'array','length':1,'items':[{'type':'number'}]}]}}}
+assert guide[2]['shape']=={'type':'object','required':['flag','count','missing','nested'],'additionalProperties':False,'properties':{'flag':{'type':'boolean'},'count':{'type':'number'},'missing':{'type':'null'},'nested':{'type':'array','length':1,'items':[{'type':'array','length':1,'items':[{'type':'number'}]}]}}}
 assert guide[3]['shape']=={'type':'array','length':0,'items':[]}
 assert not any(probe in json.dumps(guide) for probe in ['unique-secret-probe','other','distinct-probe'])
 # Same shapes, different answers: guide must not turn into an answer inventory.
@@ -27,6 +27,20 @@ changed['checks'][0]['expected']=['changed','values']
 changed['checks'][2]['expected']['flag']=False
 changed['checks'][2]['expected']['count']=99
 assert author.observation_contract_guide(changed)==guide
+# Omitted, empty and null fields are distinct frozen observation contracts.
+base={'checks':[{'id':'result','pointer':'/result','expected':{'kind':'return','contains':['probe']}}]}
+without=author.observation_contract_guide(base)[0]['shape']
+assert without['additionalProperties'] is False and 'notContains' not in without['required']
+base['checks'][0]['expected']['notContains']=[]
+empty=author.observation_contract_guide(base)[0]['shape']
+assert empty!=without and empty['properties']['notContains']=={'type':'array','length':0,'items':[]}
+assert empty['required']==['kind','contains','notContains']
+base['checks'][0]['expected']['notContains']=None
+null=author.observation_contract_guide(base)[0]['shape']
+assert null!=empty and null['properties']['notContains']=={'type':'null'}
+base['checks'][0]['expected']={'nested':{'present':[]}}
+nested=author.observation_contract_guide(base)[0]['shape']['properties']['nested']
+assert nested['required']==['present'] and nested['additionalProperties'] is False
 print('per-check shapes, nonmutation and answer exclusion passed')
 "#;
     let result = Command::new("python3")
