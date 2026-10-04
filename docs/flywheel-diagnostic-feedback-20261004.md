@@ -66,6 +66,37 @@ recognizes v3 and exposes its constraints to the author. This is a prerequisite
 for a future versioned successor, not an implementation of multi-round scheduling,
 captured-review admission, semantic truth or fresh execution. Validation is pending.
 
+## Feedback-bound successor preparation
+
+The next native implementation adds `--prepare-source-reviewed-successor` and
+`--check-source-reviewed-successor`. Supply `--source` (the original observation
+export), `--quality-rubric`, `--participant-evidence`, `--review-response`,
+`--review-feedback` (exact design_review.v3 changes), `--successor-policy`, optional
+`--source-git-checkout` and `--previous-successor`, plus a fresh `--output`.
+The check additionally takes `--successor-request` and reconstructs the entire
+packet again; producer flags and a changed successor counter cannot substitute.
+
+The policy is `agentlab.source_successor_policy.v1`, reviewed=true,
+maximumSuccessors=1..8, participantBudgetSeconds=420, designRevisionLimit=0,
+codeRevisionLimit=0, transportRetryLimit=0 and automaticPromotion=false. This is
+a fresh frozen-design code-only enrollment, not reopening an old attempt. It
+requires completed original reject feedback, unchanged original findings and an
+exact nonidentity reviewed design target. All original bytes are retained.
+
+An optional prior packet binds unchanged policy/request, contiguous declared
+design digests and counters. Its target must be the actual current parent bytes;
+targets use compact JSON serialization. This declared chain does not authenticate
+prior wire captures, prove durable scheduler ownership or prevent history omission.
+Those qualifications remain false. No participant is launched by preparation.
+
+Portable v3 design reconstruction no longer opens original runner paths. Live
+author preflight still requires request reproduction against actual source and
+knowledge. Regression uses nonexistent old paths to distinguish those gates.
+Synthetic completion/CLI tests are not real successor executions. The transport
+lane, original-review isolation admission, durable budget ownership, next source
+construction and automatic evidence return still need integration and real runs.
+These changes are not yet validated or published by this checkpoint.
+
 Overall maturity remains 75%; accepted complete automatic five-stage rounds remain
 zero. Multi-round productive closure, cross-repository transfer, measured guidance
 benefit and Harmony/ohosTest runtime qualification remain unproved.

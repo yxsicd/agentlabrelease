@@ -788,6 +788,140 @@ pub fn verify_completion_with_git(
     Ok(report)
 }
 
+/// Prepare prospective code-only work from complete rejected feedback. No dispatch,
+/// old-budget reopening, lesson acceptance or historical-capture authentication.
+pub fn prepare_reviewed_successor(
+    root: &Path,
+    rubric: &[u8],
+    evidence: &Path,
+    response: &[u8],
+    checkout: Option<&Path>,
+    feedback: &[u8],
+    policy_bytes: &[u8],
+    previous: Option<&[u8]>,
+) -> Result<Value, String> {
+    need(policy_bytes.len() <= 4096, "successor policy budget")?;
+    let policy = parse(policy_bytes)?;
+    need(
+        policy_bytes.len() <= 4096
+            && policy.as_object().is_some_and(|fields| fields.len() == 8)
+            && policy["schema"] == "agentlab.source_successor_policy.v1"
+            && policy["reviewed"] == true
+            && policy["maximumSuccessors"].as_u64().is_some_and(|n| (1..=8).contains(&n))
+            && policy["participantBudgetSeconds"] == 420
+            && policy["designRevisionLimit"] == 0
+            && policy["codeRevisionLimit"] == 0
+            && policy["transportRetryLimit"] == 0
+            && policy["automaticPromotion"] == false,
+        "successor policy requires explicit bounded fresh code-only enrollment",
+    )?;
+    let completion = verify_completion_with_git(root, rubric, evidence, response, checkout)?;
+    need(
+        completion["verdict"] == "reject" && completion["recordedCompletionVerified"] == true,
+        "successor requires complete rejected review, not a producer flag or unverified observation",
+    )?;
+    let request = diagnostic::read(&root.join("source-stage/request.json"), 512 * 1024)?;
+    let parent = diagnostic::read(&root.join("source-stage/design.json"), 64 * 1024)?;
+    let changes = parse(feedback)?;
+    let findings = rows(&changes, "findings")?;
+    let unresolved = rows(&completion, "unresolvedFindings")?;
+    let observed: BTreeSet<_> = findings.iter().map(|finding| finding["observed"].clone().to_string()).collect();
+    let original: BTreeSet<_> = unresolved.iter().map(Value::to_string).collect();
+    need(
+        !original.is_empty() && observed == original,
+        "successor findings must retain every original unresolved finding without operator paraphrase",
+    )?;
+    let target = crate::maintainer_source_recipe_author::reviewed_design_target(&request, &parent, feedback)?;
+    need(
+        target != parse(&parent)?,
+        "successor has no exact reviewed design change",
+    )?;
+    let target_bytes = serde_json::to_vec(&target).map_err(|error| error.to_string())?;
+    let mut history = Vec::new();
+    if let Some(bytes) = previous {
+        need(bytes.len() <= 2 * 1024 * 1024, "previous successor packet budget")?;
+        let previous = parse(bytes)?;
+        let previous_request = previous["authorRequestOriginal"].as_str().ok_or("previous successor request absent")?;
+        let previous_parent = previous["parentDesignOriginal"].as_str().ok_or("previous successor design absent")?;
+        let previous_feedback = previous["reviewFeedbackOriginal"].as_str().ok_or("previous successor feedback absent")?;
+        let previous_target = crate::maintainer_source_recipe_author::reviewed_design_target(
+            previous_request.as_bytes(), previous_parent.as_bytes(), previous_feedback.as_bytes(),
+        )?;
+        let previous_target_bytes = serde_json::to_vec(&previous_target).map_err(|error| error.to_string())?;
+        need(
+            previous["schema"] == "agentlab.source_reviewed_successor_request.v1"
+                && previous["policyOriginal"] == std::str::from_utf8(policy_bytes).map_err(|error| error.to_string())?
+                && previous["targetDesignOriginal"] == std::str::from_utf8(&previous_target_bytes).map_err(|error| error.to_string())?
+                && previous["targetDesignSha256"] == digest(&previous_target_bytes)
+                && previous_request.as_bytes() == request
+                && previous["targetDesignSha256"] == digest(&parent)
+                && previous["authorRequestSha256"] == digest(&request),
+            "successor parent design, request or enrolled policy differs",
+        )?;
+        history = rows(&previous, "history")?.clone();
+        need(!history.is_empty() && history.len() <= 8, "successor history budget")?;
+        need(previous["successorIndex"] == history.len() as u64
+            && previous["maximumSuccessors"] == policy["maximumSuccessors"],
+            "successor previous counter or maximum differs")?;
+        let mut prior = Value::Null;
+        let mut prior_target = None;
+        for (index, entry) in history.iter().enumerate() {
+            let mut body = entry.clone();
+            let object = body.as_object_mut().ok_or("successor history entry malformed")?;
+            let retained_hash = object.remove("entrySha256").ok_or("successor history hash missing")?;
+            need(
+                object.len() == 9 && entry["index"] == (index + 1) as u64
+                    && entry["previousEntrySha256"] == prior
+                    && entry["policySha256"] == digest(policy_bytes)
+                    && entry["authorRequestSha256"] == digest(&request)
+                    && ["parentDesignSha256", "targetDesignSha256", "reviewRequestSha256", "reviewResponseSha256", "reviewFeedbackSha256"]
+                        .iter().all(|key| entry[*key].as_str().is_some_and(|value| value.len() == 64
+                            && value.bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))))
+                    && retained_hash == digest(&serde_json::to_vec(&body).map_err(|error| error.to_string())?)
+                    && prior_target.as_ref().is_none_or(|target| entry["parentDesignSha256"] == *target),
+                "successor declared history drift or budget reset",
+            )?;
+            prior = retained_hash;
+            prior_target = Some(entry["targetDesignSha256"].clone());
+        }
+        need(prior_target == Some(json!(digest(&parent))), "successor history does not end at actual parent")?;
+        let last = history.last().unwrap();
+        need(last["parentDesignSha256"] == digest(previous_parent.as_bytes())
+            && last["reviewFeedbackSha256"] == digest(previous_feedback.as_bytes())
+            && previous["reviewResponseOriginal"].as_str().is_some_and(|original|
+                last["reviewResponseSha256"] == digest(original.as_bytes())),
+            "successor history differs from retained previous originals")?;
+    }
+    let index = history.len() + 1;
+    need(index as u64 <= policy["maximumSuccessors"].as_u64().unwrap(), "successor budget exhausted")?;
+    let mut entry = json!({"index":index,"authorRequestSha256":digest(&request),
+        "parentDesignSha256":digest(&parent),"targetDesignSha256":digest(&target_bytes),
+        "reviewRequestSha256":completion["reviewRequestSha256"],"reviewResponseSha256":digest(response),
+        "reviewFeedbackSha256":digest(feedback),"policySha256":digest(policy_bytes),
+        "previousEntrySha256":history.last().map(|entry| entry["entrySha256"].clone()).unwrap_or(Value::Null)});
+    entry["entrySha256"] = json!(digest(&serde_json::to_vec(&entry).map_err(|error| error.to_string())?));
+    history.push(entry);
+    let packet = json!({"schema":"agentlab.source_reviewed_successor_request.v1",
+        "authorRequestOriginal":std::str::from_utf8(&request).map_err(|error| error.to_string())?,
+        "parentDesignOriginal":std::str::from_utf8(&parent).map_err(|error| error.to_string())?,
+        "reviewFeedbackOriginal":std::str::from_utf8(feedback).map_err(|error| error.to_string())?,
+        "reviewResponseOriginal":std::str::from_utf8(response).map_err(|error| error.to_string())?,
+        "qualityRubricOriginal":std::str::from_utf8(rubric).map_err(|error| error.to_string())?,
+        "policyOriginal":std::str::from_utf8(policy_bytes).map_err(|error| error.to_string())?,
+        "targetDesignOriginal":std::str::from_utf8(&target_bytes).map_err(|error| error.to_string())?,
+        "authorRequestSha256":digest(&request),"targetDesignSha256":digest(&target_bytes),
+        "parentReviewCompletion":completion,"history":history,"successorIndex":index,
+        "originalRejectedReviewReconstructed":true,"sourceGitBindingVerified":checkout.is_some(),
+        "maximumSuccessors":policy["maximumSuccessors"],"participantBudgetSeconds":420,
+        "reviewed":false,"automaticPromotion":false,"dispatchPerformed":false,
+        "oldBudgetReopened":false,"historicalFeedbackCaptureVerified":false,
+        "runtimeIsolationVerified":false,"reviewerAuthenticated":false,
+        "semanticQualified":false,"learningBenefitVerified":false,"authorityWritePerformed":false});
+    need(serde_json::to_vec(&packet).map_err(|error| error.to_string())?.len() <= 2 * 1024 * 1024,
+        "successor packet budget; no truncation")?;
+    Ok(packet)
+}
+
 fn repair_policy(evidence: &Path) -> Result<Option<Value>, String> {
     let file = evidence.join("review-repair-policy.json");
     if !file.try_exists().map_err(|e| e.to_string())? {

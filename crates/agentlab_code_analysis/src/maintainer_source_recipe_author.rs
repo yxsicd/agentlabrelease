@@ -904,7 +904,7 @@ fn design_review_contract(
             reviewed_checks(&json!({"contract":{"checks":parent["checks"]}}), &review)?;
         reviewed["scenarios"] = reviewed_scenarios(&parent, &review)?;
         reviewed["controls"] = reviewed_controls(&parent, &review)?;
-        design(
+        design_contract(
             request_bytes,
             &serde_json::to_vec(&reviewed).map_err(|error| error.to_string())?,
         )?;
@@ -919,6 +919,26 @@ fn design_review_contract(
 
 /// Exact successor protection, shared by authoring, approval and portable readback.
 /// It proves declared changes only, not semantic truth or actual verifier consumption.
+pub fn reviewed_design_target(
+    request: &[u8],
+    parent: &[u8],
+    review: &[u8],
+) -> Result<Value, String> {
+    design_review_contract(request, parent, review)?;
+    let mut target: Value = serde_json::from_slice(parent).map_err(|error| error.to_string())?;
+    let feedback: Value = serde_json::from_slice(review).map_err(|error| error.to_string())?;
+    need(
+        feedback["schema"] == "agentlab.source_recipe_design_review.v3",
+        "reviewed target requires exact checks, scenarios and controls",
+    )?;
+    target["checks"] = reviewed_checks(&json!({"contract":{"checks":target["checks"]}}), &feedback)?;
+    target["scenarios"] = reviewed_scenarios(&target, &feedback)?;
+    target["controls"] = reviewed_controls(&target, &feedback)?;
+    let bytes = serde_json::to_vec(&target).map_err(|error| error.to_string())?;
+    check_design_review_output(request, parent, review, &bytes)?;
+    Ok(target)
+}
+
 pub fn check_design_review_output(
     request: &[u8],
     parent: &[u8],
@@ -971,7 +991,7 @@ pub fn check_design_review_output(
                 s["controls"] == reviewed_controls(&p, &r)?,
                 "recipe design controls differ from exact design review; require controlChanges before/after/findingId and unchanged control order",
             )?;
-            design(request, successor)?;
+            design_contract(request, successor)?;
         }
     }
     let mut result = json!({"schema":"agentlab.source_recipe_design_review_output.v1",
@@ -1090,7 +1110,6 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
         "recipe design input budget",
     )?;
     let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
-    let design: Value = serde_json::from_slice(design_bytes).map_err(|e| e.to_string())?;
     need(
         request["schema"] == "agentlab.source_recipe_author_request.v1"
             && request["reviewed"] == false
@@ -1100,6 +1119,23 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
     need(
         reproduce(&request)? == request,
         "recipe design request no longer reproduces",
+    )?;
+    design_contract(request_bytes, design_bytes)
+}
+
+// Portable contract validation consumes retained source bytes, not old runner paths.
+fn design_contract(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String> {
+    need(
+        request_bytes.len() <= 512 * 1024 && design_bytes.len() <= 64 * 1024,
+        "recipe design input budget",
+    )?;
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    let design: Value = serde_json::from_slice(design_bytes).map_err(|e| e.to_string())?;
+    need(
+        request["schema"] == "agentlab.source_recipe_author_request.v1"
+            && request["reviewed"] == false
+            && request["automaticPromotion"] == false,
+        "recipe design request identity",
     )?;
     need(
         design.as_object().is_some_and(|o| o.len() == 7)
