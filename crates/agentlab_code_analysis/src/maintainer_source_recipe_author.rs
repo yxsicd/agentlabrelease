@@ -281,12 +281,13 @@ pub fn prepare(
         .iter()
         .find(|s| s["selected"] == true)
         .ok_or("recipe author selected gap")?;
-    let request = json!({"schema":"agentlab.source_recipe_author_request.v1","knowledgeCutSha256":digest(&cut_bytes),
+    let mut request = json!({"schema":"agentlab.source_recipe_author_request.v1","knowledgeCutSha256":digest(&cut_bytes),
         "knowledgeDirectory":knowledge.canonicalize().map_err(|e|e.to_string())?,"repositorySelector":repository,
         "authorityRevision":cut["tableGitAuthority"]["revision"],"source":source_identity,"sourceWorktree":source.canonicalize().map_err(|e|e.to_string())?,
         "scope":skill,"sourceFiles":files,"semanticFacts":facts,"policy":policy,"selectedGap":gap,
         "planSha256":digest(&pretty(&plan)?),"planSummary":plan["summary"],
         "reviewed":false,"automaticPromotion":false,"closedLoopQualified":false});
+    request["sourceDependencyInventory"] = source_dependency_inventory(&request)?;
     need(
         serde_json::to_vec(&request)
             .map_err(|e| e.to_string())?
@@ -356,6 +357,7 @@ pub fn revision_with_design(
         "source",
         "scope",
         "sourceFiles",
+        "sourceDependencyInventory",
         "semanticFacts",
         "selectedGap",
         "planSha256",
@@ -1171,6 +1173,108 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
     )
 }
 
+/// Reuse native syntactic analysis over the exact bounded source cut.
+/// Existing-file candidates do not grant imports, edits or semantic approval.
+pub fn source_dependency_inventory(request: &Value) -> Result<Value, String> {
+    let files = request["sourceFiles"]
+        .as_array()
+        .ok_or("dependency source inventory missing")?;
+    let mut imports = Vec::new();
+    let mut syntax_errors = Vec::new();
+    for file in files {
+        let path = text(file, "path")?;
+        let Some(content) = file["content"].as_str() else {
+            continue;
+        };
+        if ![".ts", ".ets", ".tsx", ".js"]
+            .iter()
+            .any(|extension| path.ends_with(extension))
+        {
+            continue;
+        }
+        let analysis = crate::analyze(
+            path,
+            content.as_bytes(),
+            text(&request["source"], "revision")?,
+        )?;
+        if analysis.has_errors {
+            syntax_errors.push(path);
+        }
+        for row in analysis
+            .rows
+            .iter()
+            .filter(|row| row["kind"] == "module-reference" && row["referenceType"] == "import")
+        {
+            let specifier = text(row, "specifier")?;
+            let mut candidates = Vec::new();
+            if specifier.starts_with('.') {
+                let mut parts = path.split('/').collect::<Vec<_>>();
+                parts.pop();
+                let mut valid = true;
+                for part in specifier.split('/') {
+                    match part {
+                        "" | "." => {}
+                        ".." => {
+                            if parts.pop().is_none() {
+                                valid = false;
+                                break;
+                            }
+                        }
+                        other => parts.push(other),
+                    }
+                }
+                if valid {
+                    let base = parts.join("/");
+                    let possible = [
+                        base.clone(),
+                        format!("{base}.ts"),
+                        format!("{base}.ets"),
+                        format!("{base}.tsx"),
+                        format!("{base}.js"),
+                        format!("{base}/index.ts"),
+                        format!("{base}/index.ets"),
+                        format!("{base}/index.js"),
+                    ];
+                    for target in files
+                        .iter()
+                        .filter(|target| possible.iter().any(|p| target["path"] == *p))
+                    {
+                        candidates.push(json!({"path":target["path"],"gitBlobOid":target["gitBlobOid"],
+                            "sha256":target["sha256"],"contentLoaded":target["content"].is_string()}));
+                    }
+                }
+            }
+            candidates.sort_by_key(|target| target["path"].as_str().unwrap().to_owned());
+            imports.push(json!({"sourcePath":path,"sourceSha256":digest(content.as_bytes()),
+                "specifier":specifier,"importedBindings":row["importedBindings"],"statement":row["statement"],
+                "candidateSourceFiles":candidates,
+                "resolution":if !specifier.starts_with('.') {"external-or-alias-requires-explicit-binding"}
+                    else if candidates.is_empty() {"outside-loaded-scope-context-required"}
+                    else if candidates.len()!=1 {"ambiguous-source-candidates"}
+                    else if candidates[0]["contentLoaded"]!=true {"scoped-source-not-loaded"}
+                    else {"single-loaded-source-candidate-not-runtime-resolution"}}));
+        }
+    }
+    imports.sort_by_key(|row| {
+        (
+            row["sourcePath"].as_str().unwrap().to_owned(),
+            row["specifier"].as_str().unwrap().to_owned(),
+        )
+    });
+    syntax_errors.sort();
+    let result = json!({"schema":"agentlab.source_dependency_inventory.v1","imports":imports,
+        "syntaxErrorPaths":syntax_errors,"resolutionPolicy":"syntactic-imports-and-bounded-existing-file-candidates",
+        "runtimeResolutionVerified":false,"semanticQualified":false,"executionPerformed":false,"authorityWritePerformed":false});
+    need(
+        serde_json::to_vec(&result)
+            .map_err(|e| e.to_string())?
+            .len()
+            <= 128 * 1024,
+        "dependency inventory budget; decompose scope",
+    )?;
+    Ok(result)
+}
+
 /// Bind mechanical verifier interfaces to an independently validated design.
 /// This supplies no expected observations and grants no execution or approval.
 pub fn verifier_interface(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String> {
@@ -1201,6 +1305,7 @@ pub fn verifier_interface(request_bytes: &[u8], design_bytes: &[u8]) -> Result<V
         "runtimeSourceSha256":digest(include_bytes!("source_design_runtime.cjs")),
         "scopeSkillId":request["scope"]["id"],
         "allowedLoadedSourcePaths":loaded,
+        "sourceDependencyInventory":source_dependency_inventory(&request)?,
         "sourcePathSelection":"only loaded paths actually read; import seams do not load implementation files",
         "invocation":{"sourceRootArgvIndex":2,"controlIdArgvIndex":3,
             "runtimeArgvIndex":4+dependencies,"methodDependencyArgvStart":4,

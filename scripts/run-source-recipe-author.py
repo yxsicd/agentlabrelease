@@ -472,6 +472,8 @@ def main():
             automaticPromotion=False, authorityWritePerformed=False), stream)
     context = {key: request[key] for key in (
         'scope', 'source', 'sourceFiles', 'semanticFacts', 'selectedGap')}
+    if 'sourceDependencyInventory' in request:
+        context['sourceDependencyInventory'] = request['sourceDependencyInventory']
     dependency_count = len(request['policy']['methodDependencies'])
     transformation_policy = (
         'The operator frozen runtime selects and applies every control transformation. '
@@ -719,6 +721,14 @@ runtime.assertInitialFields(scenarioId, instance) immediately after this constru
 Observe instance fields and invoke instance methods, not properties of mod.
 Copy import specifiers verbatim from the loaded source, including relative depth;
 do not infer directory traversal from a similarly named module.
+Use sourceDependencyInventory to distinguish loaded implementations, unloaded
+scope files, absent cross-scope context and external/alias requirements. Candidate
+paths are syntactic hints, not a resolved module graph. Named imported classes
+used with new need actual constructor exports; a same-named constant/object is
+not a constructor. Never guess a missing dependency implementation. If the frozen
+context cannot support its behavior, identify the missing context and do not
+claim the scenario or source operation has been verified. A controlled seam proves
+only its declared contract, not the actual imported implementation.
 For each scenario call const seams=runtime.createSeams(scenarioId). Map the declared
 seams.functions[id] into the source's imported dependency objects without rewriting
 their outcomes. The helper supplies frozen per-call outcomes and captures calls.

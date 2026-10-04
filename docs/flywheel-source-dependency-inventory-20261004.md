@@ -1,0 +1,13 @@
+# Source dependency inventory from actual construction failure
+
+Maturity remains 75%; accepted complete automatic five-stage loops remain zero.
+
+Run 37179801774 failed first on an unbound CommonMapData import and then, after its single code repair, on CommonBoolMapping not being a constructor. The dependency implementation is absent from the frozen sourceFiles inventory. Neither failure establishes an application defect. Original artifacts and exhausted budgets remain unchanged.
+
+The constructor now reuses the existing Rust syntactic program analyzer to derive an exact sourceDependencyInventory before model construction and again for the frozen verifier interface. It retains source text digests, verbatim specifiers, imported/exported/local binding names, and bounded existing-file candidates. It distinguishes a loaded candidate, an unloaded scope file, missing cross-scope context, ambiguous candidates and external/alias requirements. TypeScript/ArkTS import syntax is not runtime resolution: type-only statements, aliases, conditional execution and export semantics still require their respective compiler or source evidence. Nothing is implicitly loaded, no seam implementation is guessed and ownership/edit bounds remain unchanged.
+
+`--analyze-source-dependencies --author-request ORIGINAL_JSON --output FRESH_JSON` is a read-only diagnostic with original request digest binding and sourceGitBindingVerified=false. It does not need unavailable historical runner executable paths and does not approve the original design. The unchanged original cloud request successfully produced a missing-context record for the exact ToggleAttributeMapping import and named constructor bindings. A direct design-interface replay first refused unavailable historical runner paths; those original request bytes were not rewritten to bypass the gate.
+
+Rust regressions cover loaded versus unloaded candidates, aliases, missing context, exact named aliases, ambiguity, stable ordering and no execution/write claims. The constructor prompt receives the derived inventory, while frozen runtime import handling remains unchanged. Known gaps need revision-bound context or explicitly declared controlled seams; an inventory alone is not completed dependency closure, a working constructor, an accepted review or learning benefit.
+
+Next: obtain bounded owner-bound dependency context through existing context preparation, connect it to source construction without changing edit authority, then prospectively verify a fresh operation and its reviewed feedback return. No previous failed run is restarted or relabeled.

@@ -23,6 +23,48 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn dependency_inventory_distinguishes_context_gaps_without_resolving_or_loading_them() {
+    use agentlab_code_analysis::maintainer_source_recipe_author::source_dependency_inventory;
+    let content = "import {Ctor as Local} from '../shared'; import {Missing} from './missing'; import {Other} from 'external'; import {Pending} from './pending'; import {Dual} from './dual';";
+    let file = |path: &str, content: Value| json!({"path":path,"content":content,"sha256":"b".repeat(64),"gitBlobOid":"c".repeat(40)});
+    let mut request = json!({"source":{"revision":"a".repeat(40)},"sourceFiles":[
+        file("src/unit.ts",json!(content)),file("shared.ts",json!("export class Ctor {}")),
+        file("src/pending.ets",Value::Null),file("src/dual.ts",json!("export const Dual=1")),
+        file("src/dual.ets",json!("export const Dual=2"))]});
+    let result = source_dependency_inventory(&request).unwrap();
+    let imports = result["imports"].as_array().unwrap();
+    let get = |specifier: &str| {
+        imports
+            .iter()
+            .find(|row| row["sourcePath"] == "src/unit.ts" && row["specifier"] == specifier)
+            .unwrap()
+    };
+    assert_eq!(
+        get("../shared")["resolution"],
+        "single-loaded-source-candidate-not-runtime-resolution"
+    );
+    assert_eq!(
+        get("../shared")["importedBindings"],
+        json!([{"kind":"named","exported":"Ctor","local":"Local"}])
+    );
+    assert_eq!(
+        get("./missing")["resolution"],
+        "outside-loaded-scope-context-required"
+    );
+    assert_eq!(get("./pending")["resolution"], "scoped-source-not-loaded");
+    assert_eq!(get("./dual")["resolution"], "ambiguous-source-candidates");
+    assert_eq!(
+        get("external")["resolution"],
+        "external-or-alias-requires-explicit-binding"
+    );
+    assert_eq!(get("../shared")["sourceSha256"], digest(content.as_bytes()));
+    assert_eq!(result["runtimeResolutionVerified"], false);
+    assert_eq!(result["authorityWritePerformed"], false);
+    request["sourceFiles"].as_array_mut().unwrap().reverse();
+    assert_eq!(source_dependency_inventory(&request).unwrap(), result);
+}
+
+#[test]
 fn original_review_collection_waits_without_artifact_calls_and_requires_native_reception() {
     use std::os::unix::fs::PermissionsExt;
     let base = std::env::temp_dir().join(format!(

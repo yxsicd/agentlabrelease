@@ -40,6 +40,13 @@ runtime readiness and failure paths still need explicit observation. Refresh
 the relevant configuration/test-owner Skills rather than broadening a behavior
 scope's ownership or treating uninspected paths as absent.
 
+Use the native sourceDependencyInventory in construction requests and verifier
+interfaces to distinguish loaded implementations from unloaded scope files,
+missing cross-scope context, aliases and ambiguous candidates. Syntactic import
+bindings and paths are not runtime resolution. A named constructor needs its
+source-supported export contract, not an empty map or guessed same-named object.
+Obtain revision-bound context or an explicit controlled seam without widening edits.
+
 Resolve build tools from existing composition/toolchain receipts before declaring
 them absent from PATH or a bounded search. Revalidate their current entrypoints
 and SDK metadata, then inspect the exact module/target task registration. A tool
