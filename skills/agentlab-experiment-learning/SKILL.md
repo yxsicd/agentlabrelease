@@ -565,6 +565,13 @@ requirements before transport; only verified committed return emits a new
 fixed-cut selection/packet. It must include the admitted Skill. Staged previews
 never become consumer packets. Rebinding hashes does not authenticate review,
 prove model consumption or authorize a new task beyond the explicit selection.
+Use `--consume-reviewed-return` to attach the digest-bound transport result to
+the original business admission state and invoke ordinary evidence-return.
+Require explicit reviewed input and refuse replacing an existing return. Producer
+success flags do not bypass current-round capture, lesson, readback or guidance
+reconstruction. Inspect the resulting business status, not process exit alone;
+only completed return clears old executable inputs. Consumption does not launch
+a participant or schedule fresh next-round work.
 
 For a single-source stage calibration, use the main-only Maintainer guidance real
 consumption Action rather than adding unrelated repositories to a multi-repo

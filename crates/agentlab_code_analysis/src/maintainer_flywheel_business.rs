@@ -719,6 +719,73 @@ fn load_admitted_skill(stage: &Path) -> Result<Value, String> {
     Ok(plan["tables"]["maintainer_skills"]["key"].clone())
 }
 
+/// Consume the transport's fixed return references through the ordinary business
+/// gate. Producer success flags are prerequisites, never semantic admission.
+/// This performs no remote mutation, participant execution or next-round dispatch.
+pub fn consume_reviewed_return(request_bytes: &[u8], output: &Path) -> Result<Value, String> {
+    need(request_bytes.len() <= 2 * 1024 * 1024, "return consumer request budget")?;
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    need(
+        request["schema"] == "agentlab.reviewed_return_consumer_request.v1"
+            && request["reviewed"] == true
+            && request["automaticPromotion"] == false
+            && request["round"].as_u64().is_some_and(|n| n < 8),
+        "return consumer requires reviewed bounded request",
+    )?;
+    let state_bytes = bound(&request["inputState"])?;
+    let mut state: Value = serde_json::from_slice(&state_bytes).map_err(|e| e.to_string())?;
+    need(
+        state["schema"] == "agentlab.flywheel_business_state.v1"
+            && state["automaticPromotion"] == false
+            && state["lessonAdmission"].is_object()
+            && state["lessonAdmission"].get("committedReturn").is_none(),
+        "return consumer needs original admission state without an existing return",
+    )?;
+    let transport_bytes = bound(&request["transportResult"])?;
+    let transport: Value = serde_json::from_slice(&transport_bytes).map_err(|e| e.to_string())?;
+    let returned = &transport["committedReturn"];
+    need(
+        transport["authorityWrites"] == 1
+            && transport["committedReadbackVerified"] == true
+            && transport["sourceReadbackVerified"] == true
+            && transport["nextGuidanceBound"] == true
+            && transport["automaticFiveStageLoopCompleted"] == false
+            && returned["reviewed"] == true
+            && returned["knowledge"]["revision"] == transport["revision"]
+            && returned["guidanceSelection"] == transport["nextGuidanceSelection"],
+        "return consumer transport references or policy differ",
+    )?;
+    state["lessonAdmission"]["committedReturn"] = returned.clone();
+    need(output.is_absolute(), "return consumer output must be absolute")?;
+    need(!output.exists(), "return consumer output already exists")?;
+    for part in output.parent().ok_or("return consumer output parent absent")?.ancestors() {
+        need(
+            !fs::symlink_metadata(part).map_err(|e| e.to_string())?.file_type().is_symlink(),
+            "return consumer output ancestor symlink",
+        )?;
+    }
+    fs::create_dir(output).map_err(|e| e.to_string())?;
+    save_raw(&output.join("consumer-request.json"), request_bytes)?;
+    save_raw(&output.join("original-input-state.json"), &state_bytes)?;
+    save_raw(&output.join("original-transport-result.json"), &transport_bytes)?;
+    let input = output.join("return-input-state.json");
+    let input_bytes = save(&input, &state)?;
+    let stage_request = json!({"schema":"agentlab.flywheel_stage_request.v1",
+        "automaticPromotion":false,"round":request["round"],"stage":"evidence-return",
+        "inputState":{"path":input,"sha256":digest(&input_bytes)}});
+    let stage_bytes = save(&output.join("business-stage-request.json"), &stage_request)?;
+    let result = run(&stage_bytes, output)?;
+    let receipt = json!({"schema":"agentlab.reviewed_return_consumption.v1",
+        "consumerRequestSha256":digest(request_bytes),"transportResultSha256":digest(&transport_bytes),
+        "originalInputStateSha256":digest(&state_bytes),"businessResult":result,
+        "committedReturnConsumed":result["status"]=="completed",
+        "authorityWritePerformed":false,"newParticipantExecution":false,
+        "nextRoundScheduled":false,"automaticFiveStageLoopCompleted":false,
+        "remoteCaptureAuthenticated":false,"qualified":false});
+    save(&output.join("consumption-receipt.json"), &receipt)?;
+    Ok(receipt)
+}
+
 /// Run within the coordinator's already-created stage directory. Business gate
 /// failures emit a rejected envelope, never a fabricated passing phase receipt.
 pub fn run(request_bytes: &[u8], output: &Path) -> Result<Value, String> {
