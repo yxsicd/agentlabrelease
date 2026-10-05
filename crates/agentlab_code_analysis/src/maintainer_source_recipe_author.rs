@@ -1586,6 +1586,7 @@ pub fn verifier_interface(request_bytes: &[u8], design_bytes: &[u8]) -> Result<V
             "initialStatePointerBase":"scenario.initialState, not scenarioInputs packet",
             "initialStateObservation":"actual source state; mismatch must stop before tested operation",
             "initialFieldsObservation":"assertInitialFields(scenarioId, actualInstance, '/fields') reads selected own data properties; never pass expected state as actual",
+            "operationFieldsObservation":"observeFields(actualInstance, fieldNames) reads explicitly selected own data properties before/after operations or caught exceptions without getters or expected-state input. Values are raw and nested references are not deep snapshots; represent non-JSON values explicitly in a reviewed contract. Missing fields/accessors reject. A source private modifier alone does not establish runtime invisibility; inaccessible native private slots are not exposed.",
             "initialStateValueShape":"assertInitialState actual is the selected subtree value, not a wrapper object; setup metadata is not observed state",
             "initialStateFailureDiagnostic":{"schema":"agentlab.source_initial_state_error.v1",
                 "errorProperty":"initialStateDiagnostic","pointerBase":"scenario.initialState",

@@ -197,6 +197,23 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
     assertInitialState(scenarioId, observed, pointer);
     return observed;
   }
+  function observeFields(instance, fieldNames) {
+    if (!instance || typeof instance !== 'object' || Array.isArray(instance))
+      throw new Error('field observation requires actual source instance');
+    if (!Array.isArray(fieldNames) || !fieldNames.length || fieldNames.length > 128 ||
+        fieldNames.some(key => typeof key !== 'string' || !key || key.length > 1024) ||
+        new Set(fieldNames).size !== fieldNames.length)
+      throw new Error('field observation requires unique bounded field names');
+    const observed = Object.create(null);
+    for (const key of fieldNames) {
+      const descriptor = Object.getOwnPropertyDescriptor(instance, key);
+      if (!descriptor || !Object.hasOwn(descriptor, 'value'))
+        throw new Error('observed field must be an own data property: ' + key);
+      // Actual values only; no getter, expected-state input, coercion or deep snapshot.
+      Object.defineProperty(observed, key, {value:descriptor.value, enumerable:true});
+    }
+    return observed;
+  }
   function createSeams(scenarioId) {
     const scenario = (manifest.scenarios || []).find(s => s.id === scenarioId);
     if (!scenario) throw new Error('unknown frozen seam scenario');
@@ -238,7 +255,7 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
         if (violations.size) throw new Error([...violations].join('; '));
       }});
   }
-  return Object.freeze({source, loadModule, loadReadOnlyModule, scenarioInputs, assertInitialState, assertInitialFields, createSeams});
+  return Object.freeze({source, loadModule, loadReadOnlyModule, scenarioInputs, assertInitialState, assertInitialFields, observeFields, createSeams});
 };
 
 // Explicit convenience entry for the pinned compiler invocation protocol.
