@@ -121,7 +121,7 @@ Its pointer is relative to initialState (for example /fields, not
 instantiate the source-exported class explicitly before observing fields or calls.
 Keep proposal sourcePaths limited to loaded implementation bodies; binding an
 import specifier to a controlled seam does not load that dependency's source.
-Before verifier generation, use the Rust-produced source_verifier_interface.v1
+Before verifier generation, use the Rust-produced source_verifier_interface.v2
 packet bound to the exact request and validated design. It enumerates allowed
 loaded paths, argument positions and initial-state-relative top-level pointers;
 nested pointers remain supported. Preserve its bytes in generation evidence.
@@ -136,6 +136,16 @@ Missing own fields, accessors and mismatches fail closed. For other state, use a
 explicit source observation with assertInitialState: actual must be the selected
 subtree value, not a wrapper. Neither helper authenticates an instance or proves
 state coverage; copied expected objects cannot establish source initialization.
+When these assertions fail, use initialStateDiagnostic (schema
+agentlab.source_initial_state_error.v1) to locate the scenario and escaped pointer
+relative to initialState, with the reason and actual/expected types. Diagnostics
+contain no observed or expected values and do not qualify a check. Trace the
+identified field through source constructors, retained dependencies and explicit
+global bindings; repair missing initialization from source evidence, never by
+copying frozen expectations into the instance. Preserve the failed baseline and
+rerun it before interpreting negative controls. The diagnostic traversal does not
+add another observation of source getters; assertInitialFields rejects accessors
+without invoking them.
 
 Use the constructor's `--design-first --design-only` mode when a new behavior
 surface needs independent semantic review before verifier generation. The retained

@@ -1127,7 +1127,8 @@ fn frozen_initial_state_assertion_rejects_source_mismatch_before_operation() {
             {"id":"empty","initialState":{"fields":{}},"inputs":{"seams":{}}},
             {"id":"array","initialState":{"fields":[]},"inputs":{"seams":{}}},
             {"id":"scalar","initialState":{"fields":0},"inputs":{"seams":{}}},
-            {"id":"special","initialState":{"a/b":{"~fields":{"__proto__":7,"value":{"items":[null,1]}}}},"inputs":{"seams":{}}}]
+            {"id":"special","initialState":{"a/b":{"~fields":{"__proto__":7,"value":{"items":[null,1]}}}},"inputs":{"seams":{}}},
+            {"id":"shared","initialState":{"items":[{},{}]},"inputs":{"seams":{}}}]
     });
     let runtime = dir.join("initial-state-runtime.cjs");
     fs::write(
@@ -1159,6 +1160,31 @@ assert.throws(()=>baseline.assertInitialFields('state',{}),/own data property/);
 assert.throws(()=>baseline.assertInitialFields('state',null),/actual source instance/);
 assert.throws(()=>baseline.assertInitialFields('state',[]),/actual source instance/);
 assert.throws(()=>baseline.assertInitialFields('state',{count:undefined,called:false}),/non-JSON/);
+function diagnostic(fn){
+ try{fn();assert.fail('expected observation failure')}catch(error){
+  assert.equal(error.initialStateDiagnostic.schema,'agentlab.source_initial_state_error.v1');
+  assert.equal(Object.hasOwn(error.initialStateDiagnostic,'actualValue'),false);
+  assert.equal(Object.hasOwn(error.initialStateDiagnostic,'expectedValue'),false);
+  return error.initialStateDiagnostic;
+ }
+}
+const undefinedField={count:undefined,called:false};
+assert.deepEqual(diagnostic(()=>baseline.assertInitialFields('state',undefinedField)),{
+ schema:'agentlab.source_initial_state_error.v1',scenarioId:'state',initialStatePointer:'/fields/count',
+ reason:'non-json-value',actualType:'undefined',expectedType:'number'});
+assert.equal(undefinedField.count,undefined);assert.equal(undefinedField.called,false);
+assert.equal(diagnostic(()=>baseline.assertInitialFields('state',inherited)).actualType,'missing-property');
+assert.equal(diagnostic(()=>baseline.assertInitialFields('state',accessor)).actualType,'accessor');
+assert.equal(getterCalls,0);
+const cyclic={};cyclic.self=cyclic;
+assert.equal(diagnostic(()=>baseline.assertInitialState('state',cyclic,'/fields')).reason,'cyclic-value');
+const sparse=[];sparse.length=2;
+const sparseError=diagnostic(()=>baseline.assertInitialState('state',sparse,'/a~1b/~0key'));
+assert.equal(sparseError.initialStatePointer,'/a~1b/~0key/0');assert.equal(sparseError.actualType,'array-hole');
+const repeated={};baseline.assertInitialState('shared',[repeated,repeated],'/items');
+let stateGetterCalls=0;const once={called:false};
+Object.defineProperty(once,'count',{enumerable:true,get(){stateGetterCalls++;return 0}});
+baseline.assertInitialState('state',once,'/fields');assert.equal(stateGetterCalls,1);
 for(const id of ['empty','array','scalar'])
  assert.throws(()=>baseline.assertInitialFields(id,good),/nonempty object/);
 assert.throws(()=>baseline.assertInitialFields('metadata',good),/missing initial state pointer/);
@@ -1169,6 +1195,14 @@ const special=Object.create(null);special.value={items:[null,1]};
 Object.defineProperty(special,'__proto__',{value:7,enumerable:true});
 const specialObserved=baseline.assertInitialFields('special',special,'/a~1b/~0fields');
 assert.equal(specialObserved.__proto__,7);assert.equal(Object.getPrototypeOf(specialObserved),null);
+const nestedFailure=diagnostic(()=>baseline.assertInitialFields('special',
+ Object.assign(Object.create(null),{value:{items:[null,2]}}),'/a~1b/~0fields'));
+assert.equal(nestedFailure.initialStatePointer,'/a~1b/~0fields/__proto__');
+const nested=Object.create(null);nested.value={items:[null,2]};
+Object.defineProperty(nested,'__proto__',{value:7,enumerable:true});
+const nestedDifference=diagnostic(()=>baseline.assertInitialFields('special',nested,'/a~1b/~0fields'));
+assert.equal(nestedDifference.initialStatePointer,'/a~1b/~0fields/value/items/1');
+assert.equal(nestedDifference.actualType,'number');assert.equal(nestedDifference.expectedType,'number');
 baseline.assertInitialState('state',{called:good.called,count:good.count},'/fields');
 assert.equal(good.run(),0);
 baseline.assertInitialState('state',0,'/fields/count');
