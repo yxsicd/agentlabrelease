@@ -248,7 +248,9 @@ jobs:
           if early_config is not None:
               import hashlib,re
               assert len(feedback.encode())<=16384,'Early enrollment exceeds bounded envelope'
-              assert set(early_config)=={'schema','rubric','rubricSha256'},'Early enrollment fields differ'
+              assert {'schema','rubric','rubricSha256'}<=set(early_config)<={'schema','rubric','rubricSha256','reviewRepairLimit'},'Early enrollment fields differ'
+              repair_limit=early_config.get('reviewRepairLimit',0)
+              assert type(repair_limit) is int and repair_limit in (0,1),'Early review repair must be zero or one'
               early=early_config['rubric'];early_digest=early_config['rubricSha256']
               assert isinstance(early,str) and isinstance(early_digest,str) and early and early_digest
               assert os.environ['GITHUB_RUN_ATTEMPT']=='1','Early review cannot reopen a rerun budget'
@@ -258,7 +260,7 @@ jobs:
               raw=path.read_bytes();assert len(raw)<=128*1024 and re.fullmatch('[0-9a-f]{64}',early_digest)
               assert hashlib.sha256(raw).hexdigest()==early_digest
               with open(os.environ['GITHUB_ENV'],'a') as stream:
-                  stream.write('DESIGN_QUALITY_RUBRIC='+early+'\nDESIGN_QUALITY_RUBRIC_SHA256='+early_digest+'\n')
+                  stream.write('DESIGN_QUALITY_RUBRIC='+early+'\nDESIGN_QUALITY_RUBRIC_SHA256='+early_digest+'\nDESIGN_REVIEW_REPAIR_LIMIT='+str(repair_limit)+'\n')
           PY
       - name: Bind optional guidance to the checked-in knowledge directory
         run: |
@@ -494,7 +496,8 @@ jobs:
           fi
           if test -n "$DESIGN_QUALITY_RUBRIC"; then
             revision_args+=(--design-quality-rubric "$GITHUB_WORKSPACE/$DESIGN_QUALITY_RUBRIC" \
-              --design-quality-rubric-sha256 "$DESIGN_QUALITY_RUBRIC_SHA256")
+              --design-quality-rubric-sha256 "$DESIGN_QUALITY_RUBRIC_SHA256" \
+              --design-review-repair-limit "$DESIGN_REVIEW_REPAIR_LIMIT")
           fi
           python3 scripts/run-source-recipe-author.py --request "$RUNNER_TEMP/recipe-author/request.json" \
             --output "$RUNNER_TEMP/recipe-author/agent" --gate target/release/agentlab-maintainer-skill-flywheel \

@@ -45,9 +45,17 @@ with tempfile.TemporaryDirectory() as temporary:
     def gate(args,flag,output,*extra):
         calls.append(flag)
         if flag=='--prepare-source-design-quality-review':output.write_text(json.dumps(packet))
-        elif flag=='--source-design-quality-review-prompt':output.write_text('reviewRequestSha256 is '+digest+'. fixture data')
+        elif flag in ('--source-design-quality-review-prompt','--source-design-quality-review-attempt-prompt'):
+            if flag.endswith('attempt-prompt'):
+                assert '--evidence' in extra
+                if getattr(args,'repair_parent',None):
+                    assert (output.parent/'evidence/repair-inputs/response.json').read_bytes()==b'{}'
+            output.write_text('reviewRequestSha256 is '+digest+'. fixture data')
         elif flag=='--verify-source-design-quality-review-completion':
             assert '--evidence' in extra and '--participant-evidence' not in extra
+            if getattr(args,'fixture_protocol_failure',False) and not getattr(args,'repair_parent',None):
+                (output.parent/'validation.json.stderr.log').write_text('native fixture rejection')
+                raise RuntimeError('native fixture rejection')
             output.write_text(json.dumps(dict(decision=args.fixture_decision,recordedCompletionVerified=True)))
         else:raise AssertionError(flag)
     class Participant:
@@ -72,10 +80,10 @@ with tempfile.TemporaryDirectory() as temporary:
         args.source=base/'suite'
         try:review.run(args,Participant);raise AssertionError('mixed lane admitted')
         except ValueError:pass
-        args.source=None;args.review_repair_limit=1
+        args.source=None;args.review_repair_limit=2
         try:review.run(args,Participant);raise AssertionError('repair lane admitted')
         except ValueError:pass
-        enrollment=dict(authorRequestSha256=hashlib.sha256(request.read_bytes()).hexdigest(),model='fixture',
+        enrollment=dict(reviewRepairLimit=0,authorRequestSha256=hashlib.sha256(request.read_bytes()).hexdigest(),model='fixture',
             rubricSha256=hashlib.sha256(b'rubric').hexdigest(),
             providerRoute='fixture',reasoningEffort='default',thinkingType='disabled',gatewayTimeoutSeconds=240,maxOutputTokens=16384)
         constructor=argparse.Namespace(request=request,output=base/'constructor',gate=base/'gate',pi=base/'pi')
@@ -90,6 +98,16 @@ with tempfile.TemporaryDirectory() as temporary:
                 try:author.review_design_before_code(constructor,design,enrollment);raise AssertionError('negative review admitted')
                 except ValueError:pass
         assert os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']==original
+    args=argparse.Namespace(source=None,author_request=request,design=design,rubric=base/'rubric',
+        output=base/'protocol-repair',gate=base/'gate',pi=base/'pi',gateway_timeout_seconds=240,
+        thinking_type='disabled',reasoning_effort='default',max_output_tokens=16384,
+        fixture_decision='revise',fixture_protocol_failure=True,review_repair_limit=1)
+    with patch.object(review,'gate',gate):repaired=review.run(args,Participant)
+    assert repaired['attempts']==['initial','repair-1'] and repaired['selectedAttempt']=='repair-attempt'
+    assert repaired['decision']=='revise' and repaired['qualified'] is False
+    assert repaired['maximumReviewerAttempts']==2 and repaired['totalParticipantBudgetSeconds']==840
+    assert (args.output/'response.json').read_bytes()==b'{}'
+    assert (args.output/'repair-attempt/response.json').read_bytes()==b'{}'
     assert all('suite-review' not in flag for flag in calls)
 "#).env("FIXTURE_REPO",root()).output().unwrap();
     assert!(
@@ -975,13 +993,17 @@ fn source_action_accepts_explicit_checked_in_cuts_and_rejects_path_escape() {
     let rubric = "examples/maintainer-knowledge-gate/source-design-quality-rubric.json";
     let rubric_digest = digest(&fs::read(root().join(rubric)).unwrap());
     let selection = "examples/maintainer-knowledge-gate/reviewed-guidance/toggle-generate-ordered-attributes-e516a65a.json";
-    for variant in 0..6 {
+    for variant in 0..10 {
         let mut enrollment = json!({"schema":"agentlab.source_design_review_action_enrollment.v1",
             "rubric":rubric,"rubricSha256":rubric_digest});
         match variant {
             1 => enrollment["rubricSha256"] = json!("0".repeat(64)),
             2 => enrollment["extra"] = json!(true),
             3 => enrollment["rubric"] = json!("../escape.json"),
+            6 => enrollment["reviewRepairLimit"] = json!(1),
+            7 => enrollment["reviewRepairLimit"] = json!(true),
+            8 => enrollment["reviewRepairLimit"] = json!(2),
+            9 => enrollment["reviewRepairLimit"] = json!("1"),
             _ => {}
         }
         let environment = fixture_root.join(format!("early-environment-{variant}"));
@@ -1007,14 +1029,18 @@ fn source_action_accepts_explicit_checked_in_cuts_and_rejects_path_escape() {
             .unwrap();
         assert_eq!(
             result.status.success(),
-            variant == 0,
+            variant == 0 || variant == 6,
             "early variant {variant}: {}",
             String::from_utf8_lossy(&result.stderr)
         );
-        if variant == 0 {
+        if variant == 0 || variant == 6 {
             let exported = fs::read_to_string(&environment).unwrap();
             assert!(exported.contains(&format!("DESIGN_QUALITY_RUBRIC={rubric}\n")));
             assert!(exported.contains(&format!("DESIGN_QUALITY_RUBRIC_SHA256={rubric_digest}\n")));
+            assert!(exported.contains(&format!(
+                "DESIGN_REVIEW_REPAIR_LIMIT={}\n",
+                if variant == 6 { 1 } else { 0 }
+            )));
             // Execute the workflow's actual request-argument builder. This is command
             // routing evidence, not native target admission or a model experiment.
             let target_builder = workflow

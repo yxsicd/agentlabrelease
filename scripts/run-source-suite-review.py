@@ -72,8 +72,9 @@ def run_attempt(args, participant_class=None):
         gate(args, '--prepare-source-design-quality-review' if design_review else
              '--prepare-source-suite-review', output / 'request.json')
         if repair_enabled:
-            gate(args, '--prepare-source-suite-review-attempt-prompt', output / 'prompt.txt',
-                 '--participant-evidence', str(evidence))
+            gate(args, '--source-design-quality-review-attempt-prompt' if design_review else
+                 '--prepare-source-suite-review-attempt-prompt', output / 'prompt.txt',
+                 '--evidence' if design_review else '--participant-evidence', str(evidence))
         else:
             gate(args, '--source-design-quality-review-prompt' if design_review else
                  '--prepare-source-suite-review-prompt', output / 'prompt.txt')
@@ -86,6 +87,14 @@ def run_attempt(args, participant_class=None):
         repo = Path(__file__).resolve().parents[1]
         helpers = load_module('source_author_transport', repo / 'scripts/run-source-recipe-author.py')
         helpers.prepare_runtime_receipt_root()
+        effort = None if args.reasoning_effort == 'default' else args.reasoning_effort
+        if design_review and getattr(args, 'repair_parent', None) is not None:
+            parent_intent = json.loads((evidence / 'repair-inputs/evidence/review-intent.json').read_bytes())
+            identity = dict(model=os.environ['AGENTLAB_MODEL'],
+                            providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
+                            providerReasoningEffort=effort)
+            if parent_intent.get('participantIdentity') != identity:
+                raise ValueError('Design review repair model or reasoning treatment differs')
         if participant_class is None:
             participant_class = load_module('review_participant', repo / 'examples/real-code-agent/participant.py').Participant
         participant = participant_class(
@@ -98,7 +107,6 @@ def run_attempt(args, participant_class=None):
             max_output_tokens=args.max_output_tokens)
         policy = helpers.freeze_pi_retry_policy(output / 'participant-state', workspace, evidence,
                                                 disable_compaction=True)
-        effort = None if args.reasoning_effort == 'default' else args.reasoning_effort
         wall_time = max(240, args.gateway_timeout_seconds + 60)
         intent = dict(schema=('agentlab.independent_source_design_review_intent.v1' if design_review
                               else 'agentlab.independent_source_suite_review_intent.v1'),
@@ -136,7 +144,7 @@ def run_attempt(args, participant_class=None):
                  '--evidence' if design_review else '--participant-evidence', str(evidence))
         except RuntimeError:
             if design_review:
-                raise  # No citation repair or final-suite relabeling for this phase.
+                raise  # Native attempt preparation decides protocol eligibility.
             # Complete diagnostics are feedback, never a replacement acceptance gate.
             try:
                 gate(args, '--diagnose-source-suite-review-citations', output / 'citation-diagnostic.json',
@@ -163,13 +171,13 @@ def run(args, participant_class=None):
     design_review = getattr(args, 'author_request', None) is not None
     if design_review:
         if (getattr(args, 'design', None) is None or getattr(args, 'source', None) is not None
-                or getattr(args, 'source_git_checkout', None) is not None or limit):
-            raise ValueError('Design review requires paired original request/design, no suite or repair lane')
+                or getattr(args, 'source_git_checkout', None) is not None):
+            raise ValueError('Design review requires paired original request/design, no suite lane')
     elif getattr(args, 'design', None) is not None or getattr(args, 'source', None) is None:
         raise ValueError('Select exactly one original design or suite review lane')
     if limit not in (0, 1):
         raise ValueError('Review repair limit must be zero or one')
-    if limit and getattr(args, 'source_git_checkout', None) is None:
+    if limit and not design_review and getattr(args, 'source_git_checkout', None) is None:
         raise ValueError('Citation repair requires independently verified Git source')
     root = args.output.absolute()
     original_runtime_root = os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT')
@@ -191,9 +199,13 @@ def run(args, participant_class=None):
                 raise
             # Routing only; native preparation must recheck original complete
             # exchange/policy and compute eligible findings before any inference.
-            diagnostic_path = root / 'citation-diagnostic.json'
-            if not diagnostic_path.is_file() or json.loads(diagnostic_path.read_bytes()).get('citationFindingCount', 0) == 0:
-                raise
+            if design_review:
+                if not (root / 'response.json').is_file() or not (root / 'validation.json.stderr.log').is_file():
+                    raise
+            else:
+                diagnostic_path = root / 'citation-diagnostic.json'
+                if not diagnostic_path.is_file() or json.loads(diagnostic_path.read_bytes()).get('citationFindingCount', 0) == 0:
+                    raise
             repaired = copy.copy(args)
             repaired.output = root / 'repair-attempt'
             repaired.repair_parent = root

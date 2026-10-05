@@ -108,6 +108,17 @@ are not stable identities. Cite design statements through their actual /design
 string pointers, not original-request text. Native location validation establishes
 content binding only, not whether a citation supports the reviewer's conclusion.
 Never relocate a rejected historical response into acceptance.
+For prospectively enrolled early-review protocol correction, freeze
+`reviewRepairLimit` before the first constructor turn (default 0; at most 1).
+Use the native attempt prompt and retained complete original capture; do not
+append a policy to an old capture or reopen an exhausted root. Keep source,
+design, rubric and participant model/route/effort unchanged. Syntax and citation
+correction is distinct from a completed `revise`/`unverified` semantic decision:
+the latter requires a reviewed design successor, not another protocol attempt.
+Retain both responses and let ordinary completion/content gates derive the
+corrected decision; a correction may still be negative. Read
+[the early-review contract](../../docs/flywheel-design-quality-review-20261005.md)
+for the bounded transport and its evidence limits.
 Review delivery and review interpretation are separate evidence: a real reviewer
 received compiler output yet treated an erased interface import as a runtime
 dependency. Use the compiler import navigation to find the original per-file

@@ -1182,18 +1182,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         a == "--prepare-source-design-quality-review"
             || a == "--validate-source-design-quality-review"
             || a == "--source-design-quality-review-prompt"
+            || a == "--source-design-quality-review-attempt-prompt"
             || a == "--verify-source-design-quality-review-completion"
     }) {
         let request = fs::read(value(&args, "--author-request")?)?;
         let design = fs::read(value(&args, "--design")?)?;
         let rubric = fs::read(value(&args, "--quality-rubric")?)?;
-        if args
-            .iter()
-            .any(|a| a == "--source-design-quality-review-prompt")
-        {
-            let bytes = agentlab_code_analysis::maintainer_source_design_quality::prompt(
-                &request, &design, &rubric,
-            )?;
+        if args.iter().any(|a| {
+            a == "--source-design-quality-review-prompt"
+                || a == "--source-design-quality-review-attempt-prompt"
+        }) {
+            let bytes = if args
+                .iter()
+                .any(|a| a == "--source-design-quality-review-attempt-prompt")
+            {
+                agentlab_code_analysis::maintainer_source_design_quality::prompt_for_review_attempt(
+                    &request,
+                    &design,
+                    &rubric,
+                    &PathBuf::from(value(&args, "--evidence")?),
+                )?
+            } else {
+                agentlab_code_analysis::maintainer_source_design_quality::prompt(
+                    &request, &design, &rubric,
+                )?
+            };
             OpenOptions::new()
                 .write(true)
                 .create_new(true)

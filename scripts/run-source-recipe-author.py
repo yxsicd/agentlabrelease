@@ -15,6 +15,9 @@ def freeze_design_review(args, request_bytes, participant_class):
     """Prospective bounded enrollment, before any constructor model call."""
     if not args.design_quality_rubric:
         return None
+    repair_limit = getattr(args, 'design_review_repair_limit', 0)
+    if type(repair_limit) is not int or repair_limit not in (0, 1):
+        raise ValueError('Design review repair limit must be zero or one before inference')
     raw = args.design_quality_rubric.read_bytes()
     if hashlib.sha256(raw).hexdigest() != args.design_quality_rubric_sha256:
         raise ValueError('Design quality rubric differs from prospective digest')
@@ -43,7 +46,8 @@ def freeze_design_review(args, request_bytes, participant_class):
         model=os.environ['AGENTLAB_MODEL'],providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
         reasoningEffort=args.reasoning_effort,thinkingType=args.thinking_type,
         gatewayTimeoutSeconds=240,maxOutputTokens=args.max_output_tokens,
-        maximumReviewerAttempts=1,participantBudgetSeconds=budget,transportRetryLimit=0,
+        reviewRepairLimit=repair_limit,maximumReviewerAttempts=1+repair_limit,
+        participantBudgetSeconds=budget,totalParticipantBudgetSeconds=budget*(1+repair_limit),transportRetryLimit=0,
         automaticCompactionDisabled=True,
         automaticPromotion=False,authorityWritePerformed=False,qualified=False)
     with (root/'enrollment.json').open('x') as stream:
@@ -65,7 +69,7 @@ def review_design_before_code(args, design_path, enrollment):
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
     config = SimpleNamespace(source=None,author_request=args.request,design=design_path,
         rubric=args.output/'design-review-enrollment/rubric.json',output=args.output/'design-review',
-        gate=args.gate,pi=args.pi,review_repair_limit=0,source_git_checkout=None,
+        gate=args.gate,pi=args.pi,review_repair_limit=enrollment['reviewRepairLimit'],source_git_checkout=None,
         reasoning_effort=enrollment['reasoningEffort'],thinking_type=enrollment['thinkingType'],
         gateway_timeout_seconds=enrollment['gatewayTimeoutSeconds'],max_output_tokens=enrollment['maxOutputTokens'])
     original_root = os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']
@@ -417,6 +421,7 @@ def main():
                    help='Stop after validated unreviewed design; no verifier generation or proposal staging')
     p.add_argument('--design-quality-rubric', type=Path)
     p.add_argument('--design-quality-rubric-sha256')
+    p.add_argument('--design-review-repair-limit', type=int, choices=[0, 1], default=0)
     p.add_argument('--frozen-design', type=Path,
                    help='Continue verifier generation from exact existing design; not semantic approval')
     p.add_argument('--frozen-design-sha256',
@@ -434,6 +439,8 @@ def main():
     args = p.parse_args()
     if bool(args.design_quality_rubric) != bool(args.design_quality_rubric_sha256):
         p.error('Design quality rubric and prospective digest must be paired')
+    if args.design_review_repair_limit and not args.design_quality_rubric:
+        p.error('Design review repair requires prospective early review enrollment')
     if args.design_quality_rubric and (not args.design_first or args.design_only
             or args.frozen_design or args.revision_request or args.parent_design or args.diagnostic_repair):
         p.error('Early design review belongs only to a fresh design-first constructor')
