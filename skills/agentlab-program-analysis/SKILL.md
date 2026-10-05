@@ -200,6 +200,11 @@ The reviewer must reassess support without operator replacement citations. Crite
 packet citations remain a separate legal form; do not forbid them globally. A real
 sole repair fixed its packet pointer but retained two wrong-kind source citations;
 delivery and partial correction do not establish completed review or convergence.
+A fresh bounded review later corrected all five original-source quote defects
+within its sole repair and passed native completion/content admission. Verify the
+complete unchanged feedback, both isolated zero-tool wire exchanges and selected
+attempt before reporting this stage's convergence. Ready-for-execution remains
+an early opinion; malformed subsequent code still prevents execution and return.
 For pure source/design review, remove tool capabilities at participant dispatch,
 not only in prose. A real reviewer invoked bash and issued a second model exchange
 despite zero transport retries; the single isolated-exchange gate correctly refused
@@ -385,6 +390,12 @@ reset the budget, or treat a repaired format as source-semantic approval. A vali
 JSON object with an invalid proposal contract goes to the existing native gate,
 not this format loop. Frozen seam call records expose arguments, not return
 values: absent record fields cannot establish undefined source behavior.
+An experiment's maximum code-attempt count does not enable this optional CLI lane.
+Bind the chosen proposal-format revision value to actual dispatch arguments before
+inference when using it; default zero remains valid for one-shot campaigns. A real
+completed code response failed strict JSON with zero configured format revisions,
+although its plan allowed at most two code attempts. Preserve that closed root;
+test an explicitly configured correction in a fresh run, not as a retroactive retry.
 
 Use the optimized native producer for operational construction and calibration,
 not a debug executable by default. Full-cut reassessment and repeated executable

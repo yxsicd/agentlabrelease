@@ -1,5 +1,66 @@
 # Pre-execution source design quality review
 
+## Experiment 15: bounded review convergence, malformed code
+
+Clean committed build `exec-0000000000000410`, exit 0, pinned method
+`d76ad77353319c3eadb5d55b821ea6a5bf87bddf`, tree
+`165824cbd2ec2a5405d7d0c3deec4841c60e2c32`, native SHA
+`599b10a6d71dc76d4d613024b67a6ab8039af34cc4f4148eb72a9f945d46a2e9`.
+Fresh plan SHA
+`7f3b1799ce74ff67750a1965de89059be5c10f6960bae760329b4509c526d6e5`
+and complete execution policy SHA
+`1aa803c813384e89e2aac60923f5e6c7a35357a0082ba7d36231c2d25c02a473`
+were frozen before inference. Constructor/reviewer isolation probes and five-table
+exact-cut preflight passed (`exec-0000000000000412`, exit 0). Original source/task,
+knowledge, model and upper attempt/deadline limits remained unchanged. Neither
+the closed experiment-14 root nor its unconsumed downstream allowances was reopened.
+
+Two constructor exchanges completed in 105,503/30,932 ms. Initial design SHA
+`ce44bf76375b6a929073626cb9c8a6ef9dded32e1f1f364c688468b7e5f8aa1f`
+used a check pointer with an extra expectedObservations component. Sole correction
+SHA `38ea0490d4b5facfefb6cd76c9e29d637b902194e6ce2c5b06fe603fb8b923de`
+passed native design validation. Independent audit `exec-000000000000041b`, exit 0,
+verified both runtime receipts, exact decoded native feedback and complete correction
+prompt in original wire history. It reconstructed all 21 original request fields
+in the actual v2 review packet; fresh review prompt length was 431,188 bytes.
+The new scenario-contract diagnostic was not exercised. This is structural correction
+and input fidelity, not source-semantic truth or a causal speed comparison.
+
+Initial early review SHA
+`d5ae63ea675755364b52200eb086dbbb343a6d5a923c1c3927a289f4600590df`
+had five original-source quote mismatches. Sole repair SHA
+`3be4f6dbc7b9570118b1d493aec65ca05a54e45ed7f3b00e22830c2d3b9c2b04`
+passed native original-capture completion/content admission with decision
+ready-for-execution, validation SHA
+`1457e39a7bb74b6694ca988177acaefbde0001f84495c5ff39eef371cbb4b23e`.
+Independent audit `exec-000000000000041e`, exit 0, verified both isolated runtimes,
+exact whole prompts, one complete exchange per reviewer, omitted wire tools field,
+zero tool calls and exact original response plus all five decoded defects inside
+the repair feedback. Review exchanges took 87,563/71,804 ms. This is real bounded
+protocol correction completing an early review; it neither authenticates semantic
+truth nor establishes execution or final-suite correctness.
+
+Original pipeline `exec-0000000000000414` is terminal, exit 1. Its subsequent code
+exchange completed in 89,005 ms but returned malformed strict JSON (line 1, column
+9343, character position 9342). Original proposal SHA
+`8ae6d2f44d978d2de7bdad52c0472d28ddc207c94908c7d5558fe8adc1ed7ae7`,
+9,370 bytes, remains unchanged and unadmitted. Independent terminal audit
+`exec-0000000000000420`, exit 0, validated all three constructor runtime receipts
+and complete exchanges. Actual proposal-format revisions were zero; the optional
+CLI flag was absent even though the plan allowed at most two code attempts.
+One-shot dispatch stayed within that upper bound, but unused allowance did not
+enable correction. A future trial must explicitly bind the selected format-revision
+value to actual arguments before inference. Never reopen this root or parse-repair
+its bytes into admission. No source execution, controls, final review or authority
+write occurred.
+
+Overall engineering maturity is **82% (+1)** based on newly verified real bounded
+early-review convergence, not test counts or packet bytes. Complete automatic
+cycles remain **zero**. Malformed-code correction, baseline/control calibration,
+independent final review, committed return, next-round consumption and cross-repository
+transfer still need actual evidence. All prior negative trials retain their own
+original maturity and outcome; this section does not revise their historical claims.
+
 ## Experiment 14 and lossless request-value transport
 
 Clean hwlinux build `exec-0000000000000402`, exit 0, pinned method
