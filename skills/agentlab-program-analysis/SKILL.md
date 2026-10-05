@@ -142,6 +142,12 @@ and ordinary v3 admission checks changes, owned paths and protected ancestors.
 Keep original reference response and reconstructed v3 feedback as separate
 digest-bound artifacts. Reconstruction is not reviewer approval or a repair of
 historical output; legacy captures must retain their original protocol.
+Exact change entries replace complete records, not a nested field's text.
+Use `responseContract.changeRecordShapes` to locate parent checks, scenarios and
+controls; copy the entire before record and include unchanged fields in after.
+A retained real revision supplied observation-adapter strings as scenario records
+and was correctly rejected. Record-shape guidance does not repair that response,
+relax exact ancestor equality or reopen its consumed semantic budget.
 Retain both responses and let ordinary completion/content gates derive the
 corrected decision; a correction may still be negative. Read
 [the early-review contract](../../docs/flywheel-design-quality-review-20261005.md)

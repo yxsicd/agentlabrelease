@@ -1616,6 +1616,32 @@ fn dependency_inventory_binding(inventory: &Value) -> Result<Value, String> {
 mod interface_inventory_tests {
     use super::*;
     #[test]
+    fn scenario_revision_requires_whole_records_even_for_one_nested_field() {
+        for id in ["first-scenario", "unrelated-scenario"] {
+            let original = json!({"id":id,"initialState":{"field":7},
+                "inputs":{"adapter":"old rule","ordered":["first","second"]},
+                "expectedObservations":{"value":7}});
+            let other = json!({"id":"untouched","initialState":{},"inputs":{},
+                "expectedObservations":{"value":null}});
+            let parent = json!({"scenarios":[original.clone(),other.clone()]});
+            let mut replacement = original.clone();
+            replacement["inputs"]["adapter"] = json!("new rule");
+            let mut review = json!({"findings":[{"id":"finding"}],"scenarioChanges":[{
+                "id":id,"before":"old rule","after":"new rule","findingId":"finding"}]});
+            assert!(reviewed_scenarios(&parent, &review)
+                .unwrap_err()
+                .contains("scenario change before differs from parent"));
+            review["scenarioChanges"][0]["before"] = original.clone();
+            assert!(reviewed_scenarios(&parent, &review).is_err());
+            review["scenarioChanges"][0]["after"] = replacement.clone();
+            let admitted = reviewed_scenarios(&parent, &review).unwrap();
+            assert_eq!(admitted, json!([replacement, other]));
+            assert_eq!(parent["scenarios"][0], original);
+            review["scenarioChanges"][0]["after"]["extra"] = json!(true);
+            assert!(reviewed_scenarios(&parent, &review).is_err());
+        }
+    }
+    #[test]
     fn edit_navigation_retains_exact_utf8_bytes_and_nonoverlapping_counts() {
         let body = format!(
             "{}\r\nneedle\r\n{}needle",

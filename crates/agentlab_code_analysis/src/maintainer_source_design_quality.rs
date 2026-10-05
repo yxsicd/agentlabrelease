@@ -390,7 +390,16 @@ fn revision_review_packet(
         "responseContract":{"schema":"agentlab.source_recipe_design_review.v3",
             "rootFields":["schema","parentRequestSha256","parentDesignSha256","reviewed","verdict","automaticPromotion","reviewer","findings","checkChanges","scenarioChanges","controlChanges"],
             "findingFields":["id","observed","requiredChange","sourcePaths"],
-            "changeFields":["id","before","after","findingId"]},
+            "changeFields":["id","before","after","findingId"],
+            "changeRecordShapes":{
+                "checkChanges":{"parentRecordsPointer":"/originalQualityPacket/design/checks",
+                    "recordFields":["id","pointer","expected"],"recordType":"object"},
+                "scenarioChanges":{"parentRecordsPointer":"/originalQualityPacket/design/scenarios",
+                    "recordFields":["id","initialState","inputs","expectedObservations"],
+                    "objectFields":["initialState","inputs","expectedObservations"],"recordType":"object"},
+                "controlChanges":{"parentRecordsPointer":"/originalQualityPacket/design/controls",
+                    "recordFields":["id","role","expectedFailedCheckIds","edits"],"recordType":"object"}},
+            "changeRecordRule":"before is the COMPLETE original record selected by id at parentRecordsPointer; after is the COMPLETE replacement record with the same id, including unchanged fields. A nested-field edit still replaces the whole record, not a field string, partial object or JSON Patch. Null before/after is allowed only for a permitted whole-record addition/removal; controls cannot be added, removed or have identity/role changed."},
         "reviewerExecuted":false,"semanticQualified":false,"executionPermissionGranted":false,
         "authorityWritePerformed":false,"qualified":false,"successorMustBeReviewed":true});
     need(
@@ -1476,6 +1485,30 @@ mod tests {
             let bridge =
                 revision_review_packet(packet.clone(), &bytes, completion.clone()).unwrap();
             assert_eq!(bridge["originalQualityPacket"], packet);
+            for (kind, collection, fields) in [
+                ("checkChanges", "checks", vec!["id", "pointer", "expected"]),
+                (
+                    "scenarioChanges",
+                    "scenarios",
+                    vec!["id", "initialState", "inputs", "expectedObservations"],
+                ),
+                (
+                    "controlChanges",
+                    "controls",
+                    vec!["id", "role", "expectedFailedCheckIds", "edits"],
+                ),
+            ] {
+                let shape = &bridge["responseContract"]["changeRecordShapes"][kind];
+                let pointer = shape["parentRecordsPointer"].as_str().unwrap();
+                assert_eq!(bridge.pointer(pointer), Some(&packet["design"][collection]));
+                assert_eq!(shape["recordFields"], json!(fields));
+                assert_eq!(shape["recordType"], "object");
+            }
+            let reference = reference_revision_packet(bridge.clone()).unwrap();
+            assert_eq!(
+                reference["responseContract"]["changeRecordShapes"],
+                bridge["responseContract"]["changeRecordShapes"]
+            );
             assert_eq!(
                 bridge["originalReviewUtf8"],
                 std::str::from_utf8(&bytes).unwrap()
