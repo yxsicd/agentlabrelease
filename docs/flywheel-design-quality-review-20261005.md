@@ -1,5 +1,76 @@
 # Pre-execution source design quality review
 
+## Experiment 14 and lossless request-value transport
+
+Clean hwlinux build `exec-0000000000000402`, exit 0, pinned method
+`43ddc065bd45350af61daa62da2480e2efe13a64`, tree
+`1535d35950ca14a5fe7dc1bc82f4f42b99a71bac` and native SHA
+`d50fc69bc1064439fb23d3d4e543b09956f29afe1302d362a387552f51034fc5`.
+Fresh plan SHA
+`9a05c198db35ae8ab8541385a35fe2f5eb9b3da51068b70bd2b7cf806da95028`
+and post-construction policy SHA
+`9d913ddde87b0b1e8a22828241611f37819ba21d2f96c0f60dcef7de574dd048`
+were frozen before inference. The policy additionally bound the existing final
+review rubric, independent runtime and two-attempt final-review allowance, plus
+native accepted-feedback export/reception. Both constructor/reviewer isolation
+probes and the unchanged five-table authority preflight passed. This is prospective
+operator orchestration, not a completed generic product controller or knowledge write.
+
+Operation `exec-0000000000000406` is terminal, exit 1. Original constructor SHA
+`90a9b653556797a2e2779a64b6820b092f075d08f5049ff8dd2250e46066d349`
+and sole correction SHA
+`03139ceba0367c6c53a293e6ced5ee080e9e187eaad4d61ff9af3dc5037f4c2f`
+each omitted expectedObservations and added top-level seams in all six scenarios.
+Both were refused with the former opaque scenario-contract message. Independent
+verification `exec-000000000000040c`, exit 0, proved both runtime isolation receipts
+and two complete HTTP-200/EOF/semantic-terminal exchanges (207,193/69,617 ms).
+No reviewer, citation-kind repair, code, calibration or authority write occurred.
+All declared downstream budgets remain unconsumed but this root is closed, not
+permission to start another constructor inside it. New scenario navigation reports
+the row pointer, missing/unexpected names, object requirements and ID rule without
+inventing expectations or automatically moving fields. It asks for source-derived
+observations, not renaming a seam map into expected results.
+
+Size inspection of retained experiment 13 found both raw original-request/design
+JSON strings and their expanded fields in the review packet. Simply removing the
+raw request would lose unique dependency inventory, semantic facts, selected-gap
+and policy data; that investigative projection was never admitted or dispatched.
+Native source-design-quality request v2 instead retains every unmatched/unknown
+request field, aliasing only six exactly equal fields in this sample. Before
+returning the packet it reconstructs and compares every original parsed field/value.
+Original request/design byte digests and lengths remain bound, and their original
+files remain unchanged. Parsed-value reconstruction does not recover raw formatting
+or authenticate an input producer. Request/response/capture budgets and all semantic
+gates remain unchanged; historical prompts cannot migrate to this new version.
+
+Read-only audit `exec-000000000000040d`, exit 0, reconstructed all 21 original
+request fields with dependency/semantic metadata and source/compiler context intact.
+Its first version reduced canonical packet bytes from 605,527 to 331,078, but an
+exhaustive second metadata-path catalog reduced prompt bytes only from 708,887 to
+654,603. That exposes navigation duplication, not model speed benefit. The next
+projection enumerates only top-level metadata strings; full nested metadata and
+eligibility of its actual string citation targets are retained. The same audit
+refused both original experiment-14 designs while locating expectedObservations
+and misplaced seams; it never rewrote them or dispatched another repair.
+
+Final Rust regression/build `exec-000000000000040e`, exit 0, passed 60 tests
+with one external-compiler test ignored; Mac regression independently passed
+the same 60/0/1 result. The modified-source experimental native SHA is
+`599b10a6d71dc76d4d613024b67a6ab8039af34cc4f4148eb72a9f945d46a2e9`.
+Final read-only audit `exec-000000000000040f`, exit 0, reduced canonical prompt
+bytes from 708,887 to 434,090 (38.8%), while canonical packet bytes remained
+605,527 to 331,078. All 21 original request fields reconstruct exactly as parsed
+values; six equal fields use bindings. Unique metadata, dependency inventory,
+semantic facts, policy, source bodies and compiler evidence remain intact.
+Both historical scenario validations still exit 1, without accepted output or
+changed original bytes. The audit dispatches no model, admits no historical
+capture and consumes no new correction budget. Byte reduction is not measured
+model elapsed-time benefit, semantic repair convergence or a complete cycle.
+
+Overall maturity remains **81% (+0)**, complete automatic cycles **zero**. Fresh
+model consumption/convergence, baseline/control/final-review completion, committed
+next-round feedback consumption and cross-repository transfer remain unproven.
+
 ## Experiment 13: complete delivery, incomplete citation repair
 
 Clean hwlinux build `exec-00000000000003eb`, exit 0, pinned method

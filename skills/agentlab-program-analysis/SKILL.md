@@ -108,6 +108,16 @@ are not stable identities. Cite design statements through their actual /design
 string pointers, not original-request text. Native location validation establishes
 content binding only, not whether a citation supports the reviewer's conclusion.
 Never relocate a rejected historical response into acceptance.
+For large source-design review inputs, distinguish duplicate raw JSON envelopes
+from unique dependency/semantic metadata before reducing transport. The native v2
+packet uses exact-equality field bindings and retains every unmatched or unknown
+original request field. Reconstruct and compare every parsed field/value; keep
+operator-retained original request/design bytes, digests and byte lengths separate.
+Parsed-value equality does not reconstruct raw formatting or authenticate producers.
+Version and fence this transport change before fresh inference; never replace an
+old captured prompt, omit unique metadata or claim model speed/convergence from
+packet-size reduction alone. Navigation need not duplicate every metadata path:
+all actual string targets remain eligible and full metadata stays in the packet.
 For prospectively enrolled early-review protocol correction, freeze
 `reviewRepairLimit` before the first constructor turn (default 0; at most 1).
 Use the native attempt prompt and retained complete original capture; do not
@@ -332,6 +342,13 @@ digits or hyphens; an underscore is not silently normalized. Request the smalles
 source-preserving correction within the existing attempt budget and retain every
 original response. A protocol repair does not establish design semantics or reset
 review/execution budgets.
+For scenario-contract failures, use native scenario pointers, required/missing
+fields and object requirements. In design v2, external seams belong in inputs.seams;
+expectedObservations is a separate source-derived object, not a renamed seam map.
+Apply the same shape review to every scenario while preserving all original attempts.
+A real sole correction repeated the same misplaced field and omitted observations
+in every scenario. Never invent expected results, move fields automatically or
+reopen that root because the old diagnostic lacked actionable detail.
 Draft state must use strict JSON; undefined source behavior needs
 an explicit observation representation, not an illegal literal or a source rewrite
 to null. Constructor lookup sequences and real method argument shapes are execution

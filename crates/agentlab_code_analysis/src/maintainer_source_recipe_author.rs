@@ -44,6 +44,32 @@ fn design_control_id<'a>(
     )?;
     Ok(id)
 }
+fn scenario_contract_error(scenario: &Value, index: usize, duplicate_id: bool) -> String {
+    let required = ["id", "initialState", "inputs", "expectedObservations"];
+    let missing: Vec<_> = required
+        .iter()
+        .filter(|k| scenario.get(**k).is_none())
+        .collect();
+    let unexpected: Vec<_> = scenario
+        .as_object()
+        .into_iter()
+        .flat_map(|o| o.keys())
+        .filter(|k| !required.contains(&k.as_str()))
+        .collect();
+    let invalid_objects: Vec<_> = required[1..]
+        .iter()
+        .filter(|k| !scenario[**k].is_object())
+        .collect();
+    let report = json!({"schema":"agentlab.source_design_scenario_contract_error.v1",
+        "scenarioPointer":format!("/scenarios/{index}"),"requiredFields":required,
+        "missingFields":missing,"objectFieldsRequired":invalid_objects,
+        "unexpectedFieldCount":unexpected.len(),
+        "unexpectedFields":unexpected.iter().filter(|k|k.len()<=64).take(8).collect::<Vec<_>>(),
+        "duplicateId":duplicate_id,"idRule":"unique nonempty string, at most 64 UTF-8 bytes, without slash or tilde",
+        "rule":"Apply the exact scenario contract to every row. In design v2 external seams belong inside inputs.seams, never as a scenario field. expectedObservations must be independently derived from original source, not inferred or copied from a misplaced field. Do not automatically rename fields, invent observations, remove scenarios or reopen a consumed correction allowance.",
+        "responseEdited":false,"qualified":false});
+    format!("recipe design scenario contract: {report}")
+}
 fn read(p: &Path, limit: usize) -> Result<Vec<u8>, String> {
     for ancestor in p.ancestors() {
         need(
@@ -1489,7 +1515,7 @@ fn design_contract(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, S
                 && scenario["initialState"].is_object()
                 && scenario["inputs"].is_object()
                 && scenario["expectedObservations"].is_object(),
-            "recipe design scenario contract",
+            &scenario_contract_error(scenario, scenario_index, expected.contains_key(id)),
         )?;
         if design["schema"] == "agentlab.source_recipe_design.v2" {
             frozen_seams(&scenario["inputs"], scenario_index)?;
@@ -2115,6 +2141,49 @@ mod interface_inventory_tests {
         let accepted = check(&request, &plan).unwrap();
         assert_eq!(accepted["semanticQualified"], false);
         assert_eq!(accepted["executionPerformed"], false);
+    }
+
+    #[test]
+    fn scenario_contract_diagnostics_locate_misplaced_fields_without_inventing_observations() {
+        for scope in ["unrelated-library", "new-language-project"] {
+            let (request, parent, _) = batch_fixture(scope);
+            let mut design: Value = serde_json::from_slice(&parent).unwrap();
+            let expected = design["scenarios"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("expectedObservations")
+                .unwrap();
+            design["scenarios"][0]["seams"] = json!({});
+            let original = design.clone();
+            let error =
+                design_contract(&request, &serde_json::to_vec(&design).unwrap()).unwrap_err();
+            let report: Value = serde_json::from_str(error.split_once(": ").unwrap().1).unwrap();
+            assert_eq!(report["scenarioPointer"], "/scenarios/0");
+            assert_eq!(report["missingFields"], json!(["expectedObservations"]));
+            assert_eq!(report["unexpectedFields"], json!(["seams"]));
+            assert_eq!(
+                report["objectFieldsRequired"],
+                json!(["expectedObservations"])
+            );
+            assert_eq!(report["responseEdited"], false);
+            assert_eq!(design, original);
+            assert!(report.get("replacement").is_none());
+            design["scenarios"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("seams");
+            design["scenarios"][0]["expectedObservations"] = expected;
+            assert!(design_contract(&request, &serde_json::to_vec(&design).unwrap()).is_ok());
+            for field in ["initialState", "inputs", "expectedObservations"] {
+                let mut bad = design.clone();
+                bad["scenarios"][0][field] = json!([]);
+                let error =
+                    design_contract(&request, &serde_json::to_vec(&bad).unwrap()).unwrap_err();
+                let report: Value =
+                    serde_json::from_str(error.split_once(": ").unwrap().1).unwrap();
+                assert_eq!(report["objectFieldsRequired"], json!([field]));
+            }
+        }
     }
 
     #[test]
