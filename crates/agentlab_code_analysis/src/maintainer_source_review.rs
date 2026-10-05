@@ -1001,7 +1001,7 @@ pub fn prepare_reviewed_successor(
     Ok(packet)
 }
 
-fn repair_policy(evidence: &Path) -> Result<Option<Value>, String> {
+pub(crate) fn repair_policy(evidence: &Path) -> Result<Option<Value>, String> {
     let file = evidence.join("review-repair-policy.json");
     if !file.try_exists().map_err(|e| e.to_string())? {
         need(
@@ -1204,7 +1204,7 @@ pub(crate) fn verify_review_capture(
     let final_message = parse(&final_bytes)?;
     let text = recorded_completion_text(&wire, &raw, &final_message)?;
     need(
-        parse(text.as_bytes())? == parse(response)?,
+        text.as_bytes() == response || parse(text.as_bytes())? == parse(response)?,
         "review response differs from original upstream completion",
     )?;
     report["reviewerExecuted"] = json!(true);

@@ -1,5 +1,47 @@
 # Pre-execution source design quality review
 
+## Prospective bounded protocol correction
+
+Real run [37251933008](https://github.com/yxsicd/agentlabrelease/actions/runs/37251933008)
+at method `5280c459871a7596fb3baad9fe034a5f79d4db83` completed a corrected
+design and an independent reviewer generation, but native review admission
+rejected `design quality criterion citation differs`. The response quoted a
+boolean design field as a string; unresolvedFindings also contained objects,
+not the required strings. The original artifact SHA256 is
+`44a64dc7af9961e9c7fbe784096fb524e456d92f22ab9fb9319ec7b5e00eef30`.
+That root remains closed: no code generation, source execution, complete controls,
+final review or authority write occurred. Its semantic opinions are unadmitted.
+
+For a fresh root, the typed Action enrollment now accepts optional
+`reviewRepairLimit` (integer 0 or 1, default 0). The constructor's matching
+`--design-review-repair-limit` requires the prospective early-review rubric.
+Enrollment records one or two reviewer attempts, each with a 420-second native
+watchdog and zero transport retries; total participant budget is 420 or 840 seconds.
+No design/code budget is inherited or reset. Legacy default-zero captures retain
+their canonical prompt and cannot gain a later allowance.
+
+The native `--source-design-quality-review-attempt-prompt` consumes original
+request/design/rubric plus `--evidence`. The policy is bound into the initial
+prompt and intent. Before a correction it rechecks the complete original wire,
+final message, lifecycle, policy and immutable inputs. Missing/partial capture,
+changed response, late enrollment and recursive correction stop before inference.
+The isolated transport checks unchanged model, route and reasoning effort before
+creating the corrected reviewer; native final admission checks them again.
+
+Only syntax or native review-content contract rejection can enter this lane.
+A completed semantic decision, including revise or unverified, cannot. Original
+response text and native rejection are untrusted feedback, not replacement
+quotations or operator-supplied judgments. Each attempt uses fresh reviewer state
+and a separate runtime-receipt root. The corrected response still passes ordinary
+content and original-capture admission; a negative decision still blocks code.
+Exact malformed text may prove complete capture, never valid review content.
+
+Rust capture and transport fixtures test prospective policy, bounded routing,
+original retention and negative decisions. They do not establish successful real
+model correction, semantic convergence, knowledge return or a complete automatic
+round. Engineering maturity remains 80%, accepted complete automatic rounds 0.
+The sections below preserve earlier implementation stages and their limitations.
+
 ## Retained real early-review failure
 
 Fresh policy follow-up [37241175488](https://github.com/yxsicd/agentlabrelease/actions/runs/37241175488)
