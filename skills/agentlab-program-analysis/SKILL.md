@@ -267,6 +267,12 @@ and the actual branch affected by each wrong control; structural validation cann
 prove those semantics. Preserve complete design failures and partial generation
 captures. A generation deadline is not permission to stage incomplete output or
 to treat isolation validation as behavioral qualification.
+For deadline diagnosis, compare captured header, first-reasoning, first-content
+and semantic-terminal timings. Process exit 0 and a final assistant message can
+coexist with an incomplete upstream stream; native completion remains required.
+Requested reasoning/thinking settings do not prove that no reasoning was emitted.
+If another authorized trial changes an existing deadline option, declare it
+before inference in a fresh root; preserve the failed capture and attempt limits.
 
 For a design-level revision, pair `--parent-design` with
 `--design-review-feedback` and retain `--design-first --design-only`. Rust binds

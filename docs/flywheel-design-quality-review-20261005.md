@@ -1,5 +1,35 @@
 # Pre-execution source design quality review
 
+## Fresh v2 trial: construction deadline, not revision rejection
+
+Clean hwlinux build `exec-00000000000003a5` pinned method
+`32ed075e88ed43c0d0941e033e78ddb0ef62fed2`, tree
+`68ba8439ade18a7e5c81c0e7e88434dc8acb1124` and gate SHA
+`83904a3a550721141e6d40606f7e0f43879fbcfc69ee3661faba41965902bb7a`.
+Experiment 8 prospectively declared semantic policy v2/reference-v2 before
+inference. Fresh isolation and five-table authority checks passed in
+`exec-00000000000003a9`; gateway authentication/model availability also passed.
+Its plan SHA is `15bbc2f351df332a0fef969b06b81fb10df07933a35abf74791c4e6b100ad7c2`.
+
+Real constructor `exec-00000000000003aa` is terminal, exit 1. The first upstream
+exchange returned HTTP 200 but stopped at its declared 180-second deadline:
+headers/first reasoning at 46,996/46,997 ms, first content at 143,247 ms,
+no semantic terminal or EOF, duration 180,027 ms and 1,640,958 captured bytes.
+Lifecycle exit 0 and final-assistant presence did not establish completion; the
+ordinary gate refused staging. Independent runtime receipt validation passed
+in `exec-00000000000003af`. No design was admitted, no reviewer/revision lane
+was reached, and no source execution or authority write occurred. This is
+incomplete delivery, not evidence that atomic revision or an Oracle failed.
+
+The failed root and original bytes remain unchanged. Experiment 9 separately
+declares the existing 240-second design deadline before inference, retaining
+the same method/task/knowledge/model and attempt allowances. Its plan SHA is
+`678962c3fef52b1a30b445dc013e3aa8b150bd1afbfb81f47b5e2f9c4bfa78d0`.
+Fresh isolation and authority preflight `exec-00000000000003b1` passed; execution
+`exec-00000000000003b2` has started, but no outcome is claimed here. Neither
+reasoningEffort none nor thinking disabled proves provider reasoning was absent.
+Engineering maturity remains 81% (+0), complete automatic cycles zero.
+
 ## Lossless decomposition primitives under validation
 
 The new read-only CLI `--prepare-source-design-revision-decomposition` consumes
