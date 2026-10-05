@@ -22,7 +22,7 @@
     {
       "id": "runtime-environment-closure",
       "requirement": "Account for source-loading and transitive module initialization as well as tested method execution. Explain exact imports, required globals, declared seams and pinned compiler/runtime limitations. Do not invent default platform stubs or claim device behavior from host execution.",
-      "evidence": "Loaded source and read-only dependency inventory, import/global usages, design seam outcomes and explicit proposed environment; unavailable execution proof remains unverified where required."
+      "evidence": "Loaded source and read-only dependency inventory, import/global usages and explicit proposed loading, initialization and seam bindings. Assess pre-execution setup adequacy, not whether it has already run: absent execution proof alone is not a design defect. Missing source-supported initialization bindings remain fail or unverified. A pass requires later real runtime calibration and never establishes executed closure or device behavior."
     }
   ]
 }

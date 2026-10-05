@@ -200,10 +200,20 @@ Separate pre-execution design adequacy from post-execution proof. An early pass
 means source-grounded setup and predictions are adequate to attempt calibration,
 not that execution or runtime closure has been verified. Missing explicit bindings
 for transitive module initializers remain blockers; absence of execution alone is
-not a defect in a pre-execution baseline/reference design. Inspect top-level enum
+not a defect in any pre-execution criterion, including runtime-environment closure,
+or item. Keep the rubric consistent with the captured phase contract: do not require
+a calibration receipt before allowing calibration. Preserve negative historical
+opinions; a revised rubric applies only to a fresh method-fenced capture, never
+as operator approval of an old design. Inspect top-level enum
 reads and resource calls in retained dependencies, even if generate never uses
 those exports. Require a proposed binding/seam with its source-only limitation;
 never infer implicit platform defaults or waive a failed baseline.
+Declare raw response and reconstructed-feedback byte limits before revision
+dispatch. Ask for compact JSON without indentation, concise change judgments and
+only necessary whole-record replacements, preserving all exact values and finding
+IDs. Diagnose whitespace overhead separately from evidence volume. Do not minify
+a captured oversized reply into acceptance or abbreviate original records; retain
+the failure and test the revised prompt in a fresh bounded run.
 Audit each control against every scored check. Compare the complete predicted
 failure set with its declaration, including overlapping whole-object field checks
 and return checks. Detecting a mutation with one check does not justify omitting

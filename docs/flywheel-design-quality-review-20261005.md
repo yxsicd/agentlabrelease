@@ -1,5 +1,52 @@
 # Pre-execution source design quality review
 
+## Experiment 10: admitted correction, phase mismatch and oversized revision
+
+Clean hwlinux method `f7f717867f27a9726d34f833786384b01b47e049`
+used immutable native gate SHA
+`a5c6b483082f251426683ab3b38e806250d35c69ce1f88cb6d7dc24c2d1f196c`.
+The fresh prospective plan SHA is
+`02a86c14d2367954beb86391c4bc102b18803a402652a367de4a78b95e3e3d1b`.
+Knowledge preflight first failed its bounded connection timeout, then a separate
+read-only retry admitted the same five-table cut before inference. Execution
+`exec-00000000000003b9` is terminal, exit 1; no source runtime or authority write.
+
+The original constructor used an unresolved check scenario pointer. Its bounded
+correction consumed the unchanged decoded native diagnostic and produced admitted
+design SHA `6f58916a18f54b7a51ef59b591f3cf20f1837e0d441782338963f9f80a6f2cec`.
+The first early review failed citation binding; its prospectively allowed protocol
+repair produced admitted response SHA
+`128da8ef804f9f42f2d4e526428d2d0a23f7c9220b82de9b0035b7d3a229c116`,
+with decision **unverified**, not semantic approval. The single negative criterion
+explicitly described an adequate pre-execution setup but required actual runtime
+initialization/resolution proof. The prior rubric's execution-proof wording was
+inconsistent with this phase. Preserve that opinion; correcting future rubric and
+phase guidance does not approve or reinterpret the historical capture.
+
+The automatic reference-v2 revision was really dispatched, but raw response SHA
+`7d01eacc9b97d64102cf95bc97b666cee6f0c46154fd54a940b8d3d3995997c5`
+was 20,604 bytes and refused by the unchanged 16 KiB limit. There was one finding
+and one group, so this is not real multi-group capacity validation. No candidate
+or successor review was produced. Read-only size analysis `exec-00000000000003c7`
+found compact value representation 15,403 bytes and an estimated grouped feedback
+16,009 bytes. Those projections were never submitted for native admission: the
+original failed response remains unchanged. Whitespace overhead is evidence for
+prospective compact-output guidance, not permission to minify historical replies.
+
+The next method makes phase boundaries explicit in the captured packet and aligns
+the rubric across every criterion, while retaining missing-source/binding blockers.
+It declares both raw and reconstructed-feedback limits before revision dispatch,
+asks for compact output and preserves complete exact records and findings. Rust
+regression `exec-00000000000003c9`, exit 0, passed 52 tests with one externally
+provisioned compiler test ignored, plus formatting/diff checks. The initial test
+`exec-00000000000003c8` exposed missing v2 contract metadata and failed; that wiring
+was corrected before this successful rerun. Tests verify negative opinions remain
+negative, early pass grants no execution permission, phase changes alter canonical
+prompts, and oversized whitespace-equivalent JSON remains rejected. They do not
+prove model convergence. Engineering maturity remains **81% (+0)**, complete
+automatic cycles **zero**; fresh real validation, final calibration, committed
+feedback consumption and cross-repository transfer remain required.
+
 ## Fresh v2 trial: construction deadline, not revision rejection
 
 Clean hwlinux build `exec-00000000000003a5` pinned method
