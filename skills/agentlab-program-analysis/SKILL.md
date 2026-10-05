@@ -108,6 +108,16 @@ are not stable identities. Cite design statements through their actual /design
 string pointers, not original-request text. Native location validation establishes
 content binding only, not whether a citation supports the reviewer's conclusion.
 Never relocate a rejected historical response into acceptance.
+Review delivery and review interpretation are separate evidence: a real reviewer
+received compiler output yet treated an erased interface import as a runtime
+dependency. Use the compiler import navigation to find the original per-file
+status, diagnostics and emitted candidates; cite original evidence, not the
+projection. Empty candidates establish no runtime-closure verdict, especially
+when compilation failed. Source-citation diagnostics locate the response row,
+declared path and matching quote paths without editing the response or approving
+its conclusion. A matching quote elsewhere is repair guidance, not acceptance.
+Compare claimed ordered/exception behavior with the actual scenario input
+sequence; prose about an omitted operation does not exercise that operation.
 
 The frozen source runtime owns control transformations: source() and loadModule()
 already consume the selected edits. Do not apply the design's edits a second time
