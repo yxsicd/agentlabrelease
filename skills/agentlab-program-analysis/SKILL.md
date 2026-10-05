@@ -168,6 +168,14 @@ response item and bounded matching packet-string pointers: a retained reviewer
 kept quoting array item zero through item one's pointer after its protocol repair.
 Both pointer/quote and uniquely bound source path/quote forms remain supported.
 Navigation does not relocate citations, coerce booleans or qualify semantic support.
+Report all detected citation defects together within a bounded feedback budget,
+with total/reported counts and visible truncation; one repair must not discover
+defects serially. A real bounded reviewer consumed exact navigation but replaced
+an object citation with a null-valued field and an empty quote. Distinguish empty,
+non-string and oversized citation fields; never stringify values or raise retry
+allowances to conceal failed convergence. Native regression is not real repair proof.
+Real-response replay also exposed source-citation shape defects hidden behind the
+first packet citation; keep packet pointer evidence distinct from source path evidence.
 
 Separate pre-execution design adequacy from post-execution proof. An early pass
 means source-grounded setup and predictions are adequate to attempt calibration,
