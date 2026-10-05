@@ -2004,6 +2004,8 @@ with tempfile.TemporaryDirectory() as d:
             assert seen['labels']==['source-recipe-design','source-recipe-author']
             assert 'complete-source-context-sentinel' in seen['prompts'][0]
             assert 'complete-source-context-sentinel' not in seen['prompts'][1]
+            assert 'observeFields(actualInstance, fieldNames)' in seen['prompts'][0]
+            assert 'declare inputs on both sides of the exception' in seen['prompts'][0]
             assert 'FROZEN DESIGN' in seen['prompts'][1]
             reuse=json.loads((root/str(index)/'evidence/source-context-reuse.json').read_bytes())
             assert reuse['retainedSessionId']=='fixture-retained-design-session'
