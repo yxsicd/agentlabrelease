@@ -535,7 +535,8 @@ def main():
     p.add_argument('--guidance-mode', choices=('guided','unguided'), default=os.environ.get('AGENTLAB_SOURCE_GUIDANCE_MODE','guided'))
     p.add_argument('--reasoning-effort', choices=('default', 'none', 'low', 'medium', 'high', 'max'), default='low',
                    help='default omits reasoning_effort; it does not request disabled thinking')
-    p.add_argument('--gateway-timeout-seconds', type=int, choices=range(30, 181), default=180)
+    p.add_argument('--gateway-timeout-seconds', type=int, choices=range(30, 241), default=180,
+                   help='Prospective design upstream deadline; preserves the 180-second default and native watchdog')
     p.add_argument('--code-gateway-timeout-seconds', type=int, choices=(180, 240),
                    help='Explicit code-only deadline; omitted inherits design deadline. No transport retries.')
     p.add_argument('--max-output-tokens', type=int, choices=(8192, 16384), default=16384,

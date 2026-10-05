@@ -1772,6 +1772,41 @@ fn dependency_inventory_binding(inventory: &Value) -> Result<Value, String> {
 #[cfg(test)]
 mod interface_inventory_tests {
     use super::*;
+    #[test]
+    fn author_cli_deadlines_reach_runtime_guard_without_dispatch() {
+        let script =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/run-source-recipe-author.py");
+        for deadline in [None, Some(30u32), Some(180), Some(240), Some(29), Some(241)] {
+            let mut command = std::process::Command::new("python3");
+            command
+                .arg(&script)
+                .args([
+                    "--request",
+                    "unused-request.json",
+                    "--output",
+                    "unused-output",
+                    "--gate",
+                    "unused-gate",
+                    "--pi",
+                    "unused-pi",
+                ])
+                .env_remove("AGENTLAB_PARTICIPANT_RUNTIME_CONFIG");
+            if let Some(seconds) = deadline {
+                command.args(["--gateway-timeout-seconds", &seconds.to_string()]);
+            }
+            let output = command.output().unwrap();
+            let stderr = String::from_utf8(output.stderr).unwrap();
+            if matches!(deadline, Some(29 | 241)) {
+                assert_eq!(output.status.code(), Some(2));
+                assert!(stderr.contains("invalid choice"));
+            } else {
+                assert_eq!(output.status.code(), Some(1));
+                assert!(stderr
+                    .contains("Recipe construction requires the contained participant runtime"));
+                assert!(!stderr.contains("invalid choice"));
+            }
+        }
+    }
     fn batch_fixture(scope: &str) -> (Vec<u8>, Vec<u8>, Value) {
         let path = "src/subject.ts";
         let request = json!({"schema":"agentlab.source_recipe_author_request.v1",

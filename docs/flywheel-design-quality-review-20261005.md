@@ -22,12 +22,25 @@ was reached, and no source execution or authority write occurred. This is
 incomplete delivery, not evidence that atomic revision or an Oracle failed.
 
 The failed root and original bytes remain unchanged. Experiment 9 separately
-declares the existing 240-second design deadline before inference, retaining
+declared a 240-second design deadline before inference, retaining
 the same method/task/knowledge/model and attempt allowances. Its plan SHA is
 `678962c3fef52b1a30b445dc013e3aa8b150bd1afbfb81f47b5e2f9c4bfa78d0`.
 Fresh isolation and authority preflight `exec-00000000000003b1` passed; execution
-`exec-00000000000003b2` has started, but no outcome is claimed here. Neither
+`exec-00000000000003b2` is terminal, exit 1, before any model call. The operator
+mistakenly assumed the design CLI already accepted 240 seconds: only its code
+deadline had that option, while design parsing stopped at 180. The parser rejected
+240 before creating the Agent capture. Preserve that configuration failure;
+do not claim it as model latency, semantic failure or a running experiment.
+The method must expose and test the Participant's existing 30..240 upstream
+range before a new trial, preserving default 180 and the native watchdog. Neither
 reasoningEffort none nor thinking disabled proves provider reasoning was absent.
+The CLI range repair passed hwlinux regression `exec-00000000000003b3`, exit 0:
+51 Rust tests passed, one ignored; formatting and diff checks passed. A Rust test
+actually invokes the author CLI with default/30/180/240 and checks that each
+reaches the missing-runtime guard, while 29/241 exit 2 at argument parsing.
+It dispatches no model or Docker workload. Tested script SHA is
+`ebf5bdb2413450a21c4e4144e72a0abe92aa04ff77fedce36ba997c02805e5f7`.
+This was a modified test tree, not a new clean release build or completed trial.
 Engineering maturity remains 81% (+0), complete automatic cycles zero.
 
 ## Lossless decomposition primitives under validation
