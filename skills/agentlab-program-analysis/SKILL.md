@@ -162,6 +162,12 @@ declared path and matching quote paths without editing the response or approving
 its conclusion. A matching quote elsewhere is repair guidance, not acceptance.
 Compare claimed ordered/exception behavior with the actual scenario input
 sequence; prose about an omitted operation does not exercise that operation.
+For criterion pointer citations, native diagnostics distinguish absent pointers,
+non-string targets and quotes absent from the declared target. Inspect the exact
+response item and bounded matching packet-string pointers: a retained reviewer
+kept quoting array item zero through item one's pointer after its protocol repair.
+Both pointer/quote and uniquely bound source path/quote forms remain supported.
+Navigation does not relocate citations, coerce booleans or qualify semantic support.
 
 Separate pre-execution design adequacy from post-execution proof. An early pass
 means source-grounded setup and predictions are adequate to attempt calibration,

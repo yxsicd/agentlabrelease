@@ -26,6 +26,76 @@ fn rows<'a>(value: &'a Value, key: &str) -> Result<&'a Vec<Value>, String> {
         .ok_or_else(|| format!("design quality array absent: {key}"))
 }
 
+fn validate_pointer_citation(
+    packet: &Value,
+    pointer: &str,
+    quote: &str,
+    response_pointer: &str,
+) -> Result<(), String> {
+    let target = packet.pointer(pointer);
+    if pointer.starts_with('/')
+        && target
+            .and_then(Value::as_str)
+            .is_some_and(|s| s.contains(quote))
+    {
+        return Ok(());
+    }
+    let reason = if !pointer.starts_with('/') {
+        "pointer-not-absolute"
+    } else if target.is_none() {
+        "pointer-not-found"
+    } else if !target.is_some_and(Value::is_string) {
+        "pointer-target-not-string"
+    } else {
+        "quote-not-in-declared-target"
+    };
+    let namespace = ["/design", "/sourceCompilerEvidence", "/verifierInterface"]
+        .into_iter()
+        .find(|prefix| pointer == *prefix || pointer.starts_with(&format!("{prefix}/")))
+        .unwrap_or("");
+    let mut locations = Vec::new();
+    design_string_locations(
+        packet.pointer(namespace).unwrap_or(packet),
+        namespace,
+        &mut locations,
+    );
+    let matches: Vec<_> = locations
+        .iter()
+        .filter_map(|row| {
+            let candidate = row["pointer"].as_str()?;
+            packet
+                .pointer(candidate)
+                .and_then(Value::as_str)
+                .filter(|s| s.contains(quote))
+                .map(|_| candidate)
+        })
+        .collect();
+    let mut navigation = json!({
+        "schema":"agentlab.design_review_citation_error.v1",
+        "responsePointer":response_pointer,"declaredPointer":if pointer.len() <= 512 { Some(pointer) } else { None },
+        "declaredPointerSha256":digest(pointer.as_bytes()),"reason":reason,
+        "targetIsString":target.is_some_and(Value::is_string),"quoteSha256":digest(quote.as_bytes()),
+        "navigationNamespace":namespace,
+        "matchingQuotePointers":matches.iter().filter(|p| p.len() <= 512).take(8).collect::<Vec<_>>(),
+        "matchingQuotePointerCount":matches.len(),
+        "rule":"Locations identify unchanged packet strings containing the original quote. They do not relocate the response, establish semantic support or choose a citation. Quote must remain a nonempty string; no boolean coercion.",
+        "responseEdited":false,"qualified":false
+    });
+    while navigation.to_string().len() > 4096 {
+        if navigation["matchingQuotePointers"]
+            .as_array_mut()
+            .unwrap()
+            .pop()
+            .is_none()
+        {
+            navigation["declaredPointer"] = Value::Null;
+        }
+    }
+    Err(format!(
+        "design quality criterion citation differs: {navigation}"
+    ))
+}
+
 fn validate_source_citation(
     packet: &Value,
     path: &str,
@@ -968,13 +1038,11 @@ fn validate_content(packet: &Value, response_bytes: &[u8]) -> Result<Value, Stri
                 let quote = text(citation, "quote")?;
                 if key == "criterionReviews" && citation.get("path").is_none() {
                     let pointer = text(citation, "pointer")?;
-                    need(
-                        pointer.starts_with('/')
-                            && packet
-                                .pointer(pointer)
-                                .and_then(Value::as_str)
-                                .is_some_and(|s| s.contains(quote)),
-                        "design quality criterion citation differs",
+                    validate_pointer_citation(
+                        packet,
+                        pointer,
+                        quote,
+                        &format!("/{key}/{row_index}/evidence/{citation_index}"),
                     )?;
                 } else {
                     let path = text(citation, "path")?;
@@ -1636,6 +1704,62 @@ mod tests {
             .iter()
             .any(|e| e["pointer"] == "/design/a~1b~0c/nested"));
         assert_eq!(packet, original);
+    }
+
+    #[test]
+    fn pointer_citation_errors_locate_wrong_indices_without_coercion_or_relocation() {
+        for repository in ["unrelated-one", "different-language-project"] {
+            let (mut packet, mut response) = fixture(repository);
+            packet["design"]["controls"] = json!([{"id":"wrong",
+                "expectedFailedCheckIds":["return-check","state-check"],"enabled":false}]);
+            response["criterionReviews"][0]["evidence"] = json!([{
+                "pointer":"/design/controls/0/expectedFailedCheckIds/1","quote":"return-check"}]);
+            let original = response.clone();
+            let error =
+                validate_content(&packet, &serde_json::to_vec(&response).unwrap()).unwrap_err();
+            let navigation: Value =
+                serde_json::from_str(error.split_once(": ").unwrap().1).unwrap();
+            assert_eq!(
+                navigation["responsePointer"],
+                "/criterionReviews/0/evidence/0"
+            );
+            assert_eq!(navigation["reason"], "quote-not-in-declared-target");
+            assert_eq!(
+                navigation["matchingQuotePointers"],
+                json!(["/design/controls/0/expectedFailedCheckIds/0"])
+            );
+            assert_eq!(response, original);
+            for (pointer, reason) in [
+                ("/design/missing", "pointer-not-found"),
+                ("/design/controls/0/enabled", "pointer-target-not-string"),
+                ("design/controls/0/id", "pointer-not-absolute"),
+            ] {
+                let error = validate_pointer_citation(
+                    &packet,
+                    pointer,
+                    "return-check",
+                    "/criterionReviews/0/evidence/0",
+                )
+                .unwrap_err();
+                let navigation: Value =
+                    serde_json::from_str(error.split_once(": ").unwrap().1).unwrap();
+                assert_eq!(navigation["reason"], reason);
+                assert_eq!(navigation["responseEdited"], false);
+                assert_eq!(navigation["qualified"], false);
+                assert!(navigation.get("quote").is_none());
+            }
+            response["criterionReviews"][0]["evidence"][0]["pointer"] =
+                json!("/design/controls/0/expectedFailedCheckIds/0");
+            assert!(validate_content(&packet, &serde_json::to_vec(&response).unwrap()).is_ok());
+            packet["design"]["a/b~c"] = json!("return-check");
+            assert!(validate_pointer_citation(
+                &packet,
+                "/design/a~1b~0c",
+                "return-check",
+                "/criterionReviews/0/evidence/0"
+            )
+            .is_ok());
+        }
     }
 
     #[test]
