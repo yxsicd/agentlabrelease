@@ -115,6 +115,15 @@ append a policy to an old capture or reopen an exhausted root. Keep source,
 design, rubric and participant model/route/effort unchanged. Syntax and citation
 correction is distinct from a completed `revise`/`unverified` semantic decision:
 the latter requires a reviewed design successor, not another protocol attempt.
+For the native negative-review bridge, reconsume the original captured early
+review before preparing an exact-change review. Preserve every negative row's
+ID and rationale; do not replace or omit findings to fit a budget. A v3 change
+review binds exact ancestor records, owned source paths and finding IDs. Derive
+the candidate from those changes, preserving unrelated records. Verify its own
+distinct-phase capture, then require another quality review and ordinary runtime
+calibration. Native preparation/content checks alone do not authorize dispatch;
+enroll a separate bounded semantic-stage budget before the original run. This
+bridge does not yet provide automatic scheduling or convergence evidence.
 Retain both responses and let ordinary completion/content gates derive the
 corrected decision; a correction may still be negative. Read
 [the early-review contract](../../docs/flywheel-design-quality-review-20261005.md)
