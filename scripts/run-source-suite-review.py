@@ -165,7 +165,7 @@ def run_attempt(args, participant_class=None):
             json.dump(intent, stream)
         helpers.require_pi_retry_policy(output / 'participant-state', workspace, policy)
         result = participant.turn(label, workspace, prompt=prompt,
-                                  wall_time_limit_seconds=wall_time, tool_call_limit=1,
+                                  wall_time_limit_seconds=wall_time, tool_call_limit=0,
                                   transport_retry_limit=0, require_completed_tool_call=False,
                                   reasoning_effort=effort)
         helpers.require_pi_retry_policy(output / 'participant-state', workspace, policy)

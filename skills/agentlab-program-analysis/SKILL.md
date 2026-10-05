@@ -176,6 +176,12 @@ non-string and oversized citation fields; never stringify values or raise retry
 allowances to conceal failed convergence. Native regression is not real repair proof.
 Real-response replay also exposed source-citation shape defects hidden behind the
 first packet citation; keep packet pointer evidence distinct from source path evidence.
+For pure source/design review, remove tool capabilities at participant dispatch,
+not only in prose. A real reviewer invoked bash and issued a second model exchange
+despite zero transport retries; the single isolated-exchange gate correctly refused
+it. Use the pinned adapter's zero-tool mode and check captured command, lifecycle
+and actual wire tool surface. Keep tool-enabled development roles unchanged; never
+discard an exchange or reopen a spent review to manufacture independent completion.
 
 Separate pre-execution design adequacy from post-execution proof. An early pass
 means source-grounded setup and predictions are adequate to attempt calibration,

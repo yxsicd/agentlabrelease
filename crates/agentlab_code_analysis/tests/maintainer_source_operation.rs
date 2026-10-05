@@ -64,6 +64,7 @@ with tempfile.TemporaryDirectory() as temporary:
         def __init__(self,evidence,state,*args,**kwargs):self.evidence=evidence;self.state=state;state.mkdir()
         def turn(self,label,workspace,**kwargs):
             assert label=='source-design-review' and not list(workspace.iterdir())
+            assert kwargs['tool_call_limit']==0 and kwargs['require_completed_tool_call'] is False
             assert json.loads((self.state/'settings.json').read_text())['compaction']['enabled'] is False
             assert kwargs['transport_retry_limit']==0
             intent=json.loads((self.evidence/'review-intent.json').read_text())

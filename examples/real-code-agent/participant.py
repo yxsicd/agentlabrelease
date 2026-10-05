@@ -355,6 +355,10 @@ class Participant:
              _transport_retry=0):
         if not isinstance(transport_retry_limit, int) or not 0 <= transport_retry_limit <= 1:
             raise ValueError('transport_retry_limit must be zero or one')
+        if tool_call_limit is not None and (type(tool_call_limit) is not int or tool_call_limit < 0):
+            raise ValueError('tool_call_limit must be a nonnegative integer')
+        if tool_call_limit == 0 and (self.implementation != 'pi' or require_completed_tool_call):
+            raise ValueError('zero-tool turns require Pi and no completed-tool requirement')
         self.active_reasoning_effort = reasoning_effort if reasoning_effort is not None else self.reasoning_effort
         prompt = prompt or (f'Work in the current Harmony ArkTS project. Read the page source and '
                   f'{"repair its invalid trailing text, then " if repair else ""}'
@@ -385,6 +389,10 @@ class Participant:
                    '--model', self.model, '--thinking', 'off', '--no-extensions',
                    '--no-skills', '--no-context-files',
                    '--session', str(session_path), prompt]
+        if tool_call_limit == 0:
+            # A prompt prohibition is not a capability boundary. Pinned Pi's
+            # flag removes built-in and extension tools before model dispatch.
+            command.insert(command.index('--session'), '--no-tools')
         if self.implementation == 'mini-swe-agent':
             command = [self.binary, str(Path(__file__).with_name('mini_runner.py')),
                        '--base-url', f'http://127.0.0.1:{self.server.server_port}/v1',
@@ -432,9 +440,9 @@ class Participant:
                 inputBytes=len(session_before), inputSha256=hashlib.sha256(session_before).hexdigest(),
                 qualified=False)
         if tool_call_limit is not None:
-            if not isinstance(tool_call_limit, int) or tool_call_limit < 1:
-                raise ValueError('tool_call_limit must be a positive integer')
             lifecycle.update(maxToolCalls=tool_call_limit, toolCallBudgetExceeded=False)
+            if tool_call_limit == 0:
+                lifecycle['toolsDisabled'] = True
         if self.implementation == 'mini-swe-agent':
             lifecycle.update(stepLimit=step_limit or 30,
                              wallTimeLimitSeconds=wall_time_limit_seconds or 360)

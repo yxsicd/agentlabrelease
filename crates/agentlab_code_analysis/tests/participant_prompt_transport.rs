@@ -27,12 +27,12 @@ print(json.dumps({'type':'message_end','message':{'role':'assistant','stopReason
     prompts=['unchanged small prompt', '源代码上下文\n'*100000]
     if os.environ.get('RETAINED_PROMPT'):
         prompts.append(Path(os.environ['RETAINED_PROMPT']).read_text())
-    for index,prompt in enumerate(prompts):
+    for index,(prompt,limit) in enumerate((prompt,limit) for prompt in prompts for limit in (None,0,1)):
         evidence=root/f'evidence-{index}';evidence.mkdir();state=root/f'state-{index}';state.mkdir()
         p=module.Participant.__new__(module.Participant)
         p.state=state;p.evidence=evidence;p.binary=str(binary);p.model='fixture'
         p.implementation='pi';p.reasoning_effort=None;p.server=SimpleNamespace(server_port=12345)
-        result=p.turn('turn',workspace,prompt=prompt,require_completed_tool_call=False,transport_retry_limit=0)
+        result=p.turn('turn',workspace,prompt=prompt,require_completed_tool_call=False,transport_retry_limit=0,tool_call_limit=limit)
         raw=prompt.encode();expected=hashlib.sha256(raw).hexdigest()
         assert result['content']==expected
         assert (evidence/'turn-prompt.txt').read_bytes()==raw
@@ -41,8 +41,25 @@ print(json.dumps({'type':'message_end','message':{'role':'assistant','stopReason
         large=len(raw)>65536
         assert lifecycle['promptTransport']=={'kind':'stdin-file' if large else 'argv','bytes':len(raw),'sha256':expected}
         assert lifecycle['exitCode']==0 and lifecycle['sessionContinuity']['qualified']
+        assert ('--no-tools' in command)==(limit==0)
+        if limit==0:
+            assert lifecycle['maxToolCalls']==0 and lifecycle['toolsDisabled'] is True
+            assert lifecycle['startedToolCalls']==0 and lifecycle['completedToolCalls']==0
+        elif limit==1:
+            assert lifecycle['maxToolCalls']==1 and 'toolsDisabled' not in lifecycle
         assert (prompt not in command) if large else (command[-1]==prompt)
         if large: assert max(len(arg.encode()) for arg in command)<65536
+    for limit in (-1,False,True,0.5):
+        try:p.turn('invalid',workspace,prompt='invalid budget',tool_call_limit=limit,require_completed_tool_call=False)
+        except ValueError:pass
+        else:raise AssertionError('invalid tool allowance admitted')
+    try:p.turn('invalid',workspace,prompt='contradictory budget',tool_call_limit=0)
+    except ValueError:pass
+    else:raise AssertionError('zero tools cannot require completed tool execution')
+    p.implementation='mini-swe-agent'
+    try:p.turn('invalid',workspace,prompt='unsupported zero-tool adapter',tool_call_limit=0,require_completed_tool_call=False)
+    except ValueError:pass
+    else:raise AssertionError('unsupported adapter cannot silently retain tools')
 "#;
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
