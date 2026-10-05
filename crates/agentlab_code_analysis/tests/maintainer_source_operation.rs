@@ -3012,6 +3012,17 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     author::validate_request(&targeted_bytes).unwrap();
     let targeted_design = author::design(&targeted_bytes, &design_bytes).unwrap();
     assert_eq!(targeted_design["requestSha256"], digest(&targeted_bytes));
+    let mut invalid_control: Value = serde_json::from_slice(&design_bytes).unwrap();
+    invalid_control["controls"][0]["id"] = json!("baseline_source");
+    let invalid_bytes = serde_json::to_vec(&invalid_control).unwrap();
+    let error = author::design(&targeted_bytes, &invalid_bytes).unwrap_err();
+    assert!(error.contains("/controls/0/id"));
+    assert!(error.contains("underscores"));
+    assert_eq!(serde_json::to_vec(&invalid_control).unwrap(), invalid_bytes);
+    assert_eq!(
+        author::design(&targeted_bytes, &design_bytes).unwrap(),
+        targeted_design
+    );
     let quality_rubric = fs::read(
         root().join("examples/maintainer-knowledge-gate/source-design-quality-rubric.json"),
     )

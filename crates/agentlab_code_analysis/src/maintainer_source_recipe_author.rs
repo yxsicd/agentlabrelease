@@ -24,6 +24,26 @@ fn design_text<'a>(v: &'a Value, key: &str, kind: &str, pointer: &str) -> Result
         format!("recipe design {kind} field at {pointer}/{key}: required nonempty string; no automatic coercion")
     })
 }
+fn design_control_id<'a>(
+    control: &'a Value,
+    pointer: &str,
+    names: &mut BTreeSet<&'a str>,
+) -> Result<&'a str, String> {
+    need(
+        control.as_object().is_some_and(|o| o.len() == 4),
+        &format!("recipe design control contract at {pointer}: required exactly four fields: id, role, expectedFailedCheckIds, edits; no fields added or removed automatically"),
+    )?;
+    let id = design_text(control, "id", "control", pointer)?;
+    need(
+        operation::valid_control_id(id),
+        &format!("recipe design control contract at {pointer}/id: required 1..64 ASCII alphanumeric or hyphen characters only; underscores, whitespace and non-ASCII are forbidden; observed UTF-8 byte length {}; original ID is not normalized", id.len()),
+    )?;
+    need(
+        names.insert(id),
+        &format!("recipe design control contract at {pointer}/id: duplicate control ID; required unique IDs; no automatic rename"),
+    )?;
+    Ok(id)
+}
 fn read(p: &Path, limit: usize) -> Result<Vec<u8>, String> {
     for ancestor in p.ancestors() {
         need(
@@ -1304,13 +1324,7 @@ fn design_contract(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, S
     let mut results = Vec::new();
     for (control_index, control) in controls.iter().enumerate() {
         let control_pointer = format!("/controls/{control_index}");
-        let id = design_text(control, "id", "control", &control_pointer)?;
-        need(
-            control.as_object().is_some_and(|o| o.len() == 4)
-                && operation::valid_control_id(id)
-                && names.insert(id),
-            "recipe design control contract",
-        )?;
+        let id = design_control_id(control, &control_pointer, &mut names)?;
         let failures = control["expectedFailedCheckIds"]
             .as_array()
             .ok_or("recipe design failure array")?;
@@ -1525,6 +1539,42 @@ fn dependency_inventory_binding(inventory: &Value) -> Result<Value, String> {
 #[cfg(test)]
 mod interface_inventory_tests {
     use super::*;
+    #[test]
+    fn control_contract_diagnostics_locate_rejection_without_normalizing_ids() {
+        for id in [
+            "baseline_source",
+            "space id",
+            "非ascii",
+            "",
+            &"x".repeat(65),
+        ] {
+            let control = json!({"id":id,"role":"baseline","expectedFailedCheckIds":[],"edits":[]});
+            let original = control.clone();
+            let mut names = BTreeSet::new();
+            let error = design_control_id(&control, "/controls/3", &mut names).unwrap_err();
+            assert!(error.contains("/controls/3/id"));
+            assert!(error.starts_with("recipe design control"));
+            assert!(names.is_empty());
+            assert_eq!(control, original);
+        }
+        for id in ["base-1", "A", &"x".repeat(64)] {
+            let control = json!({"id":id,"role":"baseline","expectedFailedCheckIds":[],"edits":[]});
+            let mut names = BTreeSet::new();
+            assert_eq!(
+                design_control_id(&control, "/controls/0", &mut names).unwrap(),
+                id
+            );
+            let duplicate = design_control_id(&control, "/controls/7", &mut names).unwrap_err();
+            assert!(duplicate.contains("/controls/7/id: duplicate control ID"));
+            assert_eq!(names.len(), 1);
+            let mut extra = control.clone();
+            extra["unexpected"] = json!(true);
+            let shape = design_control_id(&extra, "/controls/1", &mut names).unwrap_err();
+            assert!(shape.contains("/controls/1: required exactly four fields"));
+            assert_eq!(names.len(), 1);
+        }
+    }
+
     #[test]
     fn full_large_inventory_is_bound_without_duplicate_transport() {
         let mut inventory = json!({"imports":(0..165).map(|index|json!({

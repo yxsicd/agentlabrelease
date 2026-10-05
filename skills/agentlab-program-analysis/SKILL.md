@@ -201,7 +201,14 @@ generation failure. Keep design feedback separate from executable-proposal revie
 
 Keep repair feedback actionable: distinguish schema/scope mismatches from invariant
 byte limits and limitation counts, report the observed value, and retain unchanged
-acceptance limits. Draft state must use strict JSON; undefined source behavior needs
+acceptance limits.
+For rejected control contracts, use the native field pointer and rule to distinguish
+object shape, invalid ID and duplicate ID. Control IDs remain 1..64 ASCII letters,
+digits or hyphens; an underscore is not silently normalized. Request the smallest
+source-preserving correction within the existing attempt budget and retain every
+original response. A protocol repair does not establish design semantics or reset
+review/execution budgets.
+Draft state must use strict JSON; undefined source behavior needs
 an explicit observation representation, not an illegal literal or a source rewrite
 to null. Constructor lookup sequences and real method argument shapes are execution
 inputs, not facts established by prose descriptions of initial state.
