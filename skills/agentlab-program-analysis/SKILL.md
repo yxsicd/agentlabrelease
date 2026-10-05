@@ -123,7 +123,16 @@ the candidate from those changes, preserving unrelated records. Verify its own
 distinct-phase capture, then require another quality review and ordinary runtime
 calibration. Native preparation/content checks alone do not authorize dispatch;
 enroll a separate bounded semantic-stage budget before the original run. This
-bridge does not yet provide automatic scheduling or convergence evidence.
+bridge has bounded coordinator integration under validation, not real convergence
+evidence. When automatic revision selects a candidate, carry the unchanged
+ancestor and exact v3 feedback into native final staging, not only the selected
+design. Native staging must rederive that successor through the same exact-change
+gate used by manual revisions. Retain the initial design separately; a successor
+marker routes evidence and records consumed allowance, never semantic approval.
+Before a semantic revision model call, compare model/route/reasoning identity
+with the original captured review and run native dispatch admission. Recheck
+identity at completion. Consume Rust-emitted candidate bytes without host JSON
+reserialization; equivalent values need not have identical bytes or digests.
 Retain both responses and let ordinary completion/content gates derive the
 corrected decision; a correction may still be negative. Read
 [the early-review contract](../../docs/flywheel-design-quality-review-20261005.md)

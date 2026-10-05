@@ -2,6 +2,32 @@
 
 ## Negative review to exact-change review: native bridge
 
+Local bounded-coordinator work now carries original ancestor and exact v3 response
+through `--parent-design` and `--design-review-feedback` at final proposal staging.
+The existing Rust stage independently rederives the successor rather than treating
+the selected candidate or routing marker as approval. The marker binds parent,
+feedback and candidate bytes; original design bytes remain unchanged.
+Rust-driven routing fixtures cover a three-stage success path, negative successor,
+failed revision, changed model, late allowance and modified feedback. These use
+synthetic transport responses, not real semantic judgments. Full validation and
+fresh real execution remain required; engineering maturity stays 80%, complete
+automatic rounds 0.
+
+Prospective Action enrollment accepts `semanticRevisionLimit` as integer 0 or 1
+(default 0). Limit 1 freezes two quality rounds and one exact-change reviewer
+before construction: three reviewer attempts with no protocol correction, or five
+when each quality round separately enrolls one protocol correction. Each attempt
+has its own 420-second watchdog, zero transport retries and fresh capture root.
+Only an admitted negative initial review selects the exact-change stage. Its
+native dispatch gate runs before participant creation; model/route/reasoning
+identity is compared with the original capture both before inference and at
+native completion. Candidate bytes are emitted by Rust and digest-checked without
+Python serialization. A negative successor consumes the allowance and stops.
+The standalone transport accepts the original `--semantic-policy` file and paired
+parent capture paths; this cannot grant a budget to an old unbound parent.
+Transport fixtures prove order, refusal before inference, exact candidate bytes
+and exclusive captures. They do not prove real model correction or convergence.
+
 The native bridge prepares a separate semantic stage from a complete captured
 `revise` or `unverified` early review. It rejects content-only opinions, incomplete
 or changed original captures and ready-for-execution parents. The packet retains
@@ -35,9 +61,10 @@ quality review, complete runtime calibration, final review and knowledge return.
 Native fixtures and actual CLI integration cover negative-parent consumption,
 original retention, exact derivation, ancestor/source/finding drift and missing
 revision lifecycle. Captures are synthetic, not real reviewer or semantic evidence.
-Automatic transport/coordinator enrollment and real semantic convergence are
-still unfinished; never use this native facade to imply a new live budget was
-enrolled. Engineering maturity remains 80%, complete automatic rounds 0.
+Automatic transport/coordinator enrollment is implemented locally and undergoing
+qualification; real semantic convergence is still unproven. Never use this native
+facade to imply a new live budget was enrolled. Engineering maturity remains 80%,
+complete automatic rounds 0.
 
 ## Prospective bounded protocol correction
 

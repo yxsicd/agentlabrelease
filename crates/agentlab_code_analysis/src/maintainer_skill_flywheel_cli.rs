@@ -1182,6 +1182,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         a == "--prepare-source-design-revision-review"
             || a == "--source-design-revision-review-prompt"
             || a == "--verify-source-design-revision-review-completion"
+            || a == "--derive-source-design-revision-candidate"
+            || a == "--check-source-design-semantic-dispatch"
     }) {
         use agentlab_code_analysis::maintainer_source_design_quality as quality;
         let request = fs::read(value(&args, "--author-request")?)?;
@@ -1203,8 +1205,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else {
             let report = if args
                 .iter()
-                .any(|a| a == "--verify-source-design-revision-review-completion")
+                .any(|a| a == "--check-source-design-semantic-dispatch")
             {
+                quality::check_semantic_dispatch(
+                    &request,
+                    &design,
+                    &rubric,
+                    &parent_evidence,
+                    &parent_response,
+                    &PathBuf::from(value(&args, "--evidence")?),
+                )?
+            } else if args.iter().any(|a| {
+                a == "--verify-source-design-revision-review-completion"
+                    || a == "--derive-source-design-revision-candidate"
+            }) {
                 quality::verify_revision_review(
                     &request,
                     &design,
@@ -1223,7 +1237,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     &parent_response,
                 )?
             };
-            serde_json::to_vec_pretty(&report)?
+            if args
+                .iter()
+                .any(|a| a == "--derive-source-design-revision-candidate")
+            {
+                serde_json::to_vec(&report["candidateDesign"])?
+            } else {
+                serde_json::to_vec_pretty(&report)?
+            }
         };
         OpenOptions::new()
             .write(true)

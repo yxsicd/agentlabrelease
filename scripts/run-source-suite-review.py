@@ -28,6 +28,9 @@ def gate(args, flag, output, *extra):
         command.extend(['--source', str(args.source.resolve())])
     if getattr(args, 'source_git_checkout', None) is not None:
         command.extend(['--source-git-checkout', str(args.source_git_checkout.resolve())])
+    if getattr(args, 'parent_review_evidence', None) is not None:
+        command.extend(['--parent-review-evidence', str(args.parent_review_evidence.resolve()),
+                        '--parent-review-response', str(args.parent_review_response.resolve())])
     result = subprocess.run(command, capture_output=True, timeout=90)
     with output.with_suffix(output.suffix + '.stdout.log').open('xb') as stream:
         stream.write(result.stdout)
@@ -49,12 +52,21 @@ def run_attempt(args, participant_class=None):
     evidence.mkdir()
     workspace.mkdir()
     design_review = getattr(args, 'author_request', None) is not None
-    label = 'source-design-review' if design_review else 'source-suite-review'
-    terminal = dict(schema=('agentlab.independent_source_design_review_transport.v1' if design_review
+    revision_review = getattr(args, 'parent_review_evidence', None) is not None
+    label = 'source-design-revision-review' if revision_review else 'source-design-review' if design_review else 'source-suite-review'
+    terminal = dict(schema=('agentlab.independent_source_design_revision_review_transport.v1' if revision_review else
+                           'agentlab.independent_source_design_review_transport.v1' if design_review
                            else 'agentlab.independent_source_suite_review_transport.v1'),
                     completed=False, automaticPromotion=False, authorityWritePerformed=False,
                     qualified=False)
     try:
+        semantic = getattr(args, 'semantic_policy', None)
+        if semantic is not None:
+            with (evidence/'design-semantic-policy.json').open('x') as stream:
+                json.dump(semantic, stream)
+            if not revision_review:
+                with (evidence/'design-quality-round.json').open('x') as stream:
+                    json.dump(dict(schema='agentlab.design_quality_round.v1',index=args.quality_round_index),stream)
         repair_enabled = getattr(args, 'review_repair_limit', 0) == 1
         if repair_enabled:
             review_policy = dict(schema='agentlab.review_repair_policy.v1', reviewRepairLimit=1,
@@ -69,14 +81,21 @@ def run_attempt(args, participant_class=None):
                 shutil.copyfile(parent / 'response.json', retained / 'response.json')
                 shutil.copytree(parent / 'evidence', retained / 'evidence',
                                 symlinks=True, ignore=shutil.ignore_patterns('source-suite-review-events.jsonl'))
-        gate(args, '--prepare-source-design-quality-review' if design_review else
+        gate(args, '--prepare-source-design-revision-review' if revision_review else
+             '--prepare-source-design-quality-review' if design_review else
              '--prepare-source-suite-review', output / 'request.json')
+        if revision_review:
+            gate(args, '--check-source-design-semantic-dispatch', output/'semantic-dispatch-admission.json',
+                 '--evidence',str(evidence))
         if repair_enabled:
             gate(args, '--source-design-quality-review-attempt-prompt' if design_review else
                  '--prepare-source-suite-review-attempt-prompt', output / 'prompt.txt',
                  '--evidence' if design_review else '--participant-evidence', str(evidence))
+        elif semantic is not None and design_review and not revision_review:
+            gate(args, '--source-design-quality-review-attempt-prompt', output/'prompt.txt', '--evidence', str(evidence))
         else:
-            gate(args, '--source-design-quality-review-prompt' if design_review else
+            gate(args, '--source-design-revision-review-prompt' if revision_review else
+                 '--source-design-quality-review-prompt' if design_review else
                  '--prepare-source-suite-review-prompt', output / 'prompt.txt')
         prompt = (output / 'prompt.txt').read_text()
         packet = json.loads((output / 'request.json').read_bytes())
@@ -88,6 +107,13 @@ def run_attempt(args, participant_class=None):
         helpers = load_module('source_author_transport', repo / 'scripts/run-source-recipe-author.py')
         helpers.prepare_runtime_receipt_root()
         effort = None if args.reasoning_effort == 'default' else args.reasoning_effort
+        if revision_review:
+            parent_intent = json.loads((args.parent_review_evidence/'review-intent.json').read_bytes())
+            identity = dict(model=os.environ['AGENTLAB_MODEL'],
+                            providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
+                            providerReasoningEffort=effort)
+            if parent_intent.get('participantIdentity') != identity:
+                raise ValueError('Semantic revision model or reasoning treatment differs')
         if design_review and getattr(args, 'repair_parent', None) is not None:
             parent_intent = json.loads((evidence / 'repair-inputs/evidence/review-intent.json').read_bytes())
             identity = dict(model=os.environ['AGENTLAB_MODEL'],
@@ -108,10 +134,12 @@ def run_attempt(args, participant_class=None):
         policy = helpers.freeze_pi_retry_policy(output / 'participant-state', workspace, evidence,
                                                 disable_compaction=True)
         wall_time = max(240, args.gateway_timeout_seconds + 60)
-        intent = dict(schema=('agentlab.independent_source_design_review_intent.v1' if design_review
+        intent = dict(schema=('agentlab.independent_source_design_revision_review_intent.v1' if revision_review else
+                              'agentlab.independent_source_design_review_intent.v1' if design_review
                               else 'agentlab.independent_source_suite_review_intent.v1'),
                       reviewRequestSha256=request_digest,
-                      qualityRubricSha256=packet['rubricSha256' if design_review else 'qualityRubricSha256'],
+                      qualityRubricSha256=(packet['originalQualityPacket']['rubricSha256'] if revision_review else
+                                           packet['rubricSha256' if design_review else 'qualityRubricSha256']),
                       promptSha256=hashlib.sha256(prompt.encode()).hexdigest(),
                       participantBudgetSeconds=participant.process_budget_seconds(wall_time),
                       transportRetryLimit=0,
@@ -119,6 +147,13 @@ def run_attempt(args, participant_class=None):
                       participantIdentity=dict(model=os.environ['AGENTLAB_MODEL'],
                                                providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
                                                providerReasoningEffort=effort))
+        if revision_review and intent['participantBudgetSeconds'] != 420:
+            raise ValueError('Native revision reviewer watchdog differs from declared budget')
+        if semantic is not None:
+            compact_semantic = json.dumps(semantic, sort_keys=True, separators=(',', ':')).encode()
+            intent['designSemanticPolicySha256'] = hashlib.sha256(compact_semantic).hexdigest()
+            if not revision_review:
+                intent['designQualityRoundIndex'] = args.quality_round_index
         if repair_enabled:
             if intent['participantBudgetSeconds'] != 420:
                 raise ValueError('Native participant watchdog differs from declared repair policy')
@@ -138,7 +173,8 @@ def run_attempt(args, participant_class=None):
         with (output / 'response.json').open('xb') as stream:
             stream.write(content.encode())  # No fences stripped, operator repairs or JSON rewriting.
         try:
-            gate(args, '--verify-source-design-quality-review-completion' if design_review else
+            gate(args, '--verify-source-design-revision-review-completion' if revision_review else
+                 '--verify-source-design-quality-review-completion' if design_review else
                  '--verify-source-suite-review-completion', output / 'validation.json',
                  '--review-response', str(output / 'response.json'),
                  '--evidence' if design_review else '--participant-evidence', str(evidence))
@@ -154,7 +190,15 @@ def run_attempt(args, participant_class=None):
             raise
         validated = json.loads((output / 'validation.json').read_bytes())
         terminal.update(completed=True, recordedCompletionVerified=validated['recordedCompletionVerified'])
-        terminal['decision' if design_review else 'verdict'] = validated['decision' if design_review else 'verdict']
+        if revision_review:
+            gate(args, '--derive-source-design-revision-candidate', output / 'candidate-design.json',
+                 '--review-response', str(output / 'response.json'), '--evidence', str(evidence))
+            if hashlib.sha256((output / 'candidate-design.json').read_bytes()).hexdigest() != validated['candidateDesignSha256']:
+                raise ValueError('Native derived design differs from captured revision review')
+            terminal.update(decision='revision-candidate', successorMustBeReviewed=True,
+                            candidateDesignSha256=validated['candidateDesignSha256'])
+        else:
+            terminal['decision' if design_review else 'verdict'] = validated['decision' if design_review else 'verdict']
         # Reject/unverified are completed feedback. No lesson extraction or writer here.
         return terminal
     except Exception as error:
@@ -169,19 +213,27 @@ def run_attempt(args, participant_class=None):
 def run(args, participant_class=None):
     limit = getattr(args, 'review_repair_limit', 0)
     design_review = getattr(args, 'author_request', None) is not None
+    revision_review = getattr(args, 'parent_review_evidence', None) is not None
+    if revision_review and getattr(args, 'semantic_policy', None) is None:
+        raise ValueError('Semantic review requires prospective policy before dispatch')
+    if bool(getattr(args, 'parent_review_evidence', None)) != bool(getattr(args, 'parent_review_response', None)):
+        raise ValueError('Revision review requires paired original review evidence/response')
+    if revision_review and (not design_review or limit or getattr(args, 'repair_parent', None) is not None):
+        raise ValueError('Revision review requires original design and no protocol repair')
     if design_review:
         if (getattr(args, 'design', None) is None or getattr(args, 'source', None) is not None
                 or getattr(args, 'source_git_checkout', None) is not None):
             raise ValueError('Design review requires paired original request/design, no suite lane')
     elif getattr(args, 'design', None) is not None or getattr(args, 'source', None) is None:
         raise ValueError('Select exactly one original design or suite review lane')
-    if limit not in (0, 1):
+    if type(limit) is not int or limit not in (0, 1):
         raise ValueError('Review repair limit must be zero or one')
     if limit and not design_review and getattr(args, 'source_git_checkout', None) is None:
         raise ValueError('Citation repair requires independently verified Git source')
     root = args.output.absolute()
     original_runtime_root = os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT')
-    coordinator = dict(schema=('agentlab.design_review_attempt_coordinator.v1' if design_review
+    coordinator = dict(schema=('agentlab.design_revision_review_attempt_coordinator.v1' if revision_review else
+                               'agentlab.design_review_attempt_coordinator.v1' if design_review
                                else 'agentlab.review_attempt_coordinator.v1'), completed=False,
                        reviewRepairLimit=limit, maximumReviewerAttempts=1+limit,
                        totalParticipantBudgetSeconds=420*(1+limit), transportRetryLimit=0,
@@ -241,13 +293,24 @@ def main():
     parser.add_argument('--source', type=Path)
     parser.add_argument('--author-request', type=Path)
     parser.add_argument('--design', type=Path)
+    parser.add_argument('--parent-review-evidence', type=Path)
+    parser.add_argument('--parent-review-response', type=Path)
+    parser.add_argument('--semantic-policy', type=Path,
+                        help='Original prospectively captured semantic policy; native admission reconsumes it')
+    parser.add_argument('--quality-round-index', type=int, choices=[0, 1], default=0)
     parser.add_argument('--source-git-checkout', type=Path)
     parser.add_argument('--review-repair-limit', type=int, choices=[0, 1], default=0)
     parser.add_argument('--reasoning-effort', choices=['default', 'none', 'low', 'medium', 'high', 'max'], default='default')
     parser.add_argument('--thinking-type', choices=['default', 'enabled', 'disabled'], default='disabled')
     parser.add_argument('--gateway-timeout-seconds', type=int, choices=[180, 240], default=240)
     parser.add_argument('--max-output-tokens', type=int, choices=[8192, 16384], default=16384)
-    print(json.dumps(run(parser.parse_args())))
+    args = parser.parse_args()
+    if args.semantic_policy is not None:
+        raw = args.semantic_policy.read_bytes()
+        if len(raw) > 4096:
+            parser.error('Semantic policy exceeds native budget')
+        args.semantic_policy = json.loads(raw)
+    print(json.dumps(run(args)))
 
 
 if __name__ == '__main__':

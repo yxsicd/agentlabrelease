@@ -18,6 +18,9 @@ def freeze_design_review(args, request_bytes, participant_class):
     repair_limit = getattr(args, 'design_review_repair_limit', 0)
     if type(repair_limit) is not int or repair_limit not in (0, 1):
         raise ValueError('Design review repair limit must be zero or one before inference')
+    semantic_limit = getattr(args, 'design_semantic_revisions', 0)
+    if type(semantic_limit) is not int or semantic_limit not in (0, 1):
+        raise ValueError('Design semantic revision limit must be zero or one before inference')
     raw = args.design_quality_rubric.read_bytes()
     if hashlib.sha256(raw).hexdigest() != args.design_quality_rubric_sha256:
         raise ValueError('Design quality rubric differs from prospective digest')
@@ -46,10 +49,18 @@ def freeze_design_review(args, request_bytes, participant_class):
         model=os.environ['AGENTLAB_MODEL'],providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
         reasoningEffort=args.reasoning_effort,thinkingType=args.thinking_type,
         gatewayTimeoutSeconds=240,maxOutputTokens=args.max_output_tokens,
-        reviewRepairLimit=repair_limit,maximumReviewerAttempts=1+repair_limit,
-        participantBudgetSeconds=budget,totalParticipantBudgetSeconds=budget*(1+repair_limit),transportRetryLimit=0,
+        reviewRepairLimit=repair_limit,semanticRevisionLimit=semantic_limit,
+        maximumQualityReviewRounds=1+semantic_limit,maximumRevisionReviewerAttempts=semantic_limit,
+        maximumReviewerAttempts=(1+repair_limit)*(1+semantic_limit)+semantic_limit,
+        participantBudgetSeconds=budget,
+        totalParticipantBudgetSeconds=budget*((1+repair_limit)*(1+semantic_limit)+semantic_limit),transportRetryLimit=0,
         automaticCompactionDisabled=True,
         automaticPromotion=False,authorityWritePerformed=False,qualified=False)
+    if semantic_limit:
+        enrollment['semanticPolicy'] = dict(schema='agentlab.design_semantic_policy.v1',semanticRevisionLimit=1,
+            maximumQualityReviewRounds=2,qualityReviewRepairLimit=repair_limit,maximumRevisionReviewerAttempts=1,
+            maximumReviewerAttempts=enrollment['maximumReviewerAttempts'],participantBudgetSeconds=420,
+            totalParticipantBudgetSeconds=enrollment['totalParticipantBudgetSeconds'],transportRetryLimit=0)
     with (root/'enrollment.json').open('x') as stream:
         json.dump(enrollment,stream)
     return enrollment
@@ -58,11 +69,13 @@ def freeze_design_review(args, request_bytes, participant_class):
 def review_design_before_code(args, design_path, enrollment):
     """Fresh reviewer state; no constructor history or repair budget inheritance."""
     if enrollment is None:
-        return
+        return design_path
     if (hashlib.sha256(args.request.read_bytes()).hexdigest() != enrollment['authorRequestSha256']
             or hashlib.sha256((args.output/'design-review-enrollment/rubric.json').read_bytes()).hexdigest() != enrollment['rubricSha256']
             or os.environ['AGENTLAB_MODEL'] != enrollment['model']
-            or os.environ['AGENTLAB_PROVIDER_ROUTE'] != enrollment['providerRoute']):
+            or os.environ['AGENTLAB_PROVIDER_ROUTE'] != enrollment['providerRoute']
+            or args.reasoning_effort != enrollment['reasoningEffort']
+            or args.thinking_type != enrollment['thinkingType']):
         raise ValueError('Prospective design review enrollment drift')
     path = Path(__file__).resolve().parent/'run-source-suite-review.py'
     spec = importlib.util.spec_from_file_location('design_review_transport', path)
@@ -73,14 +86,107 @@ def review_design_before_code(args, design_path, enrollment):
         reasoning_effort=enrollment['reasoningEffort'],thinking_type=enrollment['thinkingType'],
         gateway_timeout_seconds=enrollment['gatewayTimeoutSeconds'],max_output_tokens=enrollment['maxOutputTokens'])
     original_root = os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']
+    semantic_limit = enrollment.get('semanticRevisionLimit', 0)
+    if type(semantic_limit) is not int or semantic_limit not in (0,1):
+        raise ValueError('Prospective semantic revision limit differs')
+    # The on-disk prospective enrollment, not a mutated in-memory budget, owns
+    # any new semantic stages. Legacy default-zero calls keep their old lane.
+    if semantic_limit:
+        if getattr(args, 'design_semantic_revisions', 0) != semantic_limit:
+            raise ValueError('Semantic budget changed after enrollment')
+        if json.loads((args.output/'design-review-enrollment/enrollment.json').read_bytes()) != enrollment:
+            raise ValueError('Prospective semantic review budget differs from retained enrollment')
+        if (semantic_limit != 1 or enrollment['maximumQualityReviewRounds'] != 2
+                or enrollment['maximumRevisionReviewerAttempts'] != 1
+                or enrollment['maximumReviewerAttempts'] != 2*(1+enrollment['reviewRepairLimit'])+1
+                or enrollment['totalParticipantBudgetSeconds'] != 420*enrollment['maximumReviewerAttempts']):
+            raise ValueError('Prospective semantic stage budget differs')
+        config.semantic_policy = enrollment['semanticPolicy']
+        config.quality_round_index = 0
     try:
         os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(Path(original_root)/'design-review')
         result = module.run(config)
+        if result.get('completed') is not True or result.get('recordedCompletionVerified') is not True:
+            raise ValueError('Original design review did not complete')
+        if result.get('decision') == 'ready-for-execution':
+            return design_path
+        if not semantic_limit or result.get('decision') not in ('revise', 'unverified'):
+            raise ValueError('Original design review blocks code generation; retain findings for a reviewed successor')
+        if json.loads((args.output/'design-review-enrollment/enrollment.json').read_bytes()) != enrollment:
+            raise ValueError('Semantic enrollment changed during initial review')
+        if (os.environ['AGENTLAB_MODEL'] != enrollment['model']
+                or os.environ['AGENTLAB_PROVIDER_ROUTE'] != enrollment['providerRoute']):
+            raise ValueError('Prospective participant drift before semantic revision')
+        selected = result.get('selectedAttempt')
+        if selected not in ('.', 'repair-attempt'):
+            raise ValueError('Original design review selection differs')
+        parent = config.output if selected == '.' else config.output/'repair-attempt'
+        revision = SimpleNamespace(**vars(config))
+        revision.output = args.output/'design-semantic-revision'
+        revision.review_repair_limit = 0
+        revision.parent_review_evidence = parent/'evidence'
+        revision.parent_review_response = parent/'response.json'
+        os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(Path(original_root)/'design-semantic-revision')
+        revised = module.run(revision)
+        if (revised.get('completed') is not True or revised.get('recordedCompletionVerified') is not True
+                or revised.get('decision') != 'revision-candidate'):
+            raise ValueError('Semantic change review did not complete')
+        candidate = revision.output/'candidate-design.json'
+        # Native transport emits exact Rust-derived bytes, never operator edits.
+        report = json.loads((revision.output/'validation.json').read_bytes())
+        if hashlib.sha256(candidate.read_bytes()).hexdigest() != report['candidateDesignSha256']:
+            raise ValueError('Semantic candidate differs from native completion')
+        with (args.output/'design-semantic-successor.json').open('x') as stream:
+            json.dump(dict(schema='agentlab.design_semantic_successor.v1',semanticRevisionIndex=1,
+                parentDesignSha256=hashlib.sha256(design_path.read_bytes()).hexdigest(),
+                reviewFeedbackSha256=hashlib.sha256((revision.output/'response.json').read_bytes()).hexdigest(),
+                candidateDesignSha256=report['candidateDesignSha256'],successorMustBeReviewed=True,
+                qualified=False,automaticPromotion=False,authorityWritePerformed=False),stream)
+        successor = SimpleNamespace(**vars(config))
+        successor.design = candidate
+        successor.quality_round_index = 1
+        successor.output = args.output/'design-successor-review'
+        if (os.environ['AGENTLAB_MODEL'] != enrollment['model']
+                or os.environ['AGENTLAB_PROVIDER_ROUTE'] != enrollment['providerRoute']
+                or json.loads((args.output/'design-review-enrollment/enrollment.json').read_bytes()) != enrollment):
+            raise ValueError('Prospective enrollment drift before successor review')
+        os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(Path(original_root)/'design-successor-review')
+        final = module.run(successor)
+        if (final.get('completed') is not True or final.get('recordedCompletionVerified') is not True
+                or final.get('decision') != 'ready-for-execution'):
+            raise ValueError('Successor design review blocks code; semantic revision allowance exhausted')
+        return candidate
     finally:
         os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = original_root
-    if (result.get('completed') is not True or result.get('recordedCompletionVerified') is not True
-            or result.get('decision') != 'ready-for-execution'):
-        raise ValueError('Original design review blocks code generation; retain findings for a reviewed successor')
+
+
+def stage_design_lineage(args, design_path):
+    """Route retained ancestor/change bytes to the existing native staging gate.
+
+    The marker is a routing receipt, not semantic approval. Rust independently
+    derives the candidate from the original request, ancestor and exact feedback.
+    """
+    marker = args.output/'design-semantic-successor.json'
+    if marker.exists():
+        if args.parent_design or args.design_review_feedback:
+            raise ValueError('Automatic semantic lineage cannot mix with manual lineage')
+        parent = args.output/'design.json'
+        feedback = args.output/'design-semantic-revision/response.json'
+        candidate = args.output/'design-semantic-revision/candidate-design.json'
+        receipt = json.loads(marker.read_bytes())
+        if (design_path is None or design_path.resolve() != candidate.resolve()
+                or receipt.get('schema') != 'agentlab.design_semantic_successor.v1'
+                or receipt.get('semanticRevisionIndex') != 1
+                or receipt.get('parentDesignSha256') != hashlib.sha256(parent.read_bytes()).hexdigest()
+                or receipt.get('reviewFeedbackSha256') != hashlib.sha256(feedback.read_bytes()).hexdigest()
+                or receipt.get('candidateDesignSha256') != hashlib.sha256(candidate.read_bytes()).hexdigest()):
+            raise ValueError('Automatic semantic staging lineage differs')
+        return ['--parent-design', str(parent.resolve()),
+                '--design-review-feedback', str(feedback.resolve())]
+    if args.parent_design:
+        return ['--parent-design', str((args.output/'parent-design.json').resolve()),
+                '--design-review-feedback', str((args.output/'design-review-feedback.json').resolve())]
+    return []
 
 
 def prepare_runtime_receipt_root():
@@ -422,6 +528,7 @@ def main():
     p.add_argument('--design-quality-rubric', type=Path)
     p.add_argument('--design-quality-rubric-sha256')
     p.add_argument('--design-review-repair-limit', type=int, choices=[0, 1], default=0)
+    p.add_argument('--design-semantic-revisions', type=int, choices=[0, 1], default=0)
     p.add_argument('--frozen-design', type=Path,
                    help='Continue verifier generation from exact existing design; not semantic approval')
     p.add_argument('--frozen-design-sha256',
@@ -441,6 +548,8 @@ def main():
         p.error('Design quality rubric and prospective digest must be paired')
     if args.design_review_repair_limit and not args.design_quality_rubric:
         p.error('Design review repair requires prospective early review enrollment')
+    if args.design_semantic_revisions and not args.design_quality_rubric:
+        p.error('Design semantic revision requires prospective early review enrollment')
     if args.design_quality_rubric and (not args.design_first or args.design_only
             or args.frozen_design or args.revision_request or args.parent_design or args.diagnostic_repair):
         p.error('Early design review belongs only to a fresh design-first constructor')
@@ -634,6 +743,8 @@ def main():
             transportRetryLimit=0, semanticQualified=False,
             automaticPromotion=False, authorityWritePerformed=False), stream)
     context = source_context(request)
+    if design_review_enrollment is not None and design_review_enrollment['semanticRevisionLimit']:
+        context['prospectiveDesignReviewEnrollment'] = design_review_enrollment
     dependency_count = len(request['policy']['methodDependencies'])
     transformation_policy = (
         'The operator frozen runtime selects and applies every control transformation. '
@@ -850,7 +961,8 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                     json.dump(receipt, stream)
                 print(json.dumps(receipt))
                 return
-            review_design_before_code(args, design_path, design_review_enrollment)
+            design_path = review_design_before_code(args, design_path, design_review_enrollment)
+            design_content = design_path.read_text()
             interface_path = args.output / 'verifier-interface.json'
             interface = subprocess.run([str(args.gate.resolve()),
                 '--prepare-source-verifier-interface', '--author-request', str(args.request.resolve()),
@@ -1006,9 +1118,7 @@ exports and require are reserved. The helper is not a sandbox or oracle approval
         command += ['--design', str(design_path.resolve())]
     if args.revision_request:
         command += ['--revision-request', str(args.revision_request.resolve())]
-    if args.parent_design:
-        command += ['--parent-design', str((args.output/'parent-design.json').resolve()),
-                    '--design-review-feedback', str((args.output/'design-review-feedback.json').resolve())]
+    command += stage_design_lineage(args, design_path)
     if args.diagnostic_repair:
         command += ['--diagnostic-repair', str(args.diagnostic_repair.resolve())]
     if args.diagnostic_loop_intent:

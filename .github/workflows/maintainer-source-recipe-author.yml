@@ -150,7 +150,7 @@ jobs:
     permissions:
       contents: write
       actions: read
-    timeout-minutes: ${{ (inputs.independent_review || contains(inputs.revision_feedback, 'agentlab.source_design_review_action_enrollment.v1')) && 45 || inputs.code_gateway_timeout_seconds == '240' && 25 || 20 }}
+    timeout-minutes: ${{ (contains(inputs.revision_feedback, 'agentlab.source_design_review_action_enrollment.v1') && fromJSON(inputs.revision_feedback).semanticRevisionLimit == 1) && 75 || (inputs.independent_review || contains(inputs.revision_feedback, 'agentlab.source_design_review_action_enrollment.v1')) && 45 || inputs.code_gateway_timeout_seconds == '240' && 25 || 20 }}
     env:
       KNOWLEDGE: ${{ inputs.knowledge_directory }}
       AGENTLAB_SOURCE_GUIDANCE_SELECTION: ${{ inputs.guidance_selection }}
@@ -248,9 +248,11 @@ jobs:
           if early_config is not None:
               import hashlib,re
               assert len(feedback.encode())<=16384,'Early enrollment exceeds bounded envelope'
-              assert {'schema','rubric','rubricSha256'}<=set(early_config)<={'schema','rubric','rubricSha256','reviewRepairLimit'},'Early enrollment fields differ'
+              assert {'schema','rubric','rubricSha256'}<=set(early_config)<={'schema','rubric','rubricSha256','reviewRepairLimit','semanticRevisionLimit'},'Early enrollment fields differ'
               repair_limit=early_config.get('reviewRepairLimit',0)
               assert type(repair_limit) is int and repair_limit in (0,1),'Early review repair must be zero or one'
+              semantic_limit=early_config.get('semanticRevisionLimit',0)
+              assert type(semantic_limit) is int and semantic_limit in (0,1),'Semantic revision must be zero or one'
               early=early_config['rubric'];early_digest=early_config['rubricSha256']
               assert isinstance(early,str) and isinstance(early_digest,str) and early and early_digest
               assert os.environ['GITHUB_RUN_ATTEMPT']=='1','Early review cannot reopen a rerun budget'
@@ -260,7 +262,7 @@ jobs:
               raw=path.read_bytes();assert len(raw)<=128*1024 and re.fullmatch('[0-9a-f]{64}',early_digest)
               assert hashlib.sha256(raw).hexdigest()==early_digest
               with open(os.environ['GITHUB_ENV'],'a') as stream:
-                  stream.write('DESIGN_QUALITY_RUBRIC='+early+'\nDESIGN_QUALITY_RUBRIC_SHA256='+early_digest+'\nDESIGN_REVIEW_REPAIR_LIMIT='+str(repair_limit)+'\n')
+                  stream.write('DESIGN_QUALITY_RUBRIC='+early+'\nDESIGN_QUALITY_RUBRIC_SHA256='+early_digest+'\nDESIGN_REVIEW_REPAIR_LIMIT='+str(repair_limit)+'\nDESIGN_SEMANTIC_REVISIONS='+str(semantic_limit)+'\n')
           PY
       - name: Bind optional guidance to the checked-in knowledge directory
         run: |
@@ -394,6 +396,7 @@ jobs:
           parent=root/'recipe-parent'
           subprocess.run(['gh','run','download',run,'--repo',repo,'--name','unreviewed-source-recipe-'+run,'--dir',str(parent)],check=True)
           assert not (parent/'agent/revision-request.json').exists(),'Only one revision from an original construction is supported'
+          assert not (parent/'agent/design-semantic-successor.json').exists(),'Semantic successor budget is exhausted'
           if 'sourceRecipeTarget' in json.loads((parent/'request.json').read_bytes()):
               restored=output/'restored-parent-request.json'
               subprocess.run(['target/release/agentlab-maintainer-skill-flywheel','--restore-source-recipe-author-target',
@@ -497,7 +500,8 @@ jobs:
           if test -n "$DESIGN_QUALITY_RUBRIC"; then
             revision_args+=(--design-quality-rubric "$GITHUB_WORKSPACE/$DESIGN_QUALITY_RUBRIC" \
               --design-quality-rubric-sha256 "$DESIGN_QUALITY_RUBRIC_SHA256" \
-              --design-review-repair-limit "$DESIGN_REVIEW_REPAIR_LIMIT")
+              --design-review-repair-limit "$DESIGN_REVIEW_REPAIR_LIMIT" \
+              --design-semantic-revisions "$DESIGN_SEMANTIC_REVISIONS")
           fi
           python3 scripts/run-source-recipe-author.py --request "$RUNNER_TEMP/recipe-author/request.json" \
             --output "$RUNNER_TEMP/recipe-author/agent" --gate target/release/agentlab-maintainer-skill-flywheel \
