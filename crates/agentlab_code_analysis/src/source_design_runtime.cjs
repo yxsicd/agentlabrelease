@@ -95,29 +95,88 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
     }
     return expected;
   }
+  const childPointer = (pointer, key) => pointer + '/' + String(key).replace(/~/g, '~0').replace(/\//g, '~1');
+  function valueType(value) {
+    if (value === null) return 'null';
+    if (Array.isArray(value)) return 'array';
+    if (typeof value === 'number' && !Number.isFinite(value)) return 'non-finite-number';
+    return typeof value;
+  }
+  function initialStateError(message, scenarioId, pointer, reason, actualType, expectedType) {
+    const diagnostic = {schema:'agentlab.source_initial_state_error.v1',scenarioId,
+      initialStatePointer:pointer,reason,actualType,expectedType};
+    const error = new Error(message + ': ' + JSON.stringify(diagnostic));
+    error.initialStateDiagnostic = diagnostic;
+    return error;
+  }
   function assertInitialState(scenarioId, actual, pointer = '') {
     // The verifier selects a source-observable subtree, not an expected output.
     // Assertion failure must escape before invoking the method under test.
     const expected = initialStateAt(scenarioId, pointer);
-    function canonical(value) {
+    const ancestors = new Set();
+    function canonical(value, location, counterpart, counterpartPresent = true) {
+      const invalid = (reason, actualType = valueType(value)) => {
+        throw initialStateError('non-JSON observed initial state',scenarioId,location,
+          reason,actualType,counterpartPresent ? valueType(counterpart) : 'missing-property');
+      };
+      const next = key => counterpart !== null && typeof counterpart === 'object' && Object.hasOwn(counterpart,key);
       if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
       if (typeof value === 'number' && Number.isFinite(value)) return value;
       if (Array.isArray(value)) {
+        if (ancestors.has(value)) invalid('cyclic-value');
+        ancestors.add(value);
         const result = [];
         for (let i = 0; i < value.length; i++) {
-          if (!Object.hasOwn(value, i)) throw new Error('non-JSON observed initial state');
-          result.push(canonical(value[i]));
+          if (!Object.hasOwn(value, i)) throw initialStateError('non-JSON observed initial state',
+            scenarioId,childPointer(location,i),'sparse-array','array-hole',next(i) ? valueType(counterpart[i]) : 'missing-property');
+          result.push(canonical(value[i],childPointer(location,i),next(i) ? counterpart[i] : undefined,next(i)));
         }
+        ancestors.delete(value);
         return {array: result};
       }
       if (value && Object.prototype.toString.call(value) === '[object Object]') {
+        if (ancestors.has(value)) invalid('cyclic-value');
+        ancestors.add(value);
         // Entry arrays avoid __proto__ mutation and disregard property order.
-        return {object: Object.keys(value).sort().map(key => [key, canonical(value[key])])};
+        const object = Object.keys(value).sort().map(key => [key,
+          canonical(value[key],childPointer(location,key),next(key) ? counterpart[key] : undefined,next(key))]);
+        ancestors.delete(value);
+        return {object};
       }
-      throw new Error('non-JSON observed initial state');
+      invalid('non-json-value');
     }
-    if (JSON.stringify(canonical(actual)) !== JSON.stringify(canonical(expected)))
-      throw new Error('observed initial state differs: ' + scenarioId + ' ' + pointer);
+    const actualCanonical = canonical(actual,pointer,expected);
+    const expectedCanonical = canonical(expected,pointer,undefined,false);
+    const canonicalType = value => value && typeof value === 'object' ?
+      (Object.hasOwn(value,'array') ? 'array' : 'object') : valueType(value);
+    function mismatch(a, b, location) {
+      const result = (actualType = canonicalType(a),expectedType = canonicalType(b)) =>
+        ({location,actualType,expectedType});
+      if (canonicalType(a) !== canonicalType(b)) return result();
+      if (!a || typeof a !== 'object') return a === b ? null : result();
+      if (Object.hasOwn(a,'array')) {
+        for (let i = 0; i < Math.max(a.array.length,b.array.length); i++) {
+          if (i >= a.array.length || i >= b.array.length) return {
+            location:childPointer(location,i),actualType:i >= a.array.length ? 'missing-element' : canonicalType(a.array[i]),
+            expectedType:i >= b.array.length ? 'missing-element' : canonicalType(b.array[i])};
+          const difference = mismatch(a.array[i],b.array[i],childPointer(location,i));
+          if (difference) return difference;
+        }
+        return null;
+      }
+      const left = new Map(a.object),right = new Map(b.object);
+      for (const key of [...new Set([...left.keys(),...right.keys()])].sort()) {
+        if (!left.has(key) || !right.has(key)) return {location:childPointer(location,key),
+          actualType:left.has(key) ? canonicalType(left.get(key)) : 'missing-property',
+          expectedType:right.has(key) ? canonicalType(right.get(key)) : 'missing-property'};
+        const difference = mismatch(left.get(key),right.get(key),childPointer(location,key));
+        if (difference) return difference;
+      }
+      return null;
+    }
+    const difference = mismatch(actualCanonical,expectedCanonical,pointer);
+    if (difference) throw initialStateError('observed initial state differs',scenarioId,
+      difference.location,'value-mismatch',difference.actualType,difference.expectedType);
   }
   function assertInitialFields(scenarioId, instance, pointer = '/fields') {
     // Expected keys select the observation, never supply observed values.
@@ -131,7 +190,8 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
     for (const key of Object.keys(expected)) {
       const descriptor = Object.getOwnPropertyDescriptor(instance, key);
       if (!descriptor || !Object.hasOwn(descriptor, 'value'))
-        throw new Error('initial field must be an own data property: ' + key);
+        throw initialStateError('initial field must be an own data property',scenarioId,
+          childPointer(pointer,key),'not-own-data-property',descriptor ? 'accessor' : 'missing-property',valueType(expected[key]));
       Object.defineProperty(observed, key, {value: descriptor.value, enumerable: true});
     }
     assertInitialState(scenarioId, observed, pointer);
