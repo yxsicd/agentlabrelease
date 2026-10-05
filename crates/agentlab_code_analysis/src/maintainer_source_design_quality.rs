@@ -485,6 +485,30 @@ pub fn verify_revision_review(
         intent["participantBudgetSeconds"] == 420,
         "design revision reviewer watchdog differs",
     )?;
+    if let Some(semantic) = semantic_policy(parent_evidence)? {
+        let parent_intent: Value = serde_json::from_slice(&diagnostic::read(
+            &parent_evidence.join("review-intent.json"),
+            4096,
+        )?)
+        .map_err(|e| e.to_string())?;
+        need(
+            parent_intent["participantIdentity"] == intent["participantIdentity"],
+            "semantic revision model or reasoning treatment differs",
+        )?;
+        check_semantic_dispatch(
+            request,
+            design,
+            rubric,
+            parent_evidence,
+            parent_response,
+            evidence,
+        )?;
+        need(
+            intent["designSemanticPolicySha256"]
+                == digest(&serde_json::to_vec(&semantic).map_err(|e| e.to_string())?),
+            "revision semantic policy differs from captured intent",
+        )?;
+    }
     let report = json!({"schema":"agentlab.source_design_revision_review_completion.v1",
         "parentReviewSha256":digest(parent_response),"revisionFeedbackSha256":digest(response),
         "candidateDesignSha256":digest(&serde_json::to_vec(&target).map_err(|e|e.to_string())?),
@@ -517,10 +541,88 @@ fn capture_contract(packet: &Value) -> maintainer_source_review::ReviewCaptureCo
     }
 }
 
+fn semantic_policy(evidence: &Path) -> Result<Option<Value>, String> {
+    let path = evidence.join("design-semantic-policy.json");
+    if !path.try_exists().map_err(|e| e.to_string())? {
+        return Ok(None);
+    }
+    let policy: Value =
+        serde_json::from_slice(&diagnostic::read(&path, 4096)?).map_err(|e| e.to_string())?;
+    let repair = policy["qualityReviewRepairLimit"]
+        .as_u64()
+        .filter(|n| *n <= 1)
+        .ok_or("design semantic quality repair budget")?;
+    need(
+        policy
+            == json!({"schema":"agentlab.design_semantic_policy.v1","semanticRevisionLimit":1,
+        "maximumQualityReviewRounds":2,"qualityReviewRepairLimit":repair,
+        "maximumRevisionReviewerAttempts":1,"maximumReviewerAttempts":3+2*repair,
+        "participantBudgetSeconds":420,"totalParticipantBudgetSeconds":420*(3+2*repair),"transportRetryLimit":0}),
+        "design semantic policy differs from bounded declaration",
+    )?;
+    Ok(Some(policy))
+}
+
+fn quality_round(evidence: &Path) -> Result<u64, String> {
+    let round: Value = serde_json::from_slice(&diagnostic::read(
+        &evidence.join("design-quality-round.json"),
+        4096,
+    )?)
+    .map_err(|e| e.to_string())?;
+    let index = round["index"]
+        .as_u64()
+        .filter(|n| *n <= 1)
+        .ok_or("design quality round allowance exhausted")?;
+    need(
+        round == json!({"schema":"agentlab.design_quality_round.v1","index":index}),
+        "design quality round declaration differs",
+    )?;
+    Ok(index)
+}
+
+/// Additional pre-dispatch budget gate, separate from offline revision preparation.
+pub fn check_semantic_dispatch(
+    request: &[u8],
+    design: &[u8],
+    rubric: &[u8],
+    parent_evidence: &Path,
+    parent_response: &[u8],
+    evidence: &Path,
+) -> Result<Value, String> {
+    prepare_revision_review(request, design, rubric, parent_evidence, parent_response)?;
+    let parent =
+        semantic_policy(parent_evidence)?.ok_or("semantic stage was not prospectively enrolled")?;
+    need(
+        quality_round(parent_evidence)? == 0,
+        "semantic successor cannot receive another revision",
+    )?;
+    need(
+        semantic_policy(evidence)? == Some(parent.clone()),
+        "semantic stage policy differs from original",
+    )?;
+    Ok(
+        json!({"schema":"agentlab.design_semantic_dispatch_admission.v1",
+        "semanticPolicySha256":digest(&serde_json::to_vec(&parent).map_err(|e|e.to_string())?),
+        "parentReviewSha256":digest(parent_response),"semanticRevisionIndex":1,
+        "qualified":false,"executionPermissionGranted":false,"authorityWritePerformed":false}),
+    )
+}
+
 // The original prompt consumes the policy before inference. A later policy cannot
 // reopen a historical response; recursive repair and semantic retries are refused.
 fn attempt_prompt(packet: &Value, evidence: &Path) -> Result<(Vec<u8>, Option<Value>), String> {
-    let original = prompt_for_packet(packet)?;
+    let mut original = prompt_for_packet(packet)?;
+    if let Some(semantic) = semantic_policy(evidence)? {
+        let round = quality_round(evidence)?;
+        need(
+            semantic["qualityReviewRepairLimit"]
+                == json!(u64::from(
+                    maintainer_source_review::repair_policy(evidence)?.is_some()
+                )),
+            "semantic quality repair policy differs",
+        )?;
+        original.extend_from_slice(format!("\nPREDECLARED SEMANTIC REVIEW POLICY (not semantic approval):\n{}\nQUALITY ROUND INDEX: {round}", serde_json::to_string(&semantic).map_err(|e|e.to_string())?).as_bytes());
+    }
     let parent = evidence.join("repair-inputs");
     let Some(policy) = maintainer_source_review::repair_policy(evidence)? else {
         need(
@@ -584,6 +686,19 @@ fn verify_packet_capture(
     report: Value,
 ) -> Result<Value, String> {
     let (prompt, repair) = attempt_prompt(packet, evidence)?;
+    if let Some(semantic) = semantic_policy(evidence)? {
+        let intent: Value = serde_json::from_slice(&diagnostic::read(
+            &evidence.join("review-intent.json"),
+            4096,
+        )?)
+        .map_err(|e| e.to_string())?;
+        need(
+            intent["designSemanticPolicySha256"]
+                == digest(&serde_json::to_vec(&semantic).map_err(|e| e.to_string())?)
+                && intent["designQualityRoundIndex"] == quality_round(evidence)?,
+            "recorded semantic policy or round differs",
+        )?;
+    }
     if repair.is_some() {
         let parent: Value = serde_json::from_slice(&diagnostic::read(
             &evidence.join("repair-inputs/evidence/review-intent.json"),

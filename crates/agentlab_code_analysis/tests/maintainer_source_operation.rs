@@ -86,7 +86,7 @@ with tempfile.TemporaryDirectory() as temporary:
         enrollment=dict(reviewRepairLimit=0,authorRequestSha256=hashlib.sha256(request.read_bytes()).hexdigest(),model='fixture',
             rubricSha256=hashlib.sha256(b'rubric').hexdigest(),
             providerRoute='fixture',reasoningEffort='default',thinkingType='disabled',gatewayTimeoutSeconds=240,maxOutputTokens=16384)
-        constructor=argparse.Namespace(request=request,output=base/'constructor',gate=base/'gate',pi=base/'pi')
+        constructor=argparse.Namespace(request=request,output=base/'constructor',gate=base/'gate',pi=base/'pi',reasoning_effort='default',thinking_type='disabled')
         (constructor.output/'design-review-enrollment').mkdir(parents=True,exist_ok=True)
         (constructor.output/'design-review-enrollment/rubric.json').write_bytes(b'rubric')
         original=os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']
@@ -110,6 +110,180 @@ with tempfile.TemporaryDirectory() as temporary:
     assert (args.output/'repair-attempt/response.json').read_bytes()==b'{}'
     assert all('suite-review' not in flag for flag in calls)
 "#).env("FIXTURE_REPO",root()).output().unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn semantic_revision_transport_checks_admission_before_inference_and_keeps_native_bytes() {
+    // Real transport orchestration with mocked native verdicts and participant.
+    // Separate native integration tests establish original-capture admission.
+    let result = Command::new("/usr/bin/python3").arg("-c").arg(r#"
+import argparse,hashlib,importlib.util,json,os,tempfile
+from pathlib import Path
+from unittest.mock import patch
+repo=Path(os.environ['FIXTURE_REPO'])
+spec=importlib.util.spec_from_file_location('review',repo/'scripts/run-source-suite-review.py')
+review=importlib.util.module_from_spec(spec);spec.loader.exec_module(review)
+with tempfile.TemporaryDirectory() as temporary:
+    base=Path(temporary).resolve()
+    os.environ.update(AGENTLAB_PARTICIPANT_RUNTIME_CONFIG=str(base/'runtime'),
+        AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT=str(base/'receipts'),AGENTLAB_MODEL='fixture',
+        AGENTLAB_PROVIDER_ROUTE='fixture',AGENTLAB_LM_GATEWAY_URL='http://fixture.invalid')
+    parent=base/'parent';parent.mkdir()
+    identity=dict(model='fixture',providerRoute='fixture',providerReasoningEffort=None)
+    (parent/'review-intent.json').write_text(json.dumps(dict(participantIdentity=identity)))
+    packet=dict(originalQualityPacket=dict(rubricSha256='b'*64))
+    digest='a'*64;candidate=b'{"number":1.0,"nativeOrder":true}'
+    sha=hashlib.sha256(candidate).hexdigest()
+    policy=dict(schema='agentlab.design_semantic_policy.v1',semanticRevisionLimit=1,
+        maximumQualityReviewRounds=2,qualityReviewRepairLimit=0,maximumRevisionReviewerAttempts=1,
+        maximumReviewerAttempts=3,participantBudgetSeconds=420,totalParticipantBudgetSeconds=1260,transportRetryLimit=0)
+    for mode in ('success','admission-failure','identity-drift','derive-drift','no-policy','repair','bool-limit'):
+        calls=[];turns=[]
+        args=argparse.Namespace(source=None,author_request=base/'request',design=base/'design',
+            rubric=base/'rubric',output=base/mode,gate=base/'gate',pi=base/'pi',
+            parent_review_evidence=parent,parent_review_response=base/'response',semantic_policy=policy,
+            review_repair_limit=0,reasoning_effort='default',thinking_type='disabled',
+            gateway_timeout_seconds=240,max_output_tokens=16384)
+        if mode=='identity-drift':args.reasoning_effort='low'
+        if mode=='no-policy':args.semantic_policy=None
+        if mode=='repair':args.review_repair_limit=1
+        if mode=='bool-limit':args.review_repair_limit=False
+        def gate(args,flag,output,*extra):
+            calls.append(flag)
+            if flag=='--prepare-source-design-revision-review':output.write_text(json.dumps(packet))
+            elif flag=='--check-source-design-semantic-dispatch':
+                assert '--evidence' in extra
+                if mode=='admission-failure':raise RuntimeError('native refusal')
+                output.write_text('{}')
+            elif flag=='--source-design-revision-review-prompt':output.write_text('reviewRequestSha256 is '+digest+'. fixture')
+            elif flag=='--verify-source-design-revision-review-completion':
+                assert '--review-response' in extra and '--evidence' in extra
+                output.write_text(json.dumps(dict(recordedCompletionVerified=True,candidateDesignSha256=sha)))
+            elif flag=='--derive-source-design-revision-candidate':
+                output.write_bytes(candidate if mode!='derive-drift' else b'{}')
+            else:raise AssertionError(flag)
+        class Participant:
+            @staticmethod
+            def process_budget_seconds(wall):return 420
+            def __init__(self,evidence,state,*a,**kw):
+                assert calls[:3]==['--prepare-source-design-revision-review',
+                    '--check-source-design-semantic-dispatch','--source-design-revision-review-prompt']
+                self.evidence=evidence;state.mkdir()
+            def turn(self,label,workspace,**kw):
+                turns.append(label)
+                assert label=='source-design-revision-review' and kw['transport_retry_limit']==0
+                intent=json.loads((self.evidence/'review-intent.json').read_bytes())
+                assert intent['schema']=='agentlab.independent_source_design_revision_review_intent.v1'
+                assert intent['participantBudgetSeconds']==420 and intent['qualityRubricSha256']=='b'*64
+                assert intent['designSemanticPolicySha256']==hashlib.sha256(
+                    json.dumps(policy,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+                return dict(content='{"original":"feedback"}')
+        with patch.object(review,'gate',gate):
+            if mode=='success':
+                result=review.run(args,Participant)
+                assert result['decision']=='revision-candidate' and result['maximumReviewerAttempts']==1
+                assert result['totalParticipantBudgetSeconds']==420 and result['attempts']==['initial']
+                assert (args.output/'candidate-design.json').read_bytes()==candidate
+                assert (args.output/'response.json').read_bytes()==b'{"original":"feedback"}'
+                receipt=(args.output/'transport-receipt.json').read_bytes()
+                try:review.run(args,Participant);raise AssertionError('capture reused')
+                except FileExistsError:pass
+                assert (args.output/'transport-receipt.json').read_bytes()==receipt
+            else:
+                try:review.run(args,Participant);raise AssertionError('invalid dispatch admitted')
+                except (ValueError,RuntimeError):pass
+        assert len(turns)==(1 if mode in ('success','derive-drift') else 0)
+        if mode in ('no-policy','repair','bool-limit'):assert calls==[] and not args.output.exists()
+"#).env("FIXTURE_REPO", root()).output().unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn bounded_semantic_loop_retains_lineage_and_stops_after_successor_review() {
+    // Routing fixtures, not model judgments. Native capture/change admission is
+    // exercised by the separate original-wire integration fixture below.
+    let result = Command::new("/usr/bin/python3").arg("-c").arg(r#"
+import argparse,hashlib,importlib.util,json,os,tempfile
+from pathlib import Path
+from unittest.mock import patch
+repo=Path(os.environ['FIXTURE_REPO'])
+spec=importlib.util.spec_from_file_location('author',repo/'scripts/run-source-recipe-author.py')
+author=importlib.util.module_from_spec(spec);spec.loader.exec_module(author)
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+with tempfile.TemporaryDirectory() as temporary:
+    base=Path(temporary).resolve()
+    os.environ.update(AGENTLAB_MODEL='fixture',AGENTLAB_PROVIDER_ROUTE='fixture',
+        AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT=str(base/'receipts'))
+    for mode in ('ready','negative','revision-failure','drift','late-budget'):
+        out=base/mode;out.mkdir();enrolled=out/'design-review-enrollment';enrolled.mkdir()
+        request=out/'request.json';request.write_text('{}')
+        design=out/'design.json';design.write_text('{"initial":true}')
+        rubric=enrolled/'rubric.json';rubric.write_text('{}')
+        enrollment=dict(authorRequestSha256=sha(request),rubricSha256=sha(rubric),model='fixture',
+            providerRoute='fixture',reasoningEffort='default',thinkingType='disabled',gatewayTimeoutSeconds=240,
+            maxOutputTokens=16384,reviewRepairLimit=0,semanticRevisionLimit=1,maximumQualityReviewRounds=2,
+            maximumRevisionReviewerAttempts=1,maximumReviewerAttempts=3,totalParticipantBudgetSeconds=1260,
+            semanticPolicy={'fixture':'native policy is tested separately'})
+        (enrolled/'enrollment.json').write_text(json.dumps(enrollment))
+        args=argparse.Namespace(request=request,output=out,gate=base/'gate',pi=base/'pi',
+            reasoning_effort='default',thinking_type='disabled',design_semantic_revisions=1,
+            parent_design=None,design_review_feedback=None)
+        if mode=='late-budget':args.design_semantic_revisions=0
+        calls=[];original=os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']
+        def run(config):
+            calls.append(config)
+            assert os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']==str(Path(original)/config.output.name)
+            config.output.mkdir()
+            if len(calls)==1:
+                assert config.quality_round_index==0
+                if mode=='drift':os.environ['AGENTLAB_MODEL']='changed'
+                return dict(completed=True,recordedCompletionVerified=True,decision='revise',selectedAttempt='repair-attempt')
+            if len(calls)==2:
+                assert config.parent_review_evidence==out/'design-review/repair-attempt/evidence'
+                assert config.parent_review_response==out/'design-review/repair-attempt/response.json'
+                assert config.review_repair_limit==0
+                if mode=='revision-failure':return dict(completed=False)
+                candidate=config.output/'candidate-design.json';candidate.write_bytes(b'{"revised":1}')
+                (config.output/'response.json').write_bytes(b'{"exactChange":"fixture"}')
+                (config.output/'validation.json').write_text(json.dumps(dict(candidateDesignSha256=sha(candidate))))
+                return dict(completed=True,recordedCompletionVerified=True,decision='revision-candidate')
+            assert len(calls)==3 and config.quality_round_index==1
+            assert config.design==out/'design-semantic-revision/candidate-design.json'
+            return dict(completed=True,recordedCompletionVerified=True,
+                decision='ready-for-execution' if mode=='ready' else 'revise')
+        fake=argparse.Namespace(run=run)
+        with patch.object(author.importlib.util,'module_from_spec',return_value=fake),patch.object(
+                author.importlib.util,'spec_from_file_location',return_value=argparse.Namespace(
+                loader=argparse.Namespace(exec_module=lambda module:None))):
+            if mode=='ready':
+                selected=author.review_design_before_code(args,design,enrollment)
+                flags=author.stage_design_lineage(args,selected)
+                assert flags==['--parent-design',str(design.resolve()),'--design-review-feedback',
+                    str((out/'design-semantic-revision/response.json').resolve())]
+                assert author.stage_design_lineage(args,selected)==flags
+                feedback=out/'design-semantic-revision/response.json';feedback.write_text('{}')
+                try:author.stage_design_lineage(args,selected);raise AssertionError('changed feedback accepted')
+                except ValueError:pass
+                try:author.stage_design_lineage(args,design);raise AssertionError('initial design selected')
+                except ValueError:pass
+            else:
+                try:author.review_design_before_code(args,design,enrollment);raise AssertionError('failed loop accepted')
+                except ValueError:pass
+        assert len(calls)=={'ready':3,'negative':3,'revision-failure':2,'drift':1,'late-budget':0}[mode]
+        assert design.read_bytes()==b'{"initial":true}'
+        assert os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']==original
+        assert (out/'design-semantic-successor.json').exists()==(mode in ('ready','negative'))
+        os.environ['AGENTLAB_MODEL']='fixture'
+"#).env("FIXTURE_REPO", root()).output().unwrap();
     assert!(
         result.status.success(),
         "{}",
@@ -993,7 +1167,7 @@ fn source_action_accepts_explicit_checked_in_cuts_and_rejects_path_escape() {
     let rubric = "examples/maintainer-knowledge-gate/source-design-quality-rubric.json";
     let rubric_digest = digest(&fs::read(root().join(rubric)).unwrap());
     let selection = "examples/maintainer-knowledge-gate/reviewed-guidance/toggle-generate-ordered-attributes-e516a65a.json";
-    for variant in 0..10 {
+    for variant in 0..15 {
         let mut enrollment = json!({"schema":"agentlab.source_design_review_action_enrollment.v1",
             "rubric":rubric,"rubricSha256":rubric_digest});
         match variant {
@@ -1004,6 +1178,14 @@ fn source_action_accepts_explicit_checked_in_cuts_and_rejects_path_escape() {
             7 => enrollment["reviewRepairLimit"] = json!(true),
             8 => enrollment["reviewRepairLimit"] = json!(2),
             9 => enrollment["reviewRepairLimit"] = json!("1"),
+            10 => enrollment["semanticRevisionLimit"] = json!(1),
+            11 => enrollment["semanticRevisionLimit"] = json!(true),
+            12 => enrollment["semanticRevisionLimit"] = json!(2),
+            13 => enrollment["semanticRevisionLimit"] = json!("1"),
+            14 => {
+                enrollment["semanticRevisionLimit"] = json!(1);
+                enrollment["reviewRepairLimit"] = json!(1);
+            }
             _ => {}
         }
         let environment = fixture_root.join(format!("early-environment-{variant}"));
@@ -1029,17 +1211,21 @@ fn source_action_accepts_explicit_checked_in_cuts_and_rejects_path_escape() {
             .unwrap();
         assert_eq!(
             result.status.success(),
-            variant == 0 || variant == 6,
+            matches!(variant, 0 | 6 | 10 | 14),
             "early variant {variant}: {}",
             String::from_utf8_lossy(&result.stderr)
         );
-        if variant == 0 || variant == 6 {
+        if matches!(variant, 0 | 6 | 10 | 14) {
             let exported = fs::read_to_string(&environment).unwrap();
             assert!(exported.contains(&format!("DESIGN_QUALITY_RUBRIC={rubric}\n")));
             assert!(exported.contains(&format!("DESIGN_QUALITY_RUBRIC_SHA256={rubric_digest}\n")));
             assert!(exported.contains(&format!(
                 "DESIGN_REVIEW_REPAIR_LIMIT={}\n",
-                if variant == 6 { 1 } else { 0 }
+                if matches!(variant, 6 | 14) { 1 } else { 0 }
+            )));
+            assert!(exported.contains(&format!(
+                "DESIGN_SEMANTIC_REVISIONS={}\n",
+                if matches!(variant, 10 | 14) { 1 } else { 0 }
             )));
             // Execute the workflow's actual request-argument builder. This is command
             // routing evidence, not native target admission or a model experiment.
@@ -3237,6 +3423,25 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
             "finalAssistantMessageSha256":digest(&fs::read(path.join(final_name)).unwrap())}),
         );
         fs::write(path.join(format!("{label}-prompt.txt")), prompt).unwrap();
+        if path.join("design-semantic-policy.json").exists() {
+            let policy: Value = serde_json::from_slice(
+                &fs::read(path.join("design-semantic-policy.json")).unwrap(),
+            )
+            .unwrap();
+            let mut intent: Value =
+                serde_json::from_slice(&fs::read(path.join("review-intent.json")).unwrap())
+                    .unwrap();
+            intent["designSemanticPolicySha256"] =
+                json!(digest(&serde_json::to_vec(&policy).unwrap()));
+            if path.join("design-quality-round.json").exists() {
+                let round: Value = serde_json::from_slice(
+                    &fs::read(path.join("design-quality-round.json")).unwrap(),
+                )
+                .unwrap();
+                intent["designQualityRoundIndex"] = round["index"].clone();
+            }
+            write("review-intent.json", intent);
+        }
     };
     let mut negative = response.clone();
     negative["criterionReviews"][0]["verdict"] = json!("fail");
@@ -3330,6 +3535,173 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     assert_eq!(revised["recordedCompletionVerified"], true);
     assert_eq!(revised["successorMustBeReviewed"], true);
     assert_eq!(revised["qualified"], false);
+    let semantic_policy = json!({"schema":"agentlab.design_semantic_policy.v1","semanticRevisionLimit":1,
+        "maximumQualityReviewRounds":2,"qualityReviewRepairLimit":0,"maximumRevisionReviewerAttempts":1,
+        "maximumReviewerAttempts":3,"participantBudgetSeconds":420,"totalParticipantBudgetSeconds":1260,
+        "transportRetryLimit":0});
+    let semantic_bytes = serde_json::to_vec(&semantic_policy).unwrap();
+    // Adding a declaration after a canonical capture cannot reopen it.
+    fs::write(
+        negative_path.join("design-semantic-policy.json"),
+        &semantic_bytes,
+    )
+    .unwrap();
+    fs::write(
+        negative_path.join("design-quality-round.json"),
+        br#"{"schema":"agentlab.design_quality_round.v1","index":0}"#,
+    )
+    .unwrap();
+    assert!(quality_review::prepare_revision_review(
+        &targeted_bytes,
+        &design_bytes,
+        &quality_rubric,
+        &negative_path,
+        &negative_bytes
+    )
+    .is_err());
+    fs::remove_file(negative_path.join("design-semantic-policy.json")).unwrap();
+    fs::remove_file(negative_path.join("design-quality-round.json")).unwrap();
+    for round_index in 0..2 {
+        let parent = dir.join(format!("semantic-parent-{round_index}"));
+        fs::create_dir(&parent).unwrap();
+        fs::write(parent.join("design-semantic-policy.json"), &semantic_bytes).unwrap();
+        fs::write(
+            parent.join("design-quality-round.json"),
+            serde_json::to_vec(&json!({
+            "schema":"agentlab.design_quality_round.v1","index":round_index}))
+            .unwrap(),
+        )
+        .unwrap();
+        let prompt = quality_review::prompt_for_review_attempt(
+            &targeted_bytes,
+            &design_bytes,
+            &quality_rubric,
+            &parent,
+        )
+        .unwrap();
+        capture(
+            &parent,
+            "source-design-review",
+            "agentlab.independent_source_design_review_intent.v1",
+            &prompt,
+            &digest(&serde_json::to_vec(&quality).unwrap()),
+            &negative_bytes,
+        );
+        let stage = dir.join(format!("semantic-stage-{round_index}"));
+        fs::create_dir(&stage).unwrap();
+        fs::write(stage.join("design-semantic-policy.json"), &semantic_bytes).unwrap();
+        let admitted = quality_review::check_semantic_dispatch(
+            &targeted_bytes,
+            &design_bytes,
+            &quality_rubric,
+            &parent,
+            &negative_bytes,
+            &stage,
+        );
+        if round_index == 1 {
+            assert!(admitted.unwrap_err().contains("another revision"));
+            continue;
+        }
+        assert_eq!(admitted.unwrap()["semanticRevisionIndex"], 1);
+        let packet = quality_review::prepare_revision_review(
+            &targeted_bytes,
+            &design_bytes,
+            &quality_rubric,
+            &parent,
+            &negative_bytes,
+        )
+        .unwrap();
+        let prompt = quality_review::prompt_for_revision_review(
+            &targeted_bytes,
+            &design_bytes,
+            &quality_rubric,
+            &parent,
+            &negative_bytes,
+        )
+        .unwrap();
+        capture(
+            &stage,
+            "source-design-revision-review",
+            "agentlab.independent_source_design_revision_review_intent.v1",
+            &prompt,
+            &digest(&serde_json::to_vec(&packet).unwrap()),
+            &feedback_bytes,
+        );
+        let report = quality_review::verify_revision_review(
+            &targeted_bytes,
+            &design_bytes,
+            &quality_rubric,
+            &parent,
+            &negative_bytes,
+            &stage,
+            &feedback_bytes,
+        )
+        .unwrap();
+        assert_eq!(report["candidateDesign"], revised["candidateDesign"]);
+        let feedback_file = stage.join("original-feedback.json");
+        fs::write(&feedback_file, &feedback_bytes).unwrap();
+        let candidate_file = stage.join("native-candidate.json");
+        let derived = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--derive-source-design-revision-candidate")
+            .arg("--author-request")
+            .arg(&review_request_path)
+            .arg("--design")
+            .arg(&review_design_path)
+            .arg("--quality-rubric")
+            .arg(
+                root().join("examples/maintainer-knowledge-gate/source-design-quality-rubric.json"),
+            )
+            .arg("--parent-review-evidence")
+            .arg(&parent)
+            .arg("--parent-review-response")
+            .arg(&negative_file)
+            .arg("--evidence")
+            .arg(&stage)
+            .arg("--review-response")
+            .arg(&feedback_file)
+            .arg("--output")
+            .arg(&candidate_file)
+            .output()
+            .unwrap();
+        assert!(
+            derived.status.success(),
+            "{}",
+            String::from_utf8_lossy(&derived.stderr)
+        );
+        let candidate_bytes = fs::read(&candidate_file).unwrap();
+        assert_eq!(
+            candidate_bytes,
+            serde_json::to_vec(&report["candidateDesign"]).unwrap()
+        );
+        assert_eq!(digest(&candidate_bytes), report["candidateDesignSha256"]);
+        let intent_path = stage.join("review-intent.json");
+        let original_intent = fs::read(&intent_path).unwrap();
+        let mut changed_intent: Value = serde_json::from_slice(&original_intent).unwrap();
+        changed_intent["participantIdentity"]["model"] = json!("different-model");
+        fs::write(&intent_path, serde_json::to_vec(&changed_intent).unwrap()).unwrap();
+        assert!(quality_review::verify_revision_review(
+            &targeted_bytes,
+            &design_bytes,
+            &quality_rubric,
+            &parent,
+            &negative_bytes,
+            &stage,
+            &feedback_bytes,
+        )
+        .unwrap_err()
+        .contains("model or reasoning treatment differs"));
+        fs::write(&intent_path, original_intent).unwrap();
+        fs::write(stage.join("design-semantic-policy.json"), b"{}").unwrap();
+        assert!(quality_review::check_semantic_dispatch(
+            &targeted_bytes,
+            &design_bytes,
+            &quality_rubric,
+            &parent,
+            &negative_bytes,
+            &stage
+        )
+        .is_err());
+    }
     for mutate in 0..4 {
         let mut invalid = feedback.clone();
         match mutate {

@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def prepare(gate, request, parent, feedback, output):
-    for name in ('revision-request.json', 'design-review-feedback.json', 'diagnostic-repair.json'):
+    for name in ('revision-request.json', 'design-review-feedback.json', 'diagnostic-repair.json', 'design-semantic-successor.json'):
         if (parent / 'agent' / name).exists():
             raise ValueError('Only an original construction may receive one reviewed child')
     if request.read_bytes() != (parent / 'request.json').read_bytes():
