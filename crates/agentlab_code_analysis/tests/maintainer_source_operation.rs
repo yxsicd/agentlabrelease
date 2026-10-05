@@ -3188,6 +3188,189 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     assert_eq!(verdict["qualified"], false);
     assert_eq!(verdict["executionPermissionGranted"], false);
     assert_eq!(verdict["reviewerAuthenticated"], false);
+    // Real native consumers with synthetic isolated captures; no model/semantic claim.
+    use agentlab_code_analysis::maintainer_source_design_quality as quality_review;
+    let capture = |path: &Path,
+                   label: &str,
+                   schema: &str,
+                   prompt: &[u8],
+                   packet_sha: &str,
+                   response: &[u8]| {
+        fs::create_dir_all(path.join("gateway")).unwrap();
+        let write = |name: &str, value: Value| {
+            fs::write(path.join(name), serde_json::to_vec(&value).unwrap()).unwrap()
+        };
+        write(
+            "review-intent.json",
+            json!({"schema":schema,"reviewRequestSha256":packet_sha,
+            "qualityRubricSha256":digest(&quality_rubric),"promptSha256":digest(prompt),
+            "participantBudgetSeconds":420,"transportRetryLimit":0,
+            "participantIdentity":{"model":"fixture","providerRoute":"fixture","providerReasoningEffort":null}}),
+        );
+        write(
+            "gateway/1.upstream-request.json",
+            json!({"model":"fixture","providerId":"fixture","stream":false,
+            "messages":[{"role":"system","content":"Capture fixture, not evaluation."},
+                {"role":"user","content":std::str::from_utf8(prompt).unwrap()}]}),
+        );
+        let text = std::str::from_utf8(response).unwrap();
+        let raw = serde_json::to_vec(
+            &json!({"choices":[{"index":0,"message":{"content":text},"finish_reason":"stop"}]}),
+        )
+        .unwrap();
+        fs::write(path.join("gateway/1.response"), &raw).unwrap();
+        write(
+            "gateway/1.status.json",
+            json!({"exchangeId":"1","durationMs":1,"status":200,
+            "upstreamEof":true,"semanticComplete":true,"outcome":"completed","streamError":null,"responseBytes":raw.len()}),
+        );
+        let final_name = format!("{label}-final-assistant-message.json");
+        write(
+            &final_name,
+            json!({"role":"assistant","stopReason":"stop","content":[{"type":"text","text":text}]}),
+        );
+        write(
+            &format!("{label}-lifecycle.json"),
+            json!({"label":label,"captureAuthority":"operator","exitCode":0,
+            "timedOut":false,"finalAssistantMessagePresent":true,"participantBudgetSeconds":420,
+            "participantBudgetScope":"native-process-watchdog","transportRetryLimit":0,
+            "finalAssistantMessageSha256":digest(&fs::read(path.join(final_name)).unwrap())}),
+        );
+        fs::write(path.join(format!("{label}-prompt.txt")), prompt).unwrap();
+    };
+    let mut negative = response.clone();
+    negative["criterionReviews"][0]["verdict"] = json!("fail");
+    negative["unresolvedFindings"] = json!(["Fixture source gap, not a verified defect."]);
+    let negative_bytes = serde_json::to_vec(&negative).unwrap();
+    let negative_path = dir.join("negative-review");
+    let negative_prompt =
+        quality_review::prompt(&targeted_bytes, &design_bytes, &quality_rubric).unwrap();
+    capture(
+        &negative_path,
+        "source-design-review",
+        "agentlab.independent_source_design_review_intent.v1",
+        &negative_prompt,
+        &digest(&serde_json::to_vec(&quality).unwrap()),
+        &negative_bytes,
+    );
+    let bridge = quality_review::prepare_revision_review(
+        &targeted_bytes,
+        &design_bytes,
+        &quality_rubric,
+        &negative_path,
+        &negative_bytes,
+    )
+    .unwrap();
+    assert_eq!(bridge["originalReviewCompletion"]["decision"], "revise");
+    assert_eq!(bridge["qualified"], false);
+    let negative_file = dir.join("negative-response.json");
+    fs::write(&negative_file, &negative_bytes).unwrap();
+    let bridge_cli = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+        .arg("--prepare-source-design-revision-review")
+        .arg("--author-request")
+        .arg(&review_request_path)
+        .arg("--design")
+        .arg(&review_design_path)
+        .arg("--quality-rubric")
+        .arg(root().join("examples/maintainer-knowledge-gate/source-design-quality-rubric.json"))
+        .arg("--parent-review-evidence")
+        .arg(&negative_path)
+        .arg("--parent-review-response")
+        .arg(&negative_file)
+        .arg("--output")
+        .arg(dir.join("revision-review-request.json"))
+        .output()
+        .unwrap();
+    assert!(
+        bridge_cli.status.success(),
+        "{}",
+        String::from_utf8_lossy(&bridge_cli.stderr)
+    );
+    let finding = &bridge["eligibleFindings"][0];
+    let mut after = design["scenarios"][0].clone();
+    after["inputs"]["operation"] = json!("read-again");
+    let feedback = json!({"schema":"agentlab.source_recipe_design_review.v3",
+        "parentRequestSha256":digest(&targeted_bytes),"parentDesignSha256":digest(&design_bytes),
+        "reviewed":true,"verdict":"revise","automaticPromotion":false,"reviewer":"fixture",
+        "findings":[{"id":finding["id"],"observed":finding["observed"],
+            "requiredChange":"Fixture exact-change test only.","sourcePaths":["src/state.json"]}],
+        "checkChanges":[],"controlChanges":[],
+        "scenarioChanges":[{"id":"state","before":design["scenarios"][0],"after":after,"findingId":finding["id"]}]});
+    let feedback_bytes = serde_json::to_vec(&feedback).unwrap();
+    let revision_path = dir.join("revision-review");
+    let revision_prompt = quality_review::prompt_for_revision_review(
+        &targeted_bytes,
+        &design_bytes,
+        &quality_rubric,
+        &negative_path,
+        &negative_bytes,
+    )
+    .unwrap();
+    capture(
+        &revision_path,
+        "source-design-revision-review",
+        "agentlab.independent_source_design_revision_review_intent.v1",
+        &revision_prompt,
+        &digest(&serde_json::to_vec(&bridge).unwrap()),
+        &feedback_bytes,
+    );
+    let revised = quality_review::verify_revision_review(
+        &targeted_bytes,
+        &design_bytes,
+        &quality_rubric,
+        &negative_path,
+        &negative_bytes,
+        &revision_path,
+        &feedback_bytes,
+    )
+    .unwrap();
+    assert_eq!(revised["candidateDesign"]["scenarios"][0], after);
+    assert_eq!(revised["candidateDesign"]["checks"], design["checks"]);
+    assert_eq!(revised["candidateDesign"]["controls"], design["controls"]);
+    assert_eq!(revised["recordedCompletionVerified"], true);
+    assert_eq!(revised["successorMustBeReviewed"], true);
+    assert_eq!(revised["qualified"], false);
+    for mutate in 0..4 {
+        let mut invalid = feedback.clone();
+        match mutate {
+            0 => invalid["findings"][0]["observed"] = json!("replacement finding"),
+            1 => {
+                invalid["scenarioChanges"][0]["before"]["inputs"]["operation"] =
+                    json!("changed ancestor")
+            }
+            2 => invalid["findings"][0]["sourcePaths"] = json!(["other/state.json"]),
+            _ => invalid["findings"] = json!([]),
+        }
+        assert!(quality_review::verify_revision_review(
+            &targeted_bytes,
+            &design_bytes,
+            &quality_rubric,
+            &negative_path,
+            &negative_bytes,
+            &revision_path,
+            &serde_json::to_vec(&invalid).unwrap()
+        )
+        .is_err());
+    }
+    fs::remove_file(revision_path.join("source-design-revision-review-lifecycle.json")).unwrap();
+    assert!(quality_review::verify_revision_review(
+        &targeted_bytes,
+        &design_bytes,
+        &quality_rubric,
+        &negative_path,
+        &negative_bytes,
+        &revision_path,
+        &feedback_bytes
+    )
+    .is_err());
+    assert!(quality_review::prepare_revision_review(
+        &targeted_bytes,
+        &design_bytes,
+        &quality_rubric,
+        &negative_path,
+        &serde_json::to_vec(&response).unwrap()
+    )
+    .is_err());
     let targeted_stage = dir.join("targeted-reproduction-stage");
     author::stage(&targeted_bytes, &proposal_bytes, &targeted_stage).unwrap();
     assert_eq!(

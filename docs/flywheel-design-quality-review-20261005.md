@@ -1,5 +1,44 @@
 # Pre-execution source design quality review
 
+## Negative review to exact-change review: native bridge
+
+The native bridge prepares a separate semantic stage from a complete captured
+`revise` or `unverified` early review. It rejects content-only opinions, incomplete
+or changed original captures and ready-for-execution parents. The packet retains
+the original quality packet, exact review text and completion receipt. Every
+negative criterion/scenario/check/control row receives a stable finding ID and
+its unchanged rationale. More than eight findings or a rationale beyond the
+existing 1024-byte v3 finding budget requires decomposition; nothing is truncated
+or silently omitted.
+
+CLI preparation uses `--prepare-source-design-revision-review` or
+`--source-design-revision-review-prompt`, with original `--author-request`,
+`--design`, `--quality-rubric`, `--parent-review-evidence` and
+`--parent-review-response`. Completion adds
+`--verify-source-design-revision-review-completion`, `--evidence` and
+`--review-response`. It reconstructs both stages, consumes the exact v3 feedback
+and derives the candidate through existing reviewed-design-target gates.
+
+Every finding must preserve its original ID/rationale. Exact check, scenario and
+control changes reference those findings and match ancestor before records.
+Owned source paths remain scoped; read-only context is not an editable finding
+path. There must be a real exact change, not an empty continuation. Baseline
+controls and control identities/roles stay protected by existing v3 admission.
+The canonical prompt treats source/review data as untrusted and supplies no
+operator replacement expectation. Distinct capture label/schema are
+`source-design-revision-review` /
+`agentlab.independent_source_design_revision_review_intent.v1`, with a 420-second
+watchdog, zero retries and no protocol-repair enrollment in this new stage.
+
+The resulting candidateDesign is unqualified and must undergo another independent
+quality review, complete runtime calibration, final review and knowledge return.
+Native fixtures and actual CLI integration cover negative-parent consumption,
+original retention, exact derivation, ancestor/source/finding drift and missing
+revision lifecycle. Captures are synthetic, not real reviewer or semantic evidence.
+Automatic transport/coordinator enrollment and real semantic convergence are
+still unfinished; never use this native facade to imply a new live budget was
+enrolled. Engineering maturity remains 80%, complete automatic rounds 0.
+
 ## Prospective bounded protocol correction
 
 Real run [37251933008](https://github.com/yxsicd/agentlabrelease/actions/runs/37251933008)

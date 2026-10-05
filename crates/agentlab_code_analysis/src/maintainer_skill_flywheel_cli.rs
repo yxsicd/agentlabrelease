@@ -1179,6 +1179,64 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     if args.iter().any(|a| {
+        a == "--prepare-source-design-revision-review"
+            || a == "--source-design-revision-review-prompt"
+            || a == "--verify-source-design-revision-review-completion"
+    }) {
+        use agentlab_code_analysis::maintainer_source_design_quality as quality;
+        let request = fs::read(value(&args, "--author-request")?)?;
+        let design = fs::read(value(&args, "--design")?)?;
+        let rubric = fs::read(value(&args, "--quality-rubric")?)?;
+        let parent_evidence = PathBuf::from(value(&args, "--parent-review-evidence")?);
+        let parent_response = fs::read(value(&args, "--parent-review-response")?)?;
+        let bytes = if args
+            .iter()
+            .any(|a| a == "--source-design-revision-review-prompt")
+        {
+            quality::prompt_for_revision_review(
+                &request,
+                &design,
+                &rubric,
+                &parent_evidence,
+                &parent_response,
+            )?
+        } else {
+            let report = if args
+                .iter()
+                .any(|a| a == "--verify-source-design-revision-review-completion")
+            {
+                quality::verify_revision_review(
+                    &request,
+                    &design,
+                    &rubric,
+                    &parent_evidence,
+                    &parent_response,
+                    &PathBuf::from(value(&args, "--evidence")?),
+                    &fs::read(value(&args, "--review-response")?)?,
+                )?
+            } else {
+                quality::prepare_revision_review(
+                    &request,
+                    &design,
+                    &rubric,
+                    &parent_evidence,
+                    &parent_response,
+                )?
+            };
+            serde_json::to_vec_pretty(&report)?
+        };
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?
+            .write_all(&bytes)?;
+        println!(
+            "{}",
+            serde_json::json!({"qualified":false,"executionPermissionGranted":false,"successorMustBeReviewed":true})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|a| {
         a == "--prepare-source-design-quality-review"
             || a == "--validate-source-design-quality-review"
             || a == "--source-design-quality-review-prompt"
