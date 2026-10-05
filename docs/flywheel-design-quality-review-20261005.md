@@ -1,5 +1,60 @@
 # Pre-execution source design quality review
 
+## Real zero-tool review and revision-capacity checkpoint
+
+Fresh hwlinux experiment 7 used clean method commit
+`0b50efd96d33c3ab114dbb31de31af0282fef78d` and tree
+`074979cfe7730abc39853421542ee06ca1ceb6de`. Operation
+`exec-0000000000000384` is terminal, exit 1. All four real model exchanges
+completed with HTTP 200 and semantic EOF: two design attempts, one initial
+review and its prospectively enrolled protocol correction. The second design
+passed native admission. No historical root or exhausted allowance was reopened.
+
+Both reviewer captures contain exactly one exchange, an empty wire tool surface,
+`--no-tools`, and lifecycle maxToolCalls/startedToolCalls/completedToolCalls = 0.
+The initial review cited a quotation through the wrong source path and was
+rejected. Its unchanged response SHA256 is
+`f592a888acbd4b7ce106de94e9bc6f7ec8dea1444503263895fa1a7bdf5c7b89`.
+The one protocol correction passed original-capture admission with decision
+`revise`; response SHA256 is
+`37aebda24def7842800287cfe61e29bf7767f81bab096c8214f0d3db823ad524`.
+Decoded native rejection and original response text match the captured repair
+feedback exactly; a raw substring probe was false because that feedback is
+JSON-escaped. The original outcome projection is retained with a separate
+binding supplement, not rewritten. Independent isolation validation operation
+`exec-0000000000000393` passed for all four real containers.
+
+The accepted negative review contains 16 original rows: three criteria,
+twelve checks and one control. Revision preparation refused it before model
+dispatch: `design revision original negative findings budget; require
+decomposition, not omission`. The current exact-change bridge supports at most
+eight findings. It has no automatic lossless decomposition/assembly path yet.
+Keep aggregate and detail rows separately, with original identities and
+rationales; do not drop repeated-looking opinions or relabel the failed root.
+
+Capture admission does not establish reviewer correctness. This accepted
+review still calls an implements-only import a runtime dependency, whereas the
+original pinned, error-free compiler evidence for that file lists only its two
+emitted value imports. It also marks private-field observations unverified
+because they have not run yet. These are review opinions to reconcile against
+the original compiler/interface and pre-execution rubric, not proven defects
+or permission to bypass review. Other genuine source/control findings must not
+be discarded along with a disputed interpretation.
+
+Next capability: provenance-bound decomposition of an oversized review, with
+complete original-row coverage, exact ancestor records, conflict checks and
+whole-successor independent review. Freeze any new stage allowances before a
+fresh run; decomposition must neither reset a spent budget nor count as semantic
+approval. Also distinguish adequacy for later calibration from completed
+runtime proof when assessing reviewer conclusions.
+
+No semantic revision inference, verifier generation, source/control execution,
+final review, authority return or next-round consumption occurred. Engineering
+maturity remains 81% (+0); accepted complete automatic cycles remain zero.
+The runtime fix now has real capture evidence, but neither stable semantic
+convergence nor cross-repository transfer is established. Earlier sections
+below are retained historical checkpoints, not current validation claims.
+
 ## Reference revision response under validation
 
 Real run [37256733699](https://github.com/yxsicd/agentlabrelease/actions/runs/37256733699)

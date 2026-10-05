@@ -182,6 +182,11 @@ despite zero transport retries; the single isolated-exchange gate correctly refu
 it. Use the pinned adapter's zero-tool mode and check captured command, lifecycle
 and actual wire tool surface. Keep tool-enabled development roles unchanged; never
 discard an exchange or reopen a spent review to manufacture independent completion.
+For an admitted oversized negative review, preserve every aggregate/detail row
+and its rationale; the current eight-finding revision bridge has no automatic
+lossless decomposition path. Read the [real zero-tool/capacity checkpoint](../../docs/flywheel-design-quality-review-20261005.md)
+before planning a successor. Original-capture admission verifies retained delivery,
+not a reviewer's interpretation of compiler output or pre-execution requirements.
 
 Separate pre-execution design adequacy from post-execution proof. An early pass
 means source-grounded setup and predictions are adequate to attempt calibration,
