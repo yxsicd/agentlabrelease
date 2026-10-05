@@ -133,6 +133,15 @@ Before a semantic revision model call, compare model/route/reasoning identity
 with the original captured review and run native dispatch admission. Recheck
 identity at completion. Consume Rust-emitted candidate bytes without host JSON
 reserialization; equivalent values need not have identical bytes or digests.
+Keep immutable finding provenance separate from model-owned change judgments.
+A retained real revision omitted an aggregate criterion finding and shortened
+three original rationales. Overlapping criterion/control findings are distinct
+bound rows, not permission to deduplicate. The reference-response lane under
+validation requires every original ID exactly once; Rust restores observed text
+and ordinary v3 admission checks changes, owned paths and protected ancestors.
+Keep original reference response and reconstructed v3 feedback as separate
+digest-bound artifacts. Reconstruction is not reviewer approval or a repair of
+historical output; legacy captures must retain their original protocol.
 Retain both responses and let ordinary completion/content gates derive the
 corrected decision; a correction may still be negative. Read
 [the early-review contract](../../docs/flywheel-design-quality-review-20261005.md)

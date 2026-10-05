@@ -31,6 +31,8 @@ def gate(args, flag, output, *extra):
     if getattr(args, 'parent_review_evidence', None) is not None:
         command.extend(['--parent-review-evidence', str(args.parent_review_evidence.resolve()),
                         '--parent-review-response', str(args.parent_review_response.resolve())])
+        if getattr(args, 'reference_revision_response', False):
+            command.append('--reference-revision-response')
     result = subprocess.run(command, capture_output=True, timeout=90)
     with output.with_suffix(output.suffix + '.stdout.log').open('xb') as stream:
         stream.write(result.stdout)
@@ -195,6 +197,11 @@ def run_attempt(args, participant_class=None):
                  '--review-response', str(output / 'response.json'), '--evidence', str(evidence))
             if hashlib.sha256((output / 'candidate-design.json').read_bytes()).hexdigest() != validated['candidateDesignSha256']:
                 raise ValueError('Native derived design differs from captured revision review')
+            if getattr(args, 'reference_revision_response', False):
+                gate(args, '--derive-source-design-revision-feedback', output/'reviewed-feedback.json',
+                     '--review-response', str(output/'response.json'), '--evidence', str(evidence))
+                if hashlib.sha256((output/'reviewed-feedback.json').read_bytes()).hexdigest() != validated['revisionFeedbackSha256']:
+                    raise ValueError('Native feedback differs from captured reference response')
             terminal.update(decision='revision-candidate', successorMustBeReviewed=True,
                             candidateDesignSha256=validated['candidateDesignSha256'])
         else:
@@ -214,6 +221,8 @@ def run(args, participant_class=None):
     limit = getattr(args, 'review_repair_limit', 0)
     design_review = getattr(args, 'author_request', None) is not None
     revision_review = getattr(args, 'parent_review_evidence', None) is not None
+    if getattr(args, 'reference_revision_response', False) and not revision_review:
+        raise ValueError('Reference revision response requires original negative review capture')
     if revision_review and getattr(args, 'semantic_policy', None) is None:
         raise ValueError('Semantic review requires prospective policy before dispatch')
     if bool(getattr(args, 'parent_review_evidence', None)) != bool(getattr(args, 'parent_review_response', None)):
@@ -298,6 +307,7 @@ def main():
     parser.add_argument('--semantic-policy', type=Path,
                         help='Original prospectively captured semantic policy; native admission reconsumes it')
     parser.add_argument('--quality-round-index', type=int, choices=[0, 1], default=0)
+    parser.add_argument('--reference-revision-response', action='store_true')
     parser.add_argument('--source-git-checkout', type=Path)
     parser.add_argument('--review-repair-limit', type=int, choices=[0, 1], default=0)
     parser.add_argument('--reasoning-effort', choices=['default', 'none', 'low', 'medium', 'high', 'max'], default='default')
