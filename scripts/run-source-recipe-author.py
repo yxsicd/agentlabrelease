@@ -732,6 +732,16 @@ for example {"fields":{"count":0}}. Keep file/class/setup descriptors in inputs
 instead. Select fields from the actual source; do not invent values or overwrite
 constructor state to make it match. Non-field state may use another source-derived
 JSON subtree and an explicit observation adapter. Disclose unobservable state.
+The frozen host verifier provides observeFields(actualInstance, fieldNames) for
+explicit own data fields before/after operations or caught exceptions, without
+getters, inheritance fallback or expected-state input. Values remain raw; nested
+references are not deep snapshots and absent/non-JSON values need an explicit
+reviewed representation. A TypeScript private modifier or absence from returned
+text alone does not prove runtime invisibility; native inaccessible private slots
+remain inaccessible. When the demand requires earlier writes and later skipped
+writes, declare inputs on both sides of the exception and score the resulting
+state effects. Do not replace those observations with throw/no-return checks or
+limitation prose. API availability is not proof of source state or coverage.
 Put executable actions, their ordered arguments and other caller inputs in inputs,
 not only in prose or expectedObservations. Seams model external dependencies,
 not the tested method. A method's return is observed from actual source execution.

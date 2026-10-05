@@ -156,6 +156,17 @@ copying frozen expectations into the instance. Preserve the failed baseline and
 rerun it before interpreting negative controls. The diagnostic traversal does not
 add another observation of source getters; assertInitialFields rejects accessors
 without invoking them.
+For operation/exception effects, use observeFields(actualInstance, fieldNames)
+to read explicitly selected own data fields before or after the operation. It
+rejects missing fields and accessors, accepts no expected-state input and returns
+raw values; nested references are not deep snapshots and non-JSON observations
+need an explicit reviewed representation. Native inaccessible private slots stay
+inaccessible; a TypeScript private modifier alone does not prove invisibility in
+the pinned host output. Early reviews receive the same digest-bound verifier
+interface used by generation. Require actual ordered inputs and scored state
+checks for demanded earlier writes and later skipped writes; a throw/no-return
+check or limitation prose cannot substitute. Interface availability proves
+neither that source was executed nor that the generated verifier uses it.
 
 Use the constructor's `--design-first --design-only` mode when a new behavior
 surface needs independent semantic review before verifier generation. The retained

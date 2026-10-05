@@ -1150,12 +1150,30 @@ assert.equal(observed.count,0);assert.equal(observed.called,false);
 assert.equal(Object.getPrototypeOf(observed),null);
 assert.equal(good.called,false);
 assert.equal(Object.hasOwn(good,'extra'),false);
+const pre=baseline.observeFields(good,['count','called']);
+assert.equal(pre.count,0);assert.equal(pre.called,false);assert.equal(Object.getPrototypeOf(pre),null);
+assert.throws(()=>baseline.observeFields(good,[]),/unique bounded/);
+assert.throws(()=>baseline.observeFields(good,['count','count']),/unique bounded/);
+assert.throws(()=>baseline.observeFields(good,['missing']),/own data property/);
+assert.throws(()=>baseline.observeFields(null,['count']),/actual source instance/);
 const inherited=Object.create({count:0,called:false});
 assert.throws(()=>baseline.assertInitialFields('state',inherited),/own data property/);
 let getterCalls=0;
 const accessor={called:false};Object.defineProperty(accessor,'count',{get(){getterCalls++;return 0}});
 assert.throws(()=>baseline.assertInitialFields('state',accessor),/own data property/);
 assert.equal(getterCalls,0);
+assert.throws(()=>baseline.observeFields(accessor,['count']),/own data property/);
+assert.equal(getterCalls,0);
+assert.throws(()=>baseline.observeFields(inherited,['count']),/own data property/);
+const undefinedObservation=baseline.observeFields({count:undefined},['count']);
+assert.equal(Object.hasOwn(undefinedObservation,'count'),true);assert.equal(undefinedObservation.count,undefined);
+const nestedField={value:{count:1}};
+assert.equal(baseline.observeFields(nestedField,['value']).value,nestedField.value);
+const effects={before:0,after:0,run(){this.before=7;JSON.parse('{invalid');this.after=9}};
+assert.throws(()=>effects.run(),SyntaxError);
+assert.deepEqual({...baseline.observeFields(effects,['before','after'])},{before:7,after:0});
+const unsafeKey=Object.create(null);Object.defineProperty(unsafeKey,'__proto__',{value:3});
+assert.equal(baseline.observeFields(unsafeKey,['__proto__']).__proto__,3);
 assert.throws(()=>baseline.assertInitialFields('state',{}),/own data property/);
 assert.throws(()=>baseline.assertInitialFields('state',null),/actual source instance/);
 assert.throws(()=>baseline.assertInitialFields('state',[]),/actual source instance/);
@@ -1205,6 +1223,7 @@ assert.equal(nestedDifference.initialStatePointer,'/a~1b/~0fields/value/items/1'
 assert.equal(nestedDifference.actualType,'number');assert.equal(nestedDifference.expectedType,'number');
 baseline.assertInitialState('state',{called:good.called,count:good.count},'/fields');
 assert.equal(good.run(),0);
+assert.equal(baseline.observeFields(good,['called']).called,true);assert.equal(pre.called,false);
 baseline.assertInitialState('state',0,'/fields/count');
 baseline.assertInitialState('state',[null,{}],'/a~1b/~0key');
 baseline.assertInitialState('state',null,'/a~1b/~0key/0');
@@ -1985,6 +2004,8 @@ with tempfile.TemporaryDirectory() as d:
             assert seen['labels']==['source-recipe-design','source-recipe-author']
             assert 'complete-source-context-sentinel' in seen['prompts'][0]
             assert 'complete-source-context-sentinel' not in seen['prompts'][1]
+            assert 'observeFields(actualInstance, fieldNames)' in seen['prompts'][0]
+            assert 'declare inputs on both sides of the exception' in seen['prompts'][0]
             assert 'FROZEN DESIGN' in seen['prompts'][1]
             reuse=json.loads((root/str(index)/'evidence/source-context-reuse.json').read_bytes())
             assert reuse['retainedSessionId']=='fixture-retained-design-session'
@@ -3014,6 +3035,23 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
         std::str::from_utf8(&design_bytes).unwrap()
     );
     assert_eq!(quality["qualified"], false);
+    assert_eq!(
+        quality["verifierInterface"],
+        author::verifier_interface(&targeted_bytes, &design_bytes).unwrap()
+    );
+    assert_eq!(
+        quality["verifierInterface"]["requestSha256"],
+        digest(&targeted_bytes)
+    );
+    assert_eq!(
+        quality["verifierInterface"]["designSha256"],
+        digest(&design_bytes)
+    );
+    assert_eq!(
+        quality["verifierInterface"]["runtimeSourceSha256"],
+        digest(include_bytes!("../src/source_design_runtime.cjs"))
+    );
+    assert_eq!(quality["verifierInterface"]["executionPerformed"], false);
     assert!(
         agentlab_code_analysis::maintainer_source_design_quality::prepare(
             &request_bytes,
