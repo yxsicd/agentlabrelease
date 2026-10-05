@@ -88,6 +88,47 @@ fn citation_failure_summary(errors: Vec<String>) -> String {
     }
 }
 
+fn reject_item_packet_citation(
+    packet: &Value,
+    citation: &Value,
+    quote: &str,
+    location: &str,
+) -> Result<(), String> {
+    if citation.get("pointer").is_none() {
+        return Ok(());
+    }
+    let mut paths = BTreeSet::new();
+    for (files, content_key) in [
+        (packet["originalSourceFiles"].as_array(), "content"),
+        (
+            packet["readOnlySourceContext"]["packet"]["selectedFiles"].as_array(),
+            "contentUtf8",
+        ),
+    ] {
+        for file in files.into_iter().flatten() {
+            if file[content_key]
+                .as_str()
+                .is_some_and(|s| s.contains(quote))
+            {
+                if let Some(path) = file["path"].as_str() {
+                    paths.insert(path);
+                }
+            }
+        }
+    }
+    let mut report = json!({"schema":"agentlab.design_review_citation_kind_error.v1",
+        "responsePointer":location,"reason":"packet-pointer-in-source-evidence",
+        "requiredFields":["path","quote"],"allowedTargetDomain":"unchanged-loaded-source",
+        "quoteSha256":digest(quote.as_bytes()),"matchingQuotePathCount":paths.len(),
+        "matchingQuotePaths":paths.iter().filter(|p|p.len()<=512).take(8).collect::<Vec<_>>(),
+        "rule":"Item sourceEvidence cannot cite packet pointers or transformed control edit text. Choose an actual unchanged loaded source path and original quote; do not merely replace pointer with path. Zero original quote matches means this quote is not eligible source evidence. Reassess support and verdict against the unchanged packet; no inferred support, automatic replacement or extra repair allowance.",
+        "responseEdited":false,"qualified":false});
+    while report.to_string().len() > 4096 {
+        report["matchingQuotePaths"].as_array_mut().unwrap().pop();
+    }
+    Err(format!("design quality citation kind differs: {report}"))
+}
+
 fn validate_pointer_citation(
     packet: &Value,
     pointer: &str,
@@ -1475,6 +1516,9 @@ fn validate_content(packet: &Value, response_bytes: &[u8]) -> Result<Value, Stri
                         "design quality evidence fields",
                     )?;
                     let quote = citation_text(citation, "quote", &location)?;
+                    if key != "criterionReviews" {
+                        reject_item_packet_citation(packet, citation, quote, &location)?;
+                    }
                     if key == "criterionReviews" && citation.get("path").is_none() {
                         let pointer = citation_text(citation, "pointer", &location)?;
                         validate_pointer_citation(packet, pointer, quote, &location)?;
@@ -2393,6 +2437,63 @@ mod tests {
                 json!([{"path":"shared.ts","quote":"external = 2"}]);
             assert!(validate_content(&packet, &serde_json::to_vec(&response).unwrap()).is_ok());
         }
+    }
+
+    #[test]
+    fn item_packet_citations_explain_original_source_domain_without_rewriting() {
+        for repository in ["different-language", "unrelated-domain"] {
+            let (mut packet, mut response) = fixture(repository);
+            packet["design"]["controls"][0]["edits"] = json!([
+                {"after":"export const value = 9;"}]);
+            for (quote, count) in [("export const value = 9;", 0), ("value = 1", 1)] {
+                response["controlReviews"][0]["sourceEvidence"] = json!([
+                    {"pointer":"/design/controls/0/edits/0/after","quote":quote}]);
+                let original = response.clone();
+                let error =
+                    validate_content(&packet, &serde_json::to_vec(&response).unwrap()).unwrap_err();
+                let report: Value =
+                    serde_json::from_str(error.split_once(": ").unwrap().1).unwrap();
+                assert_eq!(report["reason"], "packet-pointer-in-source-evidence");
+                assert_eq!(
+                    report["responsePointer"],
+                    "/controlReviews/0/sourceEvidence/0"
+                );
+                assert_eq!(report["requiredFields"], json!(["path", "quote"]));
+                assert_eq!(report["matchingQuotePathCount"], count);
+                assert_eq!(report["responseEdited"], false);
+                assert_eq!(response, original);
+                assert!(report.get("replacement").is_none());
+            }
+            // Criterion packet citations stay legal; the item-only restriction is unchanged.
+            response["controlReviews"][0]["sourceEvidence"] =
+                json!([{"path":"src/unit.ts","quote":"value = 1"}]);
+            response["criterionReviews"][0]["evidence"] = json!([
+                {"pointer":"/design/controls/0/edits/0/after","quote":"value = 9"}]);
+            assert!(validate_content(&packet, &serde_json::to_vec(&response).unwrap()).is_ok());
+        }
+    }
+
+    #[test]
+    fn item_citation_navigation_remains_bounded_with_long_source_paths() {
+        let (mut packet, _) = fixture("bounded-navigation");
+        for index in 0..32 {
+            packet["originalSourceFiles"].as_array_mut().unwrap().push(
+                json!({"path":format!("{index}/{}", "x".repeat(500)),"content":"shared quote"}),
+            );
+        }
+        let error = reject_item_packet_citation(
+            &packet,
+            &json!({"pointer":"/design/controls/0/id"}),
+            "shared quote",
+            "/controlReviews/0/sourceEvidence/0",
+        )
+        .unwrap_err();
+        let raw = error.split_once(": ").unwrap().1;
+        assert!(raw.len() <= 4096);
+        let report: Value = serde_json::from_str(raw).unwrap();
+        assert_eq!(report["matchingQuotePathCount"], 32);
+        assert!(report["matchingQuotePaths"].as_array().unwrap().len() < 8);
+        assert_eq!(report["qualified"], false);
     }
 
     #[test]

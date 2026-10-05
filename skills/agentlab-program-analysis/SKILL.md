@@ -182,6 +182,14 @@ drop rows or preserve unsupported verdicts. Repeated shape rejection exhausts
 the original repair allowance rather than granting another protocol attempt.
 Real-response replay also exposed source-citation shape defects hidden behind the
 first packet citation; keep packet pointer evidence distinct from source path evidence.
+When an item sourceEvidence contains a packet pointer, diagnose the citation kind,
+not just a missing path. Report the required path/quote shape and bounded unchanged
+source locations containing the quote. A transformed control edit may have zero
+original-source matches: merely changing the field name cannot make it eligible.
+The reviewer must reassess support without operator replacement citations. Criterion
+packet citations remain a separate legal form; do not forbid them globally. A real
+sole repair fixed its packet pointer but retained two wrong-kind source citations;
+delivery and partial correction do not establish completed review or convergence.
 For pure source/design review, remove tool capabilities at participant dispatch,
 not only in prose. A real reviewer invoked bash and issued a second model exchange
 despite zero transport retries; the single isolated-exchange gate correctly refused

@@ -1,5 +1,64 @@
 # Pre-execution source design quality review
 
+## Experiment 13: complete delivery, incomplete citation repair
+
+Clean hwlinux build `exec-00000000000003eb`, exit 0, pinned method
+`65fbe4782ae08b179148d6f59d4b1e3047afed6b`, tree
+`7302cd33e82867915da1d863fcb722e568a815eb` and native SHA
+`e5f3bfb612a6c3a3d042fc4c91abea5910e152d490fe3fb34e83e59b2b5b3193`.
+It independently matches the previous compact-diagnostic experimental binary.
+Fresh plan SHA
+`e977765c941f61fc7d2f25b4d3124681daa90ff8400fdc0d5b60833e5bea3653`
+kept the task, knowledge cut, model and attempt budgets unchanged. Before inference,
+post-construction policy SHA
+`31c1b6205b63c67b4d924f6361a66fa4dc18fd60ae40e1ac95d7a075b30ee4aa`
+bound the baseline/control scripts, compiler and image. This prospective operator
+coordinator was to continue source calibration/export automatically after author
+success; it is not product-level complete-loop qualification or automatic promotion.
+
+Operation `exec-00000000000003f1` is terminal, exit 1. Two complete constructor
+calls produced admitted design SHA
+`57b32d20c183e05e74ecb487b3a6efa22c85495e5973f1aa75f712b9f04cdd2c`.
+Independent constructor isolation validation `exec-00000000000003f6` exited 0.
+Initial review SHA
+`c86c3ee6eeb035dbdde36865f7fa0c6307aa7c29aba0cc29b49f04e59fdd74a0`
+had three citation defects. Sole repair SHA
+`fa227b1d54e497a1594e05115342e7c8f11610a3c6ce60388da593c63838e6ba`
+fixed the missing packet pointer but retained two item sourceEvidence citations
+using packet pointers instead of original source path/quote pairs. Both responses
+remain refused; no semantic successor, code generation, calibration or authority
+write occurred. Row-shape navigation was not exercised, so its convergence benefit
+remains unproven.
+
+Independent verification `exec-00000000000003ff`, exit 0, proved both reviewers'
+isolation, single complete exchange, omitted wire tool field and zero permitted,
+started and completed tools. The captured repair packet retained the exact original
+response, digest and decoded native rejection, and its entire prompt was delivered
+unchanged. Earlier inspection probes incorrectly asserted an explicit empty tools
+field or searched for unescaped rejection text inside serialized JSON; those failed
+probes are preserved, not participant failures or additional inference attempts.
+
+The next native diagnostic distinguishes packet-pointer item citations from missing
+fields. It reports the permitted unchanged-source domain, quote digest and bounded
+original matching paths; transformed edit text with no original match cannot be
+repaired merely by renaming a field. Legal criterion packet citations remain legal.
+No citation, response, verdict or historical budget is rewritten. Mac Rust regression
+passed 56 tests with one external-compiler test ignored. Full automatic cycles remain
+**zero**, maturity **81% (+0)**; real repair convergence, calibrated final review,
+committed feedback consumption and cross-repository transfer remain required.
+
+hwlinux regression/build `exec-0000000000000400`, exit 0, also passed 56 Rust
+tests with one compiler test ignored. The modified-source experimental native SHA
+is `d50fc69bc1064439fb23d3d4e543b09956f29afe1302d362a387552f51034fc5`.
+Separate read-only replay `exec-0000000000000401`, exit 0, retained both response
+digests and refused each actual validation, with no accepted output. Both reports
+identify the two citation kinds: one quote has zero unchanged-source matches;
+the other has one matching path but still uses the forbidden item packet-pointer
+form. This is actionable navigation, not a chosen replacement or semantic support.
+Neither replay performs inference, admits a historical capture, consumes a new
+repair prompt or proves convergence. Skill structure, formatting, diff and existing
+release-manifest checks pass; those checks do not constitute a new formal Release.
+
 ## Experiments 11–12: configuration guard and actionable row-shape feedback
 
 Method `a9b6007185bfe05b5d3472f66aa13fcf17b473e6` was clean-built on
