@@ -174,6 +174,12 @@ defects serially. A real bounded reviewer consumed exact navigation but replaced
 an object citation with a null-valued field and an empty quote. Distinguish empty,
 non-string and oversized citation fields; never stringify values or raise retry
 allowances to conceal failed convergence. Native regression is not real repair proof.
+Apply the same actionable diagnostic boundary to review-row shape failures:
+retain the original response digest and report row pointers, missing/unexpected
+field names, total/reported counts and truncation. Scenario links remain the
+reviewer's judgment against the frozen design; navigation must not fill them,
+drop rows or preserve unsupported verdicts. Repeated shape rejection exhausts
+the original repair allowance rather than granting another protocol attempt.
 Real-response replay also exposed source-citation shape defects hidden behind the
 first packet citation; keep packet pointer evidence distinct from source path evidence.
 For pure source/design review, remove tool capabilities at participant dispatch,
@@ -278,7 +284,13 @@ prove those semantics. Preserve complete design failures and partial generation
 captures. A generation deadline is not permission to stage incomplete output or
 to treat isolation validation as behavioral qualification.
 For deadline diagnosis, compare captured header, first-reasoning, first-content
-and semantic-terminal timings. Process exit 0 and a final assistant message can
+and semantic-terminal timing separately from CLI configuration failures. Before
+allocating author output or enrolling review budgets, require the contained runtime,
+model, provider route, gateway URL/key and receipt root. Report missing variable
+names only; gateway authentication/model listing does not verify participant
+configuration or prove inference began. Preserve failed roots and launch a fresh
+fully declared run after correction; never add a model budget to the failed one.
+Process exit 0 and a final assistant message can
 coexist with an incomplete upstream stream; native completion remains required.
 Requested reasoning/thinking settings do not prove that no reasoning was emitted.
 If another authorized trial changes an existing deadline option, declare it

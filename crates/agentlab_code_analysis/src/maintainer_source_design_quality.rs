@@ -1329,6 +1329,77 @@ fn verify_packet_capture(
     Ok(report)
 }
 
+fn review_row_shapes(response: &Value, original: &[u8]) -> Result<(), String> {
+    let mut failures = Vec::new();
+    let mut count = 0;
+    for kind in [
+        "criterionReviews",
+        "scenarioReviews",
+        "checkReviews",
+        "controlReviews",
+    ] {
+        let fields = if kind == "criterionReviews" {
+            vec!["id", "verdict", "rationale", "evidence"]
+        } else {
+            vec![
+                "id",
+                "verdict",
+                "rationale",
+                "sourceEvidence",
+                "scenarioIds",
+            ]
+        };
+        for (index, row) in rows(response, kind)?.iter().enumerate() {
+            let missing: Vec<_> = fields
+                .iter()
+                .filter(|key| row.get(**key).is_none())
+                .collect();
+            let unexpected: Vec<_> = row
+                .as_object()
+                .into_iter()
+                .flat_map(|o| o.keys())
+                .filter(|key| !fields.contains(&key.as_str()))
+                .collect();
+            if row.is_object() && missing.is_empty() && unexpected.is_empty() {
+                continue;
+            }
+            count += 1;
+            if failures.len() < 32 {
+                let shown: Vec<_> = unexpected
+                    .iter()
+                    .take(8)
+                    .filter(|key| key.len() <= 64)
+                    .collect();
+                let mut failure = json!({"responsePointer":format!("/{kind}/{index}"),
+                    "missingFields":missing});
+                if !row.is_object() {
+                    failure["objectRequired"] = json!(true);
+                }
+                if !unexpected.is_empty() {
+                    failure["unexpectedFields"] = json!(shown);
+                    failure["unexpectedFieldCount"] = json!(unexpected.len());
+                    failure["fieldNamesTruncated"] = json!(shown.len() != unexpected.len());
+                }
+                failures.push(failure);
+            }
+        }
+    }
+    if count == 0 {
+        return Ok(());
+    }
+    loop {
+        let report = json!({"schema":"agentlab.design_review_row_shape_failures.v1",
+            "responseSha256":digest(original),"failureCount":count,
+            "reportedFailureCount":failures.len(),"truncated":failures.len()!=count,
+            "failures":failures,"responseEdited":false,"qualified":false,
+            "rule":"Return all original review rows with exact responseContract fields. Choose scenarioIds against the frozen design; do not infer links from this navigation, discard rows or preserve a verdict merely to pass shape. No additional repair allowance."});
+        if report.to_string().len() <= 4096 {
+            return Err(format!("design quality review row fields: {report}"));
+        }
+        failures.pop();
+    }
+}
+
 fn validate_content(packet: &Value, response_bytes: &[u8]) -> Result<Value, String> {
     need(
         response_bytes.len() <= 128 * 1024,
@@ -1341,6 +1412,7 @@ fn validate_content(packet: &Value, response_bytes: &[u8]) -> Result<Value, Stri
         "design quality response fields/schema",
     )?;
     text(&response, "reviewerId")?;
+    review_row_shapes(&response, response_bytes)?;
     let scenarios: BTreeSet<_> = rows(&packet["design"], "scenarios")?
         .iter()
         .map(|r| text(r, "id"))
@@ -1499,6 +1571,55 @@ fn validate_content(packet: &Value, response_bytes: &[u8]) -> Result<Value, Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn row_shape_feedback_reports_all_missing_links_without_filling_or_dropping_rows() {
+        for repository in ["unrelated-repository-a", "different-repository-b"] {
+            let (packet, mut response) = fixture(repository);
+            for kind in ["scenarioReviews", "checkReviews", "controlReviews"] {
+                for row in response[kind].as_array_mut().unwrap() {
+                    row.as_object_mut().unwrap().remove("scenarioIds");
+                }
+            }
+            let raw = serde_json::to_vec(&response).unwrap();
+            let error = validate_content(&packet, &raw).unwrap_err();
+            let report: Value = serde_json::from_str(error.split_once(": ").unwrap().1).unwrap();
+            assert_eq!(report["responseSha256"], digest(&raw));
+            assert_eq!(report["failureCount"], 4);
+            assert_eq!(report["reportedFailureCount"], 4);
+            assert_eq!(report["truncated"], false);
+            assert_eq!(report["responseEdited"], false);
+            assert_eq!(report["qualified"], false);
+            for row in report["failures"].as_array().unwrap() {
+                assert_eq!(row["missingFields"], json!(["scenarioIds"]));
+                assert!(row.get("unexpectedFields").is_none());
+            }
+            assert_eq!(serde_json::to_vec(&response).unwrap(), raw);
+            let mut repeated = response.clone();
+            repeated["checkReviews"] = json!((0..19)
+                .map(|_| response["checkReviews"][0].clone())
+                .collect::<Vec<_>>());
+            let error =
+                review_row_shapes(&repeated, &serde_json::to_vec(&repeated).unwrap()).unwrap_err();
+            let complete: Value = serde_json::from_str(error.split_once(": ").unwrap().1).unwrap();
+            assert_eq!(complete["failureCount"], 22);
+            assert_eq!(complete["reportedFailureCount"], 22);
+            assert_eq!(complete["truncated"], false);
+            // Same cardinality but wrong names cannot bypass exact field shape.
+            response["scenarioReviews"][0]["inventedLinks"] = json!([]);
+            assert!(validate_content(&packet, &serde_json::to_vec(&response).unwrap()).is_err());
+            response["checkReviews"] = json!((0..80)
+                .map(|_| json!({"x".repeat(1000):true}))
+                .collect::<Vec<_>>());
+            let error =
+                validate_content(&packet, &serde_json::to_vec(&response).unwrap()).unwrap_err();
+            let report: Value = serde_json::from_str(error.split_once(": ").unwrap().1).unwrap();
+            assert!(report.to_string().len() <= 4096);
+            assert_eq!(report["failureCount"], 83);
+            assert_eq!(report["truncated"], true);
+            assert!(report["reportedFailureCount"].as_u64().unwrap() > 0);
+        }
+    }
+
     #[test]
     fn design_phase_boundary_does_not_override_negative_opinion_or_grant_execution() {
         for repository in ["independent-loading", "unrelated-initialization"] {

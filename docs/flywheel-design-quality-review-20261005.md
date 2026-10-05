@@ -1,5 +1,75 @@
 # Pre-execution source design quality review
 
+## Experiments 11–12: configuration guard and actionable row-shape feedback
+
+Method `a9b6007185bfe05b5d3472f66aa13fcf17b473e6` was clean-built on
+hwlinux with native SHA
+`713f3c643f9ae65fa9fdeb88f85a4fbd57397bcac4465066dc5e3f5ebfa8620a`.
+Experiment 11 plan SHA
+`b08f5a4be0e57bdfdd260ac0a7a8f221c77d2912ae4614d49d04165128179147`
+is closed: operation `exec-00000000000003d1` exited 1 before participant dispatch.
+The operator supplied incorrect model/route environment variable names; gateway
+authentication/model listing passed but `AGENTLAB_MODEL` was absent during review
+enrollment. Inspection independently confirmed no participant capture files.
+Preserve this operator configuration failure, not as model or semantic failure.
+
+Fresh experiment 12 verified required environment names and model/route identity
+before dispatch. Plan SHA
+`e0a9a94ac637397ad4bd2b3d8b3fcf34e331beddf767bcedf2a3b2053a6d5b1d`
+retains the same source task, knowledge, model, deadlines and attempt allowances.
+Isolation summary binds the actual launcher checkout revision, not the old static
+probe stamp. Operation `exec-00000000000003d6` is terminal, exit 1.
+Its first constructor response completed in 188,263 ms and admitted design SHA
+`b717145e444d7c2ce089d3b64d603d4b331bb8113812cd80ab6cbe6714ca95a9`:
+six scenarios, eleven checks and five controls, with no constructor correction.
+Inventory counts describe the draft, not semantic or runtime coverage.
+
+Original early review SHA
+`6bafa9d540dd5b45bd271dbe68b088a5a35588818b39a28258a565978d39d226`
+and its sole protocol repair SHA
+`80a09e28a4227eaef5b1b63b7bf5de86d76770231d761a1452c8b31facbc66f9`
+were both refused with `design quality review row fields`. There is no admitted
+early opinion, semantic revision, generated code, source execution or authority
+write. Independent runtime validation `exec-00000000000003e5`, exit 0, verified
+all three participant calls and both reviewers' one-exchange, empty-tool wire
+with zero permitted, started and completed tool calls. Isolation/delivery success
+does not erase protocol failure or establish the phase-aligned rubric's benefit.
+
+The next method checks all required participant environment names before reading
+inputs, allocating author output or enrolling review. It reports only missing
+names; no secret values. Rust actually invokes the CLI with each variable absent/
+blank and a secret canary, proving no output allocation, no input read and no
+credential value in diagnostics. Valid names reach ordinary input checks; this
+test is not live gateway authentication or model dispatch.
+
+Native row-shape diagnostics now identify missing/unexpected field names at exact
+response-row pointers, retain the original response digest, and bound navigation
+to 32 rows and 4096 serialized bytes with total/reported counts and truncation.
+Unknown oversized field names are visibly omitted rather than copied unboundedly.
+Scenario links remain reviewer-owned decisions against the frozen design; the
+operator neither fills them nor changes historical responses or repair budgets.
+Final regression `exec-00000000000003e9`, exit 0, passed 54 Rust tests with one external
+compiler test ignored, plus formatting and diff checks. Tests retain negative
+opinions and exercise absent links, equal-cardinality wrong fields and bounded
+oversized diagnostics for unrelated identities, including all 22 missing links
+without truncation. The intervening formatting check in `exec-00000000000003e7`
+failed after a remote patch; formatting was corrected before the final rerun.
+This was a modified test checkout,
+not a clean released binary or real repair convergence. Overall maturity remains
+**81% (+0)** and complete automatic cycles **zero**.
+
+Read-only native replay `exec-00000000000003e6` retained both original response
+digests and refused both, identifying 22 missing `scenarioIds` per response.
+Its verbose diagnostic showed 21 within the 4096-byte ceiling. After removing
+redundant empty/default diagnostic fields, separate replay
+`exec-00000000000003ea`, exit 0, reports all 22 on both responses with no
+truncation; each actual validation still exits 1 and produces no accepted output.
+The compact replay gate SHA is
+`e5f3bfb612a6c3a3d042fc4c91abea5910e152d490fe3fb34e83e59b2b5b3193`.
+This is a modified-source experimental binary, not a clean published build.
+Neither replay dispatches a model, rewrites a response, reopens repair allowance,
+admits a historical capture or proves the Agent consumed the new navigation.
+
 ## Experiment 10: admitted correction, phase mismatch and oversized revision
 
 Clean hwlinux method `f7f717867f27a9726d34f833786384b01b47e049`

@@ -612,6 +612,14 @@ def main():
         p.error('Design review requires --design-first and cannot mix proposal revision')
     if not os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'):
         raise ValueError('Recipe construction requires the contained participant runtime')
+    required_environment = ('AGENTLAB_MODEL', 'AGENTLAB_PROVIDER_ROUTE',
+        'AGENTLAB_LM_GATEWAY_URL', 'AGENTLAB_LM_GATEWAY_KEY',
+        'AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT')
+    missing_environment = [name for name in required_environment
+                           if not os.environ.get(name, '').strip()]
+    if missing_environment:
+        # Report names only, before request reads, root allocation or dispatch.
+        raise ValueError('Missing required participant environment: ' + ', '.join(missing_environment))
     request_bytes = args.request.read_bytes()
     request = json.loads(request_bytes)
     if request.get('schema') != 'agentlab.source_recipe_author_request.v1':

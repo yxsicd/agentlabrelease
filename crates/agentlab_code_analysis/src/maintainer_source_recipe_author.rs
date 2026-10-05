@@ -1807,6 +1807,63 @@ mod interface_inventory_tests {
             }
         }
     }
+    #[test]
+    fn author_cli_environment_fails_before_reads_allocation_or_dispatch_without_secret_values() {
+        let script =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/run-source-recipe-author.py");
+        let root = std::env::temp_dir().join(format!(
+            "author-env-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        // The input and all outputs intentionally do not exist. The guard must
+        // run before reading any of them; no model, Docker or filesystem writes.
+        let vars = [
+            ("AGENTLAB_MODEL", "fixture-model"),
+            ("AGENTLAB_PROVIDER_ROUTE", "fixture-route"),
+            ("AGENTLAB_LM_GATEWAY_URL", "http://127.0.0.1:1"),
+            (
+                "AGENTLAB_LM_GATEWAY_KEY",
+                "secret-canary-not-a-real-credential",
+            ),
+            (
+                "AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT",
+                "unused-receipts",
+            ),
+        ];
+        for missing in 0..=vars.len() {
+            let mut command = std::process::Command::new("python3");
+            command
+                .arg(&script)
+                .arg("--request")
+                .arg(root.join("absent-request.json"))
+                .arg("--output")
+                .arg(root.join("output"))
+                .args(["--gate", "unused-gate", "--pi", "unused-pi"])
+                .env("AGENTLAB_PARTICIPANT_RUNTIME_CONFIG", "unused-runtime");
+            for (index, (name, value)) in vars.iter().enumerate() {
+                command.env(name, if index == missing { " " } else { value });
+            }
+            let output = command.output().unwrap();
+            let stderr = String::from_utf8(output.stderr).unwrap();
+            assert_eq!(output.status.code(), Some(1));
+            assert!(output.stdout.is_empty());
+            assert!(!stderr.contains(vars[3].1));
+            assert!(!root.exists());
+            if missing < vars.len() {
+                assert!(stderr.contains("Missing required participant environment:"));
+                assert!(stderr.contains(vars[missing].0));
+                assert!(!stderr.contains("FileNotFoundError"));
+            } else {
+                assert!(stderr.contains("FileNotFoundError"));
+                assert!(!stderr.contains("Missing required participant environment:"));
+            }
+        }
+    }
+
     fn batch_fixture(scope: &str) -> (Vec<u8>, Vec<u8>, Value) {
         let path = "src/subject.ts";
         let request = json!({"schema":"agentlab.source_recipe_author_request.v1",
