@@ -1,5 +1,66 @@
 # Pre-execution source design quality review
 
+## Lossless decomposition primitives under validation
+
+The new read-only CLI `--prepare-source-design-revision-decomposition` consumes
+the original author request, design, rubric, parent review evidence and response
+through the existing full-capture gate. It retains every negative aggregate and
+detail row, its stable ID and exact rationale, then partitions the original order
+into at most eight groups of at most eight findings. It emits schema
+`agentlab.source_design_revision_decomposition_request.v1`, not a legacy packet
+with a raised limit. Ordinary v3/reference-v1 preparation still refuses more
+than eight findings. A plan grants no participant dispatch or new allowance.
+
+The prospective reference-v2 content contract retains the eleven root fields;
+the model supplies id/requiredChange/sourcePaths for every finding exactly once.
+Rust restores original rationales and assigns changes to groups by findingId.
+The separately reconstructed portable feedback is
+`agentlab.source_recipe_design_review_batch.v1`: eight root fields comprising
+schema, parentRequestSha256, parentDesignSha256, reviewed, verdict,
+automaticPromotion, reviewer and groups. Each group has only findings,
+checkChanges, scenarioChanges and controlChanges. Request/design, response,
+reconstructed feedback and design budgets remain 512/64/16/16/64 KiB respectively.
+This does not extend the existing model count, output-token or watchdog budgets.
+
+All exact before records refer to the same original design. Group-local finding
+links and owned paths are checked before assembly; repeated finding IDs or
+changed record IDs across groups are rejected, including identical replacements.
+Do not sequentially rebase a later group onto an earlier unreviewed result.
+Coupled scenario/check updates may reside in different groups, so full design
+consistency is checked on the atomic assembled successor, not partial states.
+No partially valid group can be published. Original order, untouched metadata,
+protected baseline controls, identities/roles and exact owned-source edit rules
+remain enforced. Portable stage/readback rederive the whole batch successor.
+
+hwlinux operation `exec-000000000000039b` passed 15 design-quality and 11 author
+unit tests, including lossless 17-row reconstruction, missing/duplicate/unknown
+IDs, foreign paths, ancestor drift, cross-group links/conflicts and coupled
+updates. These fixtures are not real multi-repository or model convergence proof.
+The subsequent full library regression `exec-000000000000039d` passed 49 tests
+with one explicitly ignored real-compiler test; formatting and diff checks passed.
+Operation `exec-000000000000039c` reconsumed experiment 7's unchanged real
+original capture: ordinary preparation exited 1, decomposition planning exited
+0, and all 16 original rows appeared in order in groups 8+8. Original review SHA
+is `37aebda24def7842800287cfe61e29bf7767f81bab096c8214f0d3db823ad524`;
+plan SHA is `ea80081d3d11549e017017bd9c6354f77d9894b1cd69f819585dd1eb0ea3eb73`.
+After adding pre-parse oversized-input refusal, final operation
+`exec-000000000000039e` again passed 49 library tests (one ignored), formatting,
+optimized build and both original-capture replay lanes. The decomposition plan
+SHA remained unchanged. The final tested native gate SHA is
+`954dbe9398cd95bffab41ecb4033c2cd31ef209159bf902382ab59c490a6844d`.
+That build used a modified source tree based on `63959a7`; it was not yet a
+clean committed release build. The replay performed no new model inference,
+historical-run reopening or authority write.
+
+Still required before a fresh automatic trial: prospectively versioned semantic
+policy, decomposition-specific canonical prompt and independent original-wire
+completion admission, then transport/coordinator routing and native staged
+lineage regression. Content-only derivation reports recordedCompletionVerified
+and dispatchQualified false; never substitute it for participant completion.
+The final whole-successor quality review, runtime calibration, final suite review
+and authority return remain mandatory. Engineering maturity stays 81% (+0),
+accepted complete automatic cycles zero.
+
 ## Real zero-tool review and revision-capacity checkpoint
 
 Fresh hwlinux experiment 7 used clean method commit

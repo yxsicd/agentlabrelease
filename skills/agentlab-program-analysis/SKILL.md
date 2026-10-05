@@ -183,8 +183,12 @@ it. Use the pinned adapter's zero-tool mode and check captured command, lifecycl
 and actual wire tool surface. Keep tool-enabled development roles unchanged; never
 discard an exchange or reopen a spent review to manufacture independent completion.
 For an admitted oversized negative review, preserve every aggregate/detail row
-and its rationale; the current eight-finding revision bridge has no automatic
-lossless decomposition path. Read the [real zero-tool/capacity checkpoint](../../docs/flywheel-design-quality-review-20261005.md)
+and its rationale. Use native read-only decomposition planning to retain complete
+ID coverage; all grouped exact before records bind the same original ancestor.
+Reject cross-group record conflicts and validate coupled changes atomically,
+not through sequential unreviewed rebases. Planning/content validation grants no
+dispatch; versioned policy and original-wire completion integration remain pending.
+Read the [decomposition and real-capture checkpoint](../../docs/flywheel-design-quality-review-20261005.md)
 before planning a successor. Original-capture admission verifies retained delivery,
 not a reviewer's interpretation of compiler output or pre-execution requirements.
 

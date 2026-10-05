@@ -478,6 +478,15 @@ fn revision_review_packet(
     response: &[u8],
     completion: Value,
 ) -> Result<Value, String> {
+    revision_review_packet_with_limit(packet, response, completion, 8)
+}
+
+fn revision_review_packet_with_limit(
+    packet: Value,
+    response: &[u8],
+    completion: Value,
+    maximum_findings: usize,
+) -> Result<Value, String> {
     need(
         completion["recordedCompletionVerified"] == true
             && matches!(
@@ -512,7 +521,7 @@ fn revision_review_packet(
         }
     }
     need(
-        !findings.is_empty() && findings.len() <= 8,
+        !findings.is_empty() && findings.len() <= maximum_findings,
         "design revision original negative findings budget; require decomposition, not omission",
     )?;
     let result = json!({"schema":"agentlab.source_design_revision_review_request.v1",
@@ -542,6 +551,178 @@ fn revision_review_packet(
         "design revision review packet budget; no truncation",
     )?;
     Ok(result)
+}
+
+fn decomposition_packet(mut packet: Value) -> Result<Value, String> {
+    let findings = rows(&packet, "eligibleFindings")?;
+    let groups: Vec<Value> = findings
+        .chunks(8)
+        .enumerate()
+        .map(|(index, group)| {
+            json!({
+                "index":index,"findingIds":group.iter().map(|f|f["id"].clone()).collect::<Vec<_>>()
+            })
+        })
+        .collect();
+    need(
+        !groups.is_empty() && groups.len() <= 8,
+        "revision decomposition group budget",
+    )?;
+    packet["schema"] = json!("agentlab.source_design_revision_decomposition_request.v1");
+    packet["findingGroups"] = json!(groups);
+    packet["responseContract"]["schema"] =
+        json!("agentlab.source_design_revision_reference_response.v2");
+    packet["responseContract"]["findingFields"] = json!(["id", "requiredChange", "sourcePaths"]);
+    packet["responseContract"]["requiredFindingIds"] = json!(rows(&packet, "eligibleFindings")?
+        .iter()
+        .map(|f| f["id"].clone())
+        .collect::<Vec<_>>());
+    packet["decompositionContract"] = json!({"maximumGroups":8,"maximumFindingsPerGroup":8,
+        "responseByteLimit":16384,"reconstructedFeedbackByteLimit":16384,
+        "ancestorPolicy":"all exact before records bind the same original design",
+        "conflictPolicy":"reject repeated change record IDs across groups, even identical changes",
+        "atomicSuccessor":true,"additionalModelAttemptsGranted":0,
+        "rule":"Preserve every original finding and rationale. Groups are capacity partitions, not independent opinions; merge all exact changes atomically and require a whole-successor independent quality review."});
+    need(
+        serde_json::to_vec(&packet)
+            .map_err(|e| e.to_string())?
+            .len()
+            <= 2 * 1024 * 1024,
+        "revision decomposition packet budget; no truncation",
+    )?;
+    Ok(packet)
+}
+
+/// Read-only lossless planning from a fully admitted original negative capture.
+/// This does not grant dispatch or retrofit a new policy onto that capture.
+pub fn prepare_revision_decomposition(
+    request: &[u8],
+    design: &[u8],
+    rubric: &[u8],
+    parent_evidence: &Path,
+    parent_response: &[u8],
+) -> Result<Value, String> {
+    let packet = prepare(request, design, rubric)?;
+    let completion = verify_packet_capture(
+        &packet,
+        parent_evidence,
+        parent_response,
+        validate_content(&packet, parent_response)?,
+    )?;
+    decomposition_packet(revision_review_packet_with_limit(
+        packet,
+        parent_response,
+        completion,
+        64,
+    )?)
+}
+
+fn expand_decomposed_feedback(packet: &Value, response: &[u8]) -> Result<Value, String> {
+    need(
+        response.len() <= 16 * 1024,
+        "decomposed revision response budget",
+    )?;
+    let mut response_value: Value = serde_json::from_slice(response).map_err(|e| e.to_string())?;
+    need(
+        packet["schema"] == "agentlab.source_design_revision_decomposition_request.v1"
+            && response_value["schema"] == "agentlab.source_design_revision_reference_response.v2",
+        "decomposed revision schema differs",
+    )?;
+    // Reuse immutable ID/rationale reconstruction, without lifting the legacy
+    // eight-finding admission. The temporary value never becomes a v3 verdict.
+    response_value["schema"] = json!("agentlab.source_design_revision_reference_response.v1");
+    let expanded = expand_reference_feedback(
+        packet,
+        &serde_json::to_vec(&response_value).map_err(|e| e.to_string())?,
+    )?;
+    let mut batch = expanded.clone();
+    let object = batch
+        .as_object_mut()
+        .ok_or("decomposed revision root object")?;
+    for key in [
+        "findings",
+        "checkChanges",
+        "scenarioChanges",
+        "controlChanges",
+    ] {
+        object.remove(key);
+    }
+    batch["schema"] = json!("agentlab.source_recipe_design_review_batch.v1");
+    let groups = rows(packet, "findingGroups")?;
+    let mut assigned = BTreeSet::new();
+    let mut batches = Vec::new();
+    for group in groups {
+        let ids = rows(group, "findingIds")?;
+        need(
+            !ids.is_empty() && ids.len() <= 8,
+            "decomposed group finding budget",
+        )?;
+        let mut part =
+            json!({"findings":[],"checkChanges":[],"scenarioChanges":[],"controlChanges":[]});
+        for id in ids {
+            let id = id.as_str().ok_or("decomposed finding ID")?;
+            need(
+                assigned.insert(id.to_owned()),
+                "duplicate decomposed finding ID",
+            )?;
+            part["findings"].as_array_mut().unwrap().push(
+                rows(&expanded, "findings")?
+                    .iter()
+                    .find(|f| f["id"] == id)
+                    .ok_or("decomposed finding not supplied")?
+                    .clone(),
+            );
+        }
+        for key in ["checkChanges", "scenarioChanges", "controlChanges"] {
+            part[key] = json!(rows(&expanded, key)?
+                .iter()
+                .filter(|change| ids.iter().any(|id| *id == change["findingId"]))
+                .cloned()
+                .collect::<Vec<_>>());
+        }
+        batches.push(part);
+    }
+    need(
+        assigned.len() == rows(&expanded, "findings")?.len(),
+        "decomposed findings coverage differs",
+    )?;
+    for key in ["checkChanges", "scenarioChanges", "controlChanges"] {
+        need(
+            batches
+                .iter()
+                .map(|b| b[key].as_array().unwrap().len())
+                .sum::<usize>()
+                == rows(&expanded, key)?.len(),
+            "decomposed change references unassigned finding",
+        )?;
+    }
+    batch["groups"] = json!(batches);
+    Ok(batch)
+}
+
+/// Content-only derivation: independent revision capture/dispatch qualification
+/// must be added before an automatic participant may use this prospective lane.
+pub fn validate_decomposed_revision_content(
+    request: &[u8],
+    design: &[u8],
+    rubric: &[u8],
+    parent_evidence: &Path,
+    parent_response: &[u8],
+    response: &[u8],
+) -> Result<Value, String> {
+    let packet =
+        prepare_revision_decomposition(request, design, rubric, parent_evidence, parent_response)?;
+    let feedback = expand_decomposed_feedback(&packet, response)?;
+    let bytes = serde_json::to_vec(&feedback).map_err(|e| e.to_string())?;
+    let target = author::reviewed_design_target(request, design, &bytes)?;
+    Ok(
+        json!({"schema":"agentlab.source_design_decomposed_content_validation.v1",
+        "originalRevisionResponseSha256":digest(response),"revisionFeedbackSha256":digest(&bytes),
+        "reviewedFeedback":feedback,"candidateDesign":target,
+        "recordedCompletionVerified":false,"dispatchQualified":false,"successorMustBeReviewed":true,
+        "semanticQualified":false,"executionPermissionGranted":false,"authorityWritePerformed":false,
+        "qualified":false}),
+    )
 }
 
 fn revision_review_prompt(packet: &Value) -> Result<Vec<u8>, String> {
@@ -1683,6 +1864,97 @@ mod tests {
                 json!({"recordedCompletionVerified":true,"decision":"revise"})
             )
             .is_err());
+        }
+    }
+
+    #[test]
+    fn revision_decomposition_preserves_all_original_rows_without_legacy_budget_lift() {
+        for repository in ["independent-one", "independent-two"] {
+            let (packet, mut response) = fixture(repository);
+            let template = response["checkReviews"][0].clone();
+            response["checkReviews"] = json!((0..17)
+                .map(|index| {
+                    let mut row = template.clone();
+                    row["id"] = json!(format!("check-{index}"));
+                    row["verdict"] = json!("unverified");
+                    row["rationale"] = json!(format!("Exact original rationale {index}"));
+                    row
+                })
+                .collect::<Vec<_>>());
+            let original_bytes = serde_json::to_vec(&response).unwrap();
+            let completion = json!({"recordedCompletionVerified":true,"decision":"unverified"});
+            assert!(
+                revision_review_packet(packet.clone(), &original_bytes, completion.clone())
+                    .is_err()
+            );
+            let planned = decomposition_packet(
+                revision_review_packet_with_limit(packet, &original_bytes, completion, 64).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(
+                planned["originalReviewUtf8"],
+                std::str::from_utf8(&original_bytes).unwrap()
+            );
+            assert_eq!(planned["eligibleFindings"].as_array().unwrap().len(), 17);
+            assert_eq!(planned["findingGroups"].as_array().unwrap().len(), 3);
+            assert_eq!(
+                planned["decompositionContract"]["additionalModelAttemptsGranted"],
+                0
+            );
+            let finding = |row: &Value| {
+                json!({"id":row["id"],"requiredChange":"independent source-grounded judgment",
+                "sourcePaths":["src/unit.ts"]})
+            };
+            let reply = json!({"schema":"agentlab.source_design_revision_reference_response.v2",
+                "parentRequestSha256":planned["originalQualityPacket"]["requestSha256"],
+                "parentDesignSha256":planned["originalQualityPacket"]["designSha256"],
+                "reviewed":true,"verdict":"revise","automaticPromotion":false,"reviewer":"fixture",
+                "findings":planned["eligibleFindings"].as_array().unwrap().iter().map(finding).collect::<Vec<_>>(),
+                "checkChanges":[{"id":"value","before":{},"after":{},
+                    "findingId":planned["eligibleFindings"][16]["id"]}],"scenarioChanges":[],"controlChanges":[]});
+            // Reconstruction alone does not admit these deliberately incomplete changes.
+            let expanded =
+                expand_decomposed_feedback(&planned, &serde_json::to_vec(&reply).unwrap()).unwrap();
+            assert_eq!(expanded["groups"][2]["checkChanges"], reply["checkChanges"]);
+            assert_eq!(
+                expanded["groups"][0]["findings"][0]["observed"],
+                planned["eligibleFindings"][0]["observed"]
+            );
+            let all = expanded["groups"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .flat_map(|g| g["findings"].as_array().unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(all.len(), 17);
+            for (row, original) in all
+                .iter()
+                .zip(planned["eligibleFindings"].as_array().unwrap())
+            {
+                assert_eq!(row["id"], original["id"]);
+                assert_eq!(row["observed"], original["observed"]);
+            }
+            for variant in 0..6 {
+                let mut bad = reply.clone();
+                match variant {
+                    0 => {
+                        bad["findings"].as_array_mut().unwrap().pop();
+                    }
+                    1 => bad["findings"][0]["id"] = json!("unknown"),
+                    2 => bad["findings"][0] = bad["findings"][1].clone(),
+                    3 => bad["findings"][0]["observed"] = json!("model-owned replacement"),
+                    4 => bad["checkChanges"][0]["findingId"] = json!("unknown"),
+                    _ => {
+                        bad["schema"] =
+                            json!("agentlab.source_design_revision_reference_response.v1")
+                    }
+                }
+                assert!(
+                    expand_decomposed_feedback(&planned, &serde_json::to_vec(&bad).unwrap())
+                        .is_err(),
+                    "variant {variant}"
+                );
+            }
         }
     }
     #[test]

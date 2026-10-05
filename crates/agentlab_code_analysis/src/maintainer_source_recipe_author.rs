@@ -892,6 +892,15 @@ fn design_review_contract(
     let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
     let parent: Value = serde_json::from_slice(design_bytes).map_err(|e| e.to_string())?;
     let review: Value = serde_json::from_slice(review_bytes).map_err(|e| e.to_string())?;
+    if review["schema"] == "agentlab.source_recipe_design_review_batch.v1" {
+        batch_review_target(request_bytes, design_bytes, review_bytes)?;
+        return Ok(
+            json!({"schema":"agentlab.source_recipe_design_review_admission.batch.v1",
+            "authorRequestSha256":digest(request_bytes),"parentDesignSha256":digest(design_bytes),
+            "reviewSha256":digest(review_bytes),"revisionRequested":true,"semanticQualified":false,
+            "executionPerformed":false,"authorityWritePerformed":false,"automaticPromotion":false}),
+        );
+    }
     let protected_controls = review["schema"] == "agentlab.source_recipe_design_review.v3";
     let exact = protected_controls || review["schema"] == "agentlab.source_recipe_design_review.v2";
     need(
@@ -974,6 +983,14 @@ pub fn reviewed_design_target(
     parent: &[u8],
     review: &[u8],
 ) -> Result<Value, String> {
+    need(
+        request.len() <= 512 * 1024 && parent.len() <= 64 * 1024 && review.len() <= 16 * 1024,
+        "design review input budget",
+    )?;
+    let feedback: Value = serde_json::from_slice(review).map_err(|error| error.to_string())?;
+    if feedback["schema"] == "agentlab.source_recipe_design_review_batch.v1" {
+        return batch_review_target(request, parent, review);
+    }
     design_review_contract(request, parent, review)?;
     let mut target: Value = serde_json::from_slice(parent).map_err(|error| error.to_string())?;
     let feedback: Value = serde_json::from_slice(review).map_err(|error| error.to_string())?;
@@ -1015,6 +1032,21 @@ pub fn check_design_review_output(
     let p: Value = serde_json::from_slice(parent).map_err(|e| e.to_string())?;
     let r: Value = serde_json::from_slice(review).map_err(|e| e.to_string())?;
     let s: Value = serde_json::from_slice(successor).map_err(|e| e.to_string())?;
+    if r["schema"] == "agentlab.source_recipe_design_review_batch.v1" {
+        need(
+            s == batch_review_target(request, parent, review)?,
+            "batch successor differs from atomic exact-change target",
+        )?;
+        return Ok(
+            json!({"schema":"agentlab.source_recipe_design_review_output.v1",
+            "authorRequestSha256":admission["authorRequestSha256"],
+            "parentDesignSha256":admission["parentDesignSha256"],"reviewSha256":admission["reviewSha256"],
+            "successorDesignSha256":digest(successor),"exactContractProtected":true,
+            "exactControlsProtected":true,"atomicBatchBound":true,
+            "semanticQualified":false,"reviewerIdentityAuthenticated":false,
+            "executionPerformed":false,"authorityWritePerformed":false,"automaticPromotion":false}),
+        );
+    }
     let protected_controls = r["schema"] == "agentlab.source_recipe_design_review.v3";
     let exact = protected_controls || r["schema"] == "agentlab.source_recipe_design_review.v2";
     if exact {
@@ -1066,6 +1098,131 @@ pub fn check_design_review_output(
         result["exactControlsProtected"] = json!(true);
     }
     Ok(result)
+}
+
+/// Lossless groups share one ancestor and form one atomic successor. Groups are
+/// capacity partitions, NOT independent approvals or additional model attempts.
+fn batch_review_target(request: &[u8], parent: &[u8], review: &[u8]) -> Result<Value, String> {
+    need(
+        request.len() <= 512 * 1024 && parent.len() <= 64 * 1024 && review.len() <= 16 * 1024,
+        "batch design review input budget",
+    )?;
+    design_contract(request, parent)?;
+    let request_value: Value = serde_json::from_slice(request).map_err(|e| e.to_string())?;
+    let original: Value = serde_json::from_slice(parent).map_err(|e| e.to_string())?;
+    let batch: Value = serde_json::from_slice(review).map_err(|e| e.to_string())?;
+    need(
+        batch.as_object().is_some_and(|o| o.len() == 8)
+            && batch["schema"] == "agentlab.source_recipe_design_review_batch.v1"
+            && batch["parentRequestSha256"] == digest(request)
+            && batch["parentDesignSha256"] == digest(parent)
+            && batch["reviewed"] == true
+            && batch["verdict"] == "revise"
+            && batch["automaticPromotion"] == false
+            && text(&batch, "reviewer")?.len() <= 128,
+        "batch design review feedback binding",
+    )?;
+    let groups = batch["groups"]
+        .as_array()
+        .filter(|a| (1..=8).contains(&a.len()))
+        .ok_or("batch design review group budget")?;
+    let mut merged = json!({"schema":"agentlab.source_recipe_design_review.v3",
+        "findings":[],"checkChanges":[],"scenarioChanges":[],"controlChanges":[]});
+    let mut finding_ids = BTreeSet::new();
+    for group in groups {
+        need(
+            group.as_object().is_some_and(|o| {
+                o.len() == 4
+                    && [
+                        "findings",
+                        "checkChanges",
+                        "scenarioChanges",
+                        "controlChanges",
+                    ]
+                    .iter()
+                    .all(|k| o.contains_key(*k))
+            }),
+            "batch design review group fields",
+        )?;
+        let findings = group["findings"]
+            .as_array()
+            .filter(|a| !a.is_empty() && a.len() <= 8)
+            .ok_or("batch design review per-group findings budget")?;
+        for finding in findings {
+            need(
+                finding.as_object().is_some_and(|o| o.len() == 4)
+                    && finding_ids.insert(text(finding, "id")?.to_owned())
+                    && text(finding, "id")?.len() <= 64
+                    && text(finding, "observed")?.len() <= 1024
+                    && text(finding, "requiredChange")?.len() <= 1024,
+                "batch design review finding contract or duplicate",
+            )?;
+            let paths = finding["sourcePaths"]
+                .as_array()
+                .filter(|a| !a.is_empty() && a.len() <= 4)
+                .ok_or("batch design review finding paths")?;
+            need(
+                paths.iter().all(|path| {
+                    request_value["sourceFiles"]
+                        .as_array()
+                        .is_some_and(|files| {
+                            files.iter().any(|f| {
+                                path.is_string() && f["path"] == *path && f["content"].is_string()
+                            })
+                        })
+                }),
+                "batch design review finding requires loaded owned source",
+            )?;
+        }
+        let mut local = group.clone();
+        local["schema"] = json!("agentlab.source_recipe_design_review.v3");
+        // Validate links and exact before records against the SAME ancestor.
+        // Defer complete design validation: coupled check/scenario updates may
+        // live in different groups and must commit together or not at all.
+        reviewed_checks(&json!({"contract":{"checks":original["checks"]}}), &local)?;
+        reviewed_scenarios(&original, &local)?;
+        reviewed_controls(&original, &local)?;
+        for key in [
+            "findings",
+            "checkChanges",
+            "scenarioChanges",
+            "controlChanges",
+        ] {
+            merged[key].as_array_mut().unwrap().extend(
+                group[key]
+                    .as_array()
+                    .ok_or("batch design review group arrays")?
+                    .iter()
+                    .cloned(),
+            );
+        }
+    }
+    need(
+        ["checkChanges", "scenarioChanges", "controlChanges"]
+            .iter()
+            .any(|key| !merged[key].as_array().unwrap().is_empty()),
+        "batch design review requires exact change",
+    )?;
+    // Existing exact-change helpers reject repeated record IDs even when both
+    // groups propose identical replacements; no last-writer-wins resolution.
+    let checks = reviewed_checks(&json!({"contract":{"checks":original["checks"]}}), &merged)?;
+    let mut remaining = check_map(&checks)?;
+    let mut ordered = Vec::new();
+    for check in original["checks"].as_array().ok_or("batch parent checks")? {
+        if let Some(replacement) = remaining.remove(text(check, "id")?) {
+            ordered.push(replacement);
+        }
+    }
+    ordered.extend(remaining.into_values());
+    let mut target = original.clone();
+    target["checks"] = Value::Array(ordered);
+    target["scenarios"] = reviewed_scenarios(&original, &merged)?;
+    target["controls"] = reviewed_controls(&original, &merged)?;
+    design_contract(
+        request,
+        &serde_json::to_vec(&target).map_err(|e| e.to_string())?,
+    )?;
+    Ok(target)
 }
 
 /// Static source correction before code generation; this does not establish semantic truth.
@@ -1615,6 +1772,130 @@ fn dependency_inventory_binding(inventory: &Value) -> Result<Value, String> {
 #[cfg(test)]
 mod interface_inventory_tests {
     use super::*;
+    fn batch_fixture(scope: &str) -> (Vec<u8>, Vec<u8>, Value) {
+        let path = "src/subject.ts";
+        let request = json!({"schema":"agentlab.source_recipe_author_request.v1",
+            "reviewed":false,"automaticPromotion":false,"scope":{"id":scope},
+            "sourceFiles":[{"path":path,"content":"let a=1; let b=2; let c=3;"}]});
+        let edit = |before, after| json!({"path":path,"before":before,"after":after});
+        let parent = json!({"schema":"agentlab.source_recipe_design.v2","scopeSkillId":scope,
+            "invariant":"unchanged source-grounded demand","limitations":["static only","no platform proof"],
+            "scenarios":[{"id":"s","initialState":{},"inputs":{"seams":{}},"expectedObservations":{"value":1}}],
+            "checks":[{"id":"value","pointer":"/s/value","expected":1}],
+            "controls":[{"id":"base","role":"baseline","expectedFailedCheckIds":[],"edits":[]},
+                {"id":"ref-a","role":"reference","expectedFailedCheckIds":[],"edits":[edit("let a=1;","let a=9;")]},
+                {"id":"ref-b","role":"reference","expectedFailedCheckIds":[],"edits":[edit("let b=2;","let b=8;")]},
+                {"id":"wrong","role":"wrong","expectedFailedCheckIds":["value"],"edits":[edit("let c=3;","let c=7;")]}]});
+        let request = serde_json::to_vec(&request).unwrap();
+        let parent_bytes = serde_json::to_vec(&parent).unwrap();
+        let finding = |index| {
+            json!({"id":format!("finding-{index}"),"observed":format!("original opinion {index}"),
+            "requiredChange":"source-supported judgment","sourcePaths":[path]})
+        };
+        let mut scenario = parent["scenarios"][0].clone();
+        scenario["expectedObservations"]["value"] = json!(2);
+        let batch = json!({"schema":"agentlab.source_recipe_design_review_batch.v1",
+            "parentRequestSha256":digest(&request),"parentDesignSha256":digest(&parent_bytes),
+            "reviewed":true,"verdict":"revise","automaticPromotion":false,"reviewer":"fixture",
+            "groups":[{"findings":(0..8).map(finding).collect::<Vec<_>>(),
+                "checkChanges":[{"id":"value","before":parent["checks"][0],
+                    "after":{"id":"value","pointer":"/s/value","expected":2},"findingId":"finding-0"}],
+                "scenarioChanges":[],"controlChanges":[]},
+                {"findings":[finding(8)],"checkChanges":[],"scenarioChanges":[{
+                    "id":"s","before":parent["scenarios"][0],"after":scenario,"findingId":"finding-8"}],
+                    "controlChanges":[]}]});
+        (request, parent_bytes, batch)
+    }
+
+    #[test]
+    fn decomposed_design_revision_is_atomic_and_preserves_ancestor() {
+        for scope in ["unrelated-scope", "other-repository-scope"] {
+            let (request, parent, batch) = batch_fixture(scope);
+            let original = batch.clone();
+            let bytes = serde_json::to_vec(&batch).unwrap();
+            let target = reviewed_design_target(&request, &parent, &bytes).unwrap();
+            assert_eq!(target["checks"][0]["expected"], 2);
+            assert_eq!(target["scenarios"][0]["expectedObservations"]["value"], 2);
+            let old: Value = serde_json::from_slice(&parent).unwrap();
+            assert_eq!(target["controls"], old["controls"]);
+            assert_eq!(target["invariant"], old["invariant"]);
+            assert_eq!(batch, original);
+            let report = check_design_review_output(
+                &request,
+                &parent,
+                &bytes,
+                &serde_json::to_vec(&target).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(report["atomicBatchBound"], true);
+            assert_eq!(report["semanticQualified"], false);
+            let mut incomplete = batch.clone();
+            incomplete["groups"][1]["scenarioChanges"] = json!([]);
+            assert!(reviewed_design_target(
+                &request,
+                &parent,
+                &serde_json::to_vec(&incomplete).unwrap()
+            )
+            .is_err());
+            let mut unbound = target.clone();
+            unbound["invariant"] = json!("operator replacement");
+            assert!(check_design_review_output(
+                &request,
+                &parent,
+                &bytes,
+                &serde_json::to_vec(&unbound).unwrap()
+            )
+            .is_err());
+        }
+    }
+
+    #[test]
+    fn decomposed_design_revision_refuses_conflicts_drift_and_budget_lifts() {
+        let (request, parent, batch) = batch_fixture("generic-scope");
+        assert!(
+            reviewed_design_target(&request, &parent, &vec![b'x'; 16 * 1024 + 1])
+                .unwrap_err()
+                .contains("design review input budget")
+        );
+        for variant in 0..12 {
+            let mut bad = batch.clone();
+            match variant {
+                0 => bad["groups"][1]["findings"][0] = bad["groups"][0]["findings"][0].clone(),
+                1 => {
+                    let mut change = bad["groups"][0]["checkChanges"][0].clone();
+                    change["findingId"] = json!("finding-8");
+                    bad["groups"][1]["checkChanges"] = json!([change]);
+                }
+                2 => bad["groups"][0]["checkChanges"][0]["before"]["expected"] = json!(99),
+                3 => {
+                    bad["groups"][0]["findings"][0]["sourcePaths"] = json!(["readonly/foreign.ts"])
+                }
+                4 => bad["groups"][0]["checkChanges"][0]["findingId"] = json!("finding-8"),
+                5 => bad["groups"][0]["findings"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(batch["groups"][1]["findings"][0].clone()),
+                6 => bad["parentDesignSha256"] = json!(digest(b"changed")),
+                7 => bad["automaticPromotion"] = json!(true),
+                8 => bad["groups"][1]["extra"] = json!(true),
+                9 => bad["groups"] = json!(vec![batch["groups"][1].clone(); 9]),
+                10 => bad["reviewer"] = json!("x".repeat(16384)),
+                _ => {
+                    let old: Value = serde_json::from_slice(&parent).unwrap();
+                    let before = old["controls"][0].clone();
+                    let mut after = before.clone();
+                    after["edits"] = old["controls"][1]["edits"].clone();
+                    bad["groups"][1]["controlChanges"] = json!([{"id":"base","before":before,"after":after,"findingId":"finding-8"}]);
+                }
+            }
+            assert!(
+                reviewed_design_target(&request, &parent, &serde_json::to_vec(&bad).unwrap())
+                    .is_err(),
+                "variant {variant}"
+            );
+        }
+    }
+
     #[test]
     fn scenario_revision_requires_whole_records_even_for_one_nested_field() {
         for id in ["first-scenario", "unrelated-scenario"] {

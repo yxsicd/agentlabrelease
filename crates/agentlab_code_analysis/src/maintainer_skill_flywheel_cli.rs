@@ -1178,6 +1178,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args
+        .iter()
+        .any(|a| a == "--prepare-source-design-revision-decomposition")
+    {
+        let report = agentlab_code_analysis::maintainer_source_design_quality::prepare_revision_decomposition(
+            &fs::read(value(&args,"--author-request")?)?,
+            &fs::read(value(&args,"--design")?)?,
+            &fs::read(value(&args,"--quality-rubric")?)?,
+            &PathBuf::from(value(&args,"--parent-review-evidence")?),
+            &fs::read(value(&args,"--parent-review-response")?)?,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"decompositionPreparedOnly":true,"dispatchQualified":false,
+            "executionPermissionGranted":false,"qualified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|a| {
         a == "--prepare-source-design-revision-review"
             || a == "--source-design-revision-review-prompt"
