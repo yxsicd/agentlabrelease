@@ -381,6 +381,13 @@ same frozen design; both native preflights must pass before participant dispatch
 This freezes
 the intended contract, not approval: independently inspect and calibrate generated
 code before execution qualification or knowledge promotion.
+Before reusing a captured ready-for-execution stage, reconsume its complete original
+review through native completion/content admission against unchanged request,
+design and rubric bytes. Record original producer and current reader separately;
+equal reconstructed validation does not authenticate semantic truth. Enroll a fresh
+code continuation before inference, without changing the retained stage or reopening
+its failed root. Preserve all scenarios/checks/controls and require actual baseline,
+complete controls, final review and knowledge return; stage reuse is not a full loop.
 
 For complete constructor responses rejected only by strict JSON parsing, an
 explicit `--proposal-format-revisions 1` permits one same-session protocol
@@ -396,6 +403,11 @@ inference when using it; default zero remains valid for one-shot campaigns. A re
 completed code response failed strict JSON with zero configured format revisions,
 although its plan allowed at most two code attempts. Preserve that closed root;
 test an explicitly configured correction in a fresh run, not as a retroactive retry.
+Verify actual wire response-format hints and terminal reasons when attributing JSON
+failures. Real stop-completed json_object requests still produced illegal escapes
+and trailing commentary. Those are retained protocol failures, not evidence of token
+truncation; a parseable prefix cannot be stripped into acceptance. Transport completion,
+strict syntax, review admission and source execution remain separate gates.
 
 Use the optimized native producer for operational construction and calibration,
 not a debug executable by default. Full-cut reassessment and repeated executable

@@ -1,5 +1,65 @@
 # Pre-execution source design quality review
 
+## Experiment 16 and retained-stage reuse preflight
+
+Fresh plan SHA
+`5421210c0974041754cb5213a49dbed15c010b34d132ce5e5657ec759a4d5511`
+bound method `649cf5f5f926653888ca610deb45cab2dd7e2b29` and native SHA
+`599b10a6d71dc76d4d613024b67a6ab8039af34cc4f4148eb72a9f945d46a2e9`.
+Execution-policy v3 SHA
+`bb6686d88d2f076eb5105a57a3f9ccc1feef7d05b0b51050e0c624fcb5ea7857`
+explicitly selected one proposal-format revision and at most two author code
+attempts before inference. Operator dispatch receipt SHA
+`89e8604a07a52169110f9390f1797e046564d4be8f41685a893e454db9f680ec`
+proved actual argument values and rejected missing, wrong and duplicated flags.
+This operator configuration check is not native semantic permission. Both isolation
+probes and five-table exact-cut preflight passed. Source/task, knowledge, model and
+upper attempt/deadline limits remained unchanged; no closed ancestor was reopened.
+
+Initial design SHA
+`c768de666a97472d0aa8406211652e760a840282e3b8ea9f0ecc1e6dda134484`
+had malformed JSON. Sole corrected design SHA
+`1803b93528b353bf7101b8fd0be8f58547fbdd51c45711ce82e337f0121767f5`
+passed native structure validation. Audit `exec-000000000000042b`, exit 0, verified
+both isolated runtime receipts, original UTF-8 error location, exact complete repair
+prompt in original wire, unchanged responses and two complete exchanges
+(150,643/63,624 ms). It does not establish design semantics or code-format repair.
+
+Original pipeline `exec-0000000000000425` is terminal, exit 1. Initial review SHA
+`bb7fe45109ee20b6120e84560a979551a51d80cd2e094a06a575a2f7548b327c`
+was refused for invalid escape at line 2, column 3945. Sole repair SHA
+`4f1f2b65fb82679bf0fc9206840b7b8863eb71ce4b28f15ac24411901e187f51`
+was refused for trailing characters at line 3, column 1: 279 UTF-8 bytes of
+trailing commentary follow its JSON prefix. No prefix was admitted or response
+rewritten. Terminal audit `exec-000000000000042f`, exit 0, independently verified
+both reviewer runtimes, zero tools, complete exchanges (90,361/57,331 ms), exact
+initial response/rejection inside repair feedback and full prompt in original wire.
+Actual wire requests contained json_object hints; original stream endings were
+stop, not length. A separate audit of experiment-15 code and experiment-16 design
+also found stop endings with explicit json_object hints. These syntax failures
+are not observed token-limit truncation. New code-format correction was enrolled
+but never exercised; no source execution, final review or authority write occurred.
+
+Rather than regenerate every previously accepted stage, native retained-stage
+preflight `exec-0000000000000430`, exit 0, reconsumed experiment-15 original request,
+frozen design and complete repaired-review capture through the current native
+consumer. Producer remains `d76ad77353319c3eadb5d55b821ea6a5bf87bddf`; reader is
+`649cf5f5f926653888ca610deb45cab2dd7e2b29`, with byte-identical native programs.
+Original and revalidated review-result SHA are both
+`1457e39a7bb74b6694ca988177acaefbde0001f84495c5ff39eef371cbb4b23e`,
+decision ready-for-execution, recorded completion verified. All original inputs
+remain unchanged and no new model was dispatched. This permits planning a fresh,
+prospectively enrolled frozen-design code continuation; it neither reopens old code
+budgets nor proves calibration, semantic truth, generic product-controller support
+or a complete automatic cycle. Preserve every original scenario/check/control and
+require all downstream gates.
+
+Overall maturity remains **82% (+0)** and complete automatic cycles **zero**.
+Next priority is reusable native-admitted stage continuation into real source
+execution, not repeated design/review construction or operator parse repair.
+Baseline/control/final-review completion, committed return, next-round consumption
+and cross-repository transfer still need actual evidence.
+
 ## Experiment 15: bounded review convergence, malformed code
 
 Clean committed build `exec-0000000000000410`, exit 0, pinned method
