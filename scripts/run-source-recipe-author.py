@@ -745,6 +745,13 @@ limitation prose. API availability is not proof of source state or coverage.
 Put executable actions, their ordered arguments and other caller inputs in inputs,
 not only in prose or expectedObservations. Seams model external dependencies,
 not the tested method. A method's return is observed from actual source execution.
+Trace module loading before the method: retained imports can execute top-level
+initializers, enum reads and resource calls even when generate never uses those
+exports. Declare the proposed source-loading/global bindings or controlled seams
+in inputs; empty seams are not evidence that transitive initialization is closed.
+Do not replace dependency constructors with empty classes or copy expected state
+into instances. Any explicit host binding remains a source-only approximation,
+not platform qualification. Runtime calibration still has to prove the setup.
 Use strict JSON values: no undefined literals, comments, trailing commas or fences.
 Represent absent-value observations explicitly (for example a presence flag),
 without changing the source's actual undefined behavior to null.
@@ -766,6 +773,10 @@ such a check in the expected failure set merely because it is an error scenario.
 Also trace all later operations skipped by an uncaught exception: unchanged state
 can fail additional checks after the mutated operation. Review each mutation
 against every scenario, not only the scenario whose name resembles the mutation.
+For every control inspect every scored check, including whole-object state checks
+as well as return checks. expectedFailedCheckIds must be the complete predicted
+set, not merely one check that detects the mutation. Omitted and extra predicted
+failures both invalidate calibration; static predictions are not executed results.
 checks: 1..64 exact id/pointer/expected objects. JSON pointers resolve into an
 object mapping scenario ID to its expectedObservations. All controls share this oracle.
 controls: 4..8 objects with exactly id, role, expectedFailedCheckIds, edits

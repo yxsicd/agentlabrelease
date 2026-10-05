@@ -119,6 +119,20 @@ its conclusion. A matching quote elsewhere is repair guidance, not acceptance.
 Compare claimed ordered/exception behavior with the actual scenario input
 sequence; prose about an omitted operation does not exercise that operation.
 
+Separate pre-execution design adequacy from post-execution proof. An early pass
+means source-grounded setup and predictions are adequate to attempt calibration,
+not that execution or runtime closure has been verified. Missing explicit bindings
+for transitive module initializers remain blockers; absence of execution alone is
+not a defect in a pre-execution baseline/reference design. Inspect top-level enum
+reads and resource calls in retained dependencies, even if generate never uses
+those exports. Require a proposed binding/seam with its source-only limitation;
+never infer implicit platform defaults or waive a failed baseline.
+Audit each control against every scored check. Compare the complete predicted
+failure set with its declaration, including overlapping whole-object field checks
+and return checks. Detecting a mutation with one check does not justify omitting
+another predicted failure. The native control/check navigation is exhaustive
+inventory, not execution evidence or a predicted verdict; cite original records.
+
 The frozen source runtime owns control transformations: source() and loadModule()
 already consume the selected edits. Do not apply the design's edits a second time
 in generated verifiers. For initialization claims, compare source-observed state

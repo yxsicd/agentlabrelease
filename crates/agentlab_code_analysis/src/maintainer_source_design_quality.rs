@@ -101,6 +101,30 @@ fn compiler_import_focus(packet: &Value) -> Value {
         "sourceExecuted":false,"runtimeResolutionVerified":false,"qualified":false})
 }
 
+// Exhaustive navigation, not a prediction of which checks actually fail.
+fn control_check_focus(packet: &Value) -> Value {
+    let design = &packet["design"];
+    let checks = design["checks"].as_array().into_iter().flatten();
+    let checks: Vec<_> = checks
+        .enumerate()
+        .map(|(index, check)| {
+            json!({
+                "checkId":check["id"],"observationPointer":check["pointer"],
+                "checkEvidencePointer":format!("/design/checks/{index}")
+            })
+        })
+        .collect();
+    json!({"schema":"agentlab.design_review_control_check_focus.v1",
+        "designSha256":packet["designSha256"],
+        "controls":design["controls"].as_array().into_iter().flatten().enumerate().map(|(index, control)|json!({
+            "controlId":control["id"],"role":control["role"],
+            "controlEvidencePointer":format!("/design/controls/{index}"),
+            "declaredFailedCheckIds":control["expectedFailedCheckIds"],
+            "checksToTrace":checks
+        })).collect::<Vec<_>>(),
+        "predictedFailuresVerified":false,"sourceExecuted":false,"qualified":false})
+}
+
 fn design_string_locations(value: &Value, pointer: &str, catalog: &mut Vec<Value>) {
     match value {
         Value::String(_) => catalog.push(
@@ -250,10 +274,17 @@ fn prompt_for_packet(packet: &Value) -> Result<Vec<u8>, String> {
     let root_shape = b"Return exactly seven top-level fields: schema, reviewerId, criterionReviews, scenarioReviews, checkReviews, controlReviews, unresolvedFindings. No other top-level fields are allowed. reviewRequestSha256 and other operator capture digests are NOT response fields; do not copy them into the response. For criterion citations of SOURCE text, prefer {\"path\":\"EXACT LOADED PATH\",\"quote\":\"EXACT ORIGINAL SUBSTRING\"} rather than a numbered source-array pointer. Rust requires exactly one matching frozen source path and an exact original substring. For DESIGN text, use its /design/... string pointer from the lookup, not /originalRequestUtf8. Each citation has exactly one locator (path or pointer) and quote; no inferred or rewritten citations.\n";
     let compiler_boundary = b"If sourceCompilerEvidence is present, it is pinned transpilation evidence, not source execution or type checking. Compare source dependency inventory with emitted require call candidates before claiming an import blocks module initialization. Parse/transpile errors, dynamic require, shadowing and unbound platform globals remain unresolved; successful transpilation never establishes runtime closure.\n";
     let observation_boundary = b"Read verifierInterface for the exact frozen state observation API. Distinguish actual runtime own data fields from native inaccessible private slots; a private modifier or absent returned value alone is not proof of unobservability. For each demanded earlier effect and later skipped effect, find the actual ordered input and a scored expected observation/check. Mentioning a nonexistent later input in adapter prose or limitations does not exercise or score it. If required coverage is missing, do not pass construction-target-coverage or state-observation-coverage merely because a throw/no-return check exists. Interface availability is not proof of source state or semantic correctness.\n";
+    let phase_boundary = b"Assess pre-execution design adequacy, not completed execution. Pass means the proposed source-grounded setup, observations and predictions are adequate for later calibration; it never proves they ran. Do not mark baseline/reference controls unverified solely because no execution has yet occurred. Genuine missing source, initialization bindings or unsupported predictions remain fail/unverified and block advancement. Trace transitive top-level initialization, including globals/resource calls in dependencies that the tested method never calls; require explicit proposed bindings or controlled seams, not implicit platform defaults. For EVERY control, trace EVERY scored check, including whole-object state checks and returned-output checks. Compare the complete predicted failed-check set with declaredFailedCheckIds; a missing or extra predicted failure is a design defect even when another check detects the mutation. Cite original design/source evidence, not the navigation projection.\n";
     let prompt = [
         root_shape.as_slice(),
         compiler_boundary.as_slice(),
         observation_boundary.as_slice(),
+        phase_boundary.as_slice(),
+        format!(
+            "CONTROL CHECK NAVIGATION (exhaustive inventory, not predictions):\n{}\n",
+            control_check_focus(packet)
+        )
+        .as_bytes(),
         format!(
             "COMPILER IMPORT NAVIGATION (derived, not qualification):\n{}\n",
             compiler_import_focus(packet)
@@ -718,6 +749,65 @@ mod tests {
                     serde_json::from_str(failure.split_once(": ").unwrap().1).unwrap();
                 assert_eq!(diagnostic["reason"], reason);
             }
+        }
+    }
+
+    #[test]
+    fn control_navigation_preserves_all_checks_without_predicting_or_approving() {
+        for repository in ["independent-state", "unrelated-return"] {
+            let (mut packet, mut response) = fixture(repository);
+            packet["design"]["checks"] = json!([
+                {"id":"return-check","pointer":"/first/output","expected":7},
+                {"id":"state-check","pointer":"/first/fields","expected":{"value":7}},
+                {"id":"later-check","pointer":"/second/fields/value","expected":9}
+            ]);
+            packet["design"]["controls"] = json!([
+                {"id":"unchanged","role":"baseline","expectedFailedCheckIds":[],"edits":[]},
+                {"id":"changed","role":"wrong","expectedFailedCheckIds":["return-check"],"edits":[]}
+            ]);
+            let original = packet.clone();
+            let focus = control_check_focus(&packet);
+            for (index, control) in focus["controls"].as_array().unwrap().iter().enumerate() {
+                let original_control = packet
+                    .pointer(control["controlEvidencePointer"].as_str().unwrap())
+                    .unwrap();
+                assert_eq!(
+                    control["declaredFailedCheckIds"],
+                    original_control["expectedFailedCheckIds"]
+                );
+                assert_eq!(
+                    control["controlId"],
+                    packet["design"]["controls"][index]["id"]
+                );
+                assert_eq!(control["checksToTrace"].as_array().unwrap().len(), 3);
+                for check in control["checksToTrace"].as_array().unwrap() {
+                    let original_check = packet
+                        .pointer(check["checkEvidencePointer"].as_str().unwrap())
+                        .unwrap();
+                    assert_eq!(check["checkId"], original_check["id"]);
+                    assert_eq!(check["observationPointer"], original_check["pointer"]);
+                    assert!(check.get("predictedFailure").is_none());
+                }
+            }
+            for key in ["predictedFailuresVerified", "sourceExecuted", "qualified"] {
+                assert_eq!(focus[key], false);
+            }
+            assert_eq!(packet, original);
+            packet["design"]["checks"].as_array_mut().unwrap().reverse();
+            let reordered = control_check_focus(&packet);
+            assert_eq!(
+                reordered["controls"][1]["checksToTrace"][0]["checkId"],
+                "later-check"
+            );
+            // Phase guidance cannot turn an original unverified review into a pass.
+            let (packet, _) = fixture(repository);
+            response["controlReviews"][0]["verdict"] = json!("unverified");
+            response["unresolvedFindings"] =
+                json!(["Explicit source initialization binding is missing"]);
+            let validation =
+                validate_content(&packet, &serde_json::to_vec(&response).unwrap()).unwrap();
+            assert_eq!(validation["decision"], "unverified");
+            assert_eq!(validation["semanticQualified"], false);
         }
     }
 
