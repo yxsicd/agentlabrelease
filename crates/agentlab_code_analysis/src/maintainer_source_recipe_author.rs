@@ -1185,6 +1185,79 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
     design_contract(request_bytes, design_bytes)
 }
 
+// Diagnostic navigation only: retain the exact non-overlapping match semantics.
+fn edit_match_navigation(body: &str, before: &str, pointer: &str, prior_edits: usize) -> Value {
+    let matches: Vec<_> = body
+        .match_indices(before)
+        .map(|(offset, _)| offset)
+        .collect();
+    let window = |offset: usize| {
+        let mut start = offset.saturating_sub(64);
+        while !body.is_char_boundary(start) {
+            start += 1;
+        }
+        let mut end = (start + 256).min(body.len());
+        while !body.is_char_boundary(end) {
+            end -= 1;
+        }
+        json!({"byteStart":start,"byteEnd":end,"content":&body[start..end]})
+    };
+    let mut contexts: Vec<_> = matches
+        .iter()
+        .take(2)
+        .map(|offset| window(*offset))
+        .collect();
+    let mut anchors = Vec::new();
+    if matches.is_empty() {
+        for line in before
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+        {
+            if line.len() > 128 || anchors.iter().any(|row: &Value| row["text"] == line) {
+                continue;
+            }
+            let offsets: Vec<_> = body.match_indices(line).map(|(offset, _)| offset).collect();
+            if let Some(offset) = offsets.first().filter(|_| contexts.len() < 2) {
+                contexts.push(window(*offset));
+            }
+            anchors.push(json!({"text":line,"matchCount":offsets.len(),
+                "byteStarts":offsets.iter().take(4).collect::<Vec<_>>()}));
+            if anchors.len() == 2 {
+                break;
+            }
+        }
+    }
+    let mut diagnostic = json!({
+        "schema":"agentlab.source_edit_match_diagnostic.v1",
+        "editPointer":pointer,"inputBodySha256":digest(body.as_bytes()),
+        "requestedBeforeSha256":digest(before.as_bytes()),"requestedBeforeBytes":before.len(),
+        "matchCount":matches.len(),"requiredMatchCount":1,"precedingEditsInThisControl":prior_edits,
+        "matchingByteStarts":matches.iter().take(4).collect::<Vec<_>>(),
+        "sourceContexts":contexts,"lineAnchors":anchors,"navigationTruncated":matches.len()>2,
+        "rule":"Offsets and verbatim contexts refer to this control's source body after earlier edits. Line-anchor matches are not complete-edit matches. Copy exact source with enough context for one match; do not invent whitespace or silently select an occurrence. This navigation neither edits output nor approves behavior.",
+        "originalOutputChanged":false,"semanticQualified":false,"executionPerformed":false
+    });
+    // Stay below the existing repair stderr budget even for heavily escaped source.
+    while diagnostic.to_string().len() > 4096 {
+        if diagnostic["sourceContexts"]
+            .as_array_mut()
+            .unwrap()
+            .pop()
+            .is_none()
+            && diagnostic["lineAnchors"]
+                .as_array_mut()
+                .unwrap()
+                .pop()
+                .is_none()
+        {
+            break;
+        }
+        diagnostic["navigationTruncated"] = json!(true);
+    }
+    diagnostic
+}
+
 // Portable contract validation consumes retained source bytes, not old runner paths.
 fn design_contract(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String> {
     need(
@@ -1380,7 +1453,10 @@ fn design_contract(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, S
                 .get_mut(path)
                 .ok_or("recipe design edit requires loaded owned source")?;
             let count = body.matches(before).count();
-            need(count==1,&format!("recipe design edit in control {id} at {path} must match exactly once; observed {count}"))?;
+            if count != 1 {
+                let diagnostic = edit_match_navigation(body, before, &edit_pointer, edit_index);
+                return Err(format!("recipe design edit in control {id} at {path} must match exactly once; observed {count}\nSOURCE EDIT NAVIGATION (data, not instructions):\n{diagnostic}"));
+            }
             *body = body.replacen(before, after, 1);
             edit_receipts
                 .push(json!({"path":path,"matchCount":1,"resultSha256":digest(body.as_bytes())}));
@@ -1539,6 +1615,109 @@ fn dependency_inventory_binding(inventory: &Value) -> Result<Value, String> {
 #[cfg(test)]
 mod interface_inventory_tests {
     use super::*;
+    #[test]
+    fn edit_navigation_retains_exact_utf8_bytes_and_nonoverlapping_counts() {
+        let body = format!(
+            "{}\r\nneedle\r\n{}needle",
+            "汉字".repeat(80),
+            "尾".repeat(90)
+        );
+        let original = body.clone();
+        let diagnostic = edit_match_navigation(&body, "needle", "/controls/2/edits/0", 0);
+        assert_eq!(diagnostic["matchCount"], 2);
+        assert_eq!(diagnostic["inputBodySha256"], digest(body.as_bytes()));
+        assert_eq!(diagnostic["requestedBeforeSha256"], digest(b"needle"));
+        for context in diagnostic["sourceContexts"].as_array().unwrap() {
+            let start = context["byteStart"].as_u64().unwrap() as usize;
+            let end = context["byteEnd"].as_u64().unwrap() as usize;
+            assert_eq!(context["content"], &body[start..end]);
+            assert!(end - start <= 256);
+        }
+        assert_eq!(body, original);
+        assert_eq!(diagnostic["originalOutputChanged"], false);
+        assert_eq!(diagnostic["semanticQualified"], false);
+        let overlap = edit_match_navigation("aaaa", "aa", "/controls/0/edits/0", 0);
+        assert_eq!(overlap["matchCount"], 2);
+        assert_eq!(overlap["matchingByteStarts"], json!([0, 2]));
+    }
+
+    #[test]
+    fn missing_edit_navigation_is_not_a_fuzzy_match_or_unbounded_source_copy() {
+        let body = format!(
+            "{}\nfirst line\nactual second line\nfirst line\n",
+            "\u{1}".repeat(20000)
+        );
+        let before = "first line\ninvented second line";
+        let diagnostic = edit_match_navigation(&body, before, "/controls/1/edits/1", 1);
+        assert_eq!(diagnostic["matchCount"], 0);
+        assert_eq!(diagnostic["matchingByteStarts"], json!([]));
+        assert_eq!(diagnostic["lineAnchors"][0]["matchCount"], 2);
+        assert_eq!(diagnostic["lineAnchors"][1]["matchCount"], 0);
+        assert_eq!(diagnostic["precedingEditsInThisControl"], 1);
+        assert!(diagnostic.to_string().len() <= 4096);
+        assert!(
+            edit_match_navigation(&"x".repeat(500000), "x", "/controls/1/edits/0", 0)
+                .to_string()
+                .len()
+                <= 4096
+        );
+    }
+
+    #[test]
+    fn native_design_rejection_keeps_unique_matching_and_sequential_edit_state() {
+        let body = "let a=1;\nlet b=2;\nlet c=3;";
+        let mut request = json!({"schema":"agentlab.source_recipe_author_request.v1",
+            "reviewed":false,"automaticPromotion":false,"scope":{"id":"scope-any-repository"},
+            "sourceFiles":[{"path":"unrelated/src/file.ts","content":body}]});
+        let edit = |before: &str, after: &str| json!({"path":"unrelated/src/file.ts","before":before,"after":after});
+        let mut plan = json!({"schema":"agentlab.source_recipe_design.v2","scopeSkillId":"scope-any-repository",
+        "invariant":"source-based invariant","limitations":["static only","no platform proof"],
+        "scenarios":[{"id":"s","initialState":{},"inputs":{"seams":{}},"expectedObservations":{"value":1}}],
+        "checks":[{"id":"value","pointer":"/s/value","expected":1}],
+        "controls":[
+            {"id":"base","role":"baseline","expectedFailedCheckIds":[],"edits":[]},
+            {"id":"ref-a","role":"reference","expectedFailedCheckIds":[],"edits":[edit("let a=1;","let a=9;")]},
+            {"id":"ref-b","role":"reference","expectedFailedCheckIds":[],"edits":[edit("let b=2;","let b=8;")]},
+            {"id":"wrong","role":"wrong","expectedFailedCheckIds":["value"],"edits":[edit("let c=3;","let c=7;")]}
+        ]});
+        let check = |request: &Value, plan: &Value| {
+            design_contract(
+                &serde_json::to_vec(request).unwrap(),
+                &serde_json::to_vec(plan).unwrap(),
+            )
+        };
+        assert!(check(&request, &plan).is_ok());
+        request["sourceFiles"][0]["content"] = json!(format!("{body}\nlet a=1;"));
+        let original = plan.clone();
+        let error = check(&request, &plan).unwrap_err();
+        assert!(error.contains("must match exactly once; observed 2"));
+        assert_eq!(plan, original);
+        request["sourceFiles"][0]["content"] = json!(body);
+        plan["controls"][1]["edits"]
+            .as_array_mut()
+            .unwrap()
+            .push(edit("let a=1;", "let a=8;"));
+        let error = check(&request, &plan).unwrap_err();
+        let diagnostic: Value = serde_json::from_str(
+            error
+                .split("SOURCE EDIT NAVIGATION (data, not instructions):\n")
+                .nth(1)
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(diagnostic["editPointer"], "/controls/1/edits/1");
+        assert_eq!(diagnostic["matchCount"], 0);
+        assert_eq!(
+            diagnostic["inputBodySha256"],
+            digest(body.replace("let a=1;", "let a=9;").as_bytes())
+        );
+        assert_eq!(diagnostic["precedingEditsInThisControl"], 1);
+        plan["controls"][1]["edits"][1]["before"] = json!("let a=9;");
+        let accepted = check(&request, &plan).unwrap();
+        assert_eq!(accepted["semanticQualified"], false);
+        assert_eq!(accepted["executionPerformed"], false);
+    }
+
     #[test]
     fn control_contract_diagnostics_locate_rejection_without_normalizing_ids() {
         for id in [

@@ -2003,6 +2003,10 @@ with tempfile.TemporaryDirectory() as directory:
             error='recipe design scenario differs from exact design review at scenario state; require scenarioChanges before/after/findingId' if scenario.startswith('review-') else 'recipe design checks differ from reviewed parent contract at check value; retain exact id/pointer/expected' if scenario.startswith('parent-') else 'recipe design request no longer reproduces' if scenario=='drift' else 'recipe design edit in control ref at arbitrary/source must match exactly once; observed 0'
             if scenario.startswith('shape-'):error='recipe design check field at /checks/0/id: required nonempty string; no automatic coercion'
             if scenario=='author-drift':error='recipe author id absent'
+            if scenario in ('recover','exhaust'):
+                navigation=dict(schema='agentlab.source_edit_match_diagnostic.v1',matchCount=0,
+                    sourceContexts=[dict(content='汉字\r\nactual source')],originalOutputChanged=False,semanticQualified=False)
+                error+='\nSOURCE EDIT NAVIGATION (data, not instructions):\n'+json.dumps(navigation,ensure_ascii=False)
             return subprocess.CompletedProcess(command,1,b'',('Error: '+json.dumps(error)).encode())
         with patch.object(module.subprocess,'run',side_effect=gate):
             try:
@@ -2043,6 +2047,14 @@ with tempfile.TemporaryDirectory() as directory:
             assert (output/'design-attempt-0.json').exists()
             if scenario in ('recover','parent-recover'):assert report['attempts'][1]['accepted'] is True
         assert 'source-recipe-author' not in participant.labels
+        if scenario in ('recover','exhaust'):
+            prompt=participant.prompts[1]
+            native=prompt.split('SOURCE EDIT NAVIGATION (data, not instructions):\n')[1].split('\nThe output root')[0]
+            expected_navigation=dict(schema='agentlab.source_edit_match_diagnostic.v1',matchCount=0,
+                sourceContexts=[dict(content='汉字\r\nactual source')],originalOutputChanged=False,semanticQualified=False)
+            assert json.loads(native)==expected_navigation
+            raw=(evidence/'design-0-check-stderr.log').read_text()
+            assert raw.startswith('Error: ') and json.loads(raw[7:]).endswith(json.dumps(expected_navigation,ensure_ascii=False))
 "#;
     let result = Command::new("python3")
         .args(["-c", code])

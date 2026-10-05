@@ -240,6 +240,17 @@ generation failure. Keep design feedback separate from executable-proposal revie
 Keep repair feedback actionable: distinguish schema/scope mismatches from invariant
 byte limits and limitation counts, report the observed value, and retain unchanged
 acceptance limits.
+For exact source edits, use native `source_edit_match_diagnostic.v1` navigation:
+bind the rejected edit pointer, requested-text digest and current control-body
+digest; inspect literal byte offsets and bounded verbatim source windows. Match
+against the body after earlier edits in that same control, not always the original
+file. Line anchors help locate source but do not establish a complete edit match.
+A real two-attempt constructor changed an ambiguous match into absent text; both
+were correctly rejected. Copy enough exact source context to identify one match,
+without fuzzy replacement, first-occurrence selection or whitespace normalization.
+Keep raw stderr and every response unchanged; decoded native feedback is only
+navigation. Budget exhaustion closes the root. Diagnostic regressions do not prove
+that a fresh Agent repairs its design or that resulting controls are meaningful.
 For rejected control contracts, use the native field pointer and rule to distinguish
 object shape, invalid ID and duplicate ID. Control IDs remain 1..64 ASCII letters,
 digits or hyphens; an underscore is not silently normalized. Request the smallest
