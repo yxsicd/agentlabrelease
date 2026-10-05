@@ -21,6 +21,9 @@ def freeze_design_review(args, request_bytes, participant_class):
     semantic_limit = getattr(args, 'design_semantic_revisions', 0)
     if type(semantic_limit) is not int or semantic_limit not in (0, 1):
         raise ValueError('Design semantic revision limit must be zero or one before inference')
+    decomposition = getattr(args, 'design_revision_decomposition', False)
+    if type(decomposition) is not bool or (decomposition and semantic_limit != 1):
+        raise ValueError('Decomposition requires prospective single semantic revision')
     raw = args.design_quality_rubric.read_bytes()
     if hashlib.sha256(raw).hexdigest() != args.design_quality_rubric_sha256:
         raise ValueError('Design quality rubric differs from prospective digest')
@@ -62,6 +65,11 @@ def freeze_design_review(args, request_bytes, participant_class):
             maximumQualityReviewRounds=2,qualityReviewRepairLimit=repair_limit,maximumRevisionReviewerAttempts=1,
             maximumReviewerAttempts=enrollment['maximumReviewerAttempts'],participantBudgetSeconds=420,
             totalParticipantBudgetSeconds=enrollment['totalParticipantBudgetSeconds'],transportRetryLimit=0)
+        if decomposition:
+            enrollment['semanticRevisionResponseSchema'] = 'agentlab.source_design_revision_reference_response.v2'
+            enrollment['semanticPolicy'].update(schema='agentlab.design_semantic_policy.v2',
+                revisionResponseSchema=enrollment['semanticRevisionResponseSchema'],
+                maximumFindingGroups=8,maximumFindingsPerGroup=8,atomicSuccessor=True)
     with (root/'enrollment.json').open('x') as stream:
         json.dump(enrollment,stream)
     return enrollment
@@ -105,8 +113,12 @@ def review_design_before_code(args, design_path, enrollment):
         config.semantic_policy = enrollment['semanticPolicy']
         config.quality_round_index = 0
         if enrollment.get('semanticRevisionResponseSchema', 'agentlab.source_recipe_design_review.v3') not in (
-                'agentlab.source_recipe_design_review.v3', 'agentlab.source_design_revision_reference_response.v1'):
+                'agentlab.source_recipe_design_review.v3', 'agentlab.source_design_revision_reference_response.v1',
+                'agentlab.source_design_revision_reference_response.v2'):
             raise ValueError('Prospective semantic response schema differs')
+        if bool(getattr(args, 'design_revision_decomposition', False)) != (
+                enrollment['semanticRevisionResponseSchema'] == 'agentlab.source_design_revision_reference_response.v2'):
+            raise ValueError('Decomposition lane changed after enrollment')
     try:
         os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(Path(original_root)/'design-review')
         result = module.run(config)
@@ -131,6 +143,7 @@ def review_design_before_code(args, design_path, enrollment):
         revision.parent_review_evidence = parent/'evidence'
         revision.parent_review_response = parent/'response.json'
         revision.reference_revision_response = enrollment.get('semanticRevisionResponseSchema') == 'agentlab.source_design_revision_reference_response.v1'
+        revision.decomposed_revision_response = enrollment.get('semanticRevisionResponseSchema') == 'agentlab.source_design_revision_reference_response.v2'
         os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(Path(original_root)/'design-semantic-revision')
         revised = module.run(revision)
         if (revised.get('completed') is not True or revised.get('recordedCompletionVerified') is not True
@@ -141,9 +154,10 @@ def review_design_before_code(args, design_path, enrollment):
         report = json.loads((revision.output/'validation.json').read_bytes())
         if hashlib.sha256(candidate.read_bytes()).hexdigest() != report['candidateDesignSha256']:
             raise ValueError('Semantic candidate differs from native completion')
-        feedback_name = 'reviewed-feedback.json' if revision.reference_revision_response else 'response.json'
+        reconstructed = revision.reference_revision_response or revision.decomposed_revision_response
+        feedback_name = 'reviewed-feedback.json' if reconstructed else 'response.json'
         feedback_sha = hashlib.sha256((revision.output/feedback_name).read_bytes()).hexdigest()
-        if revision.reference_revision_response and feedback_sha != report['revisionFeedbackSha256']:
+        if reconstructed and feedback_sha != report['revisionFeedbackSha256']:
             raise ValueError('Semantic feedback differs from native reconstruction')
         with (args.output/'design-semantic-successor.json').open('x') as stream:
             json.dump(dict(schema='agentlab.design_semantic_successor.v1',semanticRevisionIndex=1,
@@ -545,6 +559,8 @@ def main():
     p.add_argument('--design-quality-rubric-sha256')
     p.add_argument('--design-review-repair-limit', type=int, choices=[0, 1], default=0)
     p.add_argument('--design-semantic-revisions', type=int, choices=[0, 1], default=0)
+    p.add_argument('--design-revision-decomposition', action='store_true',
+                   help='Prospectively enroll lossless atomic revision; does not add model attempts')
     p.add_argument('--frozen-design', type=Path,
                    help='Continue verifier generation from exact existing design; not semantic approval')
     p.add_argument('--frozen-design-sha256',
@@ -566,6 +582,8 @@ def main():
         p.error('Design review repair requires prospective early review enrollment')
     if args.design_semantic_revisions and not args.design_quality_rubric:
         p.error('Design semantic revision requires prospective early review enrollment')
+    if args.design_revision_decomposition and args.design_semantic_revisions != 1:
+        p.error('Decomposition requires a prospectively enrolled semantic revision')
     if args.design_quality_rubric and (not args.design_first or args.design_only
             or args.frozen_design or args.revision_request or args.parent_design or args.diagnostic_repair):
         p.error('Early design review belongs only to a fresh design-first constructor')

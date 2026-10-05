@@ -52,11 +52,41 @@ That build used a modified source tree based on `63959a7`; it was not yet a
 clean committed release build. The replay performed no new model inference,
 historical-run reopening or authority write.
 
-Still required before a fresh automatic trial: prospectively versioned semantic
-policy, decomposition-specific canonical prompt and independent original-wire
-completion admission, then transport/coordinator routing and native staged
-lineage regression. Content-only derivation reports recordedCompletionVerified
-and dispatchQualified false; never substitute it for participant completion.
+The opt-in integration adds `--design-revision-decomposition` to a fresh
+constructor with `--design-semantic-revisions 1`. Enrollment freezes
+`agentlab.design_semantic_policy.v2` before inference: reference-v2 response,
+eight groups of eight, atomic successor, and the unchanged one-revision/watchdog
+allowance. The original quality prompt and captured intent consume this policy.
+The reviewer transport uses `--decomposed-revision-response`; Rust independently
+checks the response lane before dispatch and reconsumes both original captures
+at completion. Raw reference-v2 bytes and reconstructed batch feedback remain
+separate. Candidate and feedback hashes bind automatic staging; the whole
+successor still receives a new independent quality review before code generation.
+Legacy v1 enrollment cannot dispatch this lane. Read-only planning and prompt
+preparation do not enroll a historical capture.
+
+hwlinux final regression `exec-00000000000003a2` completed with exit 0:
+50 Rust library tests passed, one explicitly ignored pinned-compiler test;
+formatting, optimized build, transport syntax and diff checks passed. The four
+changed source hashes matched the local worktree. Native gate SHA is
+`83904a3a550721141e6d40606f7e0f43879fbcfc69ee3661faba41965902bb7a`.
+The tested source was a modified tree based on `28218e4`, not a clean release
+build. Fixtures verify v1/v2 exact policy shapes, unchanged attempt budgets,
+canonical prompt identity and rejection of late policy/intent-only changes
+against original wire. Transport syntax validation alone does not establish
+model completion or automatic coordinator acceptance.
+Read-only replay `exec-00000000000003a3` completed with exit 0: all 16 real
+original rows remained in groups 8+8, original input/capture bytes stayed
+unchanged, and canonical v2 prompt preparation succeeded. Attempted v2 dispatch
+against the retained v1 parent correctly exited 1 with
+`dispatch response lane differs from prospective policy`. No new model call or
+historical allowance was spent. This negative routing check is not a completed
+automatic v2 revision.
+
+Still required: a fresh real-model v2 trial, full revision-completion and staged
+lineage regression, then real runtime and feedback closure. Content-only
+derivation reports recordedCompletionVerified and dispatchQualified false;
+never substitute it for participant completion.
 The final whole-successor quality review, runtime calibration, final suite review
 and authority return remain mandatory. Engineering maturity stays 81% (+0),
 accepted complete automatic cycles zero.

@@ -813,6 +813,38 @@ fn reference_revision_prompt(packet: &Value) -> Result<Vec<u8>, String> {
     Ok(prompt)
 }
 
+fn decomposed_revision_prompt(packet: &Value) -> Result<Vec<u8>, String> {
+    let legacy = reference_revision_prompt(packet)?;
+    let text = String::from_utf8(legacy).map_err(|e| e.to_string())?;
+    let text = text.replacen(
+        "schema agentlab.source_design_revision_reference_response.v1",
+        "schema agentlab.source_design_revision_reference_response.v2",
+        1,
+    );
+    let prompt = format!("{text}\nNative findingGroups partition capacity only: address every original finding exactly once in one response. Bind all exact before records to the SAME original ancestor, not sequential rebases. Repeated change record IDs across groups are rejected even if identical. Coupled changes are validated and merged atomically. Decomposition grants no additional model attempts or execution permission.").into_bytes();
+    need(
+        prompt.len() <= 2 * 1024 * 1024,
+        "decomposed revision prompt budget; no truncation",
+    )?;
+    Ok(prompt)
+}
+
+pub fn prompt_for_decomposed_revision_review(
+    request: &[u8],
+    design: &[u8],
+    rubric: &[u8],
+    parent_evidence: &Path,
+    parent_response: &[u8],
+) -> Result<Vec<u8>, String> {
+    decomposed_revision_prompt(&prepare_revision_decomposition(
+        request,
+        design,
+        rubric,
+        parent_evidence,
+        parent_response,
+    )?)
+}
+
 pub fn prompt_for_reference_revision_review(
     request: &[u8],
     design: &[u8],
@@ -924,6 +956,36 @@ pub fn verify_reference_revision_review(
     )
 }
 
+pub fn verify_decomposed_revision_review(
+    request: &[u8],
+    design: &[u8],
+    rubric: &[u8],
+    parent_evidence: &Path,
+    parent_response: &[u8],
+    evidence: &Path,
+    response: &[u8],
+) -> Result<Value, String> {
+    let policy = semantic_policy(parent_evidence)?
+        .ok_or("decomposition requires prospective semantic policy")?;
+    need(
+        policy["schema"] == "agentlab.design_semantic_policy.v2",
+        "decomposition was not prospectively enrolled",
+    )?;
+    let packet =
+        prepare_revision_decomposition(request, design, rubric, parent_evidence, parent_response)?;
+    verify_revision_with_packet(
+        request,
+        design,
+        rubric,
+        parent_evidence,
+        parent_response,
+        evidence,
+        response,
+        packet,
+        true,
+    )
+}
+
 fn verify_revision_with_packet(
     request: &[u8],
     design: &[u8],
@@ -939,12 +1001,17 @@ fn verify_revision_with_packet(
         response.len() <= 16 * 1024,
         "design revision response budget",
     )?;
-    let feedback: Value = if reference {
+    let decomposed = packet["schema"] == "agentlab.source_design_revision_decomposition_request.v1";
+    let feedback: Value = if decomposed {
+        expand_decomposed_feedback(&packet, response)?
+    } else if reference {
         expand_reference_feedback(&packet, response)?
     } else {
         serde_json::from_slice(response).map_err(|e| e.to_string())?
     };
-    revision_finding_links(&packet, &feedback)?;
+    if !decomposed {
+        revision_finding_links(&packet, &feedback)?;
+    }
     let feedback_bytes = serde_json::to_vec(&feedback).map_err(|e| e.to_string())?;
     let target = author::reviewed_design_target(
         request,
@@ -965,6 +1032,10 @@ fn verify_revision_with_packet(
         "design revision reviewer watchdog differs",
     )?;
     if let Some(semantic) = semantic_policy(parent_evidence)? {
+        need(
+            decomposed == (semantic["schema"] == "agentlab.design_semantic_policy.v2"),
+            "revision response lane differs from prospective policy",
+        )?;
         let parent_intent: Value = serde_json::from_slice(&diagnostic::read(
             &parent_evidence.join("review-intent.json"),
             4096,
@@ -991,7 +1062,7 @@ fn verify_revision_with_packet(
     let report = json!({"schema":"agentlab.source_design_revision_review_completion.v1",
         "parentReviewSha256":digest(parent_response),"originalRevisionResponseSha256":digest(response),
         "revisionFeedbackSha256":digest(if reference { &feedback_bytes } else { response }),
-        "reviewedFeedback":feedback,"referenceFeedbackReconstructed":reference,
+        "reviewedFeedback":feedback,"referenceFeedbackReconstructed":reference,"decompositionBound":decomposed,
         "candidateDesignSha256":digest(&serde_json::to_vec(&target).map_err(|e|e.to_string())?),
         "candidateDesign":target,"exactChangesBound":true,"successorMustBeReviewed":true,
         "semanticQualified":false,"executionPermissionGranted":false,"reviewerAuthenticated":false,
@@ -1000,7 +1071,9 @@ fn verify_revision_with_packet(
     maintainer_source_review::verify_review_capture(
         evidence,
         response,
-        &if reference {
+        &if decomposed {
+            decomposed_revision_prompt(&packet)?
+        } else if reference {
             reference_revision_prompt(&packet)?
         } else {
             revision_review_prompt(&packet)?
@@ -1033,19 +1106,32 @@ fn semantic_policy(evidence: &Path) -> Result<Option<Value>, String> {
     }
     let policy: Value =
         serde_json::from_slice(&diagnostic::read(&path, 4096)?).map_err(|e| e.to_string())?;
+    validate_semantic_policy(&policy)?;
+    Ok(Some(policy))
+}
+
+fn validate_semantic_policy(policy: &Value) -> Result<(), String> {
     let repair = policy["qualityReviewRepairLimit"]
         .as_u64()
         .filter(|n| *n <= 1)
         .ok_or("design semantic quality repair budget")?;
-    need(
-        policy
-            == json!({"schema":"agentlab.design_semantic_policy.v1","semanticRevisionLimit":1,
+    let mut expected = json!({"schema":"agentlab.design_semantic_policy.v1","semanticRevisionLimit":1,
         "maximumQualityReviewRounds":2,"qualityReviewRepairLimit":repair,
         "maximumRevisionReviewerAttempts":1,"maximumReviewerAttempts":3+2*repair,
-        "participantBudgetSeconds":420,"totalParticipantBudgetSeconds":420*(3+2*repair),"transportRetryLimit":0}),
+        "participantBudgetSeconds":420,"totalParticipantBudgetSeconds":420*(3+2*repair),"transportRetryLimit":0});
+    if policy["schema"] == "agentlab.design_semantic_policy.v2" {
+        expected["schema"] = json!("agentlab.design_semantic_policy.v2");
+        expected["revisionResponseSchema"] =
+            json!("agentlab.source_design_revision_reference_response.v2");
+        expected["maximumFindingGroups"] = json!(8);
+        expected["maximumFindingsPerGroup"] = json!(8);
+        expected["atomicSuccessor"] = json!(true);
+    }
+    need(
+        *policy == expected,
         "design semantic policy differs from bounded declaration",
     )?;
-    Ok(Some(policy))
+    Ok(())
 }
 
 fn quality_round(evidence: &Path) -> Result<u64, String> {
@@ -1066,6 +1152,15 @@ fn quality_round(evidence: &Path) -> Result<u64, String> {
 }
 
 /// Additional pre-dispatch budget gate, separate from offline revision preparation.
+pub fn check_revision_lane(parent_evidence: &Path, decomposed: bool) -> Result<(), String> {
+    let policy =
+        semantic_policy(parent_evidence)?.ok_or("semantic stage was not prospectively enrolled")?;
+    need(
+        decomposed == (policy["schema"] == "agentlab.design_semantic_policy.v2"),
+        "dispatch response lane differs from prospective policy",
+    )
+}
+
 pub fn check_semantic_dispatch(
     request: &[u8],
     design: &[u8],
@@ -1074,9 +1169,13 @@ pub fn check_semantic_dispatch(
     parent_response: &[u8],
     evidence: &Path,
 ) -> Result<Value, String> {
-    prepare_revision_review(request, design, rubric, parent_evidence, parent_response)?;
     let parent =
         semantic_policy(parent_evidence)?.ok_or("semantic stage was not prospectively enrolled")?;
+    if parent["schema"] == "agentlab.design_semantic_policy.v2" {
+        prepare_revision_decomposition(request, design, rubric, parent_evidence, parent_response)?;
+    } else {
+        prepare_revision_review(request, design, rubric, parent_evidence, parent_response)?;
+    }
     need(
         quality_round(parent_evidence)? == 0,
         "semantic successor cannot receive another revision",
@@ -1464,6 +1563,41 @@ mod tests {
         };
         let report = complete().unwrap();
         assert_eq!(report["recordedCompletionVerified"], true);
+        // A v2 declaration added after capture cannot qualify old intent/wire.
+        let semantic = json!({"schema":"agentlab.design_semantic_policy.v2","semanticRevisionLimit":1,
+            "maximumQualityReviewRounds":2,"qualityReviewRepairLimit":0,"maximumRevisionReviewerAttempts":1,
+            "maximumReviewerAttempts":3,"participantBudgetSeconds":420,"totalParticipantBudgetSeconds":1260,
+            "transportRetryLimit":0,"revisionResponseSchema":"agentlab.source_design_revision_reference_response.v2",
+            "maximumFindingGroups":8,"maximumFindingsPerGroup":8,"atomicSuccessor":true});
+        write("design-semantic-policy.json", &semantic);
+        write(
+            "design-quality-round.json",
+            &json!({"schema":"agentlab.design_quality_round.v1","index":0}),
+        );
+        assert!(complete().is_err());
+        let semantic_prompt = attempt_prompt(&packet, &root).unwrap().0;
+        let mut semantic_intent = intent.clone();
+        semantic_intent["promptSha256"] = json!(digest(&semantic_prompt));
+        semantic_intent["designSemanticPolicySha256"] =
+            json!(digest(&serde_json::to_vec(&semantic).unwrap()));
+        semantic_intent["designQualityRoundIndex"] = json!(0);
+        write("review-intent.json", &semantic_intent);
+        assert!(complete().is_err()); // Intent alone cannot replace old wire.
+        let mut semantic_wire = wire.clone();
+        semantic_wire["messages"][1]["content"] =
+            json!(String::from_utf8(semantic_prompt.clone()).unwrap());
+        write("gateway/1.upstream-request.json", &semantic_wire);
+        fs::write(
+            root.join("source-design-review-prompt.txt"),
+            &semantic_prompt,
+        )
+        .unwrap();
+        assert_eq!(complete().unwrap()["recordedCompletionVerified"], true);
+        fs::remove_file(root.join("design-semantic-policy.json")).unwrap();
+        fs::remove_file(root.join("design-quality-round.json")).unwrap();
+        write("review-intent.json", &intent);
+        write("gateway/1.upstream-request.json", &wire);
+        fs::write(root.join("source-design-review-prompt.txt"), &prompt).unwrap();
         assert_eq!(report["recordedContextSeparationVerified"], true);
         assert_eq!(report["reviewerExecuted"], true);
         for key in [
@@ -1897,6 +2031,12 @@ mod tests {
             );
             assert_eq!(planned["eligibleFindings"].as_array().unwrap().len(), 17);
             assert_eq!(planned["findingGroups"].as_array().unwrap().len(), 3);
+            let prompt = String::from_utf8(decomposed_revision_prompt(&planned).unwrap()).unwrap();
+            assert!(prompt.contains("schema agentlab.source_design_revision_reference_response.v2"));
+            assert!(
+                !prompt.contains("schema agentlab.source_design_revision_reference_response.v1")
+            );
+            assert!(prompt.contains(&digest(&serde_json::to_vec(&planned).unwrap())));
             assert_eq!(
                 planned["decompositionContract"]["additionalModelAttemptsGranted"],
                 0
@@ -1954,6 +2094,40 @@ mod tests {
                         .is_err(),
                     "variant {variant}"
                 );
+            }
+        }
+    }
+    #[test]
+    fn prospective_decomposition_policy_preserves_attempt_and_atomic_limits() {
+        for repair in 0..=1 {
+            let legacy = json!({"schema":"agentlab.design_semantic_policy.v1","semanticRevisionLimit":1,
+                "maximumQualityReviewRounds":2,"qualityReviewRepairLimit":repair,
+                "maximumRevisionReviewerAttempts":1,"maximumReviewerAttempts":3+2*repair,
+                "participantBudgetSeconds":420,"totalParticipantBudgetSeconds":420*(3+2*repair),"transportRetryLimit":0});
+            validate_semantic_policy(&legacy).unwrap();
+            let mut policy = legacy.clone();
+            policy["schema"] = json!("agentlab.design_semantic_policy.v2");
+            policy["revisionResponseSchema"] =
+                json!("agentlab.source_design_revision_reference_response.v2");
+            policy["maximumFindingGroups"] = json!(8);
+            policy["maximumFindingsPerGroup"] = json!(8);
+            policy["atomicSuccessor"] = json!(true);
+            validate_semantic_policy(&policy).unwrap();
+            for (key, value) in [
+                ("maximumRevisionReviewerAttempts", json!(2)),
+                ("maximumFindingGroups", json!(9)),
+                ("maximumFindingsPerGroup", json!(9)),
+                ("atomicSuccessor", json!(false)),
+                (
+                    "revisionResponseSchema",
+                    json!("agentlab.source_design_revision_reference_response.v1"),
+                ),
+                ("schema", json!("agentlab.design_semantic_policy.v1")),
+                ("extra", json!(true)),
+            ] {
+                let mut bad = policy.clone();
+                bad[key] = value;
+                assert!(validate_semantic_policy(&bad).is_err(), "{key}");
             }
         }
     }

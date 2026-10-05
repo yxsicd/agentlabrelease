@@ -187,7 +187,11 @@ and its rationale. Use native read-only decomposition planning to retain complet
 ID coverage; all grouped exact before records bind the same original ancestor.
 Reject cross-group record conflicts and validate coupled changes atomically,
 not through sequential unreviewed rebases. Planning/content validation grants no
-dispatch; versioned policy and original-wire completion integration remain pending.
+dispatch. For fresh automatic trials, enroll decomposition before inference via
+the versioned semantic policy and use original-wire revision completion admission;
+legacy captures cannot acquire this lane retroactively. Keep raw reference replies
+separate from Rust-reconstructed batch feedback, and independently review the
+whole successor before code generation. Real v2 cycle qualification remains pending.
 Read the [decomposition and real-capture checkpoint](../../docs/flywheel-design-quality-review-20261005.md)
 before planning a successor. Original-capture admission verifies retained delivery,
 not a reviewer's interpretation of compiler output or pre-execution requirements.

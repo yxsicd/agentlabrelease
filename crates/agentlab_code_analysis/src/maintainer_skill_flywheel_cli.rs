@@ -1216,10 +1216,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let parent_evidence = PathBuf::from(value(&args, "--parent-review-evidence")?);
         let parent_response = fs::read(value(&args, "--parent-review-response")?)?;
         let reference = args.iter().any(|a| a == "--reference-revision-response");
+        let decomposed = args.iter().any(|a| a == "--decomposed-revision-response");
+        if reference && decomposed {
+            return Err("select exactly one revision response lane".into());
+        }
         if args
             .iter()
             .any(|a| a == "--derive-source-design-revision-feedback")
             && !reference
+            && !decomposed
         {
             return Err("feedback derivation requires reference revision response".into());
         }
@@ -1227,7 +1232,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .iter()
             .any(|a| a == "--source-design-revision-review-prompt")
         {
-            let prompt = if reference {
+            let prompt = if decomposed {
+                quality::prompt_for_decomposed_revision_review
+            } else if reference {
                 quality::prompt_for_reference_revision_review
             } else {
                 quality::prompt_for_revision_review
@@ -1244,6 +1251,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .iter()
                 .any(|a| a == "--check-source-design-semantic-dispatch")
             {
+                quality::check_revision_lane(&parent_evidence, decomposed)?;
                 quality::check_semantic_dispatch(
                     &request,
                     &design,
@@ -1257,7 +1265,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     || a == "--derive-source-design-revision-candidate"
                     || a == "--derive-source-design-revision-feedback"
             }) {
-                let verify = if reference {
+                let verify = if decomposed {
+                    quality::verify_decomposed_revision_review
+                } else if reference {
                     quality::verify_reference_revision_review
                 } else {
                     quality::verify_revision_review
@@ -1272,7 +1282,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     &fs::read(value(&args, "--review-response")?)?,
                 )?
             } else {
-                let prepare = if reference {
+                let prepare = if decomposed {
+                    quality::prepare_revision_decomposition
+                } else if reference {
                     quality::prepare_reference_revision_review
                 } else {
                     quality::prepare_revision_review

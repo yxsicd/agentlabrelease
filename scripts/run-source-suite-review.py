@@ -33,6 +33,8 @@ def gate(args, flag, output, *extra):
                         '--parent-review-response', str(args.parent_review_response.resolve())])
         if getattr(args, 'reference_revision_response', False):
             command.append('--reference-revision-response')
+        if getattr(args, 'decomposed_revision_response', False):
+            command.append('--decomposed-revision-response')
     result = subprocess.run(command, capture_output=True, timeout=90)
     with output.with_suffix(output.suffix + '.stdout.log').open('xb') as stream:
         stream.write(result.stdout)
@@ -197,7 +199,7 @@ def run_attempt(args, participant_class=None):
                  '--review-response', str(output / 'response.json'), '--evidence', str(evidence))
             if hashlib.sha256((output / 'candidate-design.json').read_bytes()).hexdigest() != validated['candidateDesignSha256']:
                 raise ValueError('Native derived design differs from captured revision review')
-            if getattr(args, 'reference_revision_response', False):
+            if getattr(args, 'reference_revision_response', False) or getattr(args, 'decomposed_revision_response', False):
                 gate(args, '--derive-source-design-revision-feedback', output/'reviewed-feedback.json',
                      '--review-response', str(output/'response.json'), '--evidence', str(evidence))
                 if hashlib.sha256((output/'reviewed-feedback.json').read_bytes()).hexdigest() != validated['revisionFeedbackSha256']:
@@ -223,8 +225,16 @@ def run(args, participant_class=None):
     revision_review = getattr(args, 'parent_review_evidence', None) is not None
     if getattr(args, 'reference_revision_response', False) and not revision_review:
         raise ValueError('Reference revision response requires original negative review capture')
+    if getattr(args, 'decomposed_revision_response', False):
+        if not revision_review or getattr(args, 'reference_revision_response', False):
+            raise ValueError('Decomposed response requires one original revision lane')
+        if (getattr(args, 'semantic_policy', None) or {}).get('schema') != 'agentlab.design_semantic_policy.v2':
+            raise ValueError('Decomposition requires prospective v2 policy')
     if revision_review and getattr(args, 'semantic_policy', None) is None:
         raise ValueError('Semantic review requires prospective policy before dispatch')
+    if revision_review and bool(getattr(args, 'decomposed_revision_response', False)) != (
+            args.semantic_policy.get('schema') == 'agentlab.design_semantic_policy.v2'):
+        raise ValueError('Revision response lane differs from prospective policy')
     if bool(getattr(args, 'parent_review_evidence', None)) != bool(getattr(args, 'parent_review_response', None)):
         raise ValueError('Revision review requires paired original review evidence/response')
     if revision_review and (not design_review or limit or getattr(args, 'repair_parent', None) is not None):
@@ -308,6 +318,7 @@ def main():
                         help='Original prospectively captured semantic policy; native admission reconsumes it')
     parser.add_argument('--quality-round-index', type=int, choices=[0, 1], default=0)
     parser.add_argument('--reference-revision-response', action='store_true')
+    parser.add_argument('--decomposed-revision-response', action='store_true')
     parser.add_argument('--source-git-checkout', type=Path)
     parser.add_argument('--review-repair-limit', type=int, choices=[0, 1], default=0)
     parser.add_argument('--reasoning-effort', choices=['default', 'none', 'low', 'medium', 'high', 'max'], default='default')
