@@ -1,5 +1,49 @@
 # Pre-execution source design quality review
 
+## Reference revision response under validation
+
+Real run [37256733699](https://github.com/yxsicd/agentlabrelease/actions/runs/37256733699)
+at method `7e0209f1b61f9736a688a4d89fd7f757cdb7a23f` admitted its prospectively
+enrolled protocol correction and negative early review, then automatically passed
+semantic dispatch admission. Its revision returned three of four findings and
+shortened immutable rationales; native completion rejected omission. The root is
+closed, without a derived successor, code execution or knowledge write. Original
+artifact SHA256 is `79d49a8d188a0e4a3a8fe4e360fbdc85264a486b38562d0c3230074f21cbb599`.
+Engineering maturity is now 81% (+1 for that real correction/dispatch boundary),
+not full convergence; complete automatic rounds remain zero.
+
+The new prospective reference response retains the same eleven root fields but
+uses schema `agentlab.source_design_revision_reference_response.v1`. Its findings
+contain only id, requiredChange and sourcePaths. Every original negative ID is
+mandatory exactly once, including overlapping aggregate/detail rows. Rust restores
+the unchanged observed rationale by ID; unknown, duplicate, missing and model-owned
+observed fields are rejected. It then invokes ordinary v3 exact-change admission.
+This does not fill in judgments, add missing findings, alter source or weaken
+parent, baseline or control protection. Reconstruction and the original response
+have separate digests. Original capture is verified against the new canonical
+packet/prompt; legacy wire cannot be relabeled.
+
+CLI revision entrypoints accept `--reference-revision-response`; native
+`--derive-source-design-revision-feedback` writes compact reconstructed v3 bytes
+only after capture admission. The transport retains response.json and separately
+writes reviewed-feedback.json, then routes the latter to final native staging.
+New semantic enrollment records the response schema before construction. Legacy
+entrypoints/captures retain their v3 protocol. Local primitive tests passed;
+full native capture/transport validation and fresh real convergence are pending.
+Do not dispatch a new experiment from this unqualified worktree.
+
+Validation checkpoint: eleven local design-quality unit tests passed. The exact
+embedded Python transport and coordinator fixtures also passed when executed
+directly with system Python; their native gates are mocked, so they do not prove
+full capture admission. The focused native/CLI integration and transport Rust
+wrapper remain unfinished: sampled macOS child processes were still in dyld
+startup, with no evidence of a business-code deadlock. The integration executable
+passed code-signature verification. Local formatting verification is also pending;
+the system Python Skill validator lacks PyYAML. Release-manifest validation and
+`git diff --check` passed. A draft validation PR must run the existing Linux CI's
+complete Rust suite, formatting gate and pinned real-compiler test before merge
+qualification. This checkpoint does not qualify a release or another model run.
+
 ## Negative review to exact-change review: native bridge
 
 Local bounded-coordinator work now carries original ancestor and exact v3 response

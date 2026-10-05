@@ -57,6 +57,7 @@ def freeze_design_review(args, request_bytes, participant_class):
         automaticCompactionDisabled=True,
         automaticPromotion=False,authorityWritePerformed=False,qualified=False)
     if semantic_limit:
+        enrollment['semanticRevisionResponseSchema'] = 'agentlab.source_design_revision_reference_response.v1'
         enrollment['semanticPolicy'] = dict(schema='agentlab.design_semantic_policy.v1',semanticRevisionLimit=1,
             maximumQualityReviewRounds=2,qualityReviewRepairLimit=repair_limit,maximumRevisionReviewerAttempts=1,
             maximumReviewerAttempts=enrollment['maximumReviewerAttempts'],participantBudgetSeconds=420,
@@ -103,6 +104,9 @@ def review_design_before_code(args, design_path, enrollment):
             raise ValueError('Prospective semantic stage budget differs')
         config.semantic_policy = enrollment['semanticPolicy']
         config.quality_round_index = 0
+        if enrollment.get('semanticRevisionResponseSchema', 'agentlab.source_recipe_design_review.v3') not in (
+                'agentlab.source_recipe_design_review.v3', 'agentlab.source_design_revision_reference_response.v1'):
+            raise ValueError('Prospective semantic response schema differs')
     try:
         os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(Path(original_root)/'design-review')
         result = module.run(config)
@@ -126,6 +130,7 @@ def review_design_before_code(args, design_path, enrollment):
         revision.review_repair_limit = 0
         revision.parent_review_evidence = parent/'evidence'
         revision.parent_review_response = parent/'response.json'
+        revision.reference_revision_response = enrollment.get('semanticRevisionResponseSchema') == 'agentlab.source_design_revision_reference_response.v1'
         os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(Path(original_root)/'design-semantic-revision')
         revised = module.run(revision)
         if (revised.get('completed') is not True or revised.get('recordedCompletionVerified') is not True
@@ -136,10 +141,14 @@ def review_design_before_code(args, design_path, enrollment):
         report = json.loads((revision.output/'validation.json').read_bytes())
         if hashlib.sha256(candidate.read_bytes()).hexdigest() != report['candidateDesignSha256']:
             raise ValueError('Semantic candidate differs from native completion')
+        feedback_name = 'reviewed-feedback.json' if revision.reference_revision_response else 'response.json'
+        feedback_sha = hashlib.sha256((revision.output/feedback_name).read_bytes()).hexdigest()
+        if revision.reference_revision_response and feedback_sha != report['revisionFeedbackSha256']:
+            raise ValueError('Semantic feedback differs from native reconstruction')
         with (args.output/'design-semantic-successor.json').open('x') as stream:
             json.dump(dict(schema='agentlab.design_semantic_successor.v1',semanticRevisionIndex=1,
                 parentDesignSha256=hashlib.sha256(design_path.read_bytes()).hexdigest(),
-                reviewFeedbackSha256=hashlib.sha256((revision.output/'response.json').read_bytes()).hexdigest(),
+                reviewFeedbackSha256=feedback_sha,reviewFeedbackFile=feedback_name,
                 candidateDesignSha256=report['candidateDesignSha256'],successorMustBeReviewed=True,
                 qualified=False,automaticPromotion=False,authorityWritePerformed=False),stream)
         successor = SimpleNamespace(**vars(config))
@@ -171,9 +180,12 @@ def stage_design_lineage(args, design_path):
         if args.parent_design or args.design_review_feedback:
             raise ValueError('Automatic semantic lineage cannot mix with manual lineage')
         parent = args.output/'design.json'
-        feedback = args.output/'design-semantic-revision/response.json'
         candidate = args.output/'design-semantic-revision/candidate-design.json'
         receipt = json.loads(marker.read_bytes())
+        feedback_name = receipt.get('reviewFeedbackFile', 'response.json')
+        if feedback_name not in ('response.json', 'reviewed-feedback.json'):
+            raise ValueError('Semantic feedback path differs')
+        feedback = args.output/'design-semantic-revision'/feedback_name
         if (design_path is None or design_path.resolve() != candidate.resolve()
                 or receipt.get('schema') != 'agentlab.design_semantic_successor.v1'
                 or receipt.get('semanticRevisionIndex') != 1

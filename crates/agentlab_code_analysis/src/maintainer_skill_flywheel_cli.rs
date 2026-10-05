@@ -1183,6 +1183,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             || a == "--source-design-revision-review-prompt"
             || a == "--verify-source-design-revision-review-completion"
             || a == "--derive-source-design-revision-candidate"
+            || a == "--derive-source-design-revision-feedback"
             || a == "--check-source-design-semantic-dispatch"
     }) {
         use agentlab_code_analysis::maintainer_source_design_quality as quality;
@@ -1191,11 +1192,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let rubric = fs::read(value(&args, "--quality-rubric")?)?;
         let parent_evidence = PathBuf::from(value(&args, "--parent-review-evidence")?);
         let parent_response = fs::read(value(&args, "--parent-review-response")?)?;
+        let reference = args.iter().any(|a| a == "--reference-revision-response");
+        if args
+            .iter()
+            .any(|a| a == "--derive-source-design-revision-feedback")
+            && !reference
+        {
+            return Err("feedback derivation requires reference revision response".into());
+        }
         let bytes = if args
             .iter()
             .any(|a| a == "--source-design-revision-review-prompt")
         {
-            quality::prompt_for_revision_review(
+            let prompt = if reference {
+                quality::prompt_for_reference_revision_review
+            } else {
+                quality::prompt_for_revision_review
+            };
+            prompt(
                 &request,
                 &design,
                 &rubric,
@@ -1218,8 +1232,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else if args.iter().any(|a| {
                 a == "--verify-source-design-revision-review-completion"
                     || a == "--derive-source-design-revision-candidate"
+                    || a == "--derive-source-design-revision-feedback"
             }) {
-                quality::verify_revision_review(
+                let verify = if reference {
+                    quality::verify_reference_revision_review
+                } else {
+                    quality::verify_revision_review
+                };
+                verify(
                     &request,
                     &design,
                     &rubric,
@@ -1229,7 +1249,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     &fs::read(value(&args, "--review-response")?)?,
                 )?
             } else {
-                quality::prepare_revision_review(
+                let prepare = if reference {
+                    quality::prepare_reference_revision_review
+                } else {
+                    quality::prepare_revision_review
+                };
+                prepare(
                     &request,
                     &design,
                     &rubric,
@@ -1242,6 +1267,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .any(|a| a == "--derive-source-design-revision-candidate")
             {
                 serde_json::to_vec(&report["candidateDesign"])?
+            } else if args
+                .iter()
+                .any(|a| a == "--derive-source-design-revision-feedback")
+            {
+                serde_json::to_vec(&report["reviewedFeedback"])?
             } else {
                 serde_json::to_vec_pretty(&report)?
             }
