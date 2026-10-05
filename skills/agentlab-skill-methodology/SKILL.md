@@ -335,6 +335,12 @@ wire and arrival timings rather than treating requested policy as effective.
 If testing a different reasoning hint, enroll a prospective controlled experiment
 with unchanged source/task and other budgets; preserve the failed root and do
 not salvage its partial JSON or change defaults before measuring outcomes.
+An explicit `reasoning_effort=none` can also receive reasoning deltas. In a
+retained local comparison, `none` completed within the unchanged 180-second design
+deadline, then required the enrolled format correction before native admission.
+That single observation neither proves disabled reasoning nor warrants a new
+default; count correction latency and require independent review, execution and
+committed return separately from completed generation.
 If code text starts near the observed deadline, test a separately
 recorded code-phase budget rather than extending every stage. Keep design limits,
 repair counts, transport retry policy and semantic admission unchanged; propagate
