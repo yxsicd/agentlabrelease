@@ -26,9 +26,20 @@ fn rows<'a>(value: &'a Value, key: &str) -> Result<&'a Vec<Value>, String> {
         .ok_or_else(|| format!("design quality array absent: {key}"))
 }
 
-fn validate_source_citation(packet: &Value, path: &str, quote: &str) -> Result<(), String> {
+fn validate_source_citation(
+    packet: &Value,
+    path: &str,
+    quote: &str,
+    pointer: &str,
+) -> Result<(), String> {
     let mut matches = Vec::new();
+    let mut quote_paths = BTreeSet::new();
     for file in rows(packet, "originalSourceFiles")? {
+        if file["content"].as_str().is_some_and(|s| s.contains(quote)) {
+            if let Some(candidate) = file["path"].as_str() {
+                quote_paths.insert(candidate);
+            }
+        }
         if file["path"] == path {
             if let Some(content) = file["content"].as_str() {
                 matches.push(content);
@@ -37,6 +48,14 @@ fn validate_source_citation(packet: &Value, path: &str, quote: &str) -> Result<(
     }
     if let Some(files) = packet["readOnlySourceContext"]["packet"]["selectedFiles"].as_array() {
         for file in files {
+            if file["contentUtf8"]
+                .as_str()
+                .is_some_and(|s| s.contains(quote))
+            {
+                if let Some(candidate) = file["path"].as_str() {
+                    quote_paths.insert(candidate);
+                }
+            }
             if file["path"] == path {
                 if let Some(content) = file["contentUtf8"].as_str() {
                     matches.push(content);
@@ -44,10 +63,42 @@ fn validate_source_citation(packet: &Value, path: &str, quote: &str) -> Result<(
             }
         }
     }
-    need(
-        matches.len() == 1 && matches[0].contains(quote),
-        "design quality source citation differs",
-    )
+    if matches.len() == 1 && matches[0].contains(quote) {
+        return Ok(());
+    }
+    let reason = match matches.len() {
+        0 => "source-path-not-loaded",
+        1 => "quote-not-in-declared-source",
+        _ => "ambiguous-source-path",
+    };
+    Err(format!(
+        "design quality source citation differs: {}",
+        json!({
+            "schema":"agentlab.design_review_citation_error.v1",
+            "responsePointer":pointer,"declaredPath":path,"reason":reason,
+            "declaredPathMatchCount":matches.len(),"quoteSha256":digest(quote.as_bytes()),
+            "matchingQuotePaths":quote_paths.iter().take(8).collect::<Vec<_>>(),
+            "matchingQuotePathCount":quote_paths.len(),"responseEdited":false,"qualified":false
+        })
+    ))
+}
+
+// A navigation projection of existing compiler evidence, not another analyzer.
+fn compiler_import_focus(packet: &Value) -> Value {
+    let Some(evidence) = packet.get("sourceCompilerEvidence") else {
+        return Value::Null;
+    };
+    json!({"schema":"agentlab.design_review_compiler_import_focus.v1",
+        "evidencePointer":"/sourceCompilerEvidence","evidenceSha256":digest(&serde_json::to_vec(evidence).unwrap()),
+        "files":evidence["files"].as_array().into_iter().flatten().enumerate().map(|(index,file)|json!({
+            "evidencePointer":format!("/sourceCompilerEvidence/files/{index}"),
+            "path":file["path"],"status":file["status"],
+            "sourceParseDiagnosticCodes":file["sourceParseDiagnosticCodes"],
+            "diagnostics":file["diagnostics"],"emittedParseDiagnosticCodes":file["emittedParseDiagnosticCodes"],
+            "emittedRequireSpecifiers":file["emittedRequireSpecifiers"]
+        })).collect::<Vec<_>>(),
+        "rule":"Read each file's error-free emitted candidates before labeling a syntactic import a runtime dependency. Missing emitted require is not a missing host binding; typing, dynamic/shadowed loading and platform globals remain unresolved. Cite original evidence strings, not this navigation projection.",
+        "sourceExecuted":false,"runtimeResolutionVerified":false,"qualified":false})
 }
 
 fn design_string_locations(value: &Value, pointer: &str, catalog: &mut Vec<Value>) {
@@ -197,6 +248,11 @@ fn prompt_for_packet(packet: &Value) -> Result<Vec<u8>, String> {
     let prompt = [
         root_shape.as_slice(),
         compiler_boundary.as_slice(),
+        format!(
+            "COMPILER IMPORT NAVIGATION (derived, not qualification):\n{}\n",
+            compiler_import_focus(packet)
+        )
+        .as_bytes(),
         prompt.as_slice(),
     ]
     .concat();
@@ -277,7 +333,7 @@ fn validate_content(packet: &Value, response_bytes: &[u8]) -> Result<Value, Stri
             .map(|r| text(r, "id"))
             .collect::<Result<_, _>>()?;
         let mut seen = BTreeSet::new();
-        for row in rows(&response, key)? {
+        for (row_index, row) in rows(&response, key)?.iter().enumerate() {
             need(
                 row.as_object()
                     .is_some_and(|o| o.len() == if key == "criterionReviews" { 4 } else { 5 }),
@@ -307,7 +363,7 @@ fn validate_content(packet: &Value, response_bytes: &[u8]) -> Result<Value, Stri
                 evidence.len() <= 16 && (verdict == "unverified" || !evidence.is_empty()),
                 "design quality missing evidence",
             )?;
-            for citation in evidence {
+            for (citation_index, citation) in evidence.iter().enumerate() {
                 need(
                     citation.as_object().is_some_and(|o| o.len() == 2),
                     "design quality evidence fields",
@@ -325,7 +381,17 @@ fn validate_content(packet: &Value, response_bytes: &[u8]) -> Result<Value, Stri
                     )?;
                 } else {
                     let path = text(citation, "path")?;
-                    validate_source_citation(packet, path, quote)?;
+                    let field = if key == "criterionReviews" {
+                        "evidence"
+                    } else {
+                        "sourceEvidence"
+                    };
+                    validate_source_citation(
+                        packet,
+                        path,
+                        quote,
+                        &format!("/{key}/{row_index}/{field}/{citation_index}"),
+                    )?;
                 }
             }
             if key != "criterionReviews" {
@@ -601,6 +667,86 @@ mod tests {
         assert!(catalog
             .iter()
             .any(|e| e["pointer"] == "/design/a~1b~0c/nested"));
+        assert_eq!(packet, original);
+    }
+
+    #[test]
+    fn citation_failure_locates_original_row_without_relocating_or_approving() {
+        for repository in ["unrelated-one", "different-language-project"] {
+            let (mut packet, mut response) = fixture(repository);
+            packet["originalSourceFiles"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({"path":"src/map.ts","content":"export const mapping = 7;"}));
+            response["scenarioReviews"][0]["sourceEvidence"] =
+                json!([{"path":"src/unit.ts","quote":"mapping = 7"}]);
+            let original = response.clone();
+            let failure =
+                validate_content(&packet, &serde_json::to_vec(&response).unwrap()).unwrap_err();
+            let diagnostic: Value =
+                serde_json::from_str(failure.split_once(": ").unwrap().1).unwrap();
+            assert_eq!(
+                diagnostic["responsePointer"],
+                "/scenarioReviews/0/sourceEvidence/0"
+            );
+            assert_eq!(diagnostic["reason"], "quote-not-in-declared-source");
+            assert_eq!(diagnostic["matchingQuotePaths"], json!(["src/map.ts"]));
+            assert_eq!(diagnostic["qualified"], false);
+            assert_eq!(diagnostic["responseEdited"], false);
+            assert!(diagnostic.get("quote").is_none());
+            assert_eq!(response, original);
+            for (path, reason) in [
+                ("missing.ts", "source-path-not-loaded"),
+                ("src/unit.ts", "ambiguous-source-path"),
+            ] {
+                if reason == "ambiguous-source-path" {
+                    packet["originalSourceFiles"]
+                        .as_array_mut()
+                        .unwrap()
+                        .push(json!({"path":"src/unit.ts","content":"mapping = 7"}));
+                }
+                response["scenarioReviews"][0]["sourceEvidence"][0]["path"] = json!(path);
+                let failure =
+                    validate_content(&packet, &serde_json::to_vec(&response).unwrap()).unwrap_err();
+                let diagnostic: Value =
+                    serde_json::from_str(failure.split_once(": ").unwrap().1).unwrap();
+                assert_eq!(diagnostic["reason"], reason);
+            }
+        }
+    }
+
+    #[test]
+    fn compiler_navigation_preserves_candidates_errors_and_original_evidence() {
+        let (mut packet, _) = fixture("independent-imports");
+        assert!(compiler_import_focus(&packet).is_null());
+        packet["sourceCompilerEvidence"] = json!({"files":[
+            {"path":"src/erased.ts","status":"transpiled","emittedRequireSpecifiers":[],
+             "sourceParseDiagnosticCodes":[],"diagnostics":[],"emittedParseDiagnosticCodes":[]},
+            {"path":"src/retained.ts","status":"transpiled","emittedRequireSpecifiers":["./values"],
+             "sourceParseDiagnosticCodes":[],"diagnostics":[],"emittedParseDiagnosticCodes":[]},
+            {"path":"src/broken.ts","status":"compiler-error","emittedRequireSpecifiers":[],
+             "sourceParseDiagnosticCodes":[1005],"diagnostics":[{"code":1005}],"emittedParseDiagnosticCodes":[]}
+        ]});
+        let original = packet.clone();
+        let focus = compiler_import_focus(&packet);
+        for (index, file) in focus["files"].as_array().unwrap().iter().enumerate() {
+            let original_file = packet
+                .pointer(file["evidencePointer"].as_str().unwrap())
+                .unwrap();
+            assert_eq!(
+                file["emittedRequireSpecifiers"],
+                original_file["emittedRequireSpecifiers"]
+            );
+            assert_eq!(file["diagnostics"], original_file["diagnostics"]);
+            assert_eq!(file["status"], original_file["status"]);
+            assert_eq!(
+                file["path"],
+                packet["sourceCompilerEvidence"]["files"][index]["path"]
+            );
+        }
+        for key in ["sourceExecuted", "runtimeResolutionVerified", "qualified"] {
+            assert_eq!(focus[key], false);
+        }
         assert_eq!(packet, original);
     }
 
