@@ -597,8 +597,9 @@ def main():
         p.error('Source guidance consumption currently requires openai-completions capture; no model dispatch')
     if args.diagnostic_repair and (not args.frozen_design or args.revision_request):
         p.error('Diagnostic repair requires frozen design and cannot mix reviewed revision')
-    if args.diagnostic_loop_intent and (not args.design_first or args.revision_request or args.diagnostic_repair):
-        p.error('Loop intent belongs only to a fresh design-first root')
+    if args.diagnostic_loop_intent and (not (args.design_first or args.frozen_design)
+            or args.revision_request or args.diagnostic_repair):
+        p.error('Loop intent belongs only to a fresh design-first or frozen-design root')
     if bool(args.frozen_design) != bool(args.frozen_design_sha256):
         p.error('--frozen-design and --frozen-design-sha256 must be paired')
     if args.frozen_design and (args.design_first or args.design_only or args.parent_design

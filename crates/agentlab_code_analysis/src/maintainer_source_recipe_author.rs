@@ -1834,6 +1834,57 @@ mod interface_inventory_tests {
         }
     }
     #[test]
+    fn author_cli_frozen_design_loop_intent_reaches_runtime_guard_without_dispatch() {
+        let script =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/run-source-recipe-author.py");
+        let base_args = [
+            "--request",
+            "unused-request.json",
+            "--output",
+            "unused-output",
+            "--gate",
+            "unused-gate",
+            "--pi",
+            "unused-pi",
+            "--frozen-design",
+            "unused-design.json",
+            "--frozen-design-sha256",
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            "--diagnostic-loop-intent",
+            "unused-intent.json",
+        ];
+
+        let output = std::process::Command::new("python3")
+            .arg(&script)
+            .args(base_args)
+            .env_remove("AGENTLAB_PARTICIPANT_RUNTIME_CONFIG")
+            .output()
+            .unwrap();
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert_eq!(output.status.code(), Some(1));
+        assert!(stderr.contains("Recipe construction requires the contained participant runtime"));
+        assert!(!stderr.contains("Loop intent belongs only"));
+        assert!(!stderr.contains("Frozen design continuation cannot mix"));
+
+        for conflict in ["--revision-request", "--diagnostic-repair"] {
+            let output = std::process::Command::new("python3")
+                .arg(&script)
+                .args(base_args)
+                .args([conflict, "unused-conflict.json"])
+                .env_remove("AGENTLAB_PARTICIPANT_RUNTIME_CONFIG")
+                .output()
+                .unwrap();
+            let stderr = String::from_utf8(output.stderr).unwrap();
+            assert_eq!(output.status.code(), Some(2));
+            assert!(stderr.contains(
+                "Loop intent belongs only to a fresh design-first or frozen-design root"
+            ));
+            assert!(
+                !stderr.contains("Recipe construction requires the contained participant runtime")
+            );
+        }
+    }
+    #[test]
     fn author_cli_environment_fails_before_reads_allocation_or_dispatch_without_secret_values() {
         let script =
             Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/run-source-recipe-author.py");
