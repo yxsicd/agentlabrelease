@@ -1,0 +1,31 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "control",
+  "value": {
+    "sourceRevision": "90496dc0dda9c1eaabe13be1988c85b9aab02b8c",
+    "platform": "linux-x64",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-90496dc0-linux-x64/agentlabctl-90496dc0-linux-x64",
+    "bytes": 4260960,
+    "sha256": "764b74d71b1c21f01cb68758d00da58d0f6b564d92a28fb4f8bc0e202a9fd880"
+  },
+  "assets": [
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-90496dc0-linux-x64/agentlabctl-90496dc0-linux-x64",
+      "bytes": 4260960,
+      "sha256": "764b74d71b1c21f01cb68758d00da58d0f6b564d92a28fb4f8bc0e202a9fd880"
+    }
+  ],
+  "contracts": {
+    "plan": "composition plan-docker --dir <exact-acquired-dir> --platform linux-x64",
+    "planWrites": false,
+    "planVerifiesInstalledBytes": false,
+    "reuse": "full-readonly-content-and-ownership-verification",
+    "fullHarnessReady": false
+  },
+  "qualification": {
+    "status": "pending-two-host-public-execution",
+    "fixture": "release/components/agentlab-controller-fixture-90496dc0-linux-x64.tar.zst",
+    "fixtureSha256": "42368ff87f09d406f3a6c4169a70c9bcbf353ba730de303d7b7fa6b60103826d",
+    "rustGate": "tests/native_controller_acceptance.rs"
+  }
+}

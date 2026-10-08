@@ -2,9 +2,9 @@
 set -euo pipefail
 
 version="40ecdf4b"
-control_url="https://github.com/yxsicd/agentlabrelease/releases/download/control-ea25616d-linux-x64/agentlabctl-ea25616d-linux-x64"
-control_sha256="076ee1beee90023660cbda7f9ab90ae01863550783f16d4de4a4e39422343da8"
-control_bytes="4425648"
+control_url="https://github.com/yxsicd/agentlabrelease/releases/download/control-90496dc0-linux-x64/agentlabctl-90496dc0-linux-x64"
+control_sha256="764b74d71b1c21f01cb68758d00da58d0f6b564d92a28fb4f8bc0e202a9fd880"
+control_bytes="4260960"
 lock_url="https://github.com/yxsicd/agentlabrelease/releases/download/candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64/environment-lock.json"
 lock_sha256="ac9192c09ee9e3488f2e874ddeb7b5d5dc0ec422aa09e728a49cb037f1ef333e"
 lock_bytes="6515"
@@ -12,8 +12,13 @@ lock_bytes="6515"
 usage() {
   cat <<'EOF'
 Usage:
-  agentlab-composition-install.sh online [--root DIR] [--cache-dir DIR]
-  agentlab-composition-install.sh offline --control FILE --lock FILE [--root DIR] [--cache-dir DIR]
+  agentlab-composition-install.sh online [--plan] [--root DIR] [--cache-dir DIR]
+  agentlab-composition-install.sh offline [--plan] --control FILE --lock FILE [--root DIR] [--cache-dir DIR]
+  agentlab-composition-install.sh inspect --root DIR
+
+--plan acquires verified assets into the private root/cache, then produces a
+no-Docker-write plan instead of installing. inspect uses already acquired bytes
+and creates no files or Docker resources. A plan does not verify installed bytes.
 
 Online bootstrap verifies the static agentlabctl with a host checksum command.
 The trusted control binary then performs all remaining downloads, verification,
@@ -26,7 +31,7 @@ EOF
 
 action="${1:-}"
 case "${action}" in
-  online|offline) shift ;;
+  online|offline|inspect) shift ;;
   -h|--help|"") usage; exit 0 ;;
   *) usage >&2; exit 2 ;;
 esac
@@ -35,8 +40,10 @@ root="${AGENTLAB_ROOT:-${XDG_DATA_HOME:-${HOME}/.local/share}/agentlab/${version
 cache_dir=""
 control=""
 lock=""
+plan=false
 while (( $# )); do
   case "$1" in
+    --plan) plan=true; shift ;;
     --root) root="${2:?--root requires a directory}"; shift 2 ;;
     --cache-dir) cache_dir="${2:?--cache-dir requires a directory}"; shift 2 ;;
     --control) control="${2:?--control requires a file}"; shift 2 ;;
@@ -73,7 +80,6 @@ private_directory "${root}" && private_directory "${cache_dir}" || {
 command -v docker >/dev/null 2>&1 || { echo "Docker CLI is required" >&2; exit 2; }
 docker version >/dev/null
 umask 077
-mkdir -p "${root}/bin" "${root}/metadata" "${root}/acquired" "${root}/receipts" "${cache_dir}"
 
 digest_with_host() {
   local path="$1"
@@ -101,6 +107,26 @@ download() {
   fi
 }
 
+if [[ "${action}" == "inspect" ]]; then
+  [[ "${plan}" == false && -z "${control}" && -z "${lock}" ]] || {
+    echo "inspect accepts an existing root, not --plan/--control/--lock" >&2; exit 2;
+  }
+  control="${root}/bin/agentlabctl"
+  [[ -f "${control}" && -x "${control}" && ! -L "${control}" ]] || {
+    echo "inspect requires the exact installed controller; first acquire with online --plan" >&2; exit 2;
+  }
+  [[ "$(digest_with_host "${control}")" == "${control_sha256}" ]] || {
+    echo "unexpected agentlabctl identity" >&2; exit 1;
+  }
+  [[ -f "${root}/acquired/agentlab-environment-lock.json" &&
+     ! -L "${root}/acquired/agentlab-environment-lock.json" &&
+     "$("${control}" digest "${root}/acquired/agentlab-environment-lock.json")" == "${lock_sha256}" ]] || {
+    echo "inspect requires the selected exact acquired environment lock" >&2; exit 1;
+  }
+  exec "${control}" composition plan-docker --dir "${root}/acquired" --platform linux-x64
+fi
+
+mkdir -p "${root}/bin" "${root}/metadata" "${root}/acquired" "${root}/receipts" "${cache_dir}"
 if [[ "${action}" == "online" ]]; then
   control="${root}/bin/agentlabctl"
   temporary="${control}.partial.$$"
@@ -130,10 +156,22 @@ else
   }
 fi
 
-[[ "$("${control}" digest "${control}")" == "${control_sha256}" ]] || {
+[[ "$(digest_with_host "${control}")" == "${control_sha256}" ]] || {
   echo "unexpected agentlabctl identity" >&2
   exit 1
 }
+if [[ "${action}" == "offline" ]]; then
+  temporary="${root}/bin/agentlabctl.offline.partial.$$"
+  trap 'rm -f -- "${temporary:-}"' EXIT
+  cp -- "${control}" "${temporary}"
+  [[ "$(digest_with_host "${temporary}")" == "${control_sha256}" ]] || {
+    echo "offline control changed while copying" >&2; exit 1;
+  }
+  chmod 700 "${temporary}"
+  mv -f -- "${temporary}" "${root}/bin/agentlabctl"
+  control="${root}/bin/agentlabctl"
+  trap - EXIT
+fi
 [[ "$("${control}" digest "${lock}")" == "${lock_sha256}" ]] || {
   echo "unexpected environment lock identity" >&2
   exit 1
@@ -145,6 +183,10 @@ docker version >/dev/null
   --lock "${lock}" --platform linux-x64 \
   --out-dir "${root}/acquired" --cache-dir "${cache_dir}" \
   > "${root}/receipts/fetch.json"
+
+if [[ "${plan}" == true ]]; then
+  exec "${control}" composition plan-docker --dir "${root}/acquired" --platform linux-x64
+fi
 
 "${control}" composition install-docker \
   --dir "${root}/acquired" --platform linux-x64 \

@@ -14,7 +14,7 @@ impl Fixture {
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir(&path).unwrap();
-        Self(path)
+        Self(path.canonicalize().unwrap())
     }
     fn docker(&self, body: &str) {
         use std::os::unix::fs::PermissionsExt;
@@ -41,6 +41,35 @@ impl Drop for Fixture {
 const INVENTORY: &str = "scripts/agentlab-resource-inventory.sh";
 const INSTALL: &str = "scripts/agentlab-composition-install.sh";
 const MCPGIT_INSTALL: &str = "scripts/agentlab-mcpgit-prod-install.sh";
+
+#[test]
+fn inspect_is_no_footprint_and_rejects_untrusted_control_without_execution() {
+    use std::os::unix::fs::PermissionsExt;
+    let f = Fixture::new();
+    f.docker("[ \"$1\" = version ] || exit 45");
+    let uname = f.0.join("uname");
+    fs::write(
+        &uname,
+        "#!/bin/sh\ncase \"$1\" in -s) echo Linux;; -m) echo x86_64;; *) exit 46;; esac\n",
+    )
+    .unwrap();
+    fs::set_permissions(&uname, fs::Permissions::from_mode(0o700)).unwrap();
+    let root = f.0.join("instance");
+    let before = fs::read_dir(&f.0).unwrap().count();
+    let missing = f.run(INSTALL, &["inspect", "--root", root.to_str().unwrap()]);
+    assert_eq!(missing.status.code(), Some(2));
+    assert!(!root.exists());
+    assert_eq!(before, fs::read_dir(&f.0).unwrap().count());
+    fs::create_dir_all(root.join("bin")).unwrap();
+    let control = root.join("bin/agentlabctl");
+    fs::write(&control, "#!/bin/sh\necho UNTRUSTED_EXECUTED\n").unwrap();
+    fs::set_permissions(&control, fs::Permissions::from_mode(0o700)).unwrap();
+    let rejected = f.run(INSTALL, &["inspect", "--root", root.to_str().unwrap()]);
+    assert_eq!(rejected.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&rejected.stderr).contains("unexpected agentlabctl identity"));
+    assert!(!String::from_utf8_lossy(&rejected.stdout).contains("UNTRUSTED_EXECUTED"));
+    assert!(!root.join("receipts").exists() && !root.join("cache").exists());
+}
 
 #[test]
 fn published_demo_hashes_without_optional_file_digest_api() {

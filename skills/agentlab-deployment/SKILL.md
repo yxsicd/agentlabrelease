@@ -26,9 +26,18 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 4. Use the current [component installer](../../scripts/agentlab-composition-install.sh):
 
    ```bash
+   bash scripts/agentlab-composition-install.sh online --plan --root /absolute/private/root
    bash scripts/agentlab-composition-install.sh online --root /absolute/private/root
+   bash scripts/agentlab-composition-install.sh inspect --root /absolute/private/root
    ```
 
+   The first command acquires exact public bytes and reports image/volume
+   identity plus active/stopped shared references without Docker writes. It
+   does write its dedicated acquisition root/cache. `inspect` reads that
+   existing root without creating files/resources. Neither plan validates
+   installed payloads or template readiness. Install separately verifies actual
+   bytes/types/modes/links with read-only no-copy helpers before reusing a pack;
+   unknown ownership, writable consumers or drift fail without repair.
    It verifies and installs image/program/tool components. **It does not create
    a complete running Harness instance.** Offline acquisition uses the exact
    controller and lock from that same cut; it is not an older-version fallback.

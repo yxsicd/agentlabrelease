@@ -19,7 +19,7 @@ alternatives or compatibility fallbacks.
 
 | Surface | What is executable now | What it does not prove |
 | --- | --- | --- |
-| Component installer | Verified native controller/lock acquisition, component volumes and runtime image installation | Running authenticated full Harness |
+| Component installer | Verified native controller/lock acquisition, stdout-only native plan, shared-reference discovery and full read-only component reuse verification | Running authenticated full Harness; plan is not payload acceptance |
 | Selected MCPGit installer | Dedicated loopback instance, private credentials, verified unchanged activation reuse and authenticated read-only kernel checks | AgentLab Session/template/Fork integration |
 | Resource inventory | Bounded, read-only Docker-context JSONL without credential/environment contents | Complete native/systemd/loop ownership or deletion authority |
 | Historical uninstall | Version-independent, exact-target procedure with data preservation | A published native one-command lifecycle API |
@@ -37,13 +37,19 @@ configuration/credential bytes and modes, data identity and activation receipt.
 Changed or unqualified activation must not be silently recorded as unchanged.
 Credentials and raw private receipts remain on the selected private root.
 
-Current-cut MCPGit unchanged activation and exact-ID uninstall/preserve passed on
-both hosts. The current component wrapper passed on aiwsl with no selected asset
-references. On hwlinux, artifact preflight passed but execution was held because
-the tools volume is used by an active protected instance: this controller has no
-independently established no-write shared-volume reuse proof. Neither matching
-labels nor a historical `reused` receipt resolves that gate. Do not overwrite or
-repair an active shared supply to make installation pass.
+The selected [controller component](../release/components/control-90496dc0-linux-x64.json)
+is independent of the unchanged runtime composition. It adds native no-write
+planning and actual read-only installed-tree verification with no-copy mounts,
+consumer/ownership admission and uniquely fenced fresh-volume cleanup. Its plan
+explicitly leaves payload/helper/template qualification unperformed. A real
+install must prove its exact static Linux helper can execute through the selected
+Docker daemon before volume writes. Two-host execution is recorded independently
+in the evidence receipt; source tests alone are not deployment acceptance.
+The public Rust acceptance uses one initially absent fixture namespace. Success
+removes its exact containers and volume. Failure retains diagnostic resources;
+inventory and prove ownership/references before an explicitly authorized retry
+cleanup. Never delete a same-name volume merely because an earlier check found
+it absent: a concurrent install may have won that namespace.
 
 ## Remaining product closures
 

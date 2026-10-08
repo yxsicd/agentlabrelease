@@ -1,0 +1,1 @@
+agentlab native controller immutable fixture

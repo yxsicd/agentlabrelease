@@ -44,7 +44,17 @@ lock = json.loads(lock_bytes)
 assert publication["environmentLockSha256"] == hashlib.sha256(lock_bytes).hexdigest()
 assert publication["sourceRevision"] == lock["sourceRevision"]
 installer = (ROOT / composition["installer"]).read_text()
-controller = next(asset for asset in publication["assets"] if asset["url"] == publication["smoke"]["control"])
+control_descriptor = json.loads((ROOT / composition["control"]).read_text())
+assert control_descriptor["schema"] == "agentlab.component_update.v1" and control_descriptor["component"] == "control"
+assert control_descriptor["contracts"]["planWrites"] is False
+assert control_descriptor["contracts"]["planVerifiesInstalledBytes"] is False
+assert control_descriptor["contracts"]["fullHarnessReady"] is False
+assert control_descriptor["value"]["platform"] == "linux-x64"
+assert re.fullmatch(r"[0-9a-f]{40}", control_descriptor["value"]["sourceRevision"])
+controller = {"url": control_descriptor["value"]["artifact"], **control_descriptor["value"]}
+assert controller["url"].startswith("https://github.com/yxsicd/agentlabrelease/releases/download/")
+fixture = ROOT / control_descriptor["qualification"]["fixture"]
+assert hashlib.sha256(fixture.read_bytes()).hexdigest() == control_descriptor["qualification"]["fixtureSha256"]
 for key, value in {
     "control_url": controller["url"], "control_sha256": controller["sha256"],
     "control_bytes": controller["bytes"], "lock_sha256": publication["environmentLockSha256"],
