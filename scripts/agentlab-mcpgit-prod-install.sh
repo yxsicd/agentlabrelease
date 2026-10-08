@@ -39,7 +39,7 @@ if [ "$action" != download ]; then
   docker version >/dev/null
 fi
 mkdir -p "$root/bootstrap"
-snapshot=ce380809aaa5187f75adc9aed74053c0933661a0
+snapshot=e28e549027a3e5eaaf341beac723c49fd8f1ef22
 tag=mcpgit-git-a75b9809857cea23047b61f3acea17bc09b9996c-linux-amd64
 fetch_verified() {
   url=$1; path=$2; bytes=$3; sha=$4

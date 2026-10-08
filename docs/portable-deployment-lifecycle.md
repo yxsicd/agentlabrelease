@@ -19,7 +19,7 @@ digests. Updating MCPGit must not rewrite an already published AgentLab closure.
 
 `release/integrations/mcpgit-prod-linux-x64.json` pins the production pointer
 `offline-latest.json` at installer commit
-`ce380809aaa5187f75adc9aed74053c0933661a0`, resolving MCPGit source
+`e28e549027a3e5eaaf341beac723c49fd8f1ef22`, resolving MCPGit source
 `a75b9809857cea23047b61f3acea17bc09b9996c`.
 The old `prod/channel.json` is not the current production authority.
 
@@ -37,7 +37,10 @@ its digest before execution. This candidate needs `sh`, `curl`, `python3` and,
 except for download, Docker. It forces GitHub-only immutable installer/helper
 URLs and the exact production release tag; it does not call GitHub API latest
 discovery. Repeat `install` delegates to upstream's verified update planner and
-preserves the instance's dedicated data volume. Credentials, configuration,
+preserves the instance's dedicated data volume. The corrected installer also
+reuses a qualified unchanged healthy activation without replacing its container;
+changed configuration/credentials/route or unqualified activation requires a
+separate activation and receipt. Credentials, configuration,
 bundle, tools and receipts stay under the selected private root. No historical
 volume is attached or migrated automatically; shared MCPGit services are not
 upgraded by this entrypoint. `check` downloads and writes private planning state;
