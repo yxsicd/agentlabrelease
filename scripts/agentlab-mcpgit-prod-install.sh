@@ -59,6 +59,7 @@ export MCPGIT_INSTALL_BASE_URL="https://raw.githubusercontent.com/yxsicd/mcpgitr
 export MCPGIT_INSTALL_CONTENT_BASE="https://raw.githubusercontent.com/yxsicd/mcpgitrelease/$snapshot"
 export MCPGIT_CHANNEL_URL="$MCPGIT_INSTALL_CONTENT_BASE/offline-latest.json"
 export MCPGIT_RELEASE_TAG="$tag"
+export MCPGIT_EXPECTED_MANIFEST_SHA256=c623bb1b87d7f168bb6874ef7bf0add32e75d7e6f53d2baf55b0f9a2dd836e84
 export MCPGIT_BUNDLE_DIR="$root/bundle"
 export MCPGIT_CREDENTIAL_DIR="$root/credentials"
 export MCPGIT_INSTANCE_CONFIG_DIR="$root/instances"

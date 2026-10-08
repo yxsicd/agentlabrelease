@@ -7,6 +7,11 @@ Agents.
 Current runtime candidate: `candidate-20260912-c22b7bfd-linux-x64`.
 The historical environment-kit preview remains `v0.1.0-alpha.9`.
 
+The [portable deployment and lifecycle contract](docs/portable-deployment-lifecycle.md)
+tracks GitHub-only consumer installation, isolated MCPGit production integration
+and safe component retirement. Its MCPGit successor remains an additive,
+unqualified candidate; it does not change existing immutable release closures.
+
 The current lightweight aggregate candidate is `v0.1.0-alpha.15`. It binds
 release-method source commit `665be12b74fcb0690f67b9482a075423ddfe7dd5` to 15 already-published
 immutable components and all 26 registered payload and descriptor assets,

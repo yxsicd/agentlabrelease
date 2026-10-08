@@ -84,13 +84,19 @@ their original host, never in Git or an uploaded release.
 | Host | Container retirement | Volume retirement | Evidence |
 | --- | --- | --- | --- |
 | hwlinux | 53 removed, recoverable images retained | 71 removed, verified private archives retained | Exact volume delta and protected container identity/state passed |
-| aiwsl | 14 removed, recoverable images retained | In progress; large 64 GiB old volume deferred | Final receipt pending |
+| aiwsl | 14 removed, recoverable images retained | 151 removed, verified private archives retained; large 64 GiB old volume deferred | Exact volume delta and protected container identity/state passed |
 
 Receipts are under the logged-in user's
 `.local/share/agentlab/deployment-validation-20261008/` on each host. These are
 maintenance receipts, not a required product path or host dependency. Retained
 backups mean deletion does not immediately reclaim all archive/image space.
 Active native loop files outside Docker volumes are deliberately not deleted.
+
+Initial public probes exposed a missing expected-manifest digest in the new
+MCPGit wrapper; it is now passed explicitly to upstream's immutable-tag guard.
+The historical composition installer requires Bash: invoking it with `sh`
+fails before installation (`pipefail` is not portable to `/bin/sh`). Preserve
+that failed probe separately and retry the documented Bash entrypoint.
 
 ## Next acceptance gates
 
