@@ -11,6 +11,10 @@ maintenance repository, a specific host, a LAN, or maintainer credentials.
 | Deploy, inspect, upgrade, roll back or uninstall | [Deployment Skill](skills/agentlab-deployment/SKILL.md) |
 | Understand repositories, correct analysis, validate maintenance operations, generate/evaluate cases, return evidence | [Instance flywheel Skill](skills/agentlab-harness-developer/SKILL.md) |
 
+The current [manifest](manifest.json) is the one machine-readable distribution
+contract, not an old alpha-version catalogue. Its component graph, installers,
+Skills and acceptance limits are checked together by the release validation gate.
+
 Pin a full Git commit before running its scripts. GitHub distributes immutable
 components and public contracts; the instance owns authenticated state/evidence.
 Unchanged components are reused, not rebuilt for each knowledge or method change.

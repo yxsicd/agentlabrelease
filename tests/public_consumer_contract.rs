@@ -42,6 +42,52 @@ const INVENTORY: &str = "scripts/agentlab-resource-inventory.sh";
 const INSTALL: &str = "scripts/agentlab-composition-install.sh";
 
 #[test]
+fn published_demo_hashes_without_optional_file_digest_api() {
+    let f = Fixture::new();
+    let file = f.0.join("artifact");
+    fs::write(&file, b"abc").unwrap();
+    let out = Command::new("python3")
+        .args(["-c", "import hashlib,pathlib,runpy,sys; hashlib.file_digest=lambda *args: (_ for _ in ()).throw(RuntimeError('optional API must not be called')); module=runpy.run_path('examples/run.py'); print(module['sha256'](pathlib.Path(sys.argv[1])))"])
+        .arg(file)
+        .output().unwrap();
+    assert!(out.status.success(), "{:?}", out);
+    assert_eq!(
+        String::from_utf8(out.stdout).unwrap().trim(),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
+}
+
+#[test]
+fn release_gate_rejects_whole_context_keys_and_legacy_fallback() {
+    let code = r#"
+import json,pathlib,runpy,sys
+original=pathlib.Path.read_text
+def altered(self,*args,**kwargs):
+    text=original(self,*args,**kwargs)
+    if self == pathlib.Path.cwd() / 'manifest.json':
+        value=json.loads(text)
+        if sys.argv[1]=='context': value['defaultParticipant']['context']='whole-supervisor-conversation'
+        elif sys.argv[1]=='key': value['defaultParticipant']['independentProviderKeyRequired']=True
+        else: value['acceptance']['legacyFallback']=True
+        return json.dumps(value)
+    return text
+pathlib.Path.read_text=altered
+runpy.run_path('scripts/validate-release.py')
+"#;
+    for mutation in ["context", "key", "legacy"] {
+        let out = Command::new("python3")
+            .args(["-c", code, mutation])
+            .output()
+            .unwrap();
+        assert!(
+            !out.status.success(),
+            "invalid contract accepted: {mutation}"
+        );
+        assert!(String::from_utf8_lossy(&out.stderr).contains("AssertionError"));
+    }
+}
+
+#[test]
 fn help_needs_no_docker_and_has_no_footprint() {
     let f = Fixture::new();
     let before = fs::read_dir(&f.0).unwrap().count();

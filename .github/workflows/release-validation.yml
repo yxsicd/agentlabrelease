@@ -12,6 +12,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  public-consumer-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Validate one public distribution graph and behavioral safeguards
+        run: |
+          python3 scripts/validate-release.py
+          bash -n scripts/agentlab-composition-install.sh scripts/agentlab-resource-inventory.sh scripts/agentlab-mcpgit-prod-install.sh
+          rustc --edition=2021 --test tests/public_consumer_contract.rs -o "$RUNNER_TEMP/public-consumer-contract"
+          "$RUNNER_TEMP/public-consumer-contract"
   maintainer-guidance-workflow-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 5

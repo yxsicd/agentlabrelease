@@ -1,46 +1,45 @@
 {
-  "schema": "agentlab.developer_release.v1",
-  "version": "0.1.0-alpha.9",
-  "stability": "developer-preview",
-  "sourceRevision": "2864f6ec51b7dfc3094c42d90638c5cd65f4daad",
-  "entrypoint": "skills/agentlab-harness-developer/SKILL.md",
-  "capabilities": [
-    "replaceable-code-agent",
-    "task-seed-and-campaign-model",
-    "harness-owned-checkpoint-and-fork",
-    "fresh-agent-continuation",
-    "llm-and-mcp-trace-model",
-    "difficulty-window-analysis",
-    "tablegit-relation-sql",
-    "typescript-deterministic-probe",
-    "aiwsl-ald00-environment-lifecycle",
-    "receipt-bound-qualify-install-health",
-    "machine-readable-install-timing",
-    "safe-volume-backed-ald-uninstall"
+  "schema": "agentlab.public_distribution.v1",
+  "contractVersion": 1,
+  "status": "consumer-candidate",
+  "distributionAuthority": "containing public Git commit",
+  "entrypoint": "SKILL.md",
+  "platforms": [
+    "linux-x64",
+    "wsl2-x64"
   ],
-  "limitations": [
-    "environment-kit-is-aiwsl-ald00-only",
-    "ald00-reuses-existing-agentlab-owned-mcpgit",
-    "no-stable-schema-guarantee",
-    "native-agent-session-restore-is-adapter-specific"
-  ],
-  "controlChannel": "https://github.com/yxsicd/agentlabrelease/releases/tag/alcontrol",
-  "assets": [
-    {
-      "name": "agentlab-ts-probe-v0.1.0-alpha.9.tar.zst",
-      "mediaType": "application/zstd",
-      "purpose": "deterministic external-brain probe source package",
-      "bytes": 29901,
-      "sha256": "029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3",
-      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.9/agentlab-ts-probe-v0.1.0-alpha.9.tar.zst"
+  "journeys": {
+    "deployment": "skills/agentlab-deployment/SKILL.md",
+    "flywheel": "skills/agentlab-harness-developer/SKILL.md"
+  },
+  "defaultParticipant": {
+    "topology": "supervisor-managed-isolated-subagent",
+    "execution": "attempt-scoped-remote-mcp",
+    "context": "explicit-task-only-cut",
+    "independentProviderKeyRequired": false,
+    "qualification": "pending-real-instance-assessment"
+  },
+  "components": {
+    "composition": {
+      "publication": "release/candidates/40ecdf4b-linux-x64/publication.json",
+      "lock": "release/candidates/40ecdf4b-linux-x64/environment-lock.json",
+      "installer": "scripts/agentlab-composition-install.sh"
     },
-    {
-      "name": "agentlab-environment-kit-v0.1.0-alpha.9.tar.zst",
-      "mediaType": "application/zstd",
-      "purpose": "repo-free AIWSL ald00 environment lifecycle",
-      "bytes": 51198,
-      "sha256": "fcca40e0858bbbde7620ddec83db0dc525c62d597926dc27ef66b6dd54c27a73",
-      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.9/agentlab-environment-kit-v0.1.0-alpha.9.tar.zst"
+    "mcpgit": {
+      "descriptor": "release/integrations/mcpgit-prod-linux-x64.json",
+      "installer": "scripts/agentlab-mcpgit-prod-install.sh"
     }
-  ]
+  },
+  "inventory": "scripts/agentlab-resource-inventory.sh",
+  "uninstall": "skills/agentlab-deployment/references/historical-uninstall.md",
+  "methodRegistry": "skills/registry.json",
+  "acceptance": {
+    "componentInstall": "two-host-revalidation-required-for-each-cut",
+    "fullInstanceLifecycle": "not-published",
+    "mcpgitSessionTemplateForkIntegration": "pending",
+    "remoteSubagentAssessment": "pending",
+    "completeFlywheelAndNextRoundConsumption": "pending",
+    "legacyFallback": false,
+    "automaticPromotion": false
+  }
 }

@@ -9,11 +9,53 @@ manifest = json.loads((ROOT / "manifest.json").read_text())
 provenance = json.loads((ROOT / "provenance.json").read_text())
 index = json.loads((ROOT / "package-index.json").read_text())
 
-assert manifest["schema"] == "agentlab.developer_release.v1"
-assert manifest["version"] == index["latest"] == provenance["version"]
-assert re.fullmatch(r"[0-9a-f]{40}", manifest["sourceRevision"])
-assert manifest["sourceRevision"] == provenance["source"]["revision"]
-assert (ROOT / manifest["entrypoint"]).is_file()
+assert manifest["schema"] == "agentlab.public_distribution.v1"
+assert provenance["schema"] == "agentlab.public_distribution_provenance.v1"
+assert index["schema"] == "agentlab.public_package_index.v1"
+assert manifest["contractVersion"] == index["contractVersion"] == provenance["contractVersion"] == 1
+assert manifest["entrypoint"] == "SKILL.md" and (ROOT / manifest["entrypoint"]).is_file()
+assert index["current"] == "manifest.json"
+assert provenance["source"]["repository"] == "https://github.com/yxsicd/agentlabrelease"
+assert provenance["privateSourceRequiredForInstallation"] is False
+assert manifest["acceptance"]["legacyFallback"] is False
+assert manifest["acceptance"]["automaticPromotion"] is False
+assert index["fullInstanceReleaseQualified"] is False
+assert manifest["defaultParticipant"] == {
+    "topology": "supervisor-managed-isolated-subagent",
+    "execution": "attempt-scoped-remote-mcp",
+    "context": "explicit-task-only-cut",
+    "independentProviderKeyRequired": False,
+    "qualification": "pending-real-instance-assessment",
+}
+for name in ("inventory", "uninstall", "methodRegistry"):
+    assert (ROOT / manifest[name]).is_file(), name
+for journey in manifest["journeys"].values():
+    assert (ROOT / journey).is_file(), journey
+composition = manifest["components"]["composition"]
+mcpgit = manifest["components"]["mcpgit"]
+assert index["defaultComposition"] == composition["publication"]
+assert index["defaultMcpGit"] == mcpgit["descriptor"]
+for component in (composition, mcpgit):
+    for relative in component.values():
+        assert (ROOT / relative).is_file(), relative
+publication = json.loads((ROOT / composition["publication"]).read_text())
+lock_bytes = (ROOT / composition["lock"]).read_bytes()
+lock = json.loads(lock_bytes)
+assert publication["environmentLockSha256"] == hashlib.sha256(lock_bytes).hexdigest()
+assert publication["sourceRevision"] == lock["sourceRevision"]
+installer = (ROOT / composition["installer"]).read_text()
+controller = next(asset for asset in publication["assets"] if asset["url"] == publication["smoke"]["control"])
+for key, value in {
+    "control_url": controller["url"], "control_sha256": controller["sha256"],
+    "control_bytes": controller["bytes"], "lock_sha256": publication["environmentLockSha256"],
+    "lock_bytes": len(lock_bytes),
+    "lock_url": "https://github.com/yxsicd/agentlabrelease/releases/download/" + publication["tag"] + "/environment-lock.json",
+}.items():
+    assert f'{key}="{value}"' in installer, f"installer drift: {key}"
+integration = json.loads((ROOT / mcpgit["descriptor"]).read_text())
+upstream_installer = (ROOT / mcpgit["installer"]).read_text()
+for pin in (integration["installerRevision"], integration["releaseTag"], integration["manifest"]["sha256"]):
+    assert pin in upstream_installer, "MCPGit installer drift"
 
 sums = ROOT / "SHA256SUMS"
 if sums.exists():
@@ -44,4 +86,5 @@ assert {s["stage"] for s in registry["skills"] if s["role"] == "maintenance"} ==
     "methodology", "goal", "repository-analysis", "program-analysis", "seed-extraction", "calibration", "asset-model", "experiment-learning"
 }
 
-print(json.dumps({"schema": "agentlab.release_validation.v1", "version": manifest["version"], "ok": True}))
+print(json.dumps({"schema": "agentlab.release_validation.v2", "contractVersion": manifest["contractVersion"], "ok": True,
+                  "coverage": "public-distribution-contract-not-runtime-acceptance"}))

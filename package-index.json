@@ -1,46 +1,10 @@
 {
-  "schema": "agentlab.package_index.v1",
-  "latest": "0.1.0-alpha.9",
-  "versions": [
-    {
-      "version": "0.1.0-alpha.9",
-      "tag": "v0.1.0-alpha.9",
-      "stability": "developer-preview"
-    },
-    {
-      "version": "0.1.0-alpha.8",
-      "tag": "v0.1.0-alpha.8",
-      "stability": "developer-preview"
-    },
-    {
-      "version": "0.1.0-alpha.6",
-      "tag": "v0.1.0-alpha.6",
-      "stability": "developer-preview"
-    },
-    {
-      "version": "0.1.0-alpha.5",
-      "tag": "v0.1.0-alpha.5",
-      "stability": "developer-preview"
-    },
-    {
-      "version": "0.1.0-alpha.4",
-      "tag": "v0.1.0-alpha.4",
-      "stability": "developer-preview"
-    },
-    {
-      "version": "0.1.0-alpha.3",
-      "tag": "v0.1.0-alpha.3",
-      "stability": "developer-preview"
-    },
-    {
-      "version": "0.1.0-alpha.2",
-      "tag": "v0.1.0-alpha.2",
-      "stability": "developer-preview"
-    },
-    {
-      "version": "0.1.0-alpha.1",
-      "tag": "v0.1.0-alpha.1",
-      "stability": "developer-preview"
-    }
-  ]
+  "schema": "agentlab.public_package_index.v1",
+  "contractVersion": 1,
+  "current": "manifest.json",
+  "selection": "one current component composition; independent unchanged artifacts are reused",
+  "defaultComposition": "release/candidates/40ecdf4b-linux-x64/publication.json",
+  "defaultMcpGit": "release/integrations/mcpgit-prod-linux-x64.json",
+  "history": "immutable releases and release/closures; no compatibility fallback",
+  "fullInstanceReleaseQualified": false
 }

@@ -17,6 +17,10 @@ prerequisite.
   Prefer supervisor-managed, context-isolated subagents assessed through remote
   Participant MCP; no independently configured second model key is required.
 
+Read [manifest.json](manifest.json) for the single current component graph,
+participant default and acceptance limits. Do not select an installation from
+historical root versions or experiment notes.
+
 Pin this repository to a full Git commit before executing its scripts. GitHub
 distributes public instructions, executables, templates and immutable manifests;
 the deployed instance owns runtime state and authenticated evidence. Credentials
