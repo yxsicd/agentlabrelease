@@ -1,4 +1,4 @@
 interface:
-  display_name: "AgentLab Harness Developer"
-  short_description: "Run and analyze reproducible Code Agent evaluations"
-  default_prompt: "Use $agentlab-harness-developer to design or inspect this evaluation campaign."
+  display_name: "AgentLab Instance Flywheel"
+  short_description: "Operate an instance's evidence-driven repository flywheel"
+  default_prompt: "Use $agentlab-harness-developer to discover this instance and run an evidence-driven flywheel round."

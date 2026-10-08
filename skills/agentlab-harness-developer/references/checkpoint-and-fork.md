@@ -18,8 +18,9 @@ qualification does not match.
 For standard sandbox control tools, the outer Harness Session identity is the
 authority. Do not send tenant or owner identity inside tool arguments. Older
 preview servers may also require the same Session id inside the tool-specific
-arguments; treat that as a version-qualified transport compatibility detail,
-not a second identity authority.
+arguments; those historical previews are not the current consumer contract.
+Admit only the exact deployed capability contract; a missing supported restore
+path blocks continuation rather than selecting an older compatibility path.
 
 Prove a fork with postconditions, not only a successful response: the child
 must expose the parent cut state, must exclude parent changes after the cut,

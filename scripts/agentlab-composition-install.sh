@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-version="v0.1.0-alpha.10"
-control_url="https://github.com/yxsicd/agentlabrelease/releases/download/control-24fb4ec0-linux-x64/agentlabctl-linux-x64"
-control_sha256="51cec430e1c0a3741bab77f387ee90ed7349746a2d87ff39a275b4f975eab886"
-control_bytes="4532144"
-lock_url="https://github.com/yxsicd/agentlabrelease/releases/download/candidate-agentlab-alpha10-24fb4ec0-linux-x64/environment-lock.json"
-lock_sha256="dcb27623ef9f3f5a92c0eb759120989cafcf25ace8873945a043242cb41fd1eb"
+version="40ecdf4b"
+control_url="https://github.com/yxsicd/agentlabrelease/releases/download/control-ea25616d-linux-x64/agentlabctl-ea25616d-linux-x64"
+control_sha256="076ee1beee90023660cbda7f9ab90ae01863550783f16d4de4a4e39422343da8"
+control_bytes="4425648"
+lock_url="https://github.com/yxsicd/agentlabrelease/releases/download/candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64/environment-lock.json"
+lock_sha256="ac9192c09ee9e3488f2e874ddeb7b5d5dc0ec422aa09e728a49cb037f1ef333e"
 lock_bytes="6515"
 
 usage() {
@@ -20,6 +20,7 @@ The trusted control binary then performs all remaining downloads, verification,
 zstd decoding, and Docker installation. Offline media must supply a trusted
 control binary and the exact lock. Neither path requires Python, zstd, tar,
 Git, Node/Bun, or Rust/Cargo on the host.
+This prepares components only. It does not start or qualify a full Harness.
 EOF
 }
 
@@ -45,11 +46,33 @@ while (( $# )); do
   esac
 done
 
-[[ "${root}" == /* && "${root}" != "/" ]] || {
-  echo "--root must be a dedicated absolute directory" >&2
-  exit 2
+private_directory() {
+  local directory="$1" ancestor="$1"
+  [[ "${directory}" == /* && "${directory}" != */ && "${directory}" != "${HOME}" &&
+     "${directory}" != *'"'* && "${directory}" != *$'\\'* && "${directory}" != *[[:cntrl:]]* &&
+     "${directory}" != *//* && "${directory}" != */./* && "${directory}" != */../* &&
+     "${directory}" != */. && "${directory}" != */.. ]] || return 2
+  case "${directory}" in
+    /bin|/dev|/etc|/home|/lib|/lib64|/opt|/proc|/root|/run|/sbin|/sys|/tmp|/usr|/var) return 2 ;;
+  esac
+  while [[ "${ancestor}" != / ]]; do
+    [[ ! -L "${ancestor}" ]] || return 2
+    ancestor="${ancestor%/*}"
+    ancestor="${ancestor:-/}"
+  done
 }
 cache_dir="${cache_dir:-${root}/cache}"
+private_directory "${root}" && private_directory "${cache_dir}" || {
+  echo "--root and --cache-dir must be dedicated absolute directories without symlink ancestors" >&2
+  exit 2
+}
+[[ "$(uname -s)" == Linux && "$(uname -m)" == x86_64 ]] || {
+  echo "this component cut requires Linux x86_64 (including WSL2)" >&2
+  exit 2
+}
+command -v docker >/dev/null 2>&1 || { echo "Docker CLI is required" >&2; exit 2; }
+docker version >/dev/null
+umask 077
 mkdir -p "${root}/bin" "${root}/metadata" "${root}/acquired" "${root}/receipts" "${cache_dir}"
 
 digest_with_host() {
@@ -69,9 +92,9 @@ digest_with_host() {
 download() {
   local url="$1" out="$2"
   if command -v curl >/dev/null 2>&1; then
-    curl -fL --retry 3 --connect-timeout 20 -o "${out}" "${url}"
+    curl -fL --retry 3 --connect-timeout 20 --max-time 180 -o "${out}" "${url}"
   elif command -v wget >/dev/null 2>&1; then
-    wget -O "${out}" "${url}"
+    wget --timeout=180 --tries=3 -O "${out}" "${url}"
   else
     echo "online bootstrap requires curl or wget" >&2
     return 2
@@ -128,5 +151,5 @@ docker version >/dev/null
   --receipt "${root}/receipts/install.json" \
   > "${root}/receipts/install.stdout.json"
 
-printf '{"schema":"agentlab.portable_install_result.v1","version":"%s","root":"%s","controlSha256":"%s","lockSha256":"%s","receipt":"%s"}\n' \
+printf '{"schema":"agentlab.portable_install_result.v1","coverage":"component-install-only","fullHarnessReady":false,"version":"%s","root":"%s","controlSha256":"%s","lockSha256":"%s","receipt":"%s"}\n' \
   "${version}" "${root}" "${control_sha256}" "${lock_sha256}" "${root}/receipts/install.json"

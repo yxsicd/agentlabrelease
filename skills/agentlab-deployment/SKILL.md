@@ -1,0 +1,67 @@
+---
+name: agentlab-deployment
+description: Install and manage AgentLab's public GitHub dependency closure, or inventory and safely uninstall historical AgentLab installations. Not for maintaining private source.
+metadata:
+  agentlab-layer: method
+  agentlab-role: operations
+  agentlab-stage: deployment
+---
+
+# AgentLab deployment
+
+Complete the human -> Agent -> GitHub journey using this public repository and
+its referenced public GitHub releases. Do not require AWMCP, a LAN, a particular
+hostname, private source, an existing AgentLab instance, or maintainer credentials.
+
+## Select and prepare
+
+1. Pin a full release-repository commit. Read its component descriptors and
+   acceptance limits. Resolve mutable channels once, then use exact bytes/digests.
+2. Inspect Linux/WSL architecture, Docker access, storage, ports and existing
+   installations. Read [historical uninstall](references/historical-uninstall.md)
+   before replacing an existing installation. Discovery is not deletion authority.
+3. Select a dedicated absolute private root and unique instance/port. Do not
+   attach old data automatically. Keep credentials under that root with private
+   permissions, never in Git, prompts, receipts or command output.
+4. Use the current [component installer](../../scripts/agentlab-composition-install.sh):
+
+   ```bash
+   bash scripts/agentlab-composition-install.sh online --root /absolute/private/root
+   ```
+
+   It verifies and installs image/program/tool components. **It does not create
+   a complete running Harness instance.** Offline acquisition uses the exact
+   controller and lock from that same cut; it is not an older-version fallback.
+5. When selecting the MCPGit successor, use the pinned
+   [integration](../../release/integrations/mcpgit-prod-linux-x64.json) and
+   [installer](../../scripts/agentlab-mcpgit-prod-install.sh). Its isolated
+   install/health proof does not qualify AgentLab Session/template/Fork protocols.
+
+## Deployment acceptance
+
+Require an exact installation receipt, instance identity and publicly declared
+service SKILL URL. Discover that instance's manifest and effective capabilities.
+Require authenticated readiness, successful bounded workspace operation and
+independent durable readback before handing it to the flywheel operator.
+
+Current public components and demos do not provide a qualified one-command full
+Harness lifecycle. Report `blocked: full-instance-lifecycle-not-published` if no
+public, version-bound instance provisioner is available. Do not use the historical
+AIWSL quickstart, `/share/.env`, retained control planes or private repair scripts.
+
+## Lifecycle
+
+The controller must expose inspect/list, install, upgrade, rollback and uninstall
+from one owned-resource registry. Inspect actual installed identities and shared
+references before each change. Upgrade only changed components; qualify the
+aggregate closure and preserve data. If an operation is not advertised, stop;
+do not invent command names from this target contract.
+
+For uninstall, apply the version-independent
+[historical procedure](references/historical-uninstall.md), including orphaned
+installations. Preserve data by default. Purge is a separately authorized action,
+not an implicit consequence of reinstall or uninstall.
+
+Read [portable lifecycle](../../docs/portable-deployment-lifecycle.md) for current
+component evidence and independent outstanding acceptance gates. After complete
+instance acceptance, route to [instance operations](../agentlab-harness-developer/SKILL.md).

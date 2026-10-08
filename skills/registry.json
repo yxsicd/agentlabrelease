@@ -4,9 +4,17 @@
   "knowledgeAuthority": "TableGit committed rows; JSONL files are publication snapshots",
   "roles": {
     "maintenance": "Maintain goals, methods, target knowledge and calibrated seed snapshots.",
-    "operations": "Consume fixed versions, execute campaigns and record feedback."
+    "operations": "Deploy public components or consume fixed versions, execute campaigns and record feedback."
   },
   "skills": [
+    {
+      "id": "agentlab-deployment",
+      "role": "operations",
+      "layer": "method",
+      "stage": "deployment",
+      "objectScope": "generic",
+      "path": "skills/agentlab-deployment/SKILL.md"
+    },
     {
       "id": "agentlab-skill-methodology",
       "role": "maintenance",
