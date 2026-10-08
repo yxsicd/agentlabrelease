@@ -50,6 +50,10 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
    A receipt-export failure after commit explicitly reports
    `qualificationCommitted=true; receiptExportFailed=true`; inspect the durable
    record rather than assuming the prior selection is still current.
+   The [current transaction evidence](../../docs/evidence/component-transactions-20261009.json)
+   qualifies two unchanged online-wrapper runs and no-write history inspection
+   on Linux and WSL2. It is warm reuse with a fresh registry, not cold package
+   installation or a complete runtime upgrade/rollback/uninstall qualification.
    Verified public executables use mode `0555` inside private acquisition
    directories; credentials remain private. This lets a read-only Docker helper
    execute as another UID without adding capabilities or changing shared data.

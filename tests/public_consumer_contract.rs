@@ -202,6 +202,54 @@ runpy.run_path('scripts/validate-release.py')
 }
 
 #[test]
+fn transaction_proof_cannot_promote_runtime_or_hide_identity_or_write_failures() {
+    let code = r#"
+import json,pathlib,runpy,sys
+original=pathlib.Path.read_text
+def altered(self,*args,**kwargs):
+    text=original(self,*args,**kwargs)
+    if self.name == 'component-transactions-20261009.json':
+        value=json.loads(text); mutation=sys.argv[1]
+        if mutation=='runtime': value['acceptanceLimits']['fullInstanceLifecycleQualified']=True
+        elif mutation=='missing_limits': value['acceptanceLimits']={}
+        elif mutation=='digest': value['controller']['sha256']='0'*64
+        elif mutation=='generation': value['targets'][0]['install2']['generation']=2
+        elif mutation=='pending': value['targets'][0]['pending']=True
+        elif mutation=='write': value['targets'][0]['inspectRegistry']['netNewFiles']=1
+        elif mutation=='resources': value['targets'][0]['protected']['identitiesUnchanged']=False
+        elif mutation=='peer': value['targets'][1]['targetPeerId']=value['targets'][0]['targetPeerId']
+        elif mutation=='cold': value['coldInstallQualified']=True
+        elif mutation=='exit': value['targets'][0]['install1']['exit']=1
+        return json.dumps(value)
+    return text
+pathlib.Path.read_text=altered
+runpy.run_path('scripts/validate-release.py')
+"#;
+    for mutation in [
+        "runtime",
+        "missing_limits",
+        "digest",
+        "generation",
+        "pending",
+        "write",
+        "resources",
+        "peer",
+        "cold",
+        "exit",
+    ] {
+        let out = Command::new("python3")
+            .args(["-c", code, mutation])
+            .output()
+            .unwrap();
+        assert!(
+            !out.status.success(),
+            "invalid transaction proof accepted: {mutation}"
+        );
+        assert!(String::from_utf8_lossy(&out.stderr).contains("AssertionError"));
+    }
+}
+
+#[test]
 fn network_policy_refuses_fixed_subnets_missing_inventory_and_shared_renumbering() {
     let code = r#"
 import json,pathlib,runpy,sys

@@ -140,6 +140,43 @@ if qualification["status"] == "passed-two-host-component-admission-not-full-harn
             assert re.fullmatch(r"[0-9a-f]{64}", target["fixture"]["executedToolSha256"])
         for gate in ("coldInstall", "activeReadOnlyReuse", "stoppedWritableConsumerDenied", "driftDeniedWithoutRepair", "exactCleanup"):
             assert target["fixture"][gate] is True
+if composition.get("qualification"):
+    proof = json.loads((ROOT / composition["qualification"]).read_text())
+    assert proof["schema"] == "agentlab.component_transaction_qualification.v1"
+    assert proof["status"] == "passed-two-host-warm-component-transactions"
+    assert re.fullmatch(r"[0-9a-f]{40}", proof["executedSourceRevision"])
+    assert proof["entrypoint"]["sha256"] == hashlib.sha256((ROOT / composition["installer"]).read_bytes()).hexdigest()
+    for key in ("sourceRevision", "artifact", "bytes", "sha256"):
+        assert proof["controller"][key] == controller[key]
+    assert proof["lockSha256"] == publication["environmentLockSha256"]
+    assert proof["coldInstallQualified"] is False
+    assert set(proof["acceptanceLimits"]) == {
+        "fullInstanceLifecycleQualified", "coldCompositionCrashRecoveryQualified",
+        "attemptScopedRemoteSubagentQualified", "fullFlywheelAndNextRoundConsumptionQualified",
+        "armRuntimeQualified", "applicationDataRollbackQualified", "resourceDeletionAuthorityQualified",
+    }
+    assert all(value is False for value in proof["acceptanceLimits"].values())
+    targets = proof["targets"]
+    assert {"linux-x64", "wsl2-linux-x64"} <= {target["platform"] for target in targets}
+    assert len({target["targetPeerId"] for target in targets}) == len(targets)
+    expected_packs = sum(item["enabled"] and item["platform"] == "linux-x64" for item in lock["components"])
+    expected_images = sum(item["enabled"] and item["platform"] == "linux-x64" for item in lock["images"])
+    for target in targets:
+        assert target["routeDecision"] == "peer_direct" and target["daemonId"]
+        assert target["mode"] == "public-online-wrapper-with-verified-public-cache"
+        assert target["controllerSha256"] == controller["sha256"]
+        assert target["lockSha256"] == proof["lockSha256"]
+        assert target["packsReused"] == expected_packs and target["imagesReused"] == expected_images
+        assert target["pending"] is False and target["registryAndInstallReceiptBytesUnchanged"] is True
+        for key in ("install1", "install2", "inspectRegistry"):
+            assert target[key]["exit"] == 0 and re.fullmatch(r"exec-[0-9a-f]{16}", target[key]["operation"])
+        assert target["install1"]["generation"] == target["install2"]["generation"] == 1
+        assert target["inspectRegistry"]["filesystemExactEqual"] is True
+        assert target["inspectRegistry"]["netNewFiles"] == 0
+        assert target["missingRegistryInspection"]["exit"] != 0
+        assert target["missingRegistryInspection"]["createdRegistry"] is False
+        assert target["missingRegistryInspection"]["netNewFiles"] == 0
+        assert target["protected"]["identitiesUnchanged"] is True and target["modelCalls"] == 0
 for key, value in {
     "control_url": controller["url"], "control_sha256": controller["sha256"],
     "control_bytes": controller["bytes"], "lock_sha256": publication["environmentLockSha256"],

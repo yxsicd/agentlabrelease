@@ -1,0 +1,127 @@
+{
+  "schema": "agentlab.component_transaction_qualification.v1",
+  "status": "passed-two-host-warm-component-transactions",
+  "executedSourceRevision": "f3b09efe72658f9a40004290ec6e4948ea981e3b",
+  "entrypoint": {
+    "path": "scripts/agentlab-composition-install.sh",
+    "sha256": "f28431a340f6bfdfe38571783df0f5be44babb1f504bae968d417652b8d2231c",
+    "modifiedOnConsumers": false
+  },
+  "controller": {
+    "sourceRevision": "01b777512ff005901fe040947a7f808c50176ff5",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-01b77751-linux-x64/agentlabctl-01b77751-linux-x64",
+    "bytes": 4361888,
+    "sha256": "c7ea030447d77c0f9530cf65b94a1dbd5852ea85f45aa59b86b0d3bb81c788ff",
+    "static": true,
+    "consumerExecutableMode": "0555",
+    "anonymousFinalUrlIntegrityVerified": true
+  },
+  "lockSha256": "ac9192c09ee9e3488f2e874ddeb7b5d5dc0ec422aa09e728a49cb037f1ef333e",
+  "unchangedLargeComponentArtifactsRepublished": false,
+  "nativeSourceGates": {
+    "rustTestsPassed": 47,
+    "strictClippy": "passed",
+    "format": "passed",
+    "skillsTestsPassed": 69,
+    "legacyRegressionTests": 48,
+    "legacyRealDockerTestsSkipped": 3,
+    "journalCrossProcessLock": "passed-source-test",
+    "journalProcessExitWithoutDestructorsAndReopen": "passed-source-test",
+    "oldImmutableTargetInventoryDrift": "passed-source-test",
+    "postcommitReceiptExportFailureBoundary": "passed-source-test"
+  },
+  "targets": [
+    {
+      "host": "hwlinux",
+      "platform": "linux-x64",
+      "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "routeDecision": "peer_direct",
+      "daemonId": "4fb20dda-386b-4e4c-97ec-3077604414ae",
+      "mode": "public-online-wrapper-with-verified-public-cache",
+      "controllerSha256": "c7ea030447d77c0f9530cf65b94a1dbd5852ea85f45aa59b86b0d3bb81c788ff",
+      "lockSha256": "ac9192c09ee9e3488f2e874ddeb7b5d5dc0ec422aa09e728a49cb037f1ef333e",
+      "bootstrap": {"operation": "exec-0000000000000539", "exit": 0},
+      "onlinePlan": {"operation": "exec-000000000000053a", "exit": 0},
+      "install1": {"operation": "exec-000000000000053b", "exit": 0, "generation": 1, "durationMs": 90579},
+      "install2": {"operation": "exec-000000000000053e", "exit": 0, "generation": 1, "durationMs": 89505},
+      "packsReused": 4,
+      "imagesReused": 1,
+      "pending": false,
+      "previous": null,
+      "registryAndInstallReceiptBytesUnchanged": true,
+      "registrySnapshotComparison": {"operation": "exec-0000000000000542", "exit": 0, "stateBytesEqual": true, "daemonIdentityMatches": true},
+      "inspectRegistry": {
+        "operation": "exec-000000000000053f",
+        "exit": 0,
+        "filesystemExactEqual": true,
+        "netNewFiles": 0,
+        "dockerResourcesUnchanged": true
+      },
+      "missingRegistryInspection": {
+        "operation": "exec-0000000000000540",
+        "exit": 1,
+        "createdRegistry": false,
+        "netNewFiles": 0,
+        "stderr": "FAIL: inspect registry directory: No such file or directory (os error 2)"
+      },
+      "protected": {"containers": 26, "volumes": 39, "images": 108, "networks": 8, "identitiesUnchanged": true, "dockerMetadataUnchanged": true},
+      "configurationCredentialFileGuard": {"status": "not-performed", "basis": "Docker metadata/mount policy and private composition-root tree; not a shared credential-file fingerprint"},
+      "independentSharedPackHostTreeFingerprint": "not-performed",
+      "modelCalls": 0,
+      "privateReceiptSha256": "94b2de78c22efb1ecd91a9788252ee8d96022b892392cfd6bd7ed480ca408172"
+    },
+    {
+      "host": "aiwsl",
+      "platform": "wsl2-linux-x64",
+      "targetPeerId": "lgw_353e85c0b8dc41638c767303845e9926",
+      "routeDecision": "peer_direct",
+      "daemonId": "4c62305f-dc0c-493d-9a71-69da8412cafd",
+      "mode": "public-online-wrapper-with-verified-public-cache",
+      "controllerSha256": "c7ea030447d77c0f9530cf65b94a1dbd5852ea85f45aa59b86b0d3bb81c788ff",
+      "lockSha256": "ac9192c09ee9e3488f2e874ddeb7b5d5dc0ec422aa09e728a49cb037f1ef333e",
+      "publicChecksums": 953,
+      "bootstrap": {"operation": "exec-00000000000010af", "exit": 0},
+      "onlinePlan": {"operation": "exec-00000000000010b4", "exit": 0},
+      "install1": {"operation": "exec-00000000000010b8", "exit": 0, "generation": 1},
+      "install2": {"operation": "exec-00000000000010bc", "exit": 0, "generation": 1},
+      "packsReused": 4,
+      "imagesReused": 1,
+      "pending": false,
+      "previous": null,
+      "registryAndInstallReceiptBytesUnchanged": true,
+      "inspectRegistry": {
+        "operation": "exec-00000000000010be",
+        "exit": 0,
+        "dockerEndpointIntentionallyUnavailable": true,
+        "filesystemExactEqual": true,
+        "netNewFiles": 0,
+        "dockerResourcesUnchanged": true
+      },
+      "missingRegistryInspection": {"exit": 1, "createdRegistry": false, "netNewFiles": 0},
+      "protected": {"containers": 36, "volumes": 93, "images": 62, "networks": 8, "identitiesUnchanged": true},
+      "configurationCredentialFileGuard": {"status": "passed", "count": 27, "unchanged": true, "rawContentsAndPerFileHashesPublished": false},
+      "independentSharedPackHostTreeFingerprint": "not-performed-permission-denied-no-sudo-or-permission-change",
+      "modelCalls": 0,
+      "privateReceiptSha256": "a0658f7f7b0fd1f5473e66c201d5d4b12b6c97e890dd9751b3bfa34a706dc56e"
+    }
+  ],
+  "coldInstallQualified": false,
+  "acceptanceLimits": {
+    "fullInstanceLifecycleQualified": false,
+    "coldCompositionCrashRecoveryQualified": false,
+    "attemptScopedRemoteSubagentQualified": false,
+    "fullFlywheelAndNextRoundConsumptionQualified": false,
+    "armRuntimeQualified": false,
+    "applicationDataRollbackQualified": false,
+    "resourceDeletionAuthorityQualified": false
+  },
+  "failuresPreserved": [
+    "Native first fixture test failed on macOS /var symlink ancestry; canonical test roots fixed it before source publication.",
+    "GitHub release creation HTTP422 for short target_commitish; full public revision succeeded, anonymous final asset readback passed.",
+    "Subsequent GitHub authenticated metadata read HTTP403 core rate limit; not rewritten as a failed upload or failed anonymous artifact delivery.",
+    "AI WSL operator path typo op10b0 exit2 retained; correct advertised public Skill then read and tested without product patch.",
+    "Earlier HW inventory op0537 get returned operation_not_found; not used as consumer acceptance.",
+    "Missing-registry inspect intentionally exits1 and remains absent on both hosts; it is fail-closed no-write behavior, not a successful inspection."
+  ],
+  "maturity": {"historicalEstimatePercent": 82, "measured": false, "delta": 0}
+}
