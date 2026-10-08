@@ -1,14 +1,15 @@
 {
   "schema": "agentlab.portable_component_qualification.v1",
-  "observedAt": "2026-10-08T14:04:00Z",
+  "observedAt": "2026-10-08T17:20:08Z",
+  "historicalInitialObservedAt": "2026-10-08T14:04:00Z",
   "status": "partial-component-qualification",
   "consumerArtifactAuthority": "GitHub-only",
-  "entrypoint": {
+  "historicalEntrypoint": {
     "sourceRevision": "66ca79570366749c75aea4967d660e10fe88ed5f",
     "sha256": "fd7b40ecd419efebcdbb0551d134138af2b79a1602bea6ecbafe4e9c69f263cd",
     "bytes": 3937
   },
-  "mcpgit": {
+  "historicalMcpGit": {
     "sourceRevision": "a75b9809857cea23047b61f3acea17bc09b9996c",
     "installerRevision": "ce380809aaa5187f75adc9aed74053c0933661a0",
     "manifestSha256": "c623bb1b87d7f168bb6874ef7bf0add32e75d7e6f53d2baf55b0f9a2dd836e84",
@@ -56,7 +57,7 @@
       }
     ]
   },
-  "composition": {
+  "historicalComposition": {
     "release": "historical-alpha10-composition",
     "installerSha256": "f0cfce3d0842bfd36b41ec3a4c593b41779d461ca3359c6cf2256728ce42ad04",
     "lockSha256": "dcb27623ef9f3f5a92c0eb759120989cafcf25ace8873945a043242cb41fd1eb",
@@ -97,7 +98,7 @@
       "boundary": "The historical adopted SDK archive is not a native manifest-first AgentLab pack. The composition's adopted-descriptor install succeeded; this unsupported generic inspect path is not a failed SDK installation."
     }
   },
-  "retirement": {
+  "historicalRetirement": {
     "authorization": "Direct human authorization, historical AgentLab instances and exclusively owned data volumes only",
     "targets": [
       {
@@ -147,7 +148,7 @@
       "rerunExit": 0
     }
   ],
-  "unqualified": [
+  "historicalUnqualified": [
     "AgentLab session-template/fork compatibility with new MCPGit",
     "Successor aggregate release switch or publication",
     "Unified native Rust controller component CRUD/upgrade/rollback/uninstall",
@@ -155,7 +156,7 @@
     "Harmony emulator and ohosTest/performance/power/thermal execution"
   ],
   "automaticPromotion": false,
-  "currentConsumerQualification": {
+  "historicalConsumerQualification": {
     "observedAt": "2026-10-08T16:16:17Z",
     "status": "partial-components-not-full-harness",
     "artifactAuthority": "GitHub-only",
@@ -563,6 +564,365 @@
       "url": "https://github.com/yxsicd/agentlabrelease/actions/runs/37798706040",
       "scope": "nine-job-public-release-validation-not-full-harness",
       "finalBehaviorCutCiConfirmed": false
+    }
+  },
+  "currentConsumerQualification": {
+    "observedAt": "2026-10-08T17:20:08Z",
+    "status": "passed-native-component-admission-not-full-harness",
+    "artifactAuthority": "GitHub-only",
+    "validationTransportIsConsumerDependency": false,
+    "sourceRevision": "54caf08bf6d92e63e0c09992160b83c79b32aea8",
+    "executedEntrypoint": {
+      "path": "scripts/agentlab-composition-install.sh",
+      "sha256": "69827030b5fe86ac89f4eb31c2113997b2cda4bcef4b7fe81619744363b324e3"
+    },
+    "controller": {
+      "sourceRevision": "90496dc0dda9c1eaabe13be1988c85b9aab02b8c",
+      "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-90496dc0-linux-x64/agentlabctl-90496dc0-linux-x64",
+      "sha256": "764b74d71b1c21f01cb68758d00da58d0f6b564d92a28fb4f8bc0e202a9fd880",
+      "bytes": 4260960,
+      "anonymousFinalUrlVerificationExit": 0,
+      "immutableExecutableMode": "0555"
+    },
+    "unchangedCompositionLockSha256": "ac9192c09ee9e3488f2e874ddeb7b5d5dc0ec422aa09e728a49cb037f1ef333e",
+    "unchangedRuntimeToolsSdk": true,
+    "publicContractTests": {
+      "language": "Rust",
+      "passed": 13,
+      "failed": 0,
+      "scope": "consumer-safeguards-not-runtime-acceptance"
+    },
+    "nativeTargets": [
+      {
+        "target": "hwlinux",
+        "platform": "linux-x64",
+        "status": "passed-native-component-admission-not-full-harness",
+        "sourceRevision": "54caf08bf6d92e63e0c09992160b83c79b32aea8",
+        "transport": {
+          "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+          "routeDecision": "peer_direct"
+        },
+        "operations": {
+          "exactGitHubFetch": {
+            "operationId": "exec-00000000000004e6",
+            "exit": 0
+          },
+          "nativeInstallAndIndependentFullTree": {
+            "operationId": "exec-00000000000004e7",
+            "exit": 0,
+            "wrapperExit": 0
+          },
+          "publicStaticRustFixture": {
+            "operationId": "exec-00000000000004e8",
+            "exit": 0,
+            "toolExit": 0
+          },
+          "finalOnlinePlanInspectAndNoWriteReadback": {
+            "operationId": "exec-00000000000004e9",
+            "exit": 0
+          },
+          "finalIndependentAudit": {
+            "operationId": "exec-00000000000004ea",
+            "exit": 0
+          }
+        },
+        "allFourPacksAndRuntimeImageReused": true,
+        "fullSharedTreesUnchanged": {
+          "bytes": true,
+          "inode": true,
+          "type": true,
+          "mode": true,
+          "owner": true,
+          "mtimeNanoseconds": true,
+          "ctimeNanoseconds": true,
+          "sdkEntries": 106057
+        },
+        "activeSharedConsumer": {
+          "name": "alpi-agentlab-86364862",
+          "pidBeforeAndAfter": 2717,
+          "toolsMountReadOnly": true
+        },
+        "finalResources": {
+          "containers": 26,
+          "volumes": 39,
+          "uniqueImageIds": 108,
+          "changedOrMissingProtectedResources": 0
+        },
+        "preexistingExternalImageDelta": {
+          "count": 2,
+          "occurredBeforeFirstPlan": true,
+          "attributedToInstaller": false,
+          "prePlanImageBaseline": 108
+        },
+        "rootDirectoriesMode": "0700",
+        "credentialsMode": "0600",
+        "inspectRootAndReceiptUnchanged": true,
+        "fixture": {
+          "coldInstall": true,
+          "activeReadOnlyReuse": true,
+          "stoppedWritableConsumerDenied": true,
+          "driftDeniedWithoutRepair": true,
+          "exactCleanup": true,
+          "namespaceAbsentAfter": true,
+          "netContainerVolumeImageDelta": 0,
+          "validationCompilerInstalled": false,
+          "toolSourceSha256": "cada2f915797a2901a6cf79423f5e27120fe4c7ec76f4bc9ec0d6e47c3cf9dbd",
+          "executedReleasedStaticTool": true,
+          "executedToolSha256": "bc0e189fc64d0c628c35127b922b5a05a6e3b1d22ca685105001f6f84eab5fd8"
+        },
+        "historicalPurgedInstancesAndDataStillAbsent": true,
+        "port18105Inactive": true,
+        "fullHarnessReady": false
+      },
+      {
+        "target": "aiwsl",
+        "platform": "wsl2-linux-x64",
+        "status": "passed-native-component-admission-not-full-harness",
+        "sourceRevision": "54caf08bf6d92e63e0c09992160b83c79b32aea8",
+        "transport": {
+          "targetPeerId": "lgw_353e85c0b8dc41638c767303845e9926",
+          "routeDecision": "peer_direct"
+        },
+        "operations": {
+          "exactGitHubFetch": {
+            "operationId": "exec-0000000000001044",
+            "exit": 0
+          },
+          "latestOnlinePlan": {
+            "operationId": "exec-0000000000001047",
+            "exit": 0,
+            "wrapperExit": 0,
+            "independentExit": 0
+          },
+          "latestInspect": {
+            "operationId": "exec-0000000000001048",
+            "exit": 0,
+            "wrapperExit": 0,
+            "independentExit": 0
+          },
+          "nativeInstallAndIndependentFullTree": {
+            "operationId": "exec-0000000000001049",
+            "exit": 0,
+            "wrapperExit": 0,
+            "independentExit": 0
+          },
+          "publicRustFixtureAndIndependentResourceReadback": {
+            "operationId": "exec-000000000000104a",
+            "exit": 0,
+            "toolExit": 0,
+            "independentExit": 0
+          },
+          "finalPrivateReceiptAndFilePreservation": {
+            "operationId": "exec-000000000000104c",
+            "exit": 0
+          }
+        },
+        "allFourPacksAndRuntimeImageReused": true,
+        "fullSharedTreesUnchanged": {
+          "bytes": true,
+          "type": true,
+          "mode": true,
+          "link": true,
+          "owner": true,
+          "mtime": true,
+          "ctime": true,
+          "totalEntries": 106231
+        },
+        "installedPackConsumers": [],
+        "finalResources": {
+          "containers": 36,
+          "volumes": 93,
+          "allImageIdsReported": 62,
+          "imageSetUnchanged": true,
+          "changedOrMissingProtectedResources": 0
+        },
+        "inspectRootEntriesUnchanged": 19,
+        "retainedHistoricalPrivateFilesUnchanged": 65,
+        "fixture": {
+          "coldInstall": true,
+          "activeReadOnlyReuse": true,
+          "stoppedWritableConsumerDenied": true,
+          "driftDeniedWithoutRepair": true,
+          "exactCleanup": true,
+          "namespaceAbsentAfter": true,
+          "netContainerVolumeImageDelta": 0,
+          "toolCompiledFromPinnedPublicRustSource": true,
+          "compilerIsInstallationDependency": false,
+          "toolSourceSha256": "cada2f915797a2901a6cf79423f5e27120fe4c7ec76f4bc9ec0d6e47c3cf9dbd",
+          "executedReleasedStaticTool": false,
+          "executedToolSha256": "4f7e7764d161fefd47c368b9c543fb8c7ff064603f2ce572cf73cbe46084da94"
+        },
+        "historicalPurgedInstancesAndDataStillAbsent": true,
+        "port18105Inactive": true,
+        "fullHarnessReady": false
+      }
+    ],
+    "fixtureStdout": "PASS: public native cold install, active RO exact reuse, stopped RW denial, payload drift preserved, exact fixture cleanup; not full Harness",
+    "testTool": {
+      "sourceRevision": "f896b4159379cfd7a0dd87120b9c3c50d424f277",
+      "sourceSha256": "cada2f915797a2901a6cf79423f5e27120fe4c7ec76f4bc9ec0d6e47c3cf9dbd",
+      "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-90496dc0-linux-x64/native-controller-acceptance-f896b415-linux-x64",
+      "bytes": 427240,
+      "sha256": "bc0e189fc64d0c628c35127b922b5a05a6e3b1d22ca685105001f6f84eab5fd8",
+      "anonymousFinalUrlVerificationExit": 0,
+      "role": "validation-only-not-installation-dependency"
+    },
+    "preservedTrialFailures": [
+      {
+        "target": "hwlinux",
+        "sourceRevision": "f896b4159379cfd7a0dd87120b9c3c50d424f277",
+        "operationId": "exec-00000000000004e0",
+        "gate": "actual-online-install",
+        "wrapperExit": 1,
+        "helperExit": 126,
+        "stderr": "FAIL: qualify exact installer helper before volume writes failed with exit status: 126",
+        "sharedResourceWritesObserved": false,
+        "diagnosis": "Host-owned controller mode0700 is inaccessible to default-root bind helper with cap-drop=ALL; corrected public executable mode0555, private directories unchanged."
+      },
+      {
+        "target": "hwlinux",
+        "sourceRevision": "f896b4159379cfd7a0dd87120b9c3c50d424f277",
+        "operationId": "exec-00000000000004e1",
+        "gate": "public-static-fixture-cold-install",
+        "actualProcessExit": -6,
+        "signal": "SIGABRT",
+        "helperExit": 126,
+        "positiveFixtureGatesQualified": false,
+        "fixtureNamespaceCreated": false,
+        "sharedResourceWritesObserved": false
+      },
+      {
+        "target": "aiwsl",
+        "sourceRevision": "f896b4159379cfd7a0dd87120b9c3c50d424f277",
+        "operationId": "exec-000000000000103e",
+        "gate": "original-online-plan-outer-assessment",
+        "wrapperExit": 0,
+        "outerExit": 1,
+        "countedAsPass": false
+      },
+      {
+        "target": "aiwsl",
+        "sourceRevision": "f896b4159379cfd7a0dd87120b9c3c50d424f277",
+        "operationId": "exec-0000000000001042",
+        "gate": "original-inspect-outer-assessment",
+        "wrapperExit": 0,
+        "outerExit": 1,
+        "countedAsPass": false,
+        "cause": "Assessor treated unrelated existing-service health exec events as required zero global events; resource and root file identities were unchanged."
+      },
+      {
+        "target": "aiwsl",
+        "sourceRevision": "f896b4159379cfd7a0dd87120b9c3c50d424f277",
+        "operationId": "exec-0000000000001043",
+        "gate": "actual-online-install",
+        "wrapperExit": 1,
+        "outerExit": 1,
+        "helperExit": 126,
+        "stderr": "FAIL: qualify exact installer helper before volume writes failed with exit status: 126",
+        "sharedResourceWritesObserved": false,
+        "qualifiedUnchangedTreeEntries": 106231
+      }
+    ],
+    "authorizedTestRetirement": {
+      "authority": "Direct human authorization, exact AgentLab historical test instances and exclusively owned data only",
+      "targets": [
+        {
+          "target": "hwlinux",
+          "transport": {
+            "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+            "routeDecision": "peer_direct"
+          },
+          "preflight": {
+            "operationId": "exec-00000000000004d5",
+            "exit": 0
+          },
+          "backup": {
+            "operationId": "exec-00000000000004d6",
+            "exit": 0,
+            "bytes": 2273280,
+            "sha256": "e9c26b4533141bebd2e9de560d175f9e3de9a9b616406a99507b7ddbae9c366d",
+            "archiveReadbackVerified": true,
+            "restoreExecuted": false
+          },
+          "mutation": {
+            "operationId": "exec-00000000000004d7",
+            "exit": 0
+          },
+          "independentReadback": {
+            "operationId": "exec-00000000000004d8",
+            "exit": 0
+          },
+          "removedContainerIds": [
+            "c3675c30c9182938b185179ffd0d0e2e2fd98e6440c4c1fa55b6f35356b1f5da",
+            "bd92aeb75049b0fac5ecadb937e4c13f0b4f9abb9dc68b22b13c79e7521024b4"
+          ],
+          "removedDataVolume": "agentlab-public-consumer-20261008-data",
+          "containerCounts": {
+            "before": 28,
+            "after": 26
+          },
+          "volumeCounts": {
+            "before": 40,
+            "after": 39
+          },
+          "protectedResourcesChanged": 0,
+          "unchangedImageIds": 106,
+          "privateConfigurationCredentialsReceiptsPreserved": true,
+          "verifiedDataBackupAvailable": true,
+          "fullRecoveryQualified": false
+        },
+        {
+          "target": "aiwsl",
+          "transport": {
+            "targetPeerId": "lgw_353e85c0b8dc41638c767303845e9926",
+            "routeDecision": "peer_direct"
+          },
+          "preflight": {
+            "operationId": "exec-000000000000102f",
+            "exit": 0
+          },
+          "mutation": {
+            "operationId": "exec-0000000000001031",
+            "exit": 0
+          },
+          "independentReadback": {
+            "operationId": "exec-0000000000001032",
+            "exit": 0
+          },
+          "removedContainerIds": [
+            "3a37296f3df486b2a35e6eef59c3f9887cad5588ce807f9f6e517086441d3b7b",
+            "a2b6fe2efc9a657dc2a89ae79b2be0fe530cb97267093a1c278dab669c349b3a"
+          ],
+          "removedDataVolume": "agentlab-public-consumer-20261008-data",
+          "containerCounts": {
+            "before": 38,
+            "after": 36
+          },
+          "volumeCounts": {
+            "before": 94,
+            "after": 93
+          },
+          "protectedResourcesChanged": 0,
+          "unchangedAllImageIds": 62,
+          "unchangedVisibleImageIds": 55,
+          "unchangedPrivateFiles": 65,
+          "unrelatedNetplanUnitsPreserved": true,
+          "verifiedDataBackupAvailable": false,
+          "fullRecoveryQualified": false
+        }
+      ],
+      "sharedComponentsImagesAndActiveConsumersPreserved": true,
+      "forceOrPruneUsed": false,
+      "absenceProvedByIndependentInventoryAndInspect": true,
+      "rawBackupsReceiptsCredentialsRemainPrivate": true
+    },
+    "acceptanceLimits": {
+      "completeColdCompositionQualified": false,
+      "fullInstanceLifecycleQualified": false,
+      "agentlabSessionTemplateForkWithSelectedMcpGitQualified": false,
+      "attemptScopedRemoteSubagentQualified": false,
+      "fullFlywheelAndNextRoundConsumptionQualified": false,
+      "automaticPromotion": false
     }
   },
   "flywheelMaturity": {

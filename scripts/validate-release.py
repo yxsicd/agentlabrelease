@@ -62,6 +62,38 @@ assert re.fullmatch(r"[0-9a-f]{40}", test_tool["sourceRevision"])
 assert re.fullmatch(r"[0-9a-f]{64}", test_tool["sha256"]) and test_tool["bytes"] > 0
 assert test_tool["artifact"].startswith("https://github.com/yxsicd/agentlabrelease/releases/download/")
 assert hashlib.sha256((ROOT / control_descriptor["qualification"]["rustGate"]).read_bytes()).hexdigest() == test_tool["sourceSha256"]
+qualification = control_descriptor["qualification"]
+if qualification["status"] == "passed-two-host-component-admission-not-full-harness":
+    receipt = json.loads((ROOT / qualification["receipt"]).read_text())["currentConsumerQualification"]
+    assert receipt["status"] == "passed-native-component-admission-not-full-harness"
+    assert receipt["sourceRevision"] == qualification["entrypointSourceRevision"]
+    entrypoint_sha = hashlib.sha256((ROOT / composition["installer"]).read_bytes()).hexdigest()
+    assert entrypoint_sha == qualification["entrypointSha256"] == receipt["executedEntrypoint"]["sha256"]
+    assert receipt["controller"]["sha256"] == controller["sha256"]
+    assert receipt["controller"]["bytes"] == controller["bytes"]
+    assert receipt["controller"]["sourceRevision"] == controller["sourceRevision"]
+    assert receipt["controller"]["artifact"] == controller["url"]
+    for key in ("sourceRevision", "sourceSha256", "artifact", "bytes", "sha256", "role"):
+        assert receipt["testTool"][key] == test_tool[key]
+    assert qualification["fullHarnessReady"] is False
+    assert receipt["acceptanceLimits"]["fullInstanceLifecycleQualified"] is False
+    assert receipt["acceptanceLimits"]["attemptScopedRemoteSubagentQualified"] is False
+    assert receipt["acceptanceLimits"]["fullFlywheelAndNextRoundConsumptionQualified"] is False
+    # Qualify portable platform coverage, never require particular hostnames/peers.
+    assert len(receipt["nativeTargets"]) >= 2
+    assert {"linux-x64", "wsl2-linux-x64"} <= {target["platform"] for target in receipt["nativeTargets"]}
+    for target in receipt["nativeTargets"]:
+        assert target["sourceRevision"] == qualification["entrypointSourceRevision"]
+        assert target["fullHarnessReady"] is False and target["allFourPacksAndRuntimeImageReused"] is True
+        assert all(op["exit"] == 0 for op in target["operations"].values())
+        assert target["fixture"]["toolSourceSha256"] == test_tool["sourceSha256"]
+        if target["fixture"]["executedReleasedStaticTool"]:
+            assert target["fixture"]["executedToolSha256"] == test_tool["sha256"]
+        else:
+            assert target["fixture"]["toolCompiledFromPinnedPublicRustSource"] is True
+            assert re.fullmatch(r"[0-9a-f]{64}", target["fixture"]["executedToolSha256"])
+        for gate in ("coldInstall", "activeReadOnlyReuse", "stoppedWritableConsumerDenied", "driftDeniedWithoutRepair", "exactCleanup"):
+            assert target["fixture"][gate] is True
 for key, value in {
     "control_url": controller["url"], "control_sha256": controller["sha256"],
     "control_bytes": controller["bytes"], "lock_sha256": publication["environmentLockSha256"],

@@ -23,7 +23,11 @@
     "fullHarnessReady": false
   },
   "qualification": {
-    "status": "pending-two-host-public-execution",
+    "status": "passed-two-host-component-admission-not-full-harness",
+    "entrypointSourceRevision": "54caf08bf6d92e63e0c09992160b83c79b32aea8",
+    "entrypointSha256": "69827030b5fe86ac89f4eb31c2113997b2cda4bcef4b7fe81619744363b324e3",
+    "receipt": "docs/evidence/portable-deployment-20261008.json",
+    "fullHarnessReady": false,
     "fixture": "release/components/agentlab-controller-fixture-90496dc0-linux-x64.tar.zst",
     "fixtureSha256": "42368ff87f09d406f3a6c4169a70c9bcbf353ba730de303d7b7fa6b60103826d",
     "rustGate": "tests/native_controller_acceptance.rs",

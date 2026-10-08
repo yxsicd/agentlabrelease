@@ -43,8 +43,11 @@ planning and actual read-only installed-tree verification with no-copy mounts,
 consumer/ownership admission and uniquely fenced fresh-volume cleanup. Its plan
 explicitly leaves payload/helper/template qualification unperformed. A real
 install must prove its exact static Linux helper can execute through the selected
-Docker daemon before volume writes. Two-host execution is recorded independently
-in the evidence receipt; source tests alone are not deployment acceptance.
+Docker daemon before volume writes. Public cut 54caf08 passed plan, inspect,
+existing-pack reuse and cold/RO/RW/drift fixture gates independently on Linux and
+WSL2. The evidence receipt preserves the earlier 0700-helper permission failure
+and its corrected-entrypoint reruns; complete cold composition and full Harness
+remain unqualified. Source tests alone are not deployment acceptance.
 The public Rust acceptance uses one initially absent fixture namespace. Success
 removes its exact containers and volume. Failure retains diagnostic resources;
 inventory and prove ownership/references before an explicitly authorized retry
