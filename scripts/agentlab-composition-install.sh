@@ -107,6 +107,13 @@ download() {
   fi
 }
 
+prepare_public_executable() {
+  # These are checksum-verified public code bytes, not credentials. Docker's
+  # root/other UID with cap-drop=ALL must execute the read-only binary bind.
+  # Private acquisition directories retain umask 077; no writable code bits.
+  chmod 0555 "${1}"
+}
+
 if [[ "${action}" == "inspect" ]]; then
   [[ "${plan}" == false && -z "${control}" && -z "${lock}" ]] || {
     echo "inspect accepts an existing root, not --plan/--control/--lock" >&2; exit 2;
@@ -140,7 +147,7 @@ if [[ "${action}" == "online" ]]; then
     echo "agentlabctl size mismatch" >&2
     exit 1
   }
-  chmod 700 "${temporary}"
+  prepare_public_executable "${temporary}"
   mv -f -- "${temporary}" "${control}"
   trap - EXIT
   lock="${root}/metadata/environment-lock.json"
@@ -167,7 +174,7 @@ if [[ "${action}" == "offline" ]]; then
   [[ "$(digest_with_host "${temporary}")" == "${control_sha256}" ]] || {
     echo "offline control changed while copying" >&2; exit 1;
   }
-  chmod 700 "${temporary}"
+  prepare_public_executable "${temporary}"
   mv -f -- "${temporary}" "${root}/bin/agentlabctl"
   control="${root}/bin/agentlabctl"
   trap - EXIT

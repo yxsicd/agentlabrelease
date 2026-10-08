@@ -38,6 +38,9 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
    installed payloads or template readiness. Install separately verifies actual
    bytes/types/modes/links with read-only no-copy helpers before reusing a pack;
    unknown ownership, writable consumers or drift fail without repair.
+   Verified public executables use mode `0555` inside private acquisition
+   directories; credentials remain private. This lets a read-only Docker helper
+   execute as another UID without adding capabilities or changing shared data.
    It verifies and installs image/program/tool components. **It does not create
    a complete running Harness instance.** Offline acquisition uses the exact
    controller and lock from that same cut; it is not an older-version fallback.

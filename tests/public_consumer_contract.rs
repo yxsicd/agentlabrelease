@@ -43,6 +43,32 @@ const INSTALL: &str = "scripts/agentlab-composition-install.sh";
 const MCPGIT_INSTALL: &str = "scripts/agentlab-mcpgit-prod-install.sh";
 
 #[test]
+fn verified_public_executable_is_container_readable_without_writable_bits() {
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+    let f = Fixture::new();
+    fs::set_permissions(&f.0, fs::Permissions::from_mode(0o700)).unwrap();
+    let executable = f.0.join("public-controller");
+    let bytes = b"immutable verified public code, not credentials\n";
+    fs::write(&executable, bytes).unwrap();
+    fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
+    let before = fs::metadata(&executable).unwrap();
+    let script = fs::read_to_string(INSTALL).unwrap();
+    let body = script.split("prepare_public_executable() {\n").nth(1).unwrap()
+        .split("\n}").next().unwrap();
+    assert_eq!(script.matches("prepare_public_executable \"${temporary}\"").count(), 2,
+        "online and offline must prepare the verified executable identically");
+    let result = Command::new("/bin/bash")
+        .args(["-ceu", &format!("prepare_public_executable() {{\n{body}\n}}\nprepare_public_executable \"$1\""), "gate"])
+        .arg(&executable).output().unwrap();
+    assert!(result.status.success());
+    let after = fs::metadata(&executable).unwrap();
+    assert_eq!(after.mode() & 0o777, 0o555);
+    assert_eq!((after.uid(), after.gid(), after.ino()), (before.uid(), before.gid(), before.ino()));
+    assert_eq!(fs::read(&executable).unwrap(), bytes);
+    assert_eq!(fs::metadata(&f.0).unwrap().mode() & 0o777, 0o700);
+}
+
+#[test]
 fn inspect_is_no_footprint_and_rejects_untrusted_control_without_execution() {
     use std::os::unix::fs::PermissionsExt;
     let f = Fixture::new();
