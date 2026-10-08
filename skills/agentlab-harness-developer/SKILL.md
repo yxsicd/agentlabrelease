@@ -101,6 +101,12 @@ digests, and preserves license notices. Platform is selected from the Docker
 image's architecture, not the host. Later preparation and dispatch recheck these
 immutable binaries; drift or participant-state overrides are refused. No model
 starts without these dependencies, and offline execution never downloads tools.
+When invoking the existing Participant API, first create the fresh workspace,
+evidence directory, empty operator Docker config directory and runtime receipt
+directory. Set `AGENTLAB_PARTICIPANT_RUNTIME_CONFIG`,
+`AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT` and `DOCKER_CONFIG` to those exact
+operator paths. Create the state's parent, but leave the new state itself absent
+for Participant initialization. These private paths are not child task context.
 
 The supervisor must delegate exactly the admitted child task, with `async:false`,
 one `explore` task, explicit child-only `systemPrompt`, tools
@@ -129,6 +135,10 @@ remote MCP broker. Do not qualify mode A assessment, full Harness readiness or a
 five-ring closure from installing a plugin or producing a launch plan. A normal
 extension-disabled assessed participant remains a distinct protocol; it rejects
 supervisor and synthetic-transport runtime configs rather than mislabeling them.
+The [pinned two-host consumption receipt](../../docs/evidence/pi-supervisor-consumption-20261008.json)
+separates installation, offline tool checks and a real supervised onboarding
+task from business-round and remote-assessment qualification; its failed trials
+and remaining evidence limits are retained.
 
 ## One evidence-driven flywheel
 
