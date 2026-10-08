@@ -1,0 +1,163 @@
+{
+  "schema": "agentlab.portable_component_qualification.v1",
+  "observedAt": "2026-10-08T14:04:00Z",
+  "status": "partial-component-qualification",
+  "consumerArtifactAuthority": "GitHub-only",
+  "entrypoint": {
+    "sourceRevision": "66ca79570366749c75aea4967d660e10fe88ed5f",
+    "sha256": "fd7b40ecd419efebcdbb0551d134138af2b79a1602bea6ecbafe4e9c69f263cd",
+    "bytes": 3937
+  },
+  "mcpgit": {
+    "sourceRevision": "a75b9809857cea23047b61f3acea17bc09b9996c",
+    "installerRevision": "ce380809aaa5187f75adc9aed74053c0933661a0",
+    "manifestSha256": "c623bb1b87d7f168bb6874ef7bf0add32e75d7e6f53d2baf55b0f9a2dd836e84",
+    "isolatedInstance": "agentlab-mcpgit-qual-20261008",
+    "bindAddress": "127.0.0.1",
+    "port": 18095,
+    "targets": [
+      {
+        "target": "hwlinux (Ubuntu Linux x64)",
+        "downloadExit": 0,
+        "firstInstallExit": 0,
+        "repeatInstallExit": 0,
+        "statusExit": 0,
+        "doctorExit": 0,
+        "healthHttpStatus": 204,
+        "readOnlyOnboardingExit": 0,
+        "checks": {
+          "eightKernelTools": true,
+          "expectedInstance": true,
+          "credentialAuthenticated": true,
+          "scopedRepositoryRead": true,
+          "offlineWasmcDiscovery": true,
+          "permissionsChanged": false,
+          "writeProbeRequested": false
+        }
+      },
+      {
+        "target": "aiwsl (WSL2 Linux x64)",
+        "downloadExit": 0,
+        "firstInstallExit": 0,
+        "repeatInstallExit": 0,
+        "statusExit": 0,
+        "doctorExit": 0,
+        "healthHttpStatus": 204,
+        "readOnlyOnboardingExit": 0,
+        "checks": {
+          "eightKernelTools": true,
+          "expectedInstance": true,
+          "credentialAuthenticated": true,
+          "scopedRepositoryRead": true,
+          "offlineWasmcDiscovery": true,
+          "permissionsChanged": false,
+          "writeProbeRequested": false
+        }
+      }
+    ]
+  },
+  "composition": {
+    "release": "historical-alpha10-composition",
+    "installerSha256": "f0cfce3d0842bfd36b41ec3a4c593b41779d461ca3359c6cf2256728ce42ad04",
+    "lockSha256": "dcb27623ef9f3f5a92c0eb759120989cafcf25ace8873945a043242cb41fd1eb",
+    "targets": [
+      {
+        "target": "hwlinux",
+        "bashInstallerExit": 0,
+        "receiptSchema": "agentlab.composition_install_receipt.v4",
+        "installedComponentSlots": [
+          "release",
+          "tools",
+          "harmony-cli",
+          "harmony-build-kit"
+        ],
+        "fullHarnessStarted": false,
+        "emulatorExecuted": false
+      },
+      {
+        "target": "aiwsl",
+        "bashInstallerExit": 0,
+        "receiptSchema": "agentlab.composition_install_receipt.v4",
+        "installedComponentSlots": [
+          "release",
+          "tools",
+          "harmony-cli",
+          "harmony-build-kit"
+        ],
+        "fullHarnessStarted": false,
+        "emulatorExecuted": false
+      }
+    ],
+    "sdkReceiptDifference": "The adopted SDK descriptor and archive are identical on both hosts; portableSha256 is 7d01f01c45f328c772ebf0771c2478fcefeedcdab13b54658b0a9464358e3532. Installed manifestSha256 differs and must not be confused with portable identity; local manifest provenance remains unclassified.",
+    "sdkAdoptedDescriptorSchema": "agentlab.adopted_pack_descriptor.v1",
+    "sdkNativePackInspect": {
+      "hwlinuxExit": 1,
+      "aiwslExit": 1,
+      "error": "manifest.json must be first",
+      "boundary": "The historical adopted SDK archive is not a native manifest-first AgentLab pack. The composition's adopted-descriptor install succeeded; this unsupported generic inspect path is not a failed SDK installation."
+    }
+  },
+  "retirement": {
+    "authorization": "Direct human authorization, historical AgentLab instances and exclusively owned data volumes only",
+    "targets": [
+      {
+        "target": "hwlinux",
+        "removedContainers": 53,
+        "removedVolumes": 71,
+        "originalVolumeCount": 105,
+        "currentVolumeCount": 38,
+        "initialRetirementExit": 0,
+        "reconciliationExit": 0
+      },
+      {
+        "target": "aiwsl",
+        "removedContainers": 14,
+        "removedVolumes": 152,
+        "originalVolumeCount": 239,
+        "currentVolumeCount": 92,
+        "initialRetirementExit": 0,
+        "largeVolumeRemovalOccurred": true,
+        "largeVolumeBackupBytes": 68719482880,
+        "largeVolumeBackupSha256": "22b10e8a5c8a9a472058bca02353bafbb734922be96184c457227b57b0b0ceaf",
+        "largeVolumeInitialDifferenceCheckExit": 1,
+        "reconciliationExit": 0
+      }
+    ],
+    "protectedContainerIdentityStateChanges": [],
+    "protectedVolumeIdentityChanges": [],
+    "unapprovedMissingVolumes": [],
+    "unapprovedNewVolumes": [],
+    "privateRecoverableBackupsRetained": true,
+    "activeSharedAmbiguousResourcesPreserved": true,
+    "largeVolumeDifferenceFailure": "Preserved: concurrent authorized composition installation created/recreated component volumes. Independent inventory plus exact installation receipt reconciliation passed; original exit 1 was not rewritten."
+  },
+  "preservedFailures": [
+    {
+      "gate": "v1-mcpgit-download",
+      "exit": 1,
+      "cause": "Missing MCPGIT_EXPECTED_MANIFEST_SHA256 for immutable tag",
+      "correction": "Guard explicitly passed in source 66ca795",
+      "rerunExit": 0
+    },
+    {
+      "gate": "v1-composition-invocation",
+      "exit": 2,
+      "cause": "Maintainer probe invoked Bash installer using sh, unsupported pipefail",
+      "correction": "Invoke published Bash installer with bash",
+      "rerunExit": 0
+    }
+  ],
+  "unqualified": [
+    "AgentLab session-template/fork compatibility with new MCPGit",
+    "Successor aggregate release switch or publication",
+    "Unified native Rust controller component CRUD/upgrade/rollback/uninstall",
+    "Native SessionFS readiness",
+    "Harmony emulator and ohosTest/performance/power/thermal execution"
+  ],
+  "automaticPromotion": false,
+  "flywheelMaturity": {
+    "historicalEstimatePercent": 82,
+    "delta": 0,
+    "currentWholeSystemReassessment": false
+  }
+}

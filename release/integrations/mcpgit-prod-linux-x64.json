@@ -25,8 +25,10 @@
     "sha256": "3451537ecfc0a0ae84d94e93b65f2fb1e881c32d32715d8c4d45173434ccfc35"
   },
   "qualification": {
-    "acquisition": "pending-two-host-receipts",
-    "install": "pending",
+    "acquisition": "passed-two-host-github-only",
+    "install": "passed-two-host-isolated-first-and-repeat-install",
+    "readOnlyMcpKernel": "passed-two-host-auth-tool-discovery-repository-read",
+    "evidence": "docs/evidence/portable-deployment-20261008.json",
     "agentlabIntegration": "pending",
     "historicalDataMigration": "not-run",
     "automaticPromotion": false

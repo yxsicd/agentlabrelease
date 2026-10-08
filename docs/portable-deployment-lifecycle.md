@@ -84,7 +84,7 @@ their original host, never in Git or an uploaded release.
 | Host | Container retirement | Volume retirement | Evidence |
 | --- | --- | --- | --- |
 | hwlinux | 53 removed, recoverable images retained | 71 removed, verified private archives retained | Exact volume delta and protected container identity/state passed |
-| aiwsl | 14 removed, recoverable images retained | 151 removed, verified private archives retained; large 64 GiB old volume deferred | Exact volume delta and protected container identity/state passed |
+| aiwsl | 14 removed, recoverable images retained | 152 removed, verified private archives retained, including the old 64 GiB volume | Initial large-volume delta check failed; independent inventory/install reconciliation passed |
 
 Receipts are under the logged-in user's
 `.local/share/agentlab/deployment-validation-20261008/` on each host. These are
@@ -98,10 +98,35 @@ The historical composition installer requires Bash: invoking it with `sh`
 fails before installation (`pipefail` is not portable to `/bin/sh`). Preserve
 that failed probe separately and retry the documented Bash entrypoint.
 
+The corrected public probes completed on both hosts: MCPGit download, first
+install, repeat install, status, doctor, HTTP 204 and read-only Agent onboarding
+(eight kernel tools, authenticated identity, scoped repository read and offline
+WAsmC discovery) all passed. The pinned historical composition installer also
+completed with Bash. This installs four component volumes and the runtime image;
+it does not start or qualify the full Harness or execute the emulator.
+See [the sanitized two-host receipt](evidence/portable-deployment-20261008.json).
+
+The old 64 GiB aiwsl volume was backed up and SHA-256 verified before removal.
+Its first strict volume-delta assertion exited 1 because concurrent authorized
+composition installation created/recreated dependency volumes. That failure is
+preserved. A separate check against the original volume identities, exact retired
+set and installation receipts passed: no unapproved missing/added volume,
+protected volume identity change or protected container state/identity change.
+Future retirement and installation footprint measurements must be serialized.
+
+The adopted Harmony SDK descriptor and archive match on both hosts, including
+portable manifest digest `7d01f01c45f328c772ebf0771c2478fcefeedcdab13b54658b0a9464358e3532`.
+Installed `manifestSha256` differs; it is not the descriptor's portable identity
+and its local provenance remains unclassified. The generic native `pack inspect`
+path exits 1 (`manifest.json must be first`) on this adopted historical archive,
+whereas the descriptor-aware composition installation passed. Preserve that
+unsupported-path receipt without misclassifying it as a failed SDK install.
+
 ## Next acceptance gates
 
-1. Download and verify the pinned candidate independently from GitHub on both
-   hosts, then install on isolated names/ports and exercise real MCPGit protocols.
+1. The pinned candidate's isolated download/install/repeat-install and read-only
+   MCP kernel gates passed on both hosts. Next exercise AgentLab session-template,
+   checkpoint and fork contracts against this exact MCPGit revision.
 2. Select a successor aggregate composition referencing these verified layers;
    do not mutate alpha.15 or its historical mirrors.
 3. Extend the Rust controller's component inventory/CRUD/upgrade/uninstall flow,
