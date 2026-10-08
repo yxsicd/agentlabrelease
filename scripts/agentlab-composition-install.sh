@@ -2,9 +2,9 @@
 set -euo pipefail
 
 version="40ecdf4b"
-control_url="https://github.com/yxsicd/agentlabrelease/releases/download/control-90496dc0-linux-x64/agentlabctl-90496dc0-linux-x64"
-control_sha256="764b74d71b1c21f01cb68758d00da58d0f6b564d92a28fb4f8bc0e202a9fd880"
-control_bytes="4260960"
+control_url="https://github.com/yxsicd/agentlabrelease/releases/download/control-01b77751-linux-x64/agentlabctl-01b77751-linux-x64"
+control_sha256="c7ea030447d77c0f9530cf65b94a1dbd5852ea85f45aa59b86b0d3bb81c788ff"
+control_bytes="4361888"
 lock_url="https://github.com/yxsicd/agentlabrelease/releases/download/candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64/environment-lock.json"
 lock_sha256="ac9192c09ee9e3488f2e874ddeb7b5d5dc0ec422aa09e728a49cb037f1ef333e"
 lock_bytes="6515"
@@ -15,6 +15,7 @@ Usage:
   agentlab-composition-install.sh online [--plan] [--root DIR] [--cache-dir DIR]
   agentlab-composition-install.sh offline [--plan] --control FILE --lock FILE [--root DIR] [--cache-dir DIR]
   agentlab-composition-install.sh inspect --root DIR
+  agentlab-composition-install.sh inspect-registry --root DIR
 
 --plan acquires verified assets into the private root/cache, then produces a
 no-Docker-write plan instead of installing. inspect uses already acquired bytes
@@ -26,12 +27,15 @@ zstd decoding, and Docker installation. Offline media must supply a trusted
 control binary and the exact lock. Neither path requires Python, zstd, tar,
 Git, Node/Bun, or Rust/Cargo on the host.
 This prepares components only. It does not start or qualify a full Harness.
+Install records current/previous/pending component qualification under the root.
+Only an exact interrupted target may retry, through full content verification.
+inspect-registry is read-only historical evidence, not live resource health.
 EOF
 }
 
 action="${1:-}"
 case "${action}" in
-  online|offline|inspect) shift ;;
+  online|offline|inspect|inspect-registry) shift ;;
   -h|--help|"") usage; exit 0 ;;
   *) usage >&2; exit 2 ;;
 esac
@@ -77,8 +81,10 @@ private_directory "${root}" && private_directory "${cache_dir}" || {
   echo "this component cut requires Linux x86_64 (including WSL2)" >&2
   exit 2
 }
-command -v docker >/dev/null 2>&1 || { echo "Docker CLI is required" >&2; exit 2; }
-docker version >/dev/null
+if [[ "${action}" != inspect-registry ]]; then
+  command -v docker >/dev/null 2>&1 || { echo "Docker CLI is required" >&2; exit 2; }
+  docker version >/dev/null
+fi
 umask 077
 
 digest_with_host() {
@@ -114,7 +120,7 @@ prepare_public_executable() {
   chmod 0555 "${1}"
 }
 
-if [[ "${action}" == "inspect" ]]; then
+if [[ "${action}" == "inspect" || "${action}" == "inspect-registry" ]]; then
   [[ "${plan}" == false && -z "${control}" && -z "${lock}" ]] || {
     echo "inspect accepts an existing root, not --plan/--control/--lock" >&2; exit 2;
   }
@@ -125,6 +131,9 @@ if [[ "${action}" == "inspect" ]]; then
   [[ "$(digest_with_host "${control}")" == "${control_sha256}" ]] || {
     echo "unexpected agentlabctl identity" >&2; exit 1;
   }
+  if [[ "${action}" == inspect-registry ]]; then
+    exec "${control}" composition inspect-registry --registry "${root}/component-registry"
+  fi
   [[ -f "${root}/acquired/agentlab-environment-lock.json" &&
      ! -L "${root}/acquired/agentlab-environment-lock.json" &&
      "$("${control}" digest "${root}/acquired/agentlab-environment-lock.json")" == "${lock_sha256}" ]] || {
@@ -197,6 +206,7 @@ fi
 
 "${control}" composition install-docker \
   --dir "${root}/acquired" --platform linux-x64 \
+  --registry "${root}/component-registry" \
   --receipt "${root}/receipts/install.json" \
   > "${root}/receipts/install.stdout.json"
 

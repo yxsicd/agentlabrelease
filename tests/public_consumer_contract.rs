@@ -5,6 +5,43 @@ use std::process::{Command, Output};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 static NEXT: AtomicUsize = AtomicUsize::new(0);
+
+#[test]
+fn component_transaction_entrypoint_is_required_and_never_runtime_activation() {
+    let source = fs::read_to_string(INSTALL).unwrap();
+    assert!(source.contains("--registry \"${root}/component-registry\""));
+    assert!(source.contains("composition inspect-registry --registry"));
+    assert!(source.contains("fullHarnessReady\":false"));
+    let descriptor =
+        fs::read_to_string("release/components/control-01b77751-linux-x64.json").unwrap();
+    assert!(descriptor.contains("frozen-local-unix-only"));
+    assert!(descriptor.contains("qualificationCommitted=true; receiptExportFailed=true"));
+    assert!(descriptor.contains("\"runtimeLifecycleReady\": false"));
+}
+
+#[test]
+fn registry_inspection_requires_no_docker_and_missing_root_is_not_created() {
+    use std::os::unix::fs::PermissionsExt;
+    let fixture = Fixture::new();
+    fixture.docker("echo DOCKER_MUST_NOT_RUN >&2; exit 91");
+    let uname = fixture.0.join("uname");
+    fs::write(
+        &uname,
+        "#!/bin/sh\ncase \"$1\" in -s) echo Linux;; -m) echo x86_64;; esac\n",
+    )
+    .unwrap();
+    fs::set_permissions(&uname, fs::Permissions::from_mode(0o700)).unwrap();
+    let root = fixture.0.join("absent");
+    let before = fs::read_dir(&fixture.0).unwrap().count();
+    let result = fixture.run(
+        INSTALL,
+        &["inspect-registry", "--root", root.to_str().unwrap()],
+    );
+    assert_eq!(result.status.code(), Some(2));
+    assert!(!String::from_utf8_lossy(&result.stderr).contains("DOCKER_MUST_NOT_RUN"));
+    assert!(!root.exists());
+    assert_eq!(fs::read_dir(&fixture.0).unwrap().count(), before);
+}
 struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {

@@ -19,7 +19,7 @@ alternatives or compatibility fallbacks.
 
 | Surface | What is executable now | What it does not prove |
 | --- | --- | --- |
-| Component installer | Verified native controller/lock acquisition, stdout-only native plan, shared-reference discovery and full read-only component reuse verification | Running authenticated full Harness; plan is not payload acceptance |
+| Component installer | Verified native controller/lock acquisition, stdout-only plan, shared-reference discovery, full read-only reuse and durable current/previous/pending qualification | Full-instance activation, rollback or uninstall; plan is not payload acceptance |
 | Selected MCPGit installer | Dedicated loopback instance, private credentials, verified unchanged activation reuse and authenticated read-only kernel checks | AgentLab Session/template/Fork integration |
 | Resource inventory | Bounded, read-only Docker-context JSONL without credential/environment contents | Complete native/systemd/loop ownership or deletion authority |
 | Historical uninstall | Version-independent, exact-target procedure with data preservation | A published native one-command lifecycle API |
@@ -37,7 +37,7 @@ configuration/credential bytes and modes, data identity and activation receipt.
 Changed or unqualified activation must not be silently recorded as unchanged.
 Credentials and raw private receipts remain on the selected private root.
 
-The selected [controller component](../release/components/control-90496dc0-linux-x64.json)
+The selected [controller component](../release/components/control-01b77751-linux-x64.json)
 is independent of the unchanged runtime composition. It adds native no-write
 planning and actual read-only installed-tree verification with no-copy mounts,
 consumer/ownership admission and uniquely fenced fresh-volume cleanup. Its plan

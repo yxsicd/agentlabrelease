@@ -30,6 +30,7 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
    bash scripts/agentlab-composition-install.sh online --plan --root /absolute/private/root
    bash scripts/agentlab-composition-install.sh online --root /absolute/private/root
    bash scripts/agentlab-composition-install.sh inspect --root /absolute/private/root
+   bash scripts/agentlab-composition-install.sh inspect-registry --root /absolute/private/root
    ```
 
    The first command acquires exact public bytes and reports image/volume
@@ -39,6 +40,16 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
    installed payloads or template readiness. Install separately verifies actual
    bytes/types/modes/links with read-only no-copy helpers before reusing a pack;
    unknown ownership, writable consumers or drift fail without repair.
+   Install keeps a private durable `component-registry` with current, previous
+   and pending qualifications. Interrupted targets retry only against the same
+   Docker daemon/platform/lock with full verification; repeated exact reuse
+   retains the generation. Registered installation freezes a local Unix Docker
+   endpoint; remote TCP is not supported by this component cut. `inspect-registry`
+   reads historical records without Docker, writes or repair. It is not live
+   health, full-instance activation, rollback, uninstall or deletion authority.
+   A receipt-export failure after commit explicitly reports
+   `qualificationCommitted=true; receiptExportFailed=true`; inspect the durable
+   record rather than assuming the prior selection is still current.
    Verified public executables use mode `0555` inside private acquisition
    directories; credentials remain private. This lets a read-only Docker helper
    execute as another UID without adding capabilities or changing shared data.

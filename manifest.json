@@ -24,7 +24,7 @@
       "publication": "release/candidates/40ecdf4b-linux-x64/publication.json",
       "lock": "release/candidates/40ecdf4b-linux-x64/environment-lock.json",
       "installer": "scripts/agentlab-composition-install.sh",
-      "control": "release/components/control-90496dc0-linux-x64.json"
+      "control": "release/components/control-01b77751-linux-x64.json"
     },
     "mcpgit": {
       "descriptor": "release/integrations/mcpgit-prod-linux-x64.json",
