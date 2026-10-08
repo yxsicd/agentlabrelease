@@ -55,6 +55,13 @@ controller = {"url": control_descriptor["value"]["artifact"], **control_descript
 assert controller["url"].startswith("https://github.com/yxsicd/agentlabrelease/releases/download/")
 fixture = ROOT / control_descriptor["qualification"]["fixture"]
 assert hashlib.sha256(fixture.read_bytes()).hexdigest() == control_descriptor["qualification"]["fixtureSha256"]
+test_tool = control_descriptor["qualification"]["testTool"]
+assert test_tool["role"] == "validation-only-not-installation-dependency"
+assert test_tool["platform"] == "linux-x64" and test_tool["static"] is True
+assert re.fullmatch(r"[0-9a-f]{40}", test_tool["sourceRevision"])
+assert re.fullmatch(r"[0-9a-f]{64}", test_tool["sha256"]) and test_tool["bytes"] > 0
+assert test_tool["artifact"].startswith("https://github.com/yxsicd/agentlabrelease/releases/download/")
+assert hashlib.sha256((ROOT / control_descriptor["qualification"]["rustGate"]).read_bytes()).hexdigest() == test_tool["sourceSha256"]
 for key, value in {
     "control_url": controller["url"], "control_sha256": controller["sha256"],
     "control_bytes": controller["bytes"], "lock_sha256": publication["environmentLockSha256"],

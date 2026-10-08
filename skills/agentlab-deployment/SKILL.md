@@ -48,6 +48,16 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Deployment acceptance
 
+Component admission can be checked with the selected control descriptor's
+`qualification.testTool`: a public static Linux-x64 Rust binary, not an
+installation dependency. Verify its published size/SHA256 with the host before
+execution. Run it with absolute controller and public fixture paths plus the
+lock's exact image reference. It checks a cold fixture, active read-only reuse,
+stopped writable-consumer denial, preserved drift and exact successful cleanup.
+It requires the fixture namespace initially absent and a dedicated serial test;
+failed tests retain evidence and need fresh ownership checks before cleanup.
+Neither installing nor validating a new machine requires a Rust compiler.
+
 Require an exact installation receipt, instance identity and publicly declared
 service SKILL URL. Discover that instance's manifest and effective capabilities.
 Require authenticated readiness, successful bounded workspace operation and
