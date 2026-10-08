@@ -23,6 +23,7 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 3. Select a dedicated absolute private root and unique instance/port. Do not
    attach old data automatically. Keep credentials under that root with private
    permissions, never in Git, prompts, receipts or command output.
+   Apply the inventory-first network policy below; never guess a fixed subnet.
 4. Use the current [component installer](../../scripts/agentlab-composition-install.sh):
 
    ```bash
@@ -50,6 +51,32 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
    install/health proof does not qualify AgentLab Session/template/Fork protocols.
 
 ## Deployment acceptance
+
+### Inventory-first network selection
+
+Before choosing `armnet`, retain current host interface IPs/prefixes, gateways,
+DNS resolver addresses, all IPv4 route tables, VPN routes and Docker IPAM. On
+WSL include the Windows host's LAN/VPN/virtual-switch routes and DNS, not only
+Linux's view. Default routes are not an overlap veto. Match an existing bridge
+to its exact network/interface before excluding that bridge's own route; do not
+exclude unrelated LAN/VPN routes merely because they share its subnet.
+
+Prefer preserving an existing usable network when identity, attachment policy,
+address capacity and absence of **external** conflicts are verified. Otherwise
+rank RFC1918 candidates against that inventory and declared service constraints,
+avoiding common LAN/virtualization defaults. `192.168.0.0/16` is a fallback pool,
+not a mandatory address or fixed /24; `192.0.0.0/8` is not private. Reject a
+candidate overlapping host/LAN/VPN/Docker prefixes or containing an upstream
+gateway/DNS resolver. Try the next ranked candidate and retain each rejection
+reason; missing required inventory or exhausted candidates means blocked.
+
+Recheck immediately before creation. Record the chosen CIDR, observed network
+ID, inventory identity, decision and alternatives in the owned-resource receipt.
+Existing shared networks are never automatically removed or renumbered. A
+conflict produces a migration plan identifying affected consumers, ownership
+and rollback; adjusting a running network is a separate admitted change.
+This is the provisioner's required policy, not qualification of the still-missing
+public full-instance lifecycle or proof that a candidate is safe on every host.
 
 Component admission can be checked with the selected control descriptor's
 `qualification.testTool`: a public static Linux-x64 Rust binary, not an

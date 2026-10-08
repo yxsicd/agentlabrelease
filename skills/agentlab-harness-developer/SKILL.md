@@ -47,6 +47,42 @@ Keep Control and Participant authority separate. A participant cannot read priva
 checker information or act as its own evaluator. Real provider credentials remain
 in the gateway; never insert them into tasks, model context or captured artifacts.
 
+## Bounded local knowledge construction
+
+If the operator explicitly requests the first two knowledge rings locally,
+select [codebase analysis](../agentlab-codebase-analysis/SKILL.md) and the existing
+`scripts/run-maintainer-skill-local-flywheel.sh`, which reuses the same Agent loop
+as the Action's construction path. This is a **maintenance construction Agent**, not an assessed
+A/B participant or a replacement for instance Session/Attempt capabilities.
+
+From a pinned public checkout, build the existing Rust
+`agentlab-maintainer-skill-flywheel` and install Pi **0.73.1** outside the source
+workspace with `examples/real-code-agent/participant/package-lock.json` (`npm ci`).
+The operator separately configures Gateway URL/key, model and provider route,
+TableGit MCP URL/person and a unique `AGENTLAB_RUN_ID`; credentials never enter
+the Agent task. Begin with `AGENTLAB_SCOPE_BATCH_SIZE=1` and one round:
+
+```bash
+bash scripts/run-maintainer-skill-local-flywheel.sh \
+  /absolute/current-knowledge-cut /absolute/fresh-run REPOSITORY_ID 1 /absolute/pi
+```
+
+`AGENTLAB_FLYWHEEL_GATE` selects the verified existing executable when its build
+location differs. Use an existing private parent outside the input cut and public
+checkout for the fresh run. The wrapper admits the exact live TableGit input before model
+budget, preserves the input cut, exports to `fresh-run/committed-knowledge` and
+plans from that actual readback. Do not choose the historical example default
+as current authority or retry a committed transaction because a later stage fails.
+Read the preflight, sync, durable-reference and next-round receipts separately.
+
+Shadow case sampling is off by default; `AGENTLAB_SHADOW_SAMPLE=1` spends a
+separate model budget and requires an explicitly frozen nonempty case lineage
+(`AGENTLAB_SHADOW_LINEAGE_ROOT` if absent from the committed cut). Its proposal
+and round files remain run evidence, never edits to the immutable knowledge cut.
+Missing case inputs remain a downstream blocker. Use bounded numeric rounds;
+the historical `converge` estimate does not prove queue exhaustion or five-ring
+convergence. Local construction/readback is not full Harness qualification.
+
 ## One evidence-driven flywheel
 
 Choose any operator-selected repository set from HTTP(S) Git URLs or repository

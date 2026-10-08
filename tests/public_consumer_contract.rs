@@ -53,17 +53,38 @@ fn verified_public_executable_is_container_readable_without_writable_bits() {
     fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
     let before = fs::metadata(&executable).unwrap();
     let script = fs::read_to_string(INSTALL).unwrap();
-    let body = script.split("prepare_public_executable() {\n").nth(1).unwrap()
-        .split("\n}").next().unwrap();
-    assert_eq!(script.matches("prepare_public_executable \"${temporary}\"").count(), 2,
-        "online and offline must prepare the verified executable identically");
+    let body = script
+        .split("prepare_public_executable() {\n")
+        .nth(1)
+        .unwrap()
+        .split("\n}")
+        .next()
+        .unwrap();
+    assert_eq!(
+        script
+            .matches("prepare_public_executable \"${temporary}\"")
+            .count(),
+        2,
+        "online and offline must prepare the verified executable identically"
+    );
     let result = Command::new("/bin/bash")
-        .args(["-ceu", &format!("prepare_public_executable() {{\n{body}\n}}\nprepare_public_executable \"$1\""), "gate"])
-        .arg(&executable).output().unwrap();
+        .args([
+            "-ceu",
+            &format!(
+                "prepare_public_executable() {{\n{body}\n}}\nprepare_public_executable \"$1\""
+            ),
+            "gate",
+        ])
+        .arg(&executable)
+        .output()
+        .unwrap();
     assert!(result.status.success());
     let after = fs::metadata(&executable).unwrap();
     assert_eq!(after.mode() & 0o777, 0o555);
-    assert_eq!((after.uid(), after.gid(), after.ino()), (before.uid(), before.gid(), before.ino()));
+    assert_eq!(
+        (after.uid(), after.gid(), after.ino()),
+        (before.uid(), before.gid(), before.ino())
+    );
     assert_eq!(fs::read(&executable).unwrap(), bytes);
     assert_eq!(fs::metadata(&f.0).unwrap().mode() & 0o777, 0o700);
 }
@@ -140,6 +161,51 @@ runpy.run_path('scripts/validate-release.py')
             "invalid contract accepted: {mutation}"
         );
         assert!(String::from_utf8_lossy(&out.stderr).contains("AssertionError"));
+    }
+}
+
+#[test]
+fn network_policy_refuses_fixed_subnets_missing_inventory_and_shared_renumbering() {
+    let code = r#"
+import json,pathlib,runpy,sys
+original=pathlib.Path.read_text
+def altered(self,*args,**kwargs):
+    text=original(self,*args,**kwargs)
+    if self == pathlib.Path.cwd() / 'manifest.json':
+        value=json.loads(text); policy=value['newInstanceNetwork']
+        mutation=sys.argv[1]
+        if mutation=='fixed': policy['selection']='fixed-192.168.237.0/24'
+        elif mutation=='inventory': policy['inventory'].remove('dns-resolvers')
+        elif mutation=='wsl': policy['wslHostRoutesRequired']=False
+        elif mutation=='public-range': policy['fallbackPrivateIPv4Range']='192.0.0.0/8'
+        elif mutation=='replace-existing': policy['existingNetwork']='always-replace'
+        elif mutation=='migration': policy['existingNetworkMigration']='automatic'
+        else: policy['provisioningQualified']=True
+        return json.dumps(value)
+    return text
+pathlib.Path.read_text=altered
+runpy.run_path('scripts/validate-release.py')
+"#;
+    for mutation in [
+        "fixed",
+        "inventory",
+        "wsl",
+        "public-range",
+        "replace-existing",
+        "migration",
+        "qualification",
+    ] {
+        let out = Command::new("python3")
+            .args(["-c", code, mutation])
+            .output()
+            .unwrap();
+        assert!(
+            !out.status.success(),
+            "invalid network policy accepted: {mutation}"
+        );
+        // Assert the intended gate, not an unrelated checksum failure.
+        assert!(String::from_utf8_lossy(&out.stderr)
+            .contains("AssertionError: new-instance-network-policy"));
     }
 }
 

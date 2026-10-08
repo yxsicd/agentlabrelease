@@ -19,6 +19,14 @@ assert provenance["source"]["repository"] == "https://github.com/yxsicd/agentlab
 assert provenance["privateSourceRequiredForInstallation"] is False
 assert manifest["acceptance"]["legacyFallback"] is False
 assert manifest["acceptance"]["automaticPromotion"] is False
+assert manifest["newInstanceNetwork"] == {
+    "name": "armnet", "selection": "inventory-first-ranked-non-overlapping-private-ipv4",
+    "inventory": ["host-addresses", "all-route-tables", "gateways", "dns-resolvers", "docker-ipam", "wsl-host-network"],
+    "existingNetwork": "preserve-if-admitted", "fallbackPrivateIPv4Range": "192.168.0.0/16",
+    "avoidCommonLanAndVirtualizationDefaults": True, "recheckBeforeCreation": True,
+    "wslHostRoutesRequired": True, "existingNetworkMigration": "never-automatic",
+    "provisioningQualified": False,
+}, "new-instance-network-policy"
 assert index["fullInstanceReleaseQualified"] is False
 assert manifest["defaultParticipant"] == {
     "topology": "supervisor-managed-isolated-subagent",

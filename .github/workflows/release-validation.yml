@@ -23,6 +23,9 @@ jobs:
           bash -n scripts/agentlab-composition-install.sh scripts/agentlab-resource-inventory.sh scripts/agentlab-mcpgit-prod-install.sh
           rustc --edition=2021 --test tests/public_consumer_contract.rs -o "$RUNNER_TEMP/public-consumer-contract"
           "$RUNNER_TEMP/public-consumer-contract"
+          bash -n scripts/run-maintainer-skill-local-flywheel.sh scripts/run-case-generation-shadow.sh
+          rustc --edition=2021 --test tests/local_flywheel_contract.rs -o "$RUNNER_TEMP/local-flywheel-contract"
+          "$RUNNER_TEMP/local-flywheel-contract"
           rustc --edition=2021 tests/native_controller_acceptance.rs -o "$RUNNER_TEMP/native-controller-acceptance"
   maintainer-guidance-workflow-contract:
     runs-on: ubuntu-latest

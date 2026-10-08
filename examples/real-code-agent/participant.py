@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import shutil
 import secrets
+import socket
 import subprocess
 import threading
 import time
@@ -18,6 +19,28 @@ import urllib.error
 
 
 CONTAINER_GATEWAY_PORT = 18765
+
+
+@contextlib.contextmanager
+def absolute_socket_deadline(upstream_socket, deadline):
+    """Interrupt even HTTP chunk headers/trailers that never return a read."""
+    expired = threading.Event()
+
+    def interrupt():
+        expired.set()
+        try:
+            upstream_socket.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+
+    timer = threading.Timer(max(0, deadline - time.monotonic()), interrupt)
+    timer.daemon = True
+    timer.start()
+    try:
+        yield expired
+    finally:
+        timer.cancel()
+        timer.join()
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -92,6 +115,13 @@ class Participant:
         owner = self
 
         class Handler(http.server.BaseHTTPRequestHandler):
+            def setup(self):
+                super().setup()
+                # The participant can stop reading while the operator retains
+                # upstream evidence. A blocked downstream write must not hold
+                # server_close() indefinitely after cancellation.
+                self.connection.settimeout(10)
+
             def log_message(self, *args):
                 pass
 
@@ -226,10 +256,22 @@ class Participant:
                     except OSError:
                         receipt['clientDisconnected'] = True
                     return
-                with response:
+                with contextlib.ExitStack() as boundaries:
+                    boundaries.enter_context(response)
                     mark_arrival('responseHeaders')
+                    stream = response
+                    upstream_socket = None
+                    for _ in range(3):
+                        upstream_socket = getattr(getattr(stream, 'raw', None), '_sock', None)
+                        if isinstance(upstream_socket, socket.socket):
+                            break
+                        stream = getattr(stream, 'fp', None)
+                    if not isinstance(upstream_socket, socket.socket):
+                        raise RuntimeError('Unsupported upstream response socket boundary')
+                    deadline_expired = boundaries.enter_context(absolute_socket_deadline(upstream_socket, upstream_deadline))
                     receipt['status'] = response.status
                     try:
+                        self.connection.settimeout(max(0.001, min(10, upstream_deadline - time.monotonic())))
                         self.send_response(response.status)
                         self.send_header('Content-Type', response.headers.get('Content-Type', 'application/json'))
                         self.end_headers()
@@ -293,8 +335,24 @@ class Participant:
                             # without a newline. read1() returns the bytes currently
                             # available, so the absolute deadline is checked even for
                             # a malformed or adversarial streaming response.
-                            chunk = response.read1(65536)
+                            # HTTPResponse closes its socket after consuming an exact
+                            # Content-Length. Still perform the next read to observe
+                            # EOF, without reconfiguring that already closed socket.
+                            if upstream_socket.fileno() >= 0:
+                                upstream_socket.settimeout(max(0.001, upstream_deadline - time.monotonic()))
+                            try:
+                                chunk = response.read1(65536)
+                            except Exception as error:
+                                if isinstance(error, TimeoutError) or deadline_expired.is_set() or time.monotonic() >= upstream_deadline:
+                                    receipt.update(upstreamDeadlineExceeded=True,
+                                        upstreamDeadlinePhase='response_body', outcome='upstream_deadline_exceeded')
+                                    break
+                                raise
                             if not chunk:
+                                if deadline_expired.is_set() or time.monotonic() >= upstream_deadline:
+                                    receipt.update(upstreamDeadlineExceeded=True,
+                                        upstreamDeadlinePhase='response_body', outcome='upstream_deadline_exceeded')
+                                    break
                                 if semantic_buffer:
                                     observe_semantic_line(semantic_buffer)
                                 receipt.update(upstreamEof=True, outcome=('stream_error' if receipt['streamError'] else 'completed' if receipt['semanticComplete'] or not wire.get('stream') else 'incomplete_stream'))
@@ -310,11 +368,14 @@ class Participant:
                             receipt['responseBytes'] += len(chunk)
                             if not receipt['clientDisconnected']:
                                 try:
+                                    self.connection.settimeout(max(0.001, min(10, upstream_deadline - time.monotonic())))
                                     self.wfile.write(chunk)
                                     self.wfile.flush()
-                                except OSError:
+                                except OSError as error:
                                     # Keep observing upstream after participant cancellation.
                                     receipt['clientDisconnected'] = True
+                                    if isinstance(error, TimeoutError):
+                                        receipt['clientWriteTimedOut'] = True
 
         bind_host = '0.0.0.0' if self.runtime_isolated else '127.0.0.1'
         self.server = http.server.ThreadingHTTPServer((bind_host, 0), Handler)

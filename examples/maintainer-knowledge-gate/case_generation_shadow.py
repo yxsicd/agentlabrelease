@@ -75,6 +75,41 @@ def rows(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
+def validate_lineage(root: Path) -> tuple[list[dict], list[dict], dict]:
+    """Validate the frozen producer inputs before any model budget is spent."""
+    parsed, digests = [], {}
+    for name in ("case_generation_rounds.jsonl", "case_generation_candidates.jsonl"):
+        path = root / name
+        require(path.is_file() and not path.is_symlink(), "shadow lineage input is absent or unsafe")
+        require(path.stat().st_size <= 1024 * 1024, "shadow lineage input exceeds budget")
+        raw = path.read_bytes()
+        values = [json.loads(line) for line in raw.split(b"\n") if line.strip()]
+        require(len(values) <= 5000, "shadow lineage row budget exceeded")
+        require(all(isinstance(row, dict) and isinstance(row.get("id"), str)
+                    and 1 <= len(row["id"]) <= 192 for row in values), "shadow lineage row identity is invalid")
+        require(len({row["id"] for row in values}) == len(values), "shadow lineage row identity is duplicated")
+        parsed.append(values)
+        digests[name] = hashlib.sha256(raw).hexdigest()
+    rounds, candidates = parsed
+    require(rounds, "case generation lineage is empty")
+    indices = [row.get("roundIndex") for row in rounds]
+    require(all(type(index) is int and index > 0 for index in indices)
+            and sorted(indices) == list(range(1, len(indices) + 1)), "shadow lineage round indices are invalid")
+    for row in rounds:
+        qualification = row.get("qualification", {})
+        require(isinstance(qualification, dict), "shadow lineage qualification is invalid")
+        qualified = qualification.get("oracleQualifiedIds", [])
+        require(isinstance(qualified, list) and all(isinstance(value, str) for value in qualified),
+                "shadow lineage Oracle inventory is invalid")
+    return rounds, candidates, digests
+
+
+def verify_lineage_binding(request: dict, root: Path) -> None:
+    if "caseLineageInputsSha256" in request:
+        _, _, observed = validate_lineage(root)
+        require(observed == request["caseLineageInputsSha256"], "frozen shadow lineage changed")
+
+
 def write_json(path: Path, value) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -234,7 +269,8 @@ def prepare(args) -> None:
     cut = load(cut_path)
     scopes = {row["id"]: row for row in rows(knowledge / "maintainer_scope_skills.jsonl")}
     facts = {row["id"]: row for row in rows(knowledge / "program_facts.jsonl")}
-    existing = rows(knowledge / "case_generation_candidates.jsonl")
+    lineage = getattr(args, "lineage_root", None) or knowledge
+    _, existing, lineage_digests = validate_lineage(lineage)
     loop_receipt = load(args.loop_receipt)
     iteration, fact = select_iteration(loop_receipt, facts, existing)
     scope = scopes.get(iteration["scope"])
@@ -256,6 +292,7 @@ def prepare(args) -> None:
         "knowledgeCutSha256": file_digest(cut_path),
         "maintainerSkillRefreshRoundId": latest_refresh["id"],
         "loopReceiptSha256": file_digest(args.loop_receipt),
+        "caseLineageInputsSha256": lineage_digests,
         "loopBefore": loop_receipt["iterations"][0]["before"],
         "loopAfter": loop_receipt["iterations"][-1]["after"],
         "repository": repository,
@@ -409,6 +446,7 @@ def prepare_isolated_source(request: dict, source: Path, output: Path, template:
 
 
 def run_agent(args) -> None:
+    verify_lineage_binding(load(args.request), args.request.parent)
     revision = getattr(args, "revision_request", None)
     successor = "successorConstruction" in load(args.request)
     require(not (revision is not None and successor), "draft revision and successor are exclusive")
@@ -701,6 +739,7 @@ def build_round(request: dict, rounds_before: list[dict], candidate_id: str,
 
 def record_success(args) -> None:
     request = load(args.request)
+    verify_lineage_binding(request, args.rounds.parent)
     candidate = validate_proposal(request, load(args.proposal))
     candidate_rows = rows(args.candidates)
     require(candidate["id"] not in {row["id"] for row in candidate_rows}, "shadow candidate already exists")
@@ -724,6 +763,7 @@ def record_success(args) -> None:
 
 def record_failure(args) -> None:
     request = load(args.request)
+    verify_lineage_binding(request, args.rounds.parent)
     round_rows = rows(args.rounds)
     require(round_rows, "case generation lineage is empty")
     candidate_id = request["candidateId"]
@@ -747,6 +787,7 @@ def main() -> None:
     command = commands.add_parser("prepare")
     command.add_argument("--knowledge", type=Path, required=True)
     command.add_argument("--loop-receipt", type=Path, required=True)
+    command.add_argument("--lineage-root", type=Path)
     command.add_argument("--runtime-target", choices=["harmony-emulator", "repository-test"],
                          default="harmony-emulator")
     command.add_argument("--output", type=Path, required=True)

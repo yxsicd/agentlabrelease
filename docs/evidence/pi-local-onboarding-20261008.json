@@ -1,0 +1,130 @@
+{
+  "schema": "agentlab.public_onboarding_experiment.v1",
+  "qualification": "failed-first-cold-plan-with-source-repairs-awaiting-fresh-consumer",
+  "inputPublicRevision": "0a3981e5d0eaad4a49aba7a3f5aaf08fd75b2ed4",
+  "participant": {
+    "implementation": "pi",
+    "version": "0.73.1",
+    "role": "maintenance-constructor-not-assessed-A-or-B",
+    "model": "glm-5.3-flash",
+    "providerRoute": "glm",
+    "runtimeLockSha256": "00ca626cd273bc575cb9f5c934c90d6c011f90c768ee1d1645c776808e239219",
+    "runtimeImageId": "sha256:4dd8c79b198315349f0ccebdb47aae535d593bb199346428a70e61b27017bdbc",
+    "frozenPromptBytes": 687,
+    "frozenPromptSha256": "b020d2bb1183bc49e66c2a857736655096c92308ad09585b2430c8e0d9c5987d",
+    "freshSession": true,
+    "publicInputOnly": true,
+    "credentialVisibleToParticipant": false,
+    "promptFrozenAcrossTrials": true
+  },
+  "budgets": {
+    "nativeProcessSeconds": 420,
+    "gatewayExchangeAbsoluteSeconds": 120,
+    "toolCalls": 16,
+    "nativeRetry": false,
+    "transportRetries": 0,
+    "outerOperationSeconds": 600
+  },
+  "firstTrial": {
+    "target": "hwlinux",
+    "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "routeDecision": "peer_direct",
+    "operationId": "exec-00000000000004fd",
+    "launchPlanProduced": false,
+    "completedToolCalls": 17,
+    "toolErrors": 0,
+    "nativeLifecycle": {
+      "exitCode": 125,
+      "durationMs": 75133,
+      "toolCallBudgetExceeded": true,
+      "sessionContinuityQualified": false
+    },
+    "outerOperation": {
+      "error": "timeout",
+      "timedOut": true,
+      "durationMs": 600008,
+      "exitCode": null
+    },
+    "gateway": {
+      "requests": 8,
+      "completedSemanticExchanges": 7,
+      "exchange8FinalStatusPresent": false,
+      "exchange8ObservedPartialResponseBytes": 98677,
+      "exchange8SemanticTerminalObserved": false,
+      "captureClosureQualified": false
+    },
+    "observations": [
+      "The participant followed deployed-instance and source-intake guidance instead of finding the existing local knowledge wrapper.",
+      "The asynchronous watchdog observed 17 completed tools after a configured limit of 16; this is a failed budget gate, not strict pre-dispatch enforcement.",
+      "The final exchange remained without terminal capture after participant cancellation. Downstream backpressure was a suspected mechanism, not a proven exclusive cause."
+    ],
+    "cleanupAudit": {
+      "operationId": "exec-0000000000000504",
+      "exitCode": 0,
+      "ownedRuntimeReferencesAbsent": true,
+      "ownedOperatorProcessAbsent": true,
+      "protectedContainers": 26,
+      "protectedVolumes": 39,
+      "protectedImages": 106,
+      "protectedNetworks": 8,
+      "canonicalProtectedResourceProjectionUnchanged": true,
+      "publicTrackedInputClean": true,
+      "workspaceEmpty": true
+    }
+  },
+  "sourceRepairs": [
+    "Root and Harness Skills directly select the existing bounded local knowledge construction entrypoint.",
+    "The wrapper checks authority and optional SkillsGit inputs before model budget; it preserves the input cut and reconsumes a fresh committed readback.",
+    "Optional third-ring shadow work has separate status and frozen validated lineage, without mutating the committed cut.",
+    "The shared operator proxy bounds cancelled-client downstream writes while retaining upstream bytes and honoring remaining absolute read deadlines.",
+    "An independent socket deadline interruption bounds chunk-size/trailer drips; source cache and Git-metadata redirects are refused before budget."
+  ],
+  "networkInventory": {
+    "policy": "inventory-first-preserve-admitted-existing-rank-private-alternatives",
+    "hwlinux": {
+      "operationId": "exec-0000000000000504",
+      "exitCode": 0,
+      "nativeLinuxNotWsl": true,
+      "hostAddressGatewayDnsAndRoutesObserved": true,
+      "dockerIpamObserved": true,
+      "existingArmnetCidr": "172.19.0.0/16",
+      "existingArmnetAttachedContainers": 15,
+      "externalOverlapObserved": false,
+      "decision": "preserve-existing-no-migration",
+      "fallbackCandidate": "192.168.237.0/24",
+      "fallbackRequired": false
+    },
+    "aiwsl": {
+      "operationId": "exec-000000000000106c",
+      "exitCode": 0,
+      "targetPeerId": "lgw_353e85c0b8dc41638c767303845e9926",
+      "routeDecision": "peer_direct",
+      "linuxAndWindowsIpv4AddressGatewayDnsAndRoutesObserved": true,
+      "dockerIpamObserved": true,
+      "existingArmnetCidr": "172.18.0.0/16",
+      "externalOverlapObserved": false,
+      "decision": "preserve-existing-no-migration",
+      "functionalNetworkQualification": false
+    },
+    "resourcesMutated": false,
+    "fullInstanceProvisioningQualified": false
+  },
+  "freshConsumerTrial": {
+    "status": "pending-published-source-cut",
+    "launchPlanQualified": false
+  },
+  "sourceRegression": {
+    "localFlywheelRustBehaviorTests": {"passed": 15, "failed": 0, "exitCode": 0},
+    "publicConsumerRustContractTests": {"passed": 14, "failed": 0, "exitCode": 0},
+    "nativeMaintainerFlywheelRustTests": {"passed": 25, "failed": 0, "exitCode": 0},
+    "nativeSourceOperationRustTests": {"passed": 43, "failed": 0, "exitCode": 0},
+    "existingProducerPythonRegressionTests": {"passed": 69, "failed": 0, "exitCode": 0},
+    "changedSkillStructureValidation": {"passed": 2, "exitCode": 0},
+    "qualification": "source-and-synthetic-transport-regression-not-model-or-business-acceptance"
+  },
+  "fullHarnessReady": false,
+  "attemptScopedRemoteAssessmentQualified": false,
+  "tableGitBusinessRoundExecuted": false,
+  "closedLoopQualified": false,
+  "evidenceHandling": "Raw sessions, Gateway captures, operator configuration and resource inventories remain in operator-private evidence; this public receipt contains no credential or native session data."
+}

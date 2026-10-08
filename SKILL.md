@@ -17,6 +17,15 @@ prerequisite.
   Prefer supervisor-managed, context-isolated subagents assessed through remote
   Participant MCP; no independently configured second model key is required.
 
+For an explicit **local Pi, first-two-knowledge-rings** request, go directly to
+[bounded local knowledge construction](skills/agentlab-harness-developer/SKILL.md#bounded-local-knowledge-construction).
+That section owns the existing launch command and prerequisites. Its Pi is a
+maintenance construction Agent, not an assessed A/B participant; no full Harness
+or remote Attempt qualification may be inferred. Do not dispatch Actions or scan
+every method/reference to produce a launch plan. Read the selected entry Skill,
+return the exact existing command and missing operator inputs, and load deeper
+method references only when their selected execution stage requires them.
+
 Read [manifest.json](manifest.json) for the single current component graph,
 participant default and acceptance limits. Do not select an installation from
 historical root versions or experiment notes.

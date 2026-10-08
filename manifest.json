@@ -34,6 +34,18 @@
   "inventory": "scripts/agentlab-resource-inventory.sh",
   "uninstall": "skills/agentlab-deployment/references/historical-uninstall.md",
   "methodRegistry": "skills/registry.json",
+  "newInstanceNetwork": {
+    "name": "armnet",
+    "selection": "inventory-first-ranked-non-overlapping-private-ipv4",
+    "inventory": ["host-addresses", "all-route-tables", "gateways", "dns-resolvers", "docker-ipam", "wsl-host-network"],
+    "existingNetwork": "preserve-if-admitted",
+    "fallbackPrivateIPv4Range": "192.168.0.0/16",
+    "avoidCommonLanAndVirtualizationDefaults": true,
+    "wslHostRoutesRequired": true,
+    "recheckBeforeCreation": true,
+    "existingNetworkMigration": "never-automatic",
+    "provisioningQualified": false
+  },
   "evaluationMaterial": {
     "requestSchema": "schemas/source-material-request.schema.json",
     "guidance": "skills/agentlab-harness-developer/references/source-material.md",

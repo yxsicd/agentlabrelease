@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -286,7 +287,8 @@ def main():
     parser.add_argument("--repository", required=True)
     parser.add_argument("--skillsgit-root", type=Path, required=True)
     parser.add_argument("--skillsgit-revision", required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--check-inputs-only", action="store_true")
     args = parser.parse_args()
 
     actual_revision = subprocess.check_output(
@@ -294,6 +296,23 @@ def main():
     ).strip()
     if actual_revision != args.skillsgit_revision:
         raise ValueError("SkillsGit checkout revision differs")
+    if not re.fullmatch(r"[0-9a-f]{40}", args.skillsgit_revision):
+        raise ValueError("SkillsGit requires an exact revision")
+    if subprocess.check_output(["git", "-C", str(args.skillsgit_root), "status", "--porcelain"]):
+        raise ValueError("SkillsGit input checkout is dirty")
+    for relative in ["scripts/apply-pack.sh", "scripts/validate-mst.sh",
+                     *[f".agents/skills/{name}/SKILL.md" for name in CORE_SKILLS]]:
+        path = args.skillsgit_root / relative
+        if not path.is_file() or path.is_symlink():
+            raise ValueError("SkillsGit required input is absent or unsafe")
+        if relative.startswith("scripts/") and not os.access(path, os.X_OK):
+            raise ValueError("SkillsGit execution input is not executable")
+    if args.check_inputs_only:
+        print(json.dumps({"inputsValid": True, "writesPerformed": False,
+                          "skillsgitRevision": actual_revision, "qualified": False}))
+        return
+    if args.output is None:
+        raise ValueError("materialization requires an output")
     if args.output.exists():
         raise ValueError("output already exists")
     cut = load(args.knowledge / "maintainer-knowledge-cut.json")
