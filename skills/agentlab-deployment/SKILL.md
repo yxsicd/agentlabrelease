@@ -32,7 +32,7 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
    It verifies and installs image/program/tool components. **It does not create
    a complete running Harness instance.** Offline acquisition uses the exact
    controller and lock from that same cut; it is not an older-version fallback.
-5. When selecting the MCPGit successor, use the pinned
+5. For the selected MCPGit component, use the pinned
    [integration](../../release/integrations/mcpgit-prod-linux-x64.json) and
    [installer](../../scripts/agentlab-mcpgit-prod-install.sh). Its isolated
    install/health proof does not qualify AgentLab Session/template/Fork protocols.

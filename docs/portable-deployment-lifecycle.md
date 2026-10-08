@@ -15,15 +15,15 @@ Independent component publication remains mandatory: unchanged Base, Tools,
 SDK and emulator assets are reused; an aggregate release references their exact
 digests. Updating MCPGit must not rewrite an already published AgentLab closure.
 
-## MCPGit production successor candidate
+## Selected MCPGit production integration
 
 `release/integrations/mcpgit-prod-linux-x64.json` pins the production pointer
 `offline-latest.json` at installer commit
-`e28e549027a3e5eaaf341beac723c49fd8f1ef22`, resolving MCPGit source
+`d32300f6953c57af1323ea71b606b363c4d99a3d`, resolving MCPGit source
 `a75b9809857cea23047b61f3acea17bc09b9996c`.
 The old `prod/channel.json` is not the current production authority.
 
-The additive entrypoint is `scripts/agentlab-mcpgit-prod-install.sh`:
+The selected entrypoint is `scripts/agentlab-mcpgit-prod-install.sh`:
 
 ```sh
 sh agentlab-mcpgit-prod-install.sh download --root /absolute/private/agentlab-root

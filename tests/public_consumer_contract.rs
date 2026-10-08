@@ -40,6 +40,7 @@ impl Drop for Fixture {
 }
 const INVENTORY: &str = "scripts/agentlab-resource-inventory.sh";
 const INSTALL: &str = "scripts/agentlab-composition-install.sh";
+const MCPGIT_INSTALL: &str = "scripts/agentlab-mcpgit-prod-install.sh";
 
 #[test]
 fn published_demo_hashes_without_optional_file_digest_api() {
@@ -91,7 +92,7 @@ runpy.run_path('scripts/validate-release.py')
 fn help_needs_no_docker_and_has_no_footprint() {
     let f = Fixture::new();
     let before = fs::read_dir(&f.0).unwrap().count();
-    for script in [INVENTORY, INSTALL] {
+    for script in [INVENTORY, INSTALL, MCPGIT_INSTALL] {
         let out = f.run(script, &["--help"]);
         assert!(out.status.success());
     }
@@ -155,9 +156,11 @@ fn unsafe_roots_rejected_before_acquisition() {
         "/tmp/a/./b",
         "/tmp//b",
     ] {
-        let out = f.run(INSTALL, &["online", "--root", root]);
-        assert_eq!(out.status.code(), Some(2), "{root:?}");
-        assert!(!String::from_utf8_lossy(&out.stdout).contains("DOCKER_INVOKED"));
+        for (script, action) in [(INSTALL, "online"), (MCPGIT_INSTALL, "install")] {
+            let out = f.run(script, &[action, "--root", root]);
+            assert_eq!(out.status.code(), Some(2), "{script}: {root:?}");
+            assert!(!String::from_utf8_lossy(&out.stdout).contains("DOCKER_INVOKED"));
+        }
     }
 }
 #[test]
@@ -166,19 +169,17 @@ fn symlink_install_root_is_rejected() {
     let f = Fixture::new();
     let link = f.0.join("alias");
     symlink(&f.0, &link).unwrap();
-    assert_eq!(
-        f.run(INSTALL, &["online", "--root", link.to_str().unwrap()])
-            .status
-            .code(),
-        Some(2)
-    );
     let child = link.join("child");
-    assert_eq!(
-        f.run(INSTALL, &["online", "--root", child.to_str().unwrap()])
-            .status
-            .code(),
-        Some(2)
-    );
+    for (script, action) in [(INSTALL, "online"), (MCPGIT_INSTALL, "install")] {
+        for root in [&link, &child] {
+            assert_eq!(
+                f.run(script, &[action, "--root", root.to_str().unwrap()])
+                    .status
+                    .code(),
+                Some(2)
+            );
+        }
+    }
     assert!(!f.0.join("bin").exists());
 }
 #[test]
