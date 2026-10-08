@@ -31,6 +31,16 @@ for name in ("inventory", "uninstall", "methodRegistry"):
     assert (ROOT / manifest[name]).is_file(), name
 for journey in manifest["journeys"].values():
     assert (ROOT / journey).is_file(), journey
+material = manifest["evaluationMaterial"]
+for key in ("requestSchema", "guidance", "validatorSource"):
+    assert (ROOT / material[key]).is_file(), key
+assert material["inputKinds"] == ["git-http", "archive"]
+assert material["archiveBaselineMode"] == "initialize-project-git-and-commit-source-baseline"
+assert material["targetRepositoryHostRestriction"] is None
+assert material["qualification"] == "contract-only-not-runtime-intake"
+assert all(material[key] is False for key in ("acquisitionQualified", "snapshotConsumerBridgeQualified", "automaticGitBaselineQualified", "sessionImportQualified"))
+material_schema = json.loads((ROOT / material["requestSchema"]).read_text())
+assert material_schema["properties"]["schema"]["const"] == "agentlab.source_material_request.v1"
 composition = manifest["components"]["composition"]
 mcpgit = manifest["components"]["mcpgit"]
 assert index["defaultComposition"] == composition["publication"]

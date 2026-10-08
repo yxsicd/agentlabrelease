@@ -38,6 +38,7 @@ pub mod maintainer_source_repair;
 pub mod maintainer_source_review;
 pub mod maintainer_source_suite_lesson;
 pub mod maintainer_stage_feedback;
+pub mod source_material;
 extern "C" {
     fn tree_sitter_agentlab_arkts() -> *const ();
 }

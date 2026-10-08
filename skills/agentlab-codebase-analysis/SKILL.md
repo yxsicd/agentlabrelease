@@ -12,6 +12,16 @@ metadata:
 
 Read the pinned source and its existing maintainer guidance. Identify project boundaries, architecture, build/test entrypoints, behavior contracts, state transitions and cross-file responsibilities. A strong construction Agent may do this work; it is separate from the assessed Agent.
 
+Repository material may be an HTTP(S) Git URL or a source archive. Apply the
+shared [source-material contract](../agentlab-harness-developer/references/source-material.md)
+before analysis. Evidence must bind independently verified snapshot bytes, not
+just a URL, filename or caller-declared hash. Existing Git-only context/catalog
+gates are not archive importers; do not fabricate origin/commit/Blob identities
+to bypass them. Historical Git-dependent operations need genuine history.
+Ordinary evaluation does not: the importer initializes non-Git source and commits
+a real initial project baseline. Bind evidence to that baseline and the original
+material identity, then reuse the same method rather than an archive-only method.
+
 Maintain stable `maintainer_skills` rows containing Markdown guidance and explicit source/fact references. They describe how to maintain the target codebase, not how to administer AgentLab. Revisit the same row when knowledge changes so Git history retains the semantic delta.
 
 This is a hard prerequisite for real-source case mining. Every pinned repository

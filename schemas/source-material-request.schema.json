@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/source-material-request.schema.json",
+  "title": "AgentLab repository source material request; not an acquisition receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "repositoryId", "source", "limits"],
+  "properties": {
+    "schema": {"const": "agentlab.source_material_request.v1"},
+    "repositoryId": {"$ref": "#/$defs/id"},
+    "sourceRoot": {
+      "description": "Optional explicit relative project root; importer also rejects normalized filesystem conflicts.",
+      "oneOf": [{"type": "null"}, {"$ref": "#/$defs/path"}]
+    },
+    "source": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "url"],
+          "properties": {
+            "kind": {"const": "git-http"},
+            "url": {"$ref": "#/$defs/httpUrl"},
+            "requestedRef": {
+              "description": "Resolve default/ref once at acquisition; not an acquired commit identity.",
+              "oneOf": [{"type": "null"}, {"type": "string", "minLength": 1, "maxLength": 1024, "pattern": "^[^-\\u0000-\\u001f\\u007f-\\u009f][^\\u0000-\\u001f\\u007f-\\u009f]*$"}]
+            }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "locator", "format", "sha256", "bytes"],
+          "properties": {
+            "kind": {"const": "archive"},
+            "locator": {
+              "oneOf": [
+                {"type": "object", "additionalProperties": false, "required": ["kind", "url"], "properties": {"kind": {"const": "http"}, "url": {"$ref": "#/$defs/httpUrl"}}},
+                {"type": "object", "additionalProperties": false, "required": ["kind", "artifactId"], "properties": {"kind": {"const": "artifact"}, "artifactId": {"$ref": "#/$defs/id"}}}
+              ]
+            },
+            "format": {"enum": ["zip", "tar", "tar.gz", "tar.zst"]},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "bytes": {"type": "integer", "minimum": 1, "maximum": 17179869184}
+          }
+        }
+      ]
+    },
+    "limits": {
+      "type": "object", "additionalProperties": false,
+      "required": ["acquisitionBytes", "expandedBytes", "fileBytes", "entries", "depth", "durationSeconds"],
+      "description": "Rust validator additionally requires fileBytes <= expandedBytes and archive bytes <= acquisitionBytes. Stream enforcement is a later acquisition gate.",
+      "properties": {
+        "acquisitionBytes": {"type": "integer", "minimum": 1, "maximum": 17179869184},
+        "expandedBytes": {"type": "integer", "minimum": 1, "maximum": 17179869184},
+        "fileBytes": {"type": "integer", "minimum": 1, "maximum": 17179869184},
+        "entries": {"type": "integer", "minimum": 1, "maximum": 500000},
+        "depth": {"type": "integer", "minimum": 1, "maximum": 128},
+        "durationSeconds": {"type": "integer", "minimum": 1, "maximum": 3600}
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,160}$"},
+    "httpUrl": {
+      "type": "string", "format": "iri", "minLength": 1, "maxLength": 4096,
+      "pattern": "^(?!.*[\\\\\\u0000-\\u001f\\u007f-\\u009f])https?://[^/?#@\\s]+(?:/[^?#\\s]*)?$",
+      "description": "Credential-free HTTP(S), no userinfo/query/fragment; Rust URL parser performs authority validation. Destination authorization belongs to acquisition."
+    },
+    "path": {
+      "type": "string", "minLength": 1, "maxLength": 4096,
+      "pattern": "^(?!/)(?!.*(?:^|/)(?:\\.\\.?|[.][gG][iI][tT])(?:/|$))(?!.*[\\\\:\\u0000-\\u001f\\u007f-\\u009f])(?!.*//)[^/]+(?:/[^/]+)*$"
+    }
+  }
+}

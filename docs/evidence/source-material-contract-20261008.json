@@ -1,0 +1,38 @@
+{
+  "schema": "agentlab.source_material_source_qualification.v1",
+  "sourceAuthority": "containing public Git commit",
+  "baseRevision": "60ddbde5d236df813d6eeb1fb9a4ffedff9ede2e",
+  "scope": "pure-material-request-and-declared-regular-file-inventory",
+  "requirements": {
+    "humanInputs": ["repository-http-url", "uploaded-code-archive"],
+    "targetRepositoryMustBeGitHub": false,
+    "targetCodeMustAlreadyBeGit": false,
+    "archiveTargetPath": "verified-source -> new project Git baseline -> same evaluation pipeline",
+    "generatedCommitIsOriginalHistoricalCommit": false
+  },
+  "validation": {
+    "rustNewContractTests": {"passed": 15, "failed": 0, "scope": "11 library contracts plus 4 local CLI contracts; no network material acquisition"},
+    "rustLibraryRegression": {"passed": 50, "failed": 0, "ignored": 1, "ignoredReason": "existing explicit Node/TypeScript integration gate"},
+    "existingPublicConsumerRustContracts": {"passed": 13, "failed": 0},
+    "existingInstallerPythonContracts": {"passed": 10, "failed": 0},
+    "build": {"binary": "agentlab-source-probe", "profile": "debug", "locked": true, "exit": 0},
+    "schema": {"draft": "2020-12", "metaSchemaAndBothKinds": true, "coverage": "shape-validation-not-native-cross-field-or-network-policy"},
+    "skills": {"updatedExistingEntrypoints": 2, "frontmatterValid": true},
+    "strictClippy": {"exit": 101, "passed": false, "existingUnchangedFileWarnings": 30, "changedSourceDiagnostics": 0, "notFixed": "unrelated style debt; raw failure retained in maintainer build logs"},
+    "independentReview": {"remainingFunctionalBlockersInPureContract": 0, "fifoAndSymlinkAdmission": "fixed and independently tested", "alternateCargoTargetAuxiliaryProof": "not an architecture/layout gate; default-target proof supersedes it"}
+  },
+  "notQualified": [
+    "bounded HTTP(S) source acquisition and redirect/egress policy",
+    "safe ZIP/tar/tar.gz/tar.zst extraction",
+    "actual-byte-verified SourceSnapshot and provenance-bound import receipt",
+    "automatic project Git initialization and source baseline commit",
+    "existing Git-only knowledge/context consumer bridge",
+    "Project/Session import and execution",
+    "two-host source intake acceptance",
+    "full native instance lifecycle and Attempt-scoped remote A assessment"
+  ],
+  "deployment": {"controllerChanged": false, "existingComponentArtifactsRebuilt": false, "fullHarnessReady": false},
+  "nextAction": "Implement verified source staging plus native project-Git baseline initialization, then bind the existing consumer to that real baseline and original material provenance; keep full-instance lifecycle in existing agentlabctl",
+  "maturity": {"percent": 82, "delta": 0, "meaning": "historical overall estimate; not measured whole-system maturity"},
+  "rollback": {"action": "revert this source-only checkpoint", "baseRevision": "60ddbde5d236df813d6eeb1fb9a4ffedff9ede2e", "runtimeRollbackRequired": false}
+}

@@ -49,7 +49,13 @@ in the gateway; never insert them into tasks, model context or captured artifact
 
 ## One evidence-driven flywheel
 
-Choose any operator-selected repository set and pin each full source commit.
+Choose any operator-selected repository set from HTTP(S) Git URLs or repository
+archives. Read [source material](references/source-material.md) before intake.
+Freeze each verified source snapshot; record real Git commits where available,
+and initialize/commit a new project-Git baseline for non-Git material. Preserve
+archive identity separately from that generated commit; original Git history is
+not required for ordinary evaluation. Current intake still requires a qualified
+snapshot/initialization bridge before admitting an archive.
 Use [the registry](../registry.json) to load methods only for the active stage:
 
 1. **Repository understanding:** select scope, build responsibility/boundary/

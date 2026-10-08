@@ -34,6 +34,19 @@
   "inventory": "scripts/agentlab-resource-inventory.sh",
   "uninstall": "skills/agentlab-deployment/references/historical-uninstall.md",
   "methodRegistry": "skills/registry.json",
+  "evaluationMaterial": {
+    "requestSchema": "schemas/source-material-request.schema.json",
+    "guidance": "skills/agentlab-harness-developer/references/source-material.md",
+    "validatorSource": "crates/agentlab_code_analysis/src/source_material.rs",
+    "inputKinds": ["git-http", "archive"],
+    "archiveBaselineMode": "initialize-project-git-and-commit-source-baseline",
+    "targetRepositoryHostRestriction": null,
+    "qualification": "contract-only-not-runtime-intake",
+    "acquisitionQualified": false,
+    "snapshotConsumerBridgeQualified": false,
+    "automaticGitBaselineQualified": false,
+    "sessionImportQualified": false
+  },
   "acceptance": {
     "componentInstall": "two-host-revalidation-required-for-each-cut",
     "fullInstanceLifecycle": "not-published",

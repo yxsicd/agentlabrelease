@@ -63,6 +63,10 @@ jobs:
         run: |
           # Source/build integration tests invoke the native planner on clean runners.
           cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
+          cargo test --locked -p agentlab_code_analysis --lib source_material::tests
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-source-probe
+          rustc --edition=2021 --test tests/source_material_cli_contract.rs -o "$RUNNER_TEMP/source-material-contract"
+          AGENTLAB_SOURCE_PROBE="$GITHUB_WORKSPACE/target/debug/agentlab-source-probe" "$RUNNER_TEMP/source-material-contract"
           python3 scripts/validate-release.py
           python3 scripts/component-reuse.py validate --registry release/components/registry.json
           python3 scripts/validate-release-graph.py \

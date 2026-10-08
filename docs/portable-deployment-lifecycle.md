@@ -75,6 +75,12 @@ it absent: a concurrent install may have won that namespace.
    maintenance verification -> case generation/execution -> reviewed evidence
    consumed by the next round. Qualify Harmony emulator/ohosTest and performance
    independently when the selected scenario requires them.
+   Material intake must accept arbitrary authorized HTTP(S) repository URLs and
+   source archives through one verified SourceSnapshot contract. The
+   [input contract](../skills/agentlab-harness-developer/references/source-material.md)
+   now has pure Rust declaration/inventory gates; actual acquisition, safe
+   extraction and existing Git-only consumer migration remain open. This does
+   not alter the installed controller, components or full-instance qualification.
 
 These are code and execution gates. More instructions, fixture passes or retained
 containers cannot change them to PASS. Current manifest limits remain explicit.
