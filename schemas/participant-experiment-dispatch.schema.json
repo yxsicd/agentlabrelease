@@ -49,7 +49,7 @@
       "properties": {
         "schema": {"const": "agentlab.participant_execution_protocol_portable.v1"},
         "agentImplementation": {"const": "pi"},
-        "agentPackage": {"const": "@mariozechner/pi-coding-agent"},
+        "agentPackage": {"const": "@earendil-works/pi-coding-agent"},
         "agentPackageVersion": {"$ref": "#/$defs/token"},
         "participantAdapter": {"$ref": "#/$defs/fileBinding"},
         "participantDriver": {"$ref": "#/$defs/fileBinding"},

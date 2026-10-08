@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -82,11 +83,60 @@ def mount(source: Path, destination: str, readonly=False):
     return ["--mount", option]
 
 
+def supervisor_launch_binding(config, state: Path, arguments: list[str]):
+    """Admit the effective policy and argv before creating any Docker resources."""
+    profile = config.get("piSupervisor")
+    if profile is None:
+        return None
+    expected = [
+        "--print", "--mode", "json", "--provider", "agentlab-ci",
+        "--model", arguments[6] if len(arguments) > 6 else "",
+        "--thinking", "off", "--no-extensions", "--no-skills",
+        "--no-context-files", "--no-mcp", "--offline",
+        "--session", arguments[15] if len(arguments) > 15 else "",
+        "--extension", "/runtime/" + profile["extensionRelativePath"],
+        "--tools", ",".join(profile["parentTools"]),
+    ]
+    require(len(arguments) in (20, 21) and arguments[:20] == expected,
+            "supervisor argv differs from the explicit extension/tool policy")
+    require(expected[6] and not expected[6].startswith("-")
+            and expected[15].startswith("/agent/"), "supervisor model or session is invalid")
+    require(len(arguments) == 20 or not arguments[20].startswith(("-", "@")),
+            "supervisor prompt must not be parsed as an option or file attachment")
+
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            require(key not in result, "supervisor settings contain duplicate keys")
+            result[key] = value
+        return result
+
+    bindings = {}
+    for name, key in (("delegate.json", "delegateSettings"), ("settings.json", "parentSettings")):
+        path = state / name
+        require(path.is_file() and not path.is_symlink(), "supervisor settings must be regular non-symlink files")
+        raw = path.read_bytes()
+        effective = json.loads(raw, object_pairs_hook=unique_object)
+        require(json.dumps(effective, sort_keys=True) == json.dumps(profile[key], sort_keys=True),
+                f"supervisor effective {name} policy drifted")
+        bindings[name] = digest_bytes(raw)
+    return {"effectiveSettingsSha256": bindings,
+            "argvSha256": digest_bytes(json.dumps(arguments, separators=(",", ":")).encode()),
+            "pluginPackageTreeSha256": profile["packageTreeSha256"],
+            "parentChildFilesystemIsolationQualified": False,
+            "remoteAttemptBindingQualified": False}
+
+
 def docker_base(config, workspace: Path, state: Path, network_name: str):
     runtime = Path(config["piRuntimeRoot"]).resolve(strict=True)
     case_input = Path(config["caseInputRoot"]).resolve(strict=True)
     require(digest(runtime / "package-lock.json") == config["piPackageLockSha256"], "Pi runtime lock digest drifted")
     require(digest(case_input / "manifest.json") == config["participantManifestSha256"], "participant manifest digest drifted")
+    if config.get("piSupervisor") is not None:
+        spec = importlib.util.spec_from_file_location("agentlab_pi_prepare", Path(__file__).with_name("prepare-participant-runtime.py"))
+        helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        require(config["piSupervisor"] == helper.supervisor_profile(runtime), "supervisor extension tree or policy drifted")
     require(workspace.is_dir() and state.is_dir(), "workspace and participant state must exist")
     return [
         "--read-only",
@@ -218,6 +268,7 @@ def main():
     original_session = Path(arguments[session_index]).resolve()
     require(original_session.is_relative_to(state), "Pi session must stay in participant state")
     arguments[session_index] = "/agent/" + original_session.relative_to(state).as_posix()
+    supervisor_binding = supervisor_launch_binding(config, state, arguments)
     runtime_id = uuid.uuid4().hex[:12]
     network_name = f"agentlab-net-{runtime_id}"
     relay_name = f"agentlab-relay-{runtime_id}"
@@ -237,6 +288,8 @@ def main():
         "filesystemIsolationQualified": False,
         "networkEgressIsolationQualified": False,
     }
+    if supervisor_binding is not None:
+        receipt["supervisorLaunchBinding"] = supervisor_binding
     container_id = None
     relay_id = None
     network_id = None

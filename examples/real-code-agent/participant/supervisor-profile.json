@@ -1,0 +1,40 @@
+{
+  "schema": "agentlab.pi_supervisor_profile.v1",
+  "pluginPackage": "@bermudi/pi-delegate",
+  "pluginVersion": "0.4.0",
+  "extensionRelativePath": "node_modules/@bermudi/pi-delegate/delegate.ts",
+  "parentTools": ["read", "delegate", "delegate_ticket", "delegate_session"],
+  "delegateSettings": {
+    "surface": "full",
+    "maxConcurrent": 1,
+    "concurrency": {"default": 1},
+    "models": {},
+    "modelsByParent": {},
+    "sessions": {"maxIdle": 0},
+    "stallTimeoutMs": 300000,
+    "telemetry": {"enabled": false}
+  },
+  "parentSettings": {
+    "retry": {"enabled": false, "maxRetries": 0, "provider": {"maxRetries": 0}},
+    "compaction": {"enabled": false},
+    "cacheWarming": "off",
+    "enableInstallTelemetry": false,
+    "enableAnalytics": false
+  },
+  "childPolicy": {
+    "freshUniqueSessionIdRequired": true,
+    "explicitSystemPromptRequired": true,
+    "explicitTaskOnly": true,
+    "tools": ["read", "grep", "find", "ls"],
+    "workspace": "shared-inside-contained-owned-workspace",
+    "wholeTaskRetry": "disabled-by-fresh-session-id",
+    "nativeRetry": false,
+    "openaiCompletionsTransportRetries": 0,
+    "automaticCompaction": "upstream-default-observe-not-disabled",
+    "recursiveDelegation": false,
+    "conversationIsolationOnly": true,
+    "parentChildFilesystemIsolationQualified": false,
+    "remoteAttemptBindingQualified": false
+  },
+  "qualification": "profile-contract-awaiting-real-parent-child-execution"
+}

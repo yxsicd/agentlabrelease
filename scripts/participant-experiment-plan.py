@@ -77,8 +77,10 @@ def build_execution_protocol(
         raise ExperimentPlanError("participant implementation inputs must be repository-owned") from error
     package_lock = load(participant_package_lock, "participant package lock")
     runtime = load(runtime_config_path, "participant runtime config")
+    require(runtime.get("piSupervisor") is None and runtime.get("runtimePurpose", "assessed-participant") == "assessed-participant",
+            "supervisor and synthetic runtime cannot qualify an extension-disabled assessed protocol")
     package = (package_lock.get("packages") or {}).get(
-        "node_modules/@mariozechner/pi-coding-agent"
+        "node_modules/@earendil-works/pi-coding-agent"
     )
     require(isinstance(package, dict), "Pi package is absent from participant lock")
     version = package.get("version")
@@ -93,7 +95,7 @@ def build_execution_protocol(
     return {
         "schema": "agentlab.participant_execution_protocol.v1",
         "agentImplementation": "pi",
-        "agentPackage": "@mariozechner/pi-coding-agent",
+        "agentPackage": "@earendil-works/pi-coding-agent",
         "agentPackageVersion": version,
         "participantAdapter": {
             "path": adapter_path,
@@ -134,7 +136,7 @@ def validate_execution_protocol(value: Any) -> dict[str, Any]:
     }, "participant execution protocol fields differ")
     require(value.get("schema") == "agentlab.participant_execution_protocol.v1", "participant execution protocol schema differs")
     require(value.get("agentImplementation") == "pi", "participant implementation differs")
-    require(value.get("agentPackage") == "@mariozechner/pi-coding-agent", "participant package differs")
+    require(value.get("agentPackage") == "@earendil-works/pi-coding-agent", "participant package differs")
     require(isinstance(value.get("agentPackageVersion"), str) and TOKEN.fullmatch(value["agentPackageVersion"]), "participant package version is invalid")
     for label in ("participantAdapter", "participantDriver"):
         binding = value.get(label)

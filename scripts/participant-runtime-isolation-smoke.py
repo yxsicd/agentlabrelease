@@ -120,6 +120,7 @@ def main():
                 str(forbidden),
                 "--output",
                 str(config),
+                "--synthetic-isolation-fixture",
                 capture_output=True,
             )
             environment = {

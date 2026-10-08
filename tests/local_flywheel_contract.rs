@@ -434,6 +434,85 @@ fn configured_invalid_skillsgit_stops_before_model_and_authority() {
 }
 
 #[test]
+fn explicit_supervisor_profile_binds_whole_plugin_tree_and_keeps_discovery_disabled() {
+    let root = std::env::current_dir().unwrap();
+    let code = r#"
+import importlib.util,json,os,sys,tempfile
+from pathlib import Path
+def load(name,path):
+    spec=importlib.util.spec_from_file_location(name,path);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
+repo=Path(sys.argv[1]);helper=load('prepare',repo/'scripts/prepare-participant-runtime.py')
+module=load('participant',repo/'examples/real-code-agent/participant.py')
+driver=load('driver',repo/'scripts/run-pi-in-docker.py')
+with tempfile.TemporaryDirectory() as directory:
+    root=Path(directory);runtime=root/'runtime';plugin=runtime/'node_modules/@bermudi/pi-delegate'
+    plugin.mkdir(parents=True);(plugin/'src').mkdir()
+    (plugin/'package.json').write_text('{"name":"@bermudi/pi-delegate","version":"0.4.0"}')
+    (plugin/'delegate.ts').write_text('fixture only; never executed\n')
+    nested=plugin/'src/execution.ts';nested.write_text('first fixture tree\n')
+    profile=helper.supervisor_profile(runtime)
+    config=root/'runtime.json';config.write_text(json.dumps({'piRuntimeRoot':str(runtime),'piSupervisor':profile}))
+    evidence=root/'evidence';evidence.mkdir()
+    os.environ.update(AGENTLAB_LM_GATEWAY_KEY='synthetic-only',AGENTLAB_PARTICIPANT_RUNTIME_CONFIG=str(config),
+        AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT=str(root/'receipts'),DOCKER_CONFIG=str(root/'empty-config'))
+    participant=module.Participant(evidence,root/'state','/bin/true','http://localhost','fixture-model')
+    def no_execution(*args,**kwargs):raise RuntimeError('fixture stops before any native/model execution')
+    participant._run_turn=no_execution
+    try:
+        try:participant.turn('supervisor',root,prompt='fixture task')
+        except RuntimeError:pass
+        else:raise AssertionError('fixture unexpectedly executed')
+        command=json.loads((evidence/'supervisor-command.json').read_text())
+        assert '--no-extensions' in command and '--no-mcp' in command and '--offline' in command
+        assert command[command.index('--extension')+1]=='/runtime/node_modules/@bermudi/pi-delegate/delegate.ts'
+        assert command[command.index('--tools')+1]=='read,delegate,delegate_ticket,delegate_session'
+        settings=json.loads((root/'state/settings.json').read_text())
+        assert not settings['retry']['enabled'] and not settings['compaction']['enabled']
+        assert json.loads((root/'state/delegate.json').read_text())['surface']=='full'
+        assert profile['childPolicy']['conversationIsolationOnly']
+        assert not profile['childPolicy']['parentChildFilesystemIsolationQualified']
+        args=command[1:];args[args.index('--session')+1]='/agent/sessions/operator/pi-session.jsonl'
+        binding=driver.supervisor_launch_binding({'piSupervisor':profile},root/'state',args)
+        assert set(binding['effectiveSettingsSha256'])=={'settings.json','delegate.json'}
+        for changed in [args+['-e','unreviewed.ts'],args[:-1]+['--system-prompt=unreviewed'],args[:-1]+['@/agent/settings.json'],
+                        [item for item in args if item!='--no-mcp']]:
+            try:driver.supervisor_launch_binding({'piSupervisor':profile},root/'state',changed)
+            except RuntimeError:pass
+            else:raise AssertionError('broader supervisor argv accepted')
+        changed=args.copy();changed[changed.index('--tools')+1]='read,bash,delegate'
+        try:driver.supervisor_launch_binding({'piSupervisor':profile},root/'state',changed)
+        except RuntimeError:pass
+        else:raise AssertionError('broader parent tools accepted')
+        policy=root/'state/delegate.json';original=policy.read_bytes()
+        drift=json.loads(original);drift['models']={'explore':'unreviewed/model'};policy.write_text(json.dumps(drift))
+        try:driver.supervisor_launch_binding({'piSupervisor':profile},root/'state',args)
+        except RuntimeError as error:assert 'policy drifted' in str(error)
+        else:raise AssertionError('effective settings drift accepted')
+        policy.write_bytes(original);policy.unlink();policy.symlink_to(root/'state/settings.json')
+        try:driver.supervisor_launch_binding({'piSupervisor':profile},root/'state',args)
+        except RuntimeError as error:assert 'non-symlink' in str(error)
+        else:raise AssertionError('settings symlink accepted')
+    finally:participant.close()
+    nested.write_text('drift in imported nested code\n')
+    assert helper.supervisor_profile(runtime)['packageTreeSha256']!=profile['packageTreeSha256']
+    try:module.Participant(evidence,root/'refused-state','/bin/true','http://localhost','fixture-model')
+    except ValueError as error:assert 'binding differs' in str(error)
+    else:raise AssertionError('nested plugin drift accepted')
+    assert not (root/'refused-state').exists()
+    nested.unlink();nested.symlink_to(root/'runtime.json')
+    try:helper.supervisor_profile(runtime)
+    except ValueError as error:assert 'unsafe link' in str(error)
+    else:raise AssertionError('plugin symlink accepted')
+"#;
+    let out = Command::new("python3")
+        .args(["-c", code])
+        .arg(root)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{:?}", out);
+}
+
+#[test]
 fn real_skillsgit_preflight_rejects_nonexecutable_entrypoint_without_writes() {
     let script = std::env::current_dir()
         .unwrap()

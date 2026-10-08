@@ -45,8 +45,8 @@ class ParticipantExperimentPlanTests(unittest.TestCase):
         return {
             "schema": "agentlab.participant_execution_protocol.v1",
             "agentImplementation": "pi",
-            "agentPackage": "@mariozechner/pi-coding-agent",
-            "agentPackageVersion": "0.73.1",
+            "agentPackage": "@earendil-works/pi-coding-agent",
+            "agentPackageVersion": "1.1.0",
             "participantAdapter": {"path": "examples/multi-repo-case/pi-assessed-agent.py", "sha256": "1" * 64},
             "participantDriver": {"path": "examples/real-code-agent/participant.py", "sha256": "2" * 64},
             "participantPackageLockSha256": "3" * 64,
@@ -124,6 +124,13 @@ class ParticipantExperimentPlanTests(unittest.TestCase):
             self.assertFalse(value["crossCampaignProviderReproducibilityQualified"])
             self.assertEqual(value["thinkingMode"], "off")
             self.assertEqual(value["turnTimeoutSeconds"], 420)
+            for purpose in ("delegate-supervisor", "synthetic-transport-only"):
+                configured=json.loads(runtime.read_text())
+                configured["runtimePurpose"]=purpose
+                runtime.write_text(json.dumps(configured))
+                with self.assertRaisesRegex(PLAN.ExperimentPlanError, "cannot qualify"):
+                    PLAN.build_execution_protocol(ROOT / "examples/multi-repo-case/pi-assessed-agent.py",
+                        ROOT / "examples/real-code-agent/participant.py", lock, runtime)
 
     def test_schema_and_workflows_bind_plan_before_outcomes(self) -> None:
         schema = json.loads(

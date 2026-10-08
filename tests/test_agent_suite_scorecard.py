@@ -317,8 +317,8 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         execution_protocol = {
             "schema": "agentlab.participant_execution_protocol.v1",
             "agentImplementation": "pi",
-            "agentPackage": "@mariozechner/pi-coding-agent",
-            "agentPackageVersion": "0.73.1",
+            "agentPackage": "@earendil-works/pi-coding-agent",
+            "agentPackageVersion": "1.1.0",
             "participantAdapter": {"path": "examples/multi-repo-case/pi-assessed-agent.py", "sha256": "1" * 64},
             "participantDriver": {"path": "examples/real-code-agent/participant.py", "sha256": "2" * 64},
             "participantPackageLockSha256": "3" * 64,

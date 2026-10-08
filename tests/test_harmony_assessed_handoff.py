@@ -60,8 +60,8 @@ class HarmonyAssessedHandoffTests(unittest.TestCase):
         self.execution_protocol = {
             "schema": "agentlab.participant_execution_protocol.v1",
             "agentImplementation": "pi",
-            "agentPackage": "@mariozechner/pi-coding-agent",
-            "agentPackageVersion": "0.73.1",
+            "agentPackage": "@earendil-works/pi-coding-agent",
+            "agentPackageVersion": "1.1.0",
         }
         self.experiment_profiles = [
             {"ordinal": 0, "participantId": "weak", "model": "model-weak"},

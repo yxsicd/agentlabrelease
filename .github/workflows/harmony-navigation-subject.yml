@@ -298,7 +298,7 @@ jobs:
             rm -rf "$RUNNER_TEMP/pi-runtime"
             mkdir -p "$RUNNER_TEMP/pi-runtime"
             cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
-            npm ci --prefix "$RUNNER_TEMP/pi-runtime"
+            npm ci --ignore-scripts --prefix "$RUNNER_TEMP/pi-runtime"
           fi
           if [[ ! -d "$RUNNER_TEMP/oracle-runtime/node_modules/typescript" ]]; then
             rm -rf "$RUNNER_TEMP/oracle-runtime"

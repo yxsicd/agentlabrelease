@@ -269,7 +269,7 @@ impl Fixture {
                 "executionProtocol": {
                     "schema": "agentlab.participant_execution_protocol_portable.v1",
                     "agentImplementation": "pi",
-                    "agentPackage": "@mariozechner/pi-coding-agent",
+                    "agentPackage": "@earendil-works/pi-coding-agent",
                     "agentPackageVersion": "1.2.3",
                     "participantAdapter": {"path": "adapter.py", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
                     "participantDriver": {"path": "driver.py", "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},

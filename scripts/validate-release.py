@@ -28,6 +28,20 @@ assert manifest["newInstanceNetwork"] == {
     "provisioningQualified": False,
 }, "new-instance-network-policy"
 assert index["fullInstanceReleaseQualified"] is False
+agent = manifest["referenceAgent"]
+assert agent["piPackage"] == "@earendil-works/pi-coding-agent" and agent["piVersion"] == "1.1.0"
+assert agent["delegatePackage"] == "@bermudi/pi-delegate" and agent["delegateVersion"] == "0.4.0"
+for key in ("packageLock", "supervisorProfile", "prepare", "launcher"):
+    assert (ROOT / agent[key]).is_file(), key
+agent_lock = json.loads((ROOT / agent["packageLock"]).read_text())
+for package, version in ((agent["piPackage"], agent["piVersion"]), (agent["delegatePackage"], agent["delegateVersion"])):
+    assert agent_lock["packages"]["node_modules/" + package]["version"] == version
+assert agent["supervisedDelegationQualified"] is False and agent["attemptRemoteBindingQualified"] is False
+supervisor = json.loads((ROOT / agent["supervisorProfile"]).read_text())
+assert supervisor["pluginPackage"] == agent["delegatePackage"] and supervisor["pluginVersion"] == agent["delegateVersion"]
+assert supervisor["childPolicy"]["parentChildFilesystemIsolationQualified"] is False
+assert supervisor["childPolicy"]["remoteAttemptBindingQualified"] is False
+assert supervisor["childPolicy"]["automaticCompaction"] == "upstream-default-observe-not-disabled"
 assert manifest["defaultParticipant"] == {
     "topology": "supervisor-managed-isolated-subagent",
     "execution": "attempt-scoped-remote-mcp",

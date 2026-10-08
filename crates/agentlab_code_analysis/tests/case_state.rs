@@ -290,8 +290,8 @@ impl Fixture {
                 ],
                 "executionProtocol": {
                     "agentImplementation": "pi",
-                    "agentPackage": "@mariozechner/pi-coding-agent",
-                    "agentPackageVersion": "0.73.1",
+                    "agentPackage": "@earendil-works/pi-coding-agent",
+                    "agentPackageVersion": "1.1.0",
                     "runtimeImageId": format!("sha256:{}", "b".repeat(64)),
                     "sessionPolicy": "fresh-per-attempt-persistent-across-case-stages"
                 },
@@ -906,8 +906,8 @@ fn models_a_qualified_intermediate_case_before_extending_the_difficulty_chain() 
                 {
                     "agentConfigId": "agent-pi",
                     "implementation": "pi",
-                    "package": "@mariozechner/pi-coding-agent",
-                    "packageVersion": "0.73.1",
+                    "package": "@earendil-works/pi-coding-agent",
+                    "packageVersion": "1.1.0",
                     "adapter": file_binding(&fixture.root, &adapter),
                     "driver": file_binding(&fixture.root, &driver),
                     "sessionPolicy": "fresh-per-trial-path-transitions-bound"

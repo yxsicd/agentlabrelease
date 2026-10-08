@@ -4,6 +4,7 @@ import base64
 import concurrent.futures
 import contextlib
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -19,6 +20,8 @@ import urllib.error
 
 
 CONTAINER_GATEWAY_PORT = 18765
+PI_PACKAGE = '@earendil-works/pi-coding-agent'
+PI_VERSION = '1.1.0'
 
 
 @contextlib.contextmanager
@@ -102,6 +105,19 @@ class Participant:
         self.gateway_timeout_seconds = gateway_timeout_seconds
         self.key = os.environ['AGENTLAB_LM_GATEWAY_KEY']
         self.runtime_isolated = bool(os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'))
+        self.supervisor = None
+        if self.runtime_isolated:
+            config_path = Path(os.environ['AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'])
+            config = json.loads(config_path.read_text())
+            if config.get('piSupervisor') is not None:
+                helper_path = Path(__file__).resolve().parents[2] / 'scripts/prepare-participant-runtime.py'
+                spec = importlib.util.spec_from_file_location('agentlab_pi_runtime_prepare', helper_path)
+                helper = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(helper)
+                expected = helper.supervisor_profile(Path(config['piRuntimeRoot']))
+                if config['piSupervisor'] != expected:
+                    raise ValueError('Pi supervisor extension binding differs')
+                self.supervisor = expected
         self.local_proxy_token = (
             secrets.token_urlsafe(32)
             if self.runtime_isolated
@@ -110,6 +126,12 @@ class Participant:
         self.requests = 0
         self.lock = threading.Lock()
         state.mkdir()
+        if self.supervisor:
+            for name, value in [('delegate.json', self.supervisor['delegateSettings']),
+                                ('settings.json', self.supervisor['parentSettings'])]:
+                with (state / name).open('x') as stream:
+                    json.dump(value, stream, sort_keys=True)
+                    stream.write('\n')
         capture = evidence / 'gateway'
         capture.mkdir()
         owner = self
@@ -394,7 +416,8 @@ class Participant:
                         'contextWindow': 128000, 'maxTokens': self.max_output_tokens or 8192}]}}}
         (state / 'models.json').write_text(json.dumps(models, indent=2) + '\n')
         (evidence / 'participant.json').write_text(json.dumps({
-            'implementation': implementation, 'packageVersion': '0.73.1' if implementation=='pi' else '2.4.6', 'model': model,
+            'implementation': implementation, 'packageName': PI_PACKAGE if implementation=='pi' else 'mini-swe-agent',
+            'packageVersion': PI_VERSION if implementation=='pi' else '2.4.6', 'model': model,
             'gateway': gateway, 'providerRoute': route,
             'reasoningEffort': self.reasoning_effort, 'piThinkingMode': 'off',
             'providerThinkingType': self.thinking_type,
@@ -403,6 +426,8 @@ class Participant:
             'providerMaxOutputTokens': self.max_output_tokens,
             'captureAuthority': 'operator-owned local forwarding proxy',
             'externalCredentialInParticipant': False}, indent=2) + '\n')
+        if self.supervisor:
+            (evidence / 'pi-supervisor-profile.json').write_text(json.dumps(self.supervisor, indent=2) + '\n')
 
     @staticmethod
     def _is_transient_transport_error(message):
@@ -444,8 +469,11 @@ class Participant:
             raise RuntimeError(f'{label}: retained Pi session missing or identity changed before dispatch')
         command = [self.binary, '--print', '--mode', 'json', '--provider', 'agentlab-ci',
                    '--model', self.model, '--thinking', 'off', '--no-extensions',
-                   '--no-skills', '--no-context-files',
+                   '--no-skills', '--no-context-files', '--no-mcp', '--offline',
                    '--session', str(session_path), prompt]
+        if self.supervisor:
+            command[-1:-1] = ['--extension', '/runtime/' + self.supervisor['extensionRelativePath'],
+                              '--tools', ','.join(self.supervisor['parentTools'])]
         if self.implementation == 'mini-swe-agent':
             command = [self.binary, str(Path(__file__).with_name('mini_runner.py')),
                        '--base-url', f'http://127.0.0.1:{self.server.server_port}/v1',

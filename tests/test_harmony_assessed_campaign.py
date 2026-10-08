@@ -147,7 +147,7 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
         self.execution_protocol = {
             "schema": "agentlab.participant_execution_protocol.v1",
             "agentImplementation": "pi",
-            "agentPackageVersion": "0.73.1",
+            "agentPackageVersion": "1.1.0",
         }
         self.experiment_profiles = [
             {"ordinal": 0, "participantId": "weak", "model": "model-weak"},

@@ -600,7 +600,7 @@ fn validate_portable_execution_protocol(protocol: &Value) -> Result<(), String> 
     )?;
     for (key, expected) in [
         ("agentImplementation", "pi"),
-        ("agentPackage", "@mariozechner/pi-coding-agent"),
+        ("agentPackage", "@earendil-works/pi-coding-agent"),
         (
             "promptAuthority",
             "digest-bound-adapter-driver-and-blind-case-manifest",

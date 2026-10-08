@@ -145,7 +145,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime"
           cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
-          npm ci --prefix "$RUNNER_TEMP/pi-runtime"
+          npm ci --ignore-scripts --prefix "$RUNNER_TEMP/pi-runtime"
           "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
       - name: Ask Pi to construct an intent from exact source and fact evidence
         env:

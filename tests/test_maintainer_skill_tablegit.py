@@ -19,7 +19,7 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
     def test_action_preflight_precedes_build_runtime_and_agent(self):
         workflow = (ROOT / ".github/workflows/maintainer-skill-agent-flywheel.yml").read_text()
         admission = workflow.index("python3 scripts/maintainer-skill-tablegit.py preflight")
-        for step in ("cargo build --locked", "npm ci --prefix", "scripts/run-maintainer-skill-agent-loop.sh",
+        for step in ("cargo build --locked", "npm ci --ignore-scripts --prefix", "scripts/run-maintainer-skill-agent-loop.sh",
                      "scripts/run-maintainer-skill-focused-refresh.sh", "scripts/run-maintainer-scope-catalog-rewrite.sh"):
             self.assertLess(admission, workflow.index(step))
         self.assertIn("github.ref == 'refs/heads/main'", workflow)

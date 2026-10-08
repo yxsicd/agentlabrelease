@@ -1682,7 +1682,7 @@ with tempfile.TemporaryDirectory() as directory:
     workspace=root/'workspace';workspace.mkdir()
     p=module.Participant.__new__(module.Participant)
     p.state=state;p.evidence=evidence;p.binary='/synthetic/pi';p.model='fixture'
-    p.implementation='pi';p.reasoning_effort=None;p.server=SimpleNamespace(server_port=12345)
+    p.implementation='pi';p.reasoning_effort=None;p.supervisor=None;p.server=SimpleNamespace(server_port=12345)
     observed=[]
     def run(command,project,env,label,lifecycle,**options):
         # Reproduce pinned Pi startup migration of agent-root JSONL files.
@@ -2702,6 +2702,7 @@ try:
         root=Path(directory)
         for index,(terminal,complete,outcome) in enumerate(cases):
             evidence=root/str(index);evidence.mkdir()
+            (root/'config.json').write_text('{}\n')
             with patch.dict(os.environ,{'AGENTLAB_LM_GATEWAY_KEY':'synthetic-external-key',
                 'AGENTLAB_PARTICIPANT_RUNTIME_CONFIG':str(root/'config.json')}):
                 p=module.Participant(evidence,root/f'state-{index}','/bin/true',

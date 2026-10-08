@@ -1,13 +1,20 @@
 # Real Code Agent acceptance
 
 The manual **Real Code Agent acceptance** workflow runs trusted `main` with Pi
-0.73.1 and the LM Gateway model selected at dispatch (default `glm-5.3-flash`).
+1.1.0 (`@earendil-works/pi-coding-agent`, Node >=22.19) and the LM Gateway model selected at dispatch (default `glm-5.3-flash`).
 Set `AGENTLAB_LM_GATEWAY_KEY` as an Actions Secret and optionally set repository
 variable `AGENTLAB_LM_GATEWAY_URL`. This workflow does not run PR code.
 Choose the explicit Gateway provider route too (default `glm`). Model and provider
 are separate: a bare model ID must not accidentally select the Gateway's default
 provider. Evidence retains both Pi's original payload and the upstream payload
 with the operator-selected `providerId`.
+
+Prior acceptance evidence remains bound to its original runtime and public cut;
+it does not automatically qualify the upgraded Pi runtime. For a Pi supervisor
+controlling a delegated test Agent, use the Harness Skill's
+[supervisor profile](../../skills/agentlab-harness-developer/SKILL.md#pi-supervisor-and-delegated-test-participant).
+The runtime lock installs the plugin, but only `--supervisor` on the existing
+prepare command admits loading its explicit, tree-bound entrypoint.
 
 The runner installs the referenced AgentLab image, original Harmony SDK and
 build-kit. Pi's locked npm runtime is outside the project Workspace. A control
@@ -26,7 +33,7 @@ To reproduce on Linux after installing the composition:
 ```sh
 mkdir -p /tmp/agentlab-pi-runtime
 cp examples/real-code-agent/participant/package*.json /tmp/agentlab-pi-runtime/
-npm ci --prefix /tmp/agentlab-pi-runtime
+npm ci --ignore-scripts --prefix /tmp/agentlab-pi-runtime
 # Provide AGENTLAB_LM_GATEWAY_KEY independently, without putting it in the project.
 python3 examples/harmony-build/run.py \
   --install-root "$AGENTLAB_CI_ROOT" --root /tmp/agentlab-real-agent-fresh \

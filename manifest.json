@@ -31,6 +31,18 @@
       "installer": "scripts/agentlab-mcpgit-prod-install.sh"
     }
   },
+  "referenceAgent": {
+    "piPackage": "@earendil-works/pi-coding-agent",
+    "piVersion": "1.1.0",
+    "delegatePackage": "@bermudi/pi-delegate",
+    "delegateVersion": "0.4.0",
+    "packageLock": "examples/real-code-agent/participant/package-lock.json",
+    "supervisorProfile": "examples/real-code-agent/participant/supervisor-profile.json",
+    "prepare": "scripts/prepare-participant-runtime.py",
+    "launcher": "scripts/run-pi-in-docker.py",
+    "supervisedDelegationQualified": false,
+    "attemptRemoteBindingQualified": false
+  },
   "inventory": "scripts/agentlab-resource-inventory.sh",
   "uninstall": "skills/agentlab-deployment/references/historical-uninstall.md",
   "methodRegistry": "skills/registry.json",

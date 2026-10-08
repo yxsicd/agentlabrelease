@@ -247,7 +247,7 @@ def freeze_pi_retry_policy(state, workspace, evidence, *, disable_compaction=Fal
     (evidence / 'native-retry-policy.json').write_text(json.dumps(dict(
         schema='agentlab.constructor_native_retry_policy.v1',
         settingsSha256=hashlib.sha256(raw).hexdigest(),
-        participantPackageVersion='0.73.1', nativeRetryEnabled=False,
+        participantPackageVersion='1.1.0', nativeRetryEnabled=False,
         nativeMaxRetries=0, providerMaxRetries=0,
         **({'automaticCompactionDisabled': True} if disable_compaction else {}),
         runtimeBehaviorQualified=False, automaticPromotion=False)) + '\n')

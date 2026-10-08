@@ -124,7 +124,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime"
           cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
-          npm ci --prefix "$RUNNER_TEMP/pi-runtime"
+          npm ci --ignore-scripts --prefix "$RUNNER_TEMP/pi-runtime"
           "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
       - name: Install disposable mini-SWE-agent runtime outside Workspace
         if: inputs.capture_run_id == '' && inputs.agent == 'mini-swe-agent'

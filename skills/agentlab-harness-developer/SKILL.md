@@ -56,8 +56,8 @@ as the Action's construction path. This is a **maintenance construction Agent**,
 A/B participant or a replacement for instance Session/Attempt capabilities.
 
 From a pinned public checkout, build the existing Rust
-`agentlab-maintainer-skill-flywheel` and install Pi **0.73.1** outside the source
-workspace with `examples/real-code-agent/participant/package-lock.json` (`npm ci`).
+`agentlab-maintainer-skill-flywheel` and install Pi **1.1.0** outside the source
+workspace with `examples/real-code-agent/participant/package-lock.json` (`npm ci --ignore-scripts`).
 The operator separately configures Gateway URL/key, model and provider route,
 TableGit MCP URL/person and a unique `AGENTLAB_RUN_ID`; credentials never enter
 the Agent task. Begin with `AGENTLAB_SCOPE_BATCH_SIZE=1` and one round:
@@ -82,6 +82,43 @@ and round files remain run evidence, never edits to the immutable knowledge cut.
 Missing case inputs remain a downstream blocker. Use bounded numeric rounds;
 the historical `converge` estimate does not prove queue exhaustion or five-ring
 convergence. Local construction/readback is not full Harness qualification.
+
+## Pi supervisor and delegated test participant
+
+The public Pi runtime lock installs Pi **1.1.0** and the reviewed
+`@bermudi/pi-delegate` **0.4.0** together, outside the evaluated workspace.
+Use `npm ci --ignore-scripts`; do not update a shared global Agent or enable
+unrelated extensions. Add `--supervisor` to the existing
+[`prepare-participant-runtime.py`](../../scripts/prepare-participant-runtime.py)
+invocation (exact image, runtime, case input, operator-only forbidden paths and
+fresh output). It verifies the actual Pi version and freezes the
+[supervisor profile](../../examples/real-code-agent/participant/supervisor-profile.json)
+with the complete plugin tree. The existing Participant/Docker launcher loads
+only that explicit extension and rechecks its binding before execution.
+
+The supervisor must delegate exactly the admitted child task, with `async:false`,
+one `explore` task, explicit child-only `systemPrompt`, tools
+`read,grep,find,ls`, `cwd:/workspace`, `workspace:shared`, and a **new unique
+sessionId per Attempt**. Omit parent history, `brief`, dependencies and
+`resumeFrom`. This session path disables whole-task retry and retains the child
+JSONL; it does not mean resuming an earlier Attempt. Record parent command,
+delegate arguments/result, both native sessions, every Gateway exchange, tool
+paths/counts and exact exits before closing the child session.
+
+Here `shared` is the dedicated contained workspace, not shared conversation.
+Parent/child share one process and can read the same mounted files; validate
+observed child read paths against the admitted public input. Do not claim
+parent-context filesystem confidentiality. Child automatic compaction is still
+an upstream default, even with parent compaction disabled: count any extra model
+call and reject an unadmitted summary/context change. The outer native watchdog
+covers both Agents; tool-count checks are observations, not strict child
+pre-dispatch limits. No independent external key enters either Agent.
+
+This profile supports supervised delegation, **not** the missing Attempt-scoped
+remote MCP broker. Do not qualify mode A assessment, full Harness readiness or a
+five-ring closure from installing a plugin or producing a launch plan. A normal
+extension-disabled assessed participant remains a distinct protocol; it rejects
+supervisor and synthetic-transport runtime configs rather than mislabeling them.
 
 ## One evidence-driven flywheel
 

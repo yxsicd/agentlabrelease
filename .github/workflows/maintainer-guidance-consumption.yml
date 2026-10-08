@@ -140,7 +140,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime"
           cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
-          npm ci --prefix "$RUNNER_TEMP/pi-runtime" --no-audit --no-fund
+          npm ci --ignore-scripts --prefix "$RUNNER_TEMP/pi-runtime" --no-audit --no-fund
           "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
       - name: Run the real maintenance author with the existing gateway secret
         env:

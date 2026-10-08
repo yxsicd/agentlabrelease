@@ -183,7 +183,7 @@ fn repository_binding(root: &Path, file: &Path, label: &str) -> Result<Value, St
 }
 
 fn package_version(lock: &Value) -> Result<&str, String> {
-    let version = lock["packages"]["node_modules/@mariozechner/pi-coding-agent"]["version"]
+    let version = lock["packages"]["node_modules/@earendil-works/pi-coding-agent"]["version"]
         .as_str()
         .ok_or_else(|| "Pi package is absent from participant lock".to_owned())?;
     if !valid_token(version) {
@@ -289,7 +289,7 @@ fn freeze(values: &BTreeMap<String, String>) -> Result<Value, String> {
         "executionProtocol": {
             "schema": "agentlab.participant_execution_protocol_portable.v1",
             "agentImplementation": "pi",
-            "agentPackage": "@mariozechner/pi-coding-agent",
+            "agentPackage": "@earendil-works/pi-coding-agent",
             "agentPackageVersion": version,
             "participantAdapter": repository_binding(&repository_root, &path(values, "--participant-adapter")?, "participant adapter")?,
             "participantDriver": repository_binding(&repository_root, &path(values, "--participant-driver")?, "participant driver")?,
@@ -488,7 +488,7 @@ fn validate_dispatch(dispatch: &FileInput) -> Result<(), String> {
     )?;
     same(
         string(protocol, "agentPackage", "portable execution protocol")?,
-        "@mariozechner/pi-coding-agent",
+        "@earendil-works/pi-coding-agent",
         "participant package",
     )?;
     if !valid_token(string(
@@ -700,6 +700,13 @@ fn materialize(values: &BTreeMap<String, String>) -> Result<Value, String> {
         "participant runtime config",
         true,
     )?;
+    if !runtime.object()["piSupervisor"].is_null()
+        || runtime.object()["runtimePurpose"]
+            .as_str()
+            .is_some_and(|value| value != "assessed-participant")
+    {
+        return Err("supervisor or synthetic runtime cannot qualify an assessed protocol".into());
+    }
     same(
         string(runtime.object(), "schema", "participant runtime config")?,
         "agentlab.participant_docker_runtime.v1",
