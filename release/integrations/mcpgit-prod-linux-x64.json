@@ -1,0 +1,35 @@
+{
+  "schema": "agentlab.upstream_integration.v1",
+  "component": "mcpgit",
+  "platform": "linux-x64",
+  "status": "candidate-unqualified",
+  "observedAt": "2026-10-08T13:34:00Z",
+  "productionAuthority": "offline-latest.json",
+  "repository": "yxsicd/mcpgitrelease",
+  "installerRevision": "ce380809aaa5187f75adc9aed74053c0933661a0",
+  "sourceRevision": "a75b9809857cea23047b61f3acea17bc09b9996c",
+  "releaseTag": "mcpgit-git-a75b9809857cea23047b61f3acea17bc09b9996c-linux-amd64",
+  "installer": {
+    "url": "https://raw.githubusercontent.com/yxsicd/mcpgitrelease/ce380809aaa5187f75adc9aed74053c0933661a0/install.sh",
+    "bytes": 1732,
+    "sha256": "de23d36fdf8fc444eb74a64ec0bb89ee00120b9accae6232e639168ec4a27c0f"
+  },
+  "manifest": {
+    "url": "https://github.com/yxsicd/mcpgitrelease/releases/download/mcpgit-git-a75b9809857cea23047b61f3acea17bc09b9996c-linux-amd64/mcpgit-offline-release-v1.json",
+    "bytes": 1944,
+    "sha256": "c623bb1b87d7f168bb6874ef7bf0add32e75d7e6f53d2baf55b0f9a2dd836e84"
+  },
+  "program": {
+    "url": "https://github.com/yxsicd/mcpgitrelease/releases/download/mcpgit-git-a75b9809857cea23047b61f3acea17bc09b9996c-linux-amd64/mcpgit-program-git-a75b9809857cea23047b61f3acea17bc09b9996c-x86_64-unknown-linux-musl.tar.gz",
+    "bytes": 45549763,
+    "sha256": "3451537ecfc0a0ae84d94e93b65f2fb1e881c32d32715d8c4d45173434ccfc35"
+  },
+  "qualification": {
+    "acquisition": "pending-two-host-receipts",
+    "install": "pending",
+    "agentlabIntegration": "pending",
+    "historicalDataMigration": "not-run",
+    "automaticPromotion": false
+  },
+  "compatibilityBoundary": "Additive successor candidate only. Existing immutable closures and historical mirrored MCPGit packages remain unchanged. Do not migrate shared instances or attach historical data automatically."
+}
