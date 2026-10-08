@@ -155,6 +155,416 @@
     "Harmony emulator and ohosTest/performance/power/thermal execution"
   ],
   "automaticPromotion": false,
+  "currentConsumerQualification": {
+    "observedAt": "2026-10-08T16:16:17Z",
+    "status": "partial-components-not-full-harness",
+    "artifactAuthority": "GitHub-only",
+    "sourceRevision": "41b447895cd7c357470d261e465e5a9f0e8a6eeb",
+    "mcpgitInstallerRevision": "d32300f6953c57af1323ea71b606b363c4d99a3d",
+    "executedEntrypoint": {
+      "path": "scripts/agentlab-mcpgit-prod-install.sh",
+      "bytes": 5065,
+      "sha256": "38f48698f97df7db3f5147f66d583a237f043045e2d4d6d3f7906aa363ec919d"
+    },
+    "composition": {
+      "sourceRevision": "41b447895cd7c357470d261e465e5a9f0e8a6eeb",
+      "installerSha256": "09955dc5e0528007403d4b42e62e90d87124c02be279bfe98b6d89587c7d50c0",
+      "lockSha256": "ac9192c09ee9e3488f2e874ddeb7b5d5dc0ec422aa09e728a49cb037f1ef333e",
+      "artifactBytesQualifiedOnBothHosts": true,
+      "currentWrapperBehavioralQualification": "aiwsl-pass-hwlinux-held-at-active-shared-component",
+      "targets": [
+        {
+          "target": "hwlinux",
+          "status": "held-active-component-no-write-reuse-not-established",
+          "readOnlyPreflight": {
+            "operationId": "exec-00000000000004d1",
+            "exit": 0,
+            "archives": 5,
+            "publicRawDescriptors": 5
+          },
+          "finalHoldReadback": {
+            "operationId": "exec-00000000000004d2",
+            "exit": 0
+          },
+          "wrapperExecuted": false,
+          "sharedVolume": "vol-agentlab-pack-developer-tools-e443b17a-linux-x64-58bc13e984f7",
+          "activeProtectedConsumer": "alpi-agentlab-86364862",
+          "cacheSourceCuts": [
+            "b4b6bf087b4ee9b0594d420c6251058b42f046b9",
+            "fd475fffd1424dac6b96558859a5671820d35a09"
+          ],
+          "boundary": "Matching immutable labels/reused receipts do not independently prove that this controller performs no writes in an active shared volume. No repair, overwrite or replacement executed."
+        },
+        {
+          "target": "aiwsl",
+          "status": "passed-component-install-only",
+          "preflight": {
+            "operationId": "exec-0000000000001023",
+            "exit": 0
+          },
+          "selectedVolumeImageReferences": {
+            "operationIds": [
+              "exec-0000000000001026",
+              "exec-0000000000001027"
+            ],
+            "exit": 0,
+            "containerReferences": []
+          },
+          "actualWrapper": {
+            "operationId": "exec-0000000000001025",
+            "exit": 0
+          },
+          "independentReadback": {
+            "operationId": "exec-0000000000001028",
+            "exit": 0
+          },
+          "wrapperExecuted": true,
+          "cacheSourceCut": "b4b6bf087b4ee9b0594d420c6251058b42f046b9",
+          "allFourPacksAndRuntimeImageReused": true,
+          "allFiveAcquiredArchivesByteMatched": true,
+          "resourceDelta": {
+            "changedRemainingContainers": 0,
+            "changedVolumes": 0,
+            "changedImageIdentities": 0
+          },
+          "protectedOriginalContainers": 36,
+          "protectedOriginalVolumes": 93,
+          "retainedPrivateFilesUnchanged": 16,
+          "removedMcpGitContainerStillAbsent": true,
+          "port18105Inactive": true,
+          "activeSharedReuseQualified": false,
+          "perAssetCacheHitCountQualified": false,
+          "portableVsLocalSdkManifestWarning": "Retained unclassified distinction; unchanged local manifest is not relabeled as portable identity."
+        }
+      ],
+      "fullHarnessStarted": false,
+      "fullHarnessReady": false
+    },
+    "publishedProtocolFixture": {
+      "sourceRevision": "fd475fffd1424dac6b96558859a5671820d35a09",
+      "bothHostsExit": 0,
+      "testsPerHost": 3,
+      "mappingMountChecksPerHost": 36,
+      "nativePython310Supported": true,
+      "storageConfigured": false,
+      "writeSuccessQualified": false,
+      "fullWhiteboxQualified": false,
+      "scope": "released-runtime-protocol-fixture-not-real-agent-assessment"
+    },
+    "unchangedActivationStdout": "PASS: exact healthy activation reused; no container or data changes",
+    "targets": [
+      {
+        "target": "hwlinux",
+        "platform": "linux-x64",
+        "transport": {
+          "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+          "routeDecision": "peer_direct"
+        },
+        "operations": {
+          "publicContract": {
+            "operationId": "exec-00000000000004bb",
+            "exit": 0
+          },
+          "unchangedInstall": {
+            "operationId": "exec-00000000000004c0",
+            "exit": 0
+          },
+          "independentIdentity": {
+            "operationId": "exec-00000000000004c3",
+            "exit": 0
+          },
+          "statusDoctorReadOnlyOnboarding": {
+            "operationId": "exec-00000000000004c4",
+            "statusExit": 0,
+            "doctorExit": 0,
+            "onboardingExit": 0,
+            "healthHttpStatus": 204
+          },
+          "protectedDelta": {
+            "operationId": "exec-00000000000004c6",
+            "exit": 0
+          }
+        },
+        "containerIdBeforeAndAfter": "3436a576857d15c5aad022b8ac136003fb6204503e088c20659d6db9460108eb",
+        "selectedPublicHelperCopiesByteMatched": 11,
+        "protectedResources": {
+          "originalContainers": 26,
+          "changedOrMissingOriginalContainers": 0,
+          "originalVolumes": 38,
+          "missingOriginalVolumeNames": 0,
+          "originalVolumeBaselineAuthority": "names-and-driver-only; creation-time identities not captured"
+        },
+        "unchanged": {
+          "configurationBytes": true,
+          "mountedConfigurationMatchesHost": true,
+          "credentialBytes": true,
+          "credentialAndConfigMode0600": true,
+          "activationReceiptBytes": true,
+          "organization": true,
+          "dedicatedDataVolumeIdentity": true,
+          "selectedDockerFingerprint": true
+        },
+        "uninstallPreserve": {
+          "status": "passed-exact-test-container-only",
+          "preflight": {
+            "operationId": "exec-00000000000004c7",
+            "exit": 0
+          },
+          "mutation": {
+            "operationId": "exec-00000000000004c8",
+            "exit": 0,
+            "restartDisableExit": 0,
+            "stopExit": 0,
+            "removeWithoutVolumesExit": 0
+          },
+          "independentReadback": {
+            "operationId": "exec-00000000000004cb",
+            "exit": 0
+          },
+          "removedContainerIds": [
+            "3436a576857d15c5aad022b8ac136003fb6204503e088c20659d6db9460108eb"
+          ],
+          "containerCounts": {
+            "before": 29,
+            "after": 28
+          },
+          "volumeCounts": {
+            "before": 40,
+            "after": 40
+          },
+          "onlyAuthorizedResourceRemoved": true,
+          "bothRollbackContainersPreserved": true,
+          "dedicatedDataVolumeIdentityPreserved": true,
+          "privateConfigurationCredentialsInstallStatePreserved": true,
+          "runtimeImagePreserved": true,
+          "port18105ListenerPresent": false,
+          "restoreExecuted": false,
+          "writableContainerLayerBackedUp": false,
+          "boundary": "Data/config/image preserved for reconstruction; deleted container ID cannot be restored and retained install-state describes an absent activation. Not a native unified lifecycle API."
+        }
+      },
+      {
+        "target": "aiwsl",
+        "platform": "wsl2-x64",
+        "transport": {
+          "targetPeerId": "lgw_353e85c0b8dc41638c767303845e9926",
+          "routeDecision": "peer_direct"
+        },
+        "operations": {
+          "publicContract": {
+            "operationId": "exec-0000000000001006",
+            "exit": 0
+          },
+          "unchangedInstall": {
+            "operationId": "exec-0000000000001008",
+            "exit": 0
+          },
+          "statusDoctorReadOnlyOnboarding": {
+            "operationId": "exec-000000000000100b",
+            "statusExit": 0,
+            "doctorExit": 0,
+            "onboardingExit": 0,
+            "healthHttpStatus": 204
+          },
+          "independentIdentityAndProtectedDelta": {
+            "operationId": "exec-000000000000100f",
+            "exit": 0
+          },
+          "startupDiscovery": {
+            "operationId": "exec-0000000000001009",
+            "exit": 0,
+            "matchingUnits": [],
+            "boundedDiscoveryCompleteForSelectedInstance": true
+          },
+          "stdoutReadback": {
+            "operationIds": [
+              "exec-0000000000001010",
+              "exec-0000000000001011"
+            ],
+            "exit": 0
+          }
+        },
+        "containerIdBeforeAndAfter": "7d7116c341eba525e45163e0af841da5e47a8bb2e7c3351a7065cded8d754e33",
+        "selectedPublicHelperCopiesByteMatched": 14,
+        "protectedResources": {
+          "originalContainers": 36,
+          "changedOrMissingOriginalContainers": 0,
+          "originalVolumes": 93,
+          "changedOrMissingOriginalVolumes": 0
+        },
+        "unchanged": {
+          "configurationBytes": true,
+          "credentialBytes": true,
+          "credentialAndConfigMode0600": true,
+          "activationReceiptBytes": true,
+          "organization": true,
+          "dedicatedDataVolumeIdentity": true,
+          "selectedDockerFingerprint": true
+        },
+        "uninstallPreserve": {
+          "status": "passed-exact-test-container-only",
+          "preflight": {
+            "operationId": "exec-0000000000001016",
+            "exit": 0
+          },
+          "nativeDiscovery": {
+            "operationIds": [
+              "exec-0000000000001013",
+              "exec-0000000000001014"
+            ],
+            "exit": 0
+          },
+          "mutation": {
+            "operationId": "exec-0000000000001019",
+            "exit": 0,
+            "restartDisableExit": 0,
+            "stopExit": 0,
+            "removeWithoutVolumesExit": 0
+          },
+          "independentReadback": {
+            "operationId": "exec-000000000000101a",
+            "exit": 0
+          },
+          "removedContainerIds": [
+            "7d7116c341eba525e45163e0af841da5e47a8bb2e7c3351a7065cded8d754e33"
+          ],
+          "containerCounts": {
+            "before": 39,
+            "after": 38
+          },
+          "volumeCounts": {
+            "before": 94,
+            "after": 94
+          },
+          "onlyAuthorizedResourceRemoved": true,
+          "bothRollbackContainersPreserved": true,
+          "dedicatedDataVolumeIdentityPreserved": true,
+          "privateConfigurationCredentialsInstallStatePreserved": true,
+          "unchangedPrivateFiles": 16,
+          "preservedUniqueImageIds": 55,
+          "port18105ListenerPresent": false,
+          "restoreExecuted": false,
+          "boundary": "Retained data/config/image can support reconstruction; deleted container identity and full writable-layer restoration are not qualified. Install-state describes an absent activation. Not a native unified lifecycle API."
+        }
+      }
+    ],
+    "readOnlyKernelChecks": {
+      "eightKernelTools": true,
+      "expectedIdentity": true,
+      "credentialAuthenticated": true,
+      "repositoryRead": true,
+      "offlineWasmcDiscovery": true,
+      "writeProbeRequested": false,
+      "permissionsChanged": false
+    },
+    "retainedFailures": [
+      {
+        "gate": "hwlinux-b4b6bf0-component-fetch",
+        "exit": 1,
+        "cause": "native public asset fetch failed after bootstrap verification",
+        "correctedSourceRevision": "fd475fffd1424dac6b96558859a5671820d35a09",
+        "rerunExit": 0
+      },
+      {
+        "gate": "hwlinux-b4b6bf0-protocol-python310",
+        "exit": 1,
+        "cause": "optional hashlib.file_digest unavailable on native Python 3.10",
+        "correctedSourceRevision": "fd475fffd1424dac6b96558859a5671820d35a09",
+        "rerunExit": 0
+      },
+      {
+        "gate": "aiwsl-b4b6bf0-first-composition-transport",
+        "installerReportedExit": 0,
+        "outerTransportExit": 1,
+        "countedAsPass": false,
+        "independentRepeatExit": 0
+      },
+      {
+        "gate": "fd475ff-repeat-install-no-container-replacement",
+        "targets": [
+          "hwlinux",
+          "aiwsl"
+        ],
+        "installerExit": 0,
+        "independentIdentityAssertionExit": 1,
+        "cause": "unchanged installation replaced the container despite exact plan",
+        "correction": "upstream verified activation reuse; final d32300f both-host independent identity checks passed"
+      },
+      {
+        "gate": "aiwsl-100b-independent-helper-diagnostic",
+        "outerExit": 0,
+        "publicLookupGitExit": 128,
+        "pipelineMaskedFailure": true,
+        "countedAsPass": false,
+        "correctedOperationId": "exec-000000000000100f",
+        "correctedExit": 0
+      },
+      {
+        "gate": "hwlinux-uninstall-first-absence-assertion",
+        "operationId": "exec-00000000000004c9",
+        "exit": 1,
+        "cause": "Diagnostic required empty stdout; absent Docker inspect emitted a newline.",
+        "readOnlyIsolation": {
+          "operationId": "exec-00000000000004ca",
+          "exit": 0
+        },
+        "correctedIndependentOperationId": "exec-00000000000004cb",
+        "correctedExit": 0
+      },
+      {
+        "gate": "aiwsl-uninstall-first-fence-diagnostic",
+        "operationId": "exec-0000000000001017",
+        "exit": 1,
+        "cause": "Compared full RestartPolicy object to the stored Name-only field.",
+        "resourceMutationOccurred": false,
+        "correctedMutationOperationId": "exec-0000000000001019",
+        "correctedMutationExit": 0,
+        "independentReadbackOperationId": "exec-000000000000101a",
+        "independentReadbackExit": 0
+      },
+      {
+        "gate": "hwlinux-component-help-diagnostic",
+        "operationId": "exec-00000000000004cd",
+        "exit": 1,
+        "cause": "Native composition help selector unsupported; not an install attempt."
+      },
+      {
+        "gate": "hwlinux-component-descriptor-path-diagnostic",
+        "operationId": "exec-00000000000004d0",
+        "outcome": "failed",
+        "cause": "Read-only assessor raw-descriptor path assumption; corrected preflight 04d1 passed."
+      },
+      {
+        "gate": "aiwsl-component-script-lookup-diagnostic",
+        "operationId": "exec-000000000000101d",
+        "exit": 2,
+        "cause": "Guessed nonexistent script path; no resource changes."
+      },
+      {
+        "gate": "aiwsl-component-help-diagnostic",
+        "operationId": "exec-0000000000001020",
+        "exit": 2,
+        "cause": "Unsupported help selector; no resource changes."
+      }
+    ],
+    "acceptanceLimits": {
+      "currentInstallerFreshInstallationQualified": false,
+      "fullInstanceLifecycleQualified": false,
+      "agentlabSessionTemplateForkWithSelectedMcpGitQualified": false,
+      "attemptScopedRemoteSubagentQualified": false,
+      "fullFlywheelAndNextRoundConsumptionQualified": false,
+      "unifiedNativeLifecycleApiQualified": false,
+      "purgeExecuted": false,
+      "automaticPromotion": false
+    },
+    "privateEvidencePolicy": "Private roots retain configuration, credentials, raw receipts and recovery information; no secrets or captured agent homes are published.",
+    "lastObservedCompleteCiPass": {
+      "sourceRevision": "fd475fffd1424dac6b96558859a5671820d35a09",
+      "url": "https://github.com/yxsicd/agentlabrelease/actions/runs/37798706040",
+      "scope": "nine-job-public-release-validation-not-full-harness",
+      "finalBehaviorCutCiConfirmed": false
+    }
+  },
   "flywheelMaturity": {
     "historicalEstimatePercent": 82,
     "delta": 0,

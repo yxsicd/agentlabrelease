@@ -22,7 +22,7 @@ Unchanged components are reused, not rebuilt for each knowledge or method change
 ## Current acceptance boundary
 
 The public component installer prepares the declared Docker image and component
-volumes. The MCPGit successor has separate installation/kernel evidence. Neither
+volumes. The selected MCPGit component has separate installation/kernel evidence. Neither
 is proof of a fully provisioned AgentLab Harness or a completed real flywheel.
 The full-instance lifecycle, Session/template/Fork integration and unified
 component CRUD still require independent qualification. Missing capability is a
