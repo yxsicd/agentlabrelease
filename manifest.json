@@ -38,6 +38,7 @@
     "delegateVersion": "0.4.0",
     "packageLock": "examples/real-code-agent/participant/package-lock.json",
     "supervisorProfile": "examples/real-code-agent/participant/supervisor-profile.json",
+    "nativeTools": "examples/real-code-agent/participant/native-tools.json",
     "prepare": "scripts/prepare-participant-runtime.py",
     "launcher": "scripts/run-pi-in-docker.py",
     "supervisedDelegationQualified": false,

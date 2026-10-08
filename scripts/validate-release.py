@@ -31,7 +31,7 @@ assert index["fullInstanceReleaseQualified"] is False
 agent = manifest["referenceAgent"]
 assert agent["piPackage"] == "@earendil-works/pi-coding-agent" and agent["piVersion"] == "1.1.0"
 assert agent["delegatePackage"] == "@bermudi/pi-delegate" and agent["delegateVersion"] == "0.4.0"
-for key in ("packageLock", "supervisorProfile", "prepare", "launcher"):
+for key in ("packageLock", "supervisorProfile", "nativeTools", "prepare", "launcher"):
     assert (ROOT / agent[key]).is_file(), key
 agent_lock = json.loads((ROOT / agent["packageLock"]).read_text())
 for package, version in ((agent["piPackage"], agent["piVersion"]), (agent["delegatePackage"], agent["delegateVersion"])):
@@ -42,6 +42,20 @@ assert supervisor["pluginPackage"] == agent["delegatePackage"] and supervisor["p
 assert supervisor["childPolicy"]["parentChildFilesystemIsolationQualified"] is False
 assert supervisor["childPolicy"]["remoteAttemptBindingQualified"] is False
 assert supervisor["childPolicy"]["automaticCompaction"] == "upstream-default-observe-not-disabled"
+native_tools = json.loads((ROOT / agent["nativeTools"]).read_text())
+assert native_tools["schema"] == "agentlab.pi_native_tools.v1"
+assert set(native_tools["linux"]) == {"amd64", "arm64"}
+for tools in native_tools["linux"].values():
+    assert set(tools) == {"rg", "fd"}
+    for tool in tools.values():
+        assert tool["url"].startswith("https://github.com/") and "/releases/download/" in tool["url"]
+        assert all(re.fullmatch("[0-9a-f]{64}", tool[key]) for key in ("archiveSha256", "binarySha256"))
+        assert tool["licenses"]
+assert set(native_tools["noticeSha256"]) == {"rg", "fd"}
+for tools in native_tools["linux"].values():
+    for name, tool in tools.items():
+        assert set(tool["licenses"]) == set(native_tools["noticeSha256"][name])
+        assert all(re.fullmatch("[0-9a-f]{64}", value) for value in native_tools["noticeSha256"][name].values())
 assert manifest["defaultParticipant"] == {
     "topology": "supervisor-managed-isolated-subagent",
     "execution": "attempt-scoped-remote-mcp",

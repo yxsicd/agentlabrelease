@@ -130,6 +130,15 @@ def supervisor_launch_binding(config, state: Path, arguments: list[str]):
 def docker_base(config, workspace: Path, state: Path, network_name: str):
     runtime = Path(config["piRuntimeRoot"]).resolve(strict=True)
     case_input = Path(config["caseInputRoot"]).resolve(strict=True)
+    workspace = workspace.resolve(strict=True)
+    state = state.resolve(strict=True)
+    require(not workspace.is_relative_to(state) and not state.is_relative_to(workspace),
+            "workspace and participant state must be disjoint")
+    for readonly_root in (runtime, case_input):
+        for writable_root in (workspace, state):
+            require(not readonly_root.is_relative_to(writable_root)
+                    and not writable_root.is_relative_to(readonly_root),
+                    "read-only inputs overlap a writable mount")
     require(digest(runtime / "package-lock.json") == config["piPackageLockSha256"], "Pi runtime lock digest drifted")
     require(digest(case_input / "manifest.json") == config["participantManifestSha256"], "participant manifest digest drifted")
     if config.get("piSupervisor") is not None:
@@ -137,6 +146,13 @@ def docker_base(config, workspace: Path, state: Path, network_name: str):
         helper = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(helper)
         require(config["piSupervisor"] == helper.supervisor_profile(runtime), "supervisor extension tree or policy drifted")
+    if config.get("runtimePurpose") != "synthetic-transport-only":
+        spec = importlib.util.spec_from_file_location("agentlab_pi_prepare_tools", Path(__file__).with_name("prepare-participant-runtime.py"))
+        helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        tools = config.get("nativeTools") or {}
+        require(tools == helper.native_tools_binding(runtime, tools.get("architecture")), "native tool binding drifted")
+        native_tool_override_guard(state)
     require(workspace.is_dir() and state.is_dir(), "workspace and participant state must exist")
     return [
         "--read-only",
@@ -153,9 +169,14 @@ def docker_base(config, workspace: Path, state: Path, network_name: str):
         *mount(state, "/agent"),
         "--env", "HOME=/agent",
         "--env", "PI_CODING_AGENT_DIR=/agent",
-        "--env", "PATH=/runtime/node_modules/.bin:/usr/local/bin:/usr/bin:/bin",
+        "--env", "PATH=/runtime/bin:/runtime/node_modules/.bin:/usr/local/bin:/usr/bin:/bin",
         config["imageId"],
     ]
+
+
+def native_tool_override_guard(state: Path):
+    require(not (state / "bin").exists() and not (state / "bin").is_symlink(),
+            "participant state must not override pinned native tools")
 
 
 def run_probe(base, config, workspace: Path):
@@ -165,6 +186,10 @@ def run_probe(base, config, workspace: Path):
 set -eux
 test -r /agentlab/case/manifest.json
 test -x /runtime/node_modules/.bin/pi
+if test "$2" = native; then
+  /runtime/bin/rg --version
+  /runtime/bin/fd --version
+fi
 node -e "const n=require('node:net').createConnection({host:'agentlab-gateway',port:18765});n.setTimeout(5000);n.on('connect',()=>{n.end();process.exit(0)});n.on('timeout',()=>process.exit(72));n.on('error',()=>process.exit(73))"
 node -e "const fs=require('node:fs'),http=require('node:http');const m=JSON.parse(fs.readFileSync('/agent/models.json'));const k=m.providers['agentlab-ci'].apiKey;const q=http.get({host:'agentlab-gateway',port:18765,path:'/__agentlab_runtime_probe',headers:{Authorization:'Bearer '+k}},r=>process.exit(r.statusCode===204?0:75));q.setTimeout(5000,()=>process.exit(76));q.on('error',()=>process.exit(77))"
 node -e "const n=require('node:net').createConnection({host:'1.1.1.1',port:443});n.setTimeout(2000);n.on('connect',()=>process.exit(74));n.on('timeout',()=>process.exit(0));n.on('error',()=>process.exit(0))"
@@ -175,13 +200,14 @@ test ! -e /var/run/docker.sock
 if tr '\0' '\n' </proc/1/environ | grep -Eq '^(AGENTLAB_LM_GATEWAY_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY)='; then
   exit 71
 fi
-shift
+shift 2
 for forbidden_path in "$@"; do
   test ! -e "$forbidden_path"
 done
 '''
     completed = subprocess.run(
-        ["docker", "run", "--rm", *base[:-1], "--entrypoint", "/bin/sh", base[-1], "-c", script, "probe", sentinel, *forbidden],
+        ["docker", "run", "--rm", *base[:-1], "--entrypoint", "/bin/sh", base[-1], "-c", script, "probe", sentinel,
+         "native" if config.get("nativeTools") else "synthetic", *forbidden],
         capture_output=True,
         text=True,
     )
@@ -194,6 +220,7 @@ done
     return {
         "caseInputReadable": True,
         "piRuntimeReadable": True,
+        "nativeToolsExecuted": bool(config.get("nativeTools")),
         "workspaceWritable": True,
         "dockerSocketVisible": False,
         "operatorGatewayRelayReachable": True,

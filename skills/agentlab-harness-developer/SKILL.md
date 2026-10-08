@@ -95,6 +95,12 @@ fresh output). It verifies the actual Pi version and freezes the
 [supervisor profile](../../examples/real-code-agent/participant/supervisor-profile.json)
 with the complete plugin tree. The existing Participant/Docker launcher loads
 only that explicit extension and rechecks its binding before execution.
+For a fresh runtime add `--install-native-tools` to that same prepare command:
+it installs pinned `rg` and `fd` from public GitHub, verifies archive and binary
+digests, and preserves license notices. Platform is selected from the Docker
+image's architecture, not the host. Later preparation and dispatch recheck these
+immutable binaries; drift or participant-state overrides are refused. No model
+starts without these dependencies, and offline execution never downloads tools.
 
 The supervisor must delegate exactly the admitted child task, with `async:false`,
 one `explore` task, explicit child-only `systemPrompt`, tools
@@ -108,7 +114,11 @@ paths/counts and exact exits before closing the child session.
 Here `shared` is the dedicated contained workspace, not shared conversation.
 Parent/child share one process and can read the same mounted files; validate
 observed child read paths against the admitted public input. Do not claim
-parent-context filesystem confidentiality. Child automatic compaction is still
+parent-context filesystem confidentiality. Parent discovery restrictions are
+not inherited by the child: use a fresh empty workspace and Agent state, and
+check the child's effective system sections for unadmitted AGENTS, Skills,
+append prompts or other context before accepting the result. Child automatic
+compaction is still
 an upstream default, even with parent compaction disabled: count any extra model
 call and reject an unadmitted summary/context change. The outer native watchdog
 covers both Agents; tool-count checks are observations, not strict child

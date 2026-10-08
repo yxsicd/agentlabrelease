@@ -434,6 +434,89 @@ fn configured_invalid_skillsgit_stops_before_model_and_authority() {
 }
 
 #[test]
+fn pinned_native_tools_stage_both_assets_and_refuse_missing_drift_links_and_overrides() {
+    let code = r#"
+import hashlib,importlib.util,io,json,os,sys,tarfile,tempfile
+from pathlib import Path
+spec=importlib.util.spec_from_file_location('prepare',Path(sys.argv[1])/'scripts/prepare-participant-runtime.py')
+helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper)
+driver_spec=importlib.util.spec_from_file_location('driver',Path(sys.argv[1])/'scripts/run-pi-in-docker.py')
+driver=importlib.util.module_from_spec(driver_spec);driver_spec.loader.exec_module(driver)
+def sha(value):return hashlib.sha256(value).hexdigest()
+assets={};specs={}
+for name in ['rg','fd']:
+    binary=('fixture binary '+name).encode();buf=io.BytesIO()
+    with tarfile.open(fileobj=buf,mode='w:gz') as tar:
+        for filename,value in [(name+'/bin',binary),(name+'/LICENSE',b'fixture license'),('../never-extract',b'unadmitted')]:
+            member=tarfile.TarInfo(filename);member.size=len(value);tar.addfile(member,io.BytesIO(value))
+    url='https://github.com/fixture/'+name+'/releases/download/v1/fixture.tar.gz'
+    assets[url]=buf.getvalue();specs[name]={'version':'fixture','url':url,'archiveSha256':sha(assets[url]),
+        'member':name+'/bin','binarySha256':sha(binary),'licenses':['LICENSE'],
+        'noticeSha256':{'LICENSE':sha(b'fixture license')}}
+class Response(io.BytesIO):
+    def geturl(self):return 'https://github.com/fixture'
+helper.native_tools_specs=lambda architecture:specs
+helper.urllib.request.urlopen=lambda url,timeout:Response(assets[url])
+with tempfile.TemporaryDirectory() as directory:
+    root=Path(directory);runtime=root/'runtime';runtime.mkdir()
+    state=root/'state';workspace=root/'workspace';case=root/'case'
+    for path in [state,workspace,case]:path.mkdir()
+    (runtime/'package-lock.json').write_text('fixture-lock');(case/'manifest.json').write_text('{}')
+    config={'piRuntimeRoot':str(runtime),'caseInputRoot':str(case),'runtimePurpose':'synthetic-transport-only',
+            'piPackageLockSha256':sha((runtime/'package-lock.json').read_bytes()),
+            'participantManifestSha256':sha((case/'manifest.json').read_bytes()),'runtimeUser':'fixture',
+            'imageId':'fixture'}
+    assert '--read-only' in driver.docker_base(config,workspace,state,'fixture')
+    for writable_workspace,writable_state in [(runtime,state),(root,state),(workspace,runtime),
+                                               (case,state),(workspace,case),(state,root),(state,state)]:
+        try:driver.docker_base(config,writable_workspace,writable_state,'fixture')
+        except RuntimeError as error:assert 'overlap' in str(error) or 'disjoint' in str(error)
+        else:raise AssertionError('writable alias to an immutable input accepted')
+    driver.native_tool_override_guard(state)
+    (state/'bin').symlink_to(runtime)
+    try:driver.native_tool_override_guard(state)
+    except RuntimeError as error:assert 'override' in str(error)
+    else:raise AssertionError('state/bin override accepted')
+    try:helper.native_tools_binding(runtime,'amd64')
+    except ValueError as error:assert 'absent' in str(error)
+    else:raise AssertionError('missing tools accepted')
+    original=specs['fd']['archiveSha256'];specs['fd']['archiveSha256']='0'*64
+    try:helper.install_native_tools(runtime,'amd64')
+    except ValueError as error:assert 'archive digest differs' in str(error)
+    else:raise AssertionError('bad archive accepted')
+    assert not (runtime/'bin').exists() and not (runtime/'native-tool-licenses').exists()
+    specs['fd']['archiveSha256']=original
+    binding=helper.install_native_tools(runtime,'amd64')
+    assert set(binding['binaries'])=={'rg','fd'} and not (root/'never-extract').exists()
+    assert helper.install_native_tools(runtime,'amd64')==binding
+    notice=runtime/'native-tool-licenses/rg/LICENSE';notice.chmod(0o644);notice.write_bytes(b'');notice.chmod(0o444)
+    try:helper.native_tools_binding(runtime,'amd64')
+    except ValueError as error:assert 'official license content drifted' in str(error)
+    else:raise AssertionError('new baseline accepted altered official notice')
+    notice.chmod(0o644);notice.write_bytes(b'fixture license');notice.chmod(0o444)
+    (runtime/'bin/rg').chmod(0o755)
+    try:helper.native_tools_binding(runtime,'amd64')
+    except ValueError as error:assert 'immutable' in str(error)
+    else:raise AssertionError('writable tool accepted')
+    (runtime/'bin/rg').chmod(0o555)
+    (runtime/'bin/fd').unlink();(runtime/'bin/fd').symlink_to(runtime/'bin/rg')
+    try:helper.native_tools_binding(runtime,'amd64')
+    except ValueError as error:assert 'non-symlink' in str(error)
+    else:raise AssertionError('tool link accepted')
+    (runtime/'bin/fd').unlink();(runtime/'bin/fd').write_bytes(b'changed');(runtime/'bin/fd').chmod(0o555)
+    try:helper.native_tools_binding(runtime,'amd64')
+    except ValueError as error:assert 'binary drifted' in str(error)
+    else:raise AssertionError('binary drift accepted')
+"#;
+    let out = Command::new("python3")
+        .args(["-c", code])
+        .arg(std::env::current_dir().unwrap())
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{:?}", out);
+}
+
+#[test]
 fn explicit_supervisor_profile_binds_whole_plugin_tree_and_keeps_discovery_disabled() {
     let root = std::env::current_dir().unwrap();
     let code = r#"
