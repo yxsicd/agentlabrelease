@@ -1,5 +1,43 @@
 # Pre-execution source design quality review
 
+## Source-only publication reconciliation — 2026-10-08
+
+The restored execution reconciled the same task and feature worktree, rather
+than creating another owner or replaying the source fix. Full committed diff,
+development trailers and task-owned historical file digests identify commit
+`784ee84b70174fa0eaa1a4f2c44ecb5f07c8bed5` as the already completed minimal
+launcher change. The fresh eligibility guard accepts design-first **or** frozen
+design with a loop intent, while retaining revision-request/diagnostic-repair
+rejection, frozen-design digest pairing and generation/revision mode separation.
+Native intent/design admission and downstream budgets are unchanged.
+
+On reactivation the selected worktree was clean and ahead 1 / behind 0 of the
+same origin branch. Ordinary push advanced that branch from `70336955` to
+`784ee84`; subsequent fetch and exact remote-ref readback were equal, ahead/
+behind became 0/0, and all three changed files matched remote Git Blob bytes.
+Launcher SHA is
+`4ba31896254fc8d203110f442ea4e3e8cda79dc72a401195b3cd49758ce17dc4`;
+Rust author SHA is
+`1922be2f09ad4c3168a651a34542749faec245556d06e5f24407163d8337d4e9`.
+This proves source publication, not a new functional or runtime acceptance.
+
+The earlier task checkpoint records targeted author CLI tests 3/3 at
+`exec-00000000000000ae`, but full-package run `exec-00000000000000b0` failed
+three maintenance-operation tests. The baseline reproduction at `70336955`
+(`exec-00000000000000b5`) records the same three failures. Preserve both
+historical receipts; this stage has not rerun, added or newly qualified any
+implementation tests. The full package is not reported green.
+
+No constructor, experiment17/18, inference, TableGit business write, main merge
+or Harmony qualification was dispatched in this stage. The October 5 estimate
+82% and complete-cycle count zero remain historical checkpoints, not a fresh
+whole-system assessment. No maturity increment is justified by publishing an
+already committed source fix. Current method/program-analysis guidance was
+reviewed; no new reusable lesson requires a Skill change. The remaining work
+is a separately authorized validation/preparation stage with fresh runtime
+identity/admission and complete downstream acceptance, not replay of old
+exact-cut preflights merely to obtain another PASS.
+
 ## Experiment 16 and retained-stage reuse preflight
 
 Fresh plan SHA
