@@ -26,6 +26,12 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
    Apply the inventory-first network policy below; never guess a fixed subnet.
 4. Use the current [component installer](../../scripts/agentlab-composition-install.sh):
 
+   Its [immutable installer release](../../release/components/installer-eee1e1e-linux-x64.json)
+   binds the downloadable shell file, controller and environment lock. Download
+   the declared GitHub asset into the fresh private acquisition directory and
+   verify its declared size/SHA256 with a host checksum tool before execution.
+   It is the same bytes as this pinned repository's script, not another installer.
+
    ```bash
    bash scripts/agentlab-composition-install.sh online --cold --root /absolute/new/private/root
    bash scripts/agentlab-composition-install.sh inspect --root /absolute/private/root

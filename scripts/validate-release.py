@@ -90,7 +90,19 @@ lock = json.loads(lock_bytes)
 assert publication["environmentLockSha256"] == hashlib.sha256(lock_bytes).hexdigest()
 assert publication["sourceRevision"] == lock["sourceRevision"]
 installer = (ROOT / composition["installer"]).read_text()
+installer_release = json.loads((ROOT / composition["installerRelease"]).read_text())
+assert installer_release["schema"] == "agentlab.public_installer_release.v1"
+assert installer_release["sourceRepository"] == "https://github.com/yxsicd/agentlabrelease"
+assert re.fullmatch(r"[0-9a-f]{40}", installer_release["sourceRevision"])
+assert installer_release["artifact"].startswith("https://github.com/yxsicd/agentlabrelease/releases/download/")
+assert installer_release["sha256"] == hashlib.sha256(installer.encode()).hexdigest()
+assert installer_release["bytes"] == len(installer.encode())
+assert installer_release["coldPolicy"] == "all-new-required-no-warm-fallback"
+assert installer_release["fullHarnessReady"] is False
 control_descriptor = json.loads((ROOT / composition["control"]).read_text())
+assert installer_release["controller"] == control_descriptor["value"]
+assert installer_release["environmentLock"]["sha256"] == publication["environmentLockSha256"]
+assert installer_release["environmentLock"]["bytes"] == len(lock_bytes)
 assert control_descriptor["schema"] == "agentlab.component_update.v1" and control_descriptor["component"] == "control"
 assert control_descriptor["contracts"]["planWrites"] is False
 assert control_descriptor["contracts"]["planVerifiesInstalledBytes"] is False
