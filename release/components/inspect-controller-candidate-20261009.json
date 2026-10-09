@@ -11,11 +11,25 @@
   "qualification": {
     "source": "passed",
     "staticBuild": "passed",
-    "publicFinalUrlReadback": "pending",
+    "publicFinalUrlReadback": "not_run",
     "installedInspector": "not_run",
     "twoPlatformColdInstall": "not_run",
     "fullInstanceDeploy": "missing",
     "fullHarnessReady": false
+  },
+  "publication": {
+    "status": "blocked-before-release-creation",
+    "releaseCreated": false,
+    "assetsUploaded": 0,
+    "failure": "GitHub API HTTP403 primary rate limit",
+    "observedAt": "2026-10-09T09:08:47Z",
+    "authoritativeRemaining": 0,
+    "authoritativeResetUtc": "2026-10-09T09:24:04Z",
+    "rateLimitEndpointDisagreed": true,
+    "noRetryBeforeReset": true,
+    "finalUrlDownloadPerformed": false,
+    "immutableApiFlag": "not_observed_no_release_exists",
+    "intendedTagTarget": "887426098c3f35083c24ec1aa71fa6d07f42f60a"
   },
   "nextSourceSlice": {
     "owner": "existing Rust agentlabctl deploy module",

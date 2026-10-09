@@ -16,7 +16,9 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 ## Select and prepare
 
 The [inspector controller candidate](../../release/components/inspect-controller-candidate-20261009.json)
-is published independently from the current installation selection. It fixes
+is tracked independently from the current installation selection. Its static
+binary has been built, but GitHub API quota blocked Release creation; the graph
+records the failed publication and earliest permitted retry. It fixes
 order-only Docker mount comparison while preserving real drift and writable
 consumer refusal. Source/static/download evidence is not installed-inspector
 or cold-install acceptance. The current installer still selects f2e87a57; do
