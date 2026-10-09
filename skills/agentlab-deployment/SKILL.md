@@ -15,6 +15,14 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
+The [inspector controller candidate](../../release/components/inspect-controller-candidate-20261009.json)
+is published independently from the current installation selection. It fixes
+order-only Docker mount comparison while preserving real drift and writable
+consumer refusal. Source/static/download evidence is not installed-inspector
+or cold-install acceptance. The current installer still selects f2e87a57; do
+not replace its controller or borrow its cold proof to qualify this candidate.
+The candidate graph also records the next existing-deploy-owner SOURCE slice.
+
 1. Pin a full release-repository commit. Read its component descriptors and
    acceptance limits. Resolve mutable channels once, then use exact bytes/digests.
 2. Inspect Linux/WSL architecture, Docker access, storage, ports and existing

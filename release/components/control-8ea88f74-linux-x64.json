@@ -1,0 +1,49 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "control",
+  "value": {
+    "sourceRevision": "8ea88f749c8028bbe8eb6d0c50c789c9e2f07bec",
+    "platform": "linux-x64",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-8ea88f74-linux-x64/agentlabctl-8ea88f74-linux-x64",
+    "bytes": 4725064,
+    "sha256": "598f2629c0d63e1badca22297c363dcefb25bb3ad4289b7ef179e5cdaf4aed03"
+  },
+  "contracts": {
+    "planWrites": false,
+    "planVerifiesInstalledBytes": false,
+    "registryQualification": "historical-component-only-not-runtime-activation-or-deletion-authority",
+    "consumerMountComparison": "full-field-order-independent-multiset-no-deduplication",
+    "consumerProjectionDrift": "Docker consumer projection changed during admission",
+    "volumeIdentityDrift": "Docker volume identity changed during admission",
+    "coldPolicy": "all-new-required-no-warm-fallback",
+    "deploymentEffectsSupported": false,
+    "fullHarnessReady": false
+  },
+  "build": {
+    "sourceWorktreeClean": true,
+    "target": "x86_64-unknown-linux-musl",
+    "profile": "release-locked",
+    "rustc": "1.96.0",
+    "zig": "0.16.0",
+    "elf": "ELF64-LSB-x86-64-static-stripped",
+    "interpreterSegments": 0,
+    "dynamicSegments": 0,
+    "binaryExecutedDuringPublication": false
+  },
+  "qualification": {
+    "status": "source-static-qualified-candidate-only",
+    "nativeRustTests": 87,
+    "strictClippy": "passed",
+    "sourceFailureFirst": {
+      "exit": 101,
+      "passed": 13,
+      "failed": 2
+    },
+    "mountPermutationPairs": 36,
+    "originalHwlinuxFailureAttribution": "consistent-but-not-conclusively-confirmed",
+    "installedInspectorRevalidation": false,
+    "twoPlatformColdInstallRevalidation": false,
+    "runtimeLifecycleReady": false,
+    "fullHarnessReady": false
+  }
+}

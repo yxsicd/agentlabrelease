@@ -1,0 +1,37 @@
+{
+  "schema": "agentlab.controller_candidate.v1",
+  "status": "candidate-not-current-installation",
+  "controller": "release/components/control-8ea88f74-linux-x64.json",
+  "releaseTag": "control-8ea88f74-linux-x64",
+  "unchangedComposition": "release/candidates/40ecdf4b-linux-x64/publication.json",
+  "environmentLock": "release/candidates/40ecdf4b-linux-x64/environment-lock.json",
+  "currentInstaller": "release/components/installer-eee1e1e-linux-x64.json",
+  "currentInstallerSelectsCandidate": false,
+  "selectionPolicy": "explicit-candidate-only-no-current-installation-or-promotion",
+  "qualification": {
+    "source": "passed",
+    "staticBuild": "passed",
+    "publicFinalUrlReadback": "pending",
+    "installedInspector": "not_run",
+    "twoPlatformColdInstall": "not_run",
+    "fullInstanceDeploy": "missing",
+    "fullHarnessReady": false
+  },
+  "nextSourceSlice": {
+    "owner": "existing Rust agentlabctl deploy module",
+    "gap": "deploy currently accepts plan only; component registry is not instance-resource or deletion authority",
+    "deliverable": "private durable instance-operation journal binding exact plan bytes, daemon and public component identities",
+    "requiredProperties": [
+      "monotonic generation and CAS",
+      "reconcile interruptions and unknown effect outcomes",
+      "at-most-once effect identity",
+      "admit authenticated Owner and six SessionFS participants before runtime effects"
+    ],
+    "forbidden": [
+      "new lifecycle engine",
+      "Owner authority synthesized from JSON",
+      "deletion inferred from component history"
+    ],
+    "implementationNotIncluded": true
+  }
+}

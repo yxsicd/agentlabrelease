@@ -28,6 +28,33 @@ assert manifest["newInstanceNetwork"] == {
     "provisioningQualified": False,
 }, "new-instance-network-policy"
 assert index["fullInstanceReleaseQualified"] is False
+if manifest.get("controllerCandidate"):
+    candidate = json.loads((ROOT / manifest["controllerCandidate"]).read_text())
+    assert candidate["schema"] == "agentlab.controller_candidate.v1"
+    assert candidate["status"] == "candidate-not-current-installation"
+    assert candidate["currentInstallerSelectsCandidate"] is False
+    assert candidate["qualification"]["fullHarnessReady"] is False
+    assert candidate["qualification"]["installedInspector"] == "not_run"
+    assert candidate["qualification"]["twoPlatformColdInstall"] == "not_run"
+    assert candidate["qualification"]["fullInstanceDeploy"] == "missing"
+    for key in ("controller", "unchangedComposition", "environmentLock", "currentInstaller"):
+        assert (ROOT / candidate[key]).is_file(), key
+    assert candidate["unchangedComposition"] == manifest["components"]["composition"]["publication"]
+    assert candidate["environmentLock"] == manifest["components"]["composition"]["lock"]
+    assert candidate["currentInstaller"] == manifest["components"]["composition"]["installerRelease"]
+    candidate_control = json.loads((ROOT / candidate["controller"]).read_text())
+    assert candidate_control["contracts"]["fullHarnessReady"] is False
+    assert candidate_control["build"]["sourceWorktreeClean"] is True
+    assert candidate_control["build"]["target"] == "x86_64-unknown-linux-musl"
+    assert candidate_control["build"]["interpreterSegments"] == candidate_control["build"]["dynamicSegments"] == 0
+    assert candidate_control["qualification"]["installedInspectorRevalidation"] is False
+    assert candidate_control["qualification"]["twoPlatformColdInstallRevalidation"] is False
+    candidate_value = candidate_control["value"]
+    assert re.fullmatch(r"[0-9a-f]{40}", candidate_value["sourceRevision"])
+    assert re.fullmatch(r"[0-9a-f]{64}", candidate_value["sha256"])
+    assert candidate_value["bytes"] > 0
+    assert f'/releases/download/{candidate["releaseTag"]}/' in candidate_value["artifact"]
+    assert candidate_control["contracts"]["consumerMountComparison"] == "full-field-order-independent-multiset-no-deduplication"
 agent = manifest["referenceAgent"]
 assert agent["piPackage"] == "@earendil-works/pi-coding-agent" and agent["piVersion"] == "1.1.0"
 assert agent["delegatePackage"] == "@bermudi/pi-delegate" and agent["delegateVersion"] == "0.4.0"
