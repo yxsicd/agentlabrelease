@@ -11,13 +11,23 @@
   "qualification": {
     "source": "passed",
     "staticBuild": "passed",
-    "publicFinalUrlReadback": "not_run",
+    "publicFinalUrlReadback": "passed",
     "installedInspector": "not_run",
     "twoPlatformColdInstall": "not_run",
     "fullInstanceDeploy": "missing",
     "fullHarnessReady": false
   },
   "publication": {
+    "status": "published-final-url-verified",
+    "receipt": "docs/evidence/inspect-controller-publication-20261009.json",
+    "releaseCreated": true,
+    "assetsUploaded": 2,
+    "finalUrlDownloadPerformed": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true,
+    "intendedTagTarget": "887426098c3f35083c24ec1aa71fa6d07f42f60a"
+  },
+  "previousPublication": {
     "status": "blocked-before-release-creation",
     "releaseCreated": false,
     "assetsUploaded": 0,

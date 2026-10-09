@@ -17,8 +17,12 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 The [inspector controller candidate](../../release/components/inspect-controller-candidate-20261009.json)
 is tracked independently from the current installation selection. Its static
-binary has been built, but GitHub API quota blocked Release creation; the graph
-records the failed publication and earliest permitted retry. It fixes
+binary and descriptor are now published, with independent anonymous GitHub
+download size/SHA readback in the graph-selected receipt. The previous quota
+failure remains recorded. GitHub reports API immutable=false: assets are
+digest-pinned and never overwritten by this publisher, not platform-enforced
+immutable. Skills/documentation-only edits require Git synchronization, not a
+new executable release. This candidate fixes
 order-only Docker mount comparison while preserving real drift and writable
 consumer refusal. Source/static/download evidence is not installed-inspector
 or cold-install acceptance. The current installer still selects f2e87a57; do

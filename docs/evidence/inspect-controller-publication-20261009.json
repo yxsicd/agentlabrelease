@@ -1,0 +1,73 @@
+{
+  "schema": "agentlab.controller_publication_receipt.v1",
+  "status": "passed-publication-and-anonymous-byte-readback",
+  "observedAt": "2026-10-09T09:44:36Z",
+  "sourceRevision": "8ea88f749c8028bbe8eb6d0c50c789c9e2f07bec",
+  "sourceQualification": "existing-source87-and-strict-Clippy-not-rerun-during-publication",
+  "reusedRetainedBuild": true,
+  "rebuilt": false,
+  "release": {
+    "url": "https://github.com/yxsicd/agentlabrelease/releases/tag/control-8ea88f74-linux-x64",
+    "id": 407770311,
+    "tag": "control-8ea88f74-linux-x64",
+    "tagTarget": "887426098c3f35083c24ec1aa71fa6d07f42f60a",
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "quotaAdmission": {
+    "observedAt": "2026-10-09T09:42:26Z",
+    "exactReleaseLookupStatus": 404,
+    "exactResponseRemaining": 2673,
+    "rateLimitEndpointRemaining": 5000,
+    "endpointHeadersAuthoritative": true
+  },
+  "assets": [
+    {
+      "assetId": 624532908,
+      "bytes": 4725064,
+      "downloadedBytes": 4725064,
+      "downloadedSha256": "598f2629c0d63e1badca22297c363dcefb25bb3ad4289b7ef179e5cdaf4aed03",
+      "matchesApiAndRetainedArtifact": true,
+      "name": "agentlabctl-8ea88f74-linux-x64",
+      "sha256": "598f2629c0d63e1badca22297c363dcefb25bb3ad4289b7ef179e5cdaf4aed03",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-8ea88f74-linux-x64/agentlabctl-8ea88f74-linux-x64"
+    },
+    {
+      "assetId": 624532964,
+      "bytes": 1825,
+      "downloadedBytes": 1825,
+      "downloadedSha256": "229ad4794db7e64f1663fa7b5cd72cd34b89d909e7aa540caee412a88153ac91",
+      "matchesApiAndRetainedArtifact": true,
+      "name": "control-8ea88f74-linux-x64.json",
+      "sha256": "229ad4794db7e64f1663fa7b5cd72cd34b89d909e7aa540caee412a88153ac91",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-8ea88f74-linux-x64/control-8ea88f74-linux-x64.json"
+    }
+  ],
+  "download": {
+    "anonymous": true,
+    "usedFinalGitHubReleaseUrls": true,
+    "independentFromUpload": true,
+    "staticElfVerified": true,
+    "binaryExecuted": false,
+    "installed": false
+  },
+  "unchanged": {
+    "currentInstaller": true,
+    "runtimeImage": true,
+    "program": true,
+    "developerTools": true,
+    "harmonySdk": true,
+    "mcpgitIntegration": true
+  },
+  "acceptanceLimits": {
+    "installedInspectorQualified": false,
+    "twoPlatformColdInstallQualified": false,
+    "fullInstanceLifecycleQualified": false,
+    "fullHarnessReady": false,
+    "completeFlywheelQualified": false,
+    "productionPromotionQualified": false
+  },
+  "previousQuotaFailure": "retained in candidate graph previousPublication and Git history; not rewritten"
+}

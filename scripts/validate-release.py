@@ -55,6 +55,32 @@ if manifest.get("controllerCandidate"):
     assert candidate_value["bytes"] > 0
     assert f'/releases/download/{candidate["releaseTag"]}/' in candidate_value["artifact"]
     assert candidate_control["contracts"]["consumerMountComparison"] == "full-field-order-independent-multiset-no-deduplication"
+    if candidate["qualification"]["publicFinalUrlReadback"] == "passed":
+        publication_receipt = json.loads((ROOT / candidate["publication"]["receipt"]).read_text())
+        assert publication_receipt["schema"] == "agentlab.controller_publication_receipt.v1"
+        assert publication_receipt["status"] == "passed-publication-and-anonymous-byte-readback"
+        assert publication_receipt["sourceRevision"] == candidate_value["sourceRevision"]
+        assert publication_receipt["release"]["tag"] == candidate["releaseTag"]
+        assert publication_receipt["release"]["draft"] is False
+        assert publication_receipt["release"]["prerelease"] is True
+        assert publication_receipt["release"]["apiImmutable"] == candidate["publication"]["apiImmutable"]
+        assert publication_receipt["release"]["noOverwritePolicy"] is True
+        assert all(value is False for value in publication_receipt["acceptanceLimits"].values())
+        assert publication_receipt["download"]["anonymous"] is True
+        assert publication_receipt["download"]["usedFinalGitHubReleaseUrls"] is True
+        assert publication_receipt["download"]["binaryExecuted"] is False
+        assert publication_receipt["download"]["installed"] is False
+        assets = publication_receipt["assets"]
+        assert len(assets) == 2 and len({a["name"] for a in assets}) == 2
+        binary = next(a for a in assets if a["url"] == candidate_value["artifact"])
+        assert binary["bytes"] == candidate_value["bytes"] and binary["sha256"] == candidate_value["sha256"]
+        descriptor = next(a for a in assets if a["url"].endswith('/' + pathlib.Path(candidate["controller"]).name))
+        assert descriptor["bytes"] == (ROOT / candidate["controller"]).stat().st_size
+        assert descriptor["sha256"] == hashlib.sha256((ROOT / candidate["controller"]).read_bytes()).hexdigest()
+        for asset in assets:
+            assert asset["downloadedBytes"] == asset["bytes"]
+            assert asset["downloadedSha256"] == asset["sha256"]
+            assert asset["matchesApiAndRetainedArtifact"] is True
 agent = manifest["referenceAgent"]
 assert agent["piPackage"] == "@earendil-works/pi-coding-agent" and agent["piVersion"] == "1.1.0"
 assert agent["delegatePackage"] == "@bermudi/pi-delegate" and agent["delegateVersion"] == "0.4.0"
