@@ -316,6 +316,62 @@ runpy.run_path('scripts/validate-release.py')
 }
 
 #[test]
+fn cold_proof_rejects_reuse_old_downloads_false_readiness_and_unverified_hosts() {
+    let code = r#"
+import json,pathlib,runpy,sys
+original=pathlib.Path.read_text
+def altered(self,*args,**kwargs):
+    text=original(self,*args,**kwargs)
+    if self.name == 'public-cold-components-20261009.json':
+        value=json.loads(text); mutation=sys.argv[1]; target=value['targets'][0]
+        if mutation=='runtime': value['acceptanceLimits']['fullHarnessReady']=True
+        elif mutation=='digest': value['controller']['sha256']='0'*64
+        elif mutation=='reuse': target['coldInstall']['components'][0]['status']='reused'
+        elif mutation=='cache': target['coldInstall']['components'][0]['archiveStatus']='cache-hit'
+        elif mutation=='baseline': target['baseline']['images']=1
+        elif mutation=='daemon': target['coldInstall']['registry']['daemonId']='another-daemon'
+        elif mutation=='ready': target['independentReadback']['components'][0]['readySha256']='0'*64
+        elif mutation=='protected': target['protected']['identitiesUnchanged']=False
+        elif mutation=='exit': target['coldInstall']['exit']=1
+        elif mutation=='refusal': target['existingResourcesColdRefused']['exit']=0
+        elif mutation=='cleanup': target['testDaemonStopped']=False
+        return json.dumps(value)
+    return text
+pathlib.Path.read_text=altered
+runpy.run_path('scripts/validate-release.py')
+"#;
+    for mutation in [
+        "runtime",
+        "digest",
+        "reuse",
+        "cache",
+        "baseline",
+        "daemon",
+        "ready",
+        "protected",
+        "exit",
+        "refusal",
+        "cleanup",
+    ] {
+        let out = Command::new("python3")
+            .args(["-c", code, mutation])
+            .output()
+            .unwrap();
+        assert!(
+            !out.status.success(),
+            "invalid cold proof accepted: {mutation}"
+        );
+        // Require the dedicated gate, not a later checksum mismatch.
+        assert!(
+            String::from_utf8_lossy(&out.stderr)
+                .contains("AssertionError: public-cold-component-proof"),
+            "wrong failure: {mutation}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+}
+
+#[test]
 fn network_policy_refuses_fixed_subnets_missing_inventory_and_shared_renumbering() {
     let code = r#"
 import json,pathlib,runpy,sys

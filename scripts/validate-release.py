@@ -192,6 +192,73 @@ if composition.get("historicalQualification"):
         assert target["missingRegistryInspection"]["createdRegistry"] is False
         assert target["missingRegistryInspection"]["netNewFiles"] == 0
         assert target["protected"]["identitiesUnchanged"] is True and target["modelCalls"] == 0
+if manifest["acceptance"]["componentInstall"] == "passed-two-platform-public-cold-components":
+    assert composition.get("coldQualification"), "public-cold-component-proof"
+else:
+    assert manifest["acceptance"]["componentInstall"] == "two-host-revalidation-required-for-each-cut", "public-cold-component-proof"
+    assert not composition.get("coldQualification"), "public-cold-component-proof"
+if composition.get("coldQualification"):
+    try:
+        proof = json.loads((ROOT / composition["coldQualification"]).read_text())
+        assert proof["schema"] == "agentlab.public_cold_component_qualification.v1"
+        assert proof["status"] == "passed-two-platform-public-cold-components"
+        assert proof["installer"] == installer_release
+        assert proof["controller"] == control_descriptor["value"]
+        assert proof["lockSha256"] == publication["environmentLockSha256"]
+        assert proof["coverage"] == "component-install-only-not-full-instance"
+        assert set(proof["acceptanceLimits"]) == {
+            "fullHarnessReady", "physicalBlankHostQualified",
+            "authenticatedWorkspaceQualified", "fullInstanceUninstallQualified",
+            "productionPromotionQualified", "completeFlywheelQualified",
+        }
+        assert all(value is False for value in proof["acceptanceLimits"].values())
+        targets = proof["targets"]
+        assert {"linux-x64", "wsl2-linux-x64"} <= {t["platform"] for t in targets}
+        assert len({t["targetPeerId"] for t in targets}) == len(targets)
+        expected_packs = {c["slot"]: c for c in lock["components"] if c["enabled"] and c["platform"] == "linux-x64"}
+        expected_images = {c["slot"]: c for c in lock["images"] if c["enabled"] and c["platform"] == "linux-x64"}
+        for target in targets:
+            assert target["routeDecision"] == "peer_direct"
+            assert target["baseline"] == {"images": 0, "volumes": 0, "containers": 0, "newCache": True, "newConsumerConfiguration": True}
+            install = target["coldInstall"]
+            assert install["exit"] == 0 and re.fullmatch(r"exec-[0-9a-f]{16}", install["operation"])
+            assert install["entrypointSha256"] == installer_release["sha256"]
+            assert install["entrypointUrl"] == installer_release["artifact"]
+            assert install["controllerSha256"] == controller["sha256"]
+            registry = install["registry"]
+            assert registry["daemonId"] == target["daemonId"]
+            assert registry["generation"] == 1 and registry["installationPolicy"] == "all-new-required"
+            assert registry["pending"] is False and registry["runtimeActivated"] is False
+            assert registry["coverage"] == "component-qualification-only"
+            assert registry["fullHarnessReady"] is False and registry["coldEnvironmentQualified"] is False
+            assert {c["slot"] for c in install["components"]} == set(expected_packs)
+            assert {c["slot"] for c in install["images"]} == set(expected_images)
+            assert len(install["components"]) == len(expected_packs)
+            assert len(install["images"]) == len(expected_images)
+            for items, expected in ((install["components"], expected_packs), (install["images"], expected_images)):
+                for item in items:
+                    selected = expected[item["slot"]]
+                    assert item["status"] == "installed" and item["archiveSha256"] == selected["archiveSha256"]
+                    assert item["archiveStatus"] == item["descriptorStatus"] == "downloaded"
+                    if "volume" in item:
+                        assert item["volume"] == selected["volume"]
+                    else:
+                        assert item["imageId"] == selected["imageId"] and item["reference"] == selected["reference"]
+            readback = target["independentReadback"]
+            assert readback["exit"] == 0 and readback["imageId"] == install["images"][0]["imageId"]
+            assert {c["slot"] for c in readback["components"]} == set(expected_packs)
+            assert len(readback["components"]) == len(expected_packs)
+            for item in readback["components"]:
+                installed = next(c for c in install["components"] if c["slot"] == item["slot"])
+                assert item["readySha256"] == installed["archiveSha256"]
+                assert item["manifestSha256"] == installed["manifestSha256"]
+            assert target["existingRootColdRefused"]["exit"] == 2
+            assert target["existingResourcesColdRefused"]["exit"] != 0
+            assert target["existingResourcesColdRefused"]["registryCreated"] is False
+            assert target["protected"]["identitiesUnchanged"] is True
+            assert target["testDaemonStopped"] is True
+    except AssertionError as error:
+        raise AssertionError("public-cold-component-proof") from error
 for key, value in {
     "control_url": controller["url"], "control_sha256": controller["sha256"],
     "control_bytes": controller["bytes"], "lock_sha256": publication["environmentLockSha256"],

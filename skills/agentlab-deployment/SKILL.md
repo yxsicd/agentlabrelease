@@ -64,6 +64,14 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
    A receipt-export failure after commit explicitly reports
    `qualificationCommitted=true; receiptExportFailed=true`; inspect the durable
    record rather than assuming the prior selection is still current.
+   The [current cold-component evidence](../../docs/evidence/public-cold-components-20261009.json)
+   binds the independently downloaded installer Release and controller to two
+   initially empty Linux/WSL2 daemons, fresh caches/configuration, all-new
+   installation and actual image/READY/manifest readback. Both cold refusals
+   preserve existing state. Linux additionally passed exact component removal,
+   another public download/cold reinstall and a retained synthetic data marker.
+   These are component gates, not authenticated workspace or full-instance
+   lifecycle acceptance. Test daemons are stopped; private data/evidence remains.
    The [historical transaction evidence](../../docs/evidence/component-transactions-20261009.json)
    qualifies two unchanged online-wrapper runs and no-write history inspection
    on Linux and WSL2 for controller 01b77751, not the selected f2e87a57 cut.

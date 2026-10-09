@@ -26,6 +26,7 @@
       "installer": "scripts/agentlab-composition-install.sh",
       "installerRelease": "release/components/installer-eee1e1e-linux-x64.json",
       "control": "release/components/control-f2e87a57-linux-x64.json",
+      "coldQualification": "docs/evidence/public-cold-components-20261009.json",
       "historicalQualification": "docs/evidence/component-transactions-20261009.json"
     },
     "mcpgit": {
@@ -75,7 +76,7 @@
     "sessionImportQualified": false
   },
   "acceptance": {
-    "componentInstall": "two-host-revalidation-required-for-each-cut",
+    "componentInstall": "passed-two-platform-public-cold-components",
     "fullInstanceLifecycle": "not-published",
     "mcpgitSessionTemplateForkIntegration": "pending",
     "remoteSubagentAssessment": "pending",

@@ -43,6 +43,16 @@ all-new component installation policy and the native deployment planner, which
 is plan-only and cannot activate an instance. Each changed cut requires a new
 GitHub download and cold component installation on independent empty Linux and
 WSL2 daemons; reuse is supplementary. Source tests are not that qualification.
+The [current cold-component proof](evidence/public-cold-components-20261009.json)
+records a released-installer download and new-cache/configuration installation
+on empty Linux/WSL2 daemons, independent image/READY/manifest readback, explicit
+old-state cold refusals and unchanged protected shared daemons. Linux also
+passed exact component removal and another public-download cold reinstall with
+a retained synthetic data marker. This does not qualify full-instance uninstall,
+an authenticated workspace, a physically blank host or the complete flywheel.
+The test daemons are stopped while their private data/receipts are retained.
+Immutable component descriptors retain their original publication-time scope;
+the aggregate selects this later evidence without rewriting those descriptors.
 The [historical warm transaction proof](evidence/component-transactions-20261009.json)
 belongs to controller 01b77751 and its original entrypoint. It remains immutable
 evidence and is never borrowed to qualify this new controller or wrapper.
