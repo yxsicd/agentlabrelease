@@ -37,16 +37,15 @@ configuration/credential bytes and modes, data identity and activation receipt.
 Changed or unqualified activation must not be silently recorded as unchanged.
 Credentials and raw private receipts remain on the selected private root.
 
-The selected [controller component](../release/components/control-01b77751-linux-x64.json)
-is independent of the unchanged runtime composition. Its new
-[transaction qualification](evidence/component-transactions-20261009.json)
-passed the unchanged published online wrapper twice on Linux and WSL2: four
-packs and one runtime image reused, generation 1 retained, protected Docker
-identities unchanged, historical inspection without new files, and missing
-registry refusal without creation. These are warm-component qualifications;
-source process-crash tests are not real cold-extraction recovery acceptance.
-The descriptor remains the immutable component cut; the aggregate manifest
-selects this separate runtime evidence without rebuilding component artifacts.
+The selected [controller component](../release/components/control-f2e87a57-linux-x64.json)
+is independent of the unchanged runtime composition. It adds an explicit
+all-new component installation policy and the native deployment planner, which
+is plan-only and cannot activate an instance. Each changed cut requires a new
+GitHub download and cold component installation on independent empty Linux and
+WSL2 daemons; reuse is supplementary. Source tests are not that qualification.
+The [historical warm transaction proof](evidence/component-transactions-20261009.json)
+belongs to controller 01b77751 and its original entrypoint. It remains immutable
+evidence and is never borrowed to qualify this new controller or wrapper.
 It preserves native no-write planning and read-only tree verification with no-copy mounts,
 consumer/ownership admission and uniquely fenced fresh-volume cleanup. Its plan
 explicitly leaves payload/helper/template qualification unperformed. A real

@@ -140,14 +140,17 @@ if qualification["status"] == "passed-two-host-component-admission-not-full-harn
             assert re.fullmatch(r"[0-9a-f]{64}", target["fixture"]["executedToolSha256"])
         for gate in ("coldInstall", "activeReadOnlyReuse", "stoppedWritableConsumerDenied", "driftDeniedWithoutRepair", "exactCleanup"):
             assert target["fixture"][gate] is True
-if composition.get("qualification"):
-    proof = json.loads((ROOT / composition["qualification"]).read_text())
+if composition.get("historicalQualification"):
+    # Historical warm evidence is checked against its own immutable controller
+    # and entrypoint, never borrowed as qualification of the selected new cut.
+    historical_controller = json.loads((ROOT / "release/components/control-01b77751-linux-x64.json").read_text())["value"]
+    proof = json.loads((ROOT / composition["historicalQualification"]).read_text())
     assert proof["schema"] == "agentlab.component_transaction_qualification.v1"
     assert proof["status"] == "passed-two-host-warm-component-transactions"
     assert re.fullmatch(r"[0-9a-f]{40}", proof["executedSourceRevision"])
-    assert proof["entrypoint"]["sha256"] == hashlib.sha256((ROOT / composition["installer"]).read_bytes()).hexdigest()
+    assert proof["entrypoint"]["sha256"] == "f28431a340f6bfdfe38571783df0f5be44babb1f504bae968d417652b8d2231c"
     for key in ("sourceRevision", "artifact", "bytes", "sha256"):
-        assert proof["controller"][key] == controller[key]
+        assert proof["controller"][key] == historical_controller[key]
     assert proof["lockSha256"] == publication["environmentLockSha256"]
     assert proof["coldInstallQualified"] is False
     assert set(proof["acceptanceLimits"]) == {
@@ -164,7 +167,7 @@ if composition.get("qualification"):
     for target in targets:
         assert target["routeDecision"] == "peer_direct" and target["daemonId"]
         assert target["mode"] == "public-online-wrapper-with-verified-public-cache"
-        assert target["controllerSha256"] == controller["sha256"]
+        assert target["controllerSha256"] == historical_controller["sha256"]
         assert target["lockSha256"] == proof["lockSha256"]
         assert target["packsReused"] == expected_packs and target["imagesReused"] == expected_images
         assert target["pending"] is False and target["registryAndInstallReceiptBytesUnchanged"] is True

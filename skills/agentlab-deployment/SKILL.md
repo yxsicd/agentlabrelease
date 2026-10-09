@@ -27,13 +27,21 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 4. Use the current [component installer](../../scripts/agentlab-composition-install.sh):
 
    ```bash
-   bash scripts/agentlab-composition-install.sh online --plan --root /absolute/private/root
-   bash scripts/agentlab-composition-install.sh online --root /absolute/private/root
+   bash scripts/agentlab-composition-install.sh online --cold --root /absolute/new/private/root
    bash scripts/agentlab-composition-install.sh inspect --root /absolute/private/root
    bash scripts/agentlab-composition-install.sh inspect-registry --root /absolute/private/root
    ```
 
-   The first command acquires exact public bytes and reports image/volume
+   Primary acceptance for every changed published cut is a new GitHub download
+   and `online --cold` installation. Its dedicated root/cache and registry must
+   be absent; every selected image and component volume must be absent on the
+   explicitly selected local daemon. Keep an operator-supplied Docker endpoint
+   private and never switch the caller's default Docker context. The installer
+   refuses existing state and any raced reuse; it does not delete old resources
+   or retry as warm. This is component cold installation, not whole-host or
+   full-Harness qualification. Uninstall-preserve/reinstall is an independent
+   gate; existing verified reuse is supplementary, never the primary evidence.
+   Optional `online --plan` acquires exact public bytes and reports image/volume
    identity plus active/stopped shared references without Docker writes. It
    does write its dedicated acquisition root/cache. `inspect` reads that
    existing root without creating files/resources. Neither plan validates
@@ -50,9 +58,10 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
    A receipt-export failure after commit explicitly reports
    `qualificationCommitted=true; receiptExportFailed=true`; inspect the durable
    record rather than assuming the prior selection is still current.
-   The [current transaction evidence](../../docs/evidence/component-transactions-20261009.json)
+   The [historical transaction evidence](../../docs/evidence/component-transactions-20261009.json)
    qualifies two unchanged online-wrapper runs and no-write history inspection
-   on Linux and WSL2. It is warm reuse with a fresh registry, not cold package
+   on Linux and WSL2 for controller 01b77751, not the selected f2e87a57 cut.
+   It is warm reuse with a fresh registry, not cold package
    installation or a complete runtime upgrade/rollback/uninstall qualification.
    Verified public executables use mode `0555` inside private acquisition
    directories; credentials remain private. This lets a read-only Docker helper

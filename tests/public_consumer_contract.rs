@@ -13,7 +13,7 @@ fn component_transaction_entrypoint_is_required_and_never_runtime_activation() {
     assert!(source.contains("composition inspect-registry --registry"));
     assert!(source.contains("fullHarnessReady\":false"));
     let descriptor =
-        fs::read_to_string("release/components/control-01b77751-linux-x64.json").unwrap();
+        fs::read_to_string("release/components/control-f2e87a57-linux-x64.json").unwrap();
     assert!(descriptor.contains("frozen-local-unix-only"));
     assert!(descriptor.contains("qualificationCommitted=true; receiptExportFailed=true"));
     assert!(descriptor.contains("\"runtimeLifecycleReady\": false"));
@@ -78,6 +78,72 @@ impl Drop for Fixture {
 const INVENTORY: &str = "scripts/agentlab-resource-inventory.sh";
 const INSTALL: &str = "scripts/agentlab-composition-install.sh";
 const MCPGIT_INSTALL: &str = "scripts/agentlab-mcpgit-prod-install.sh";
+
+#[test]
+fn cold_entrypoint_refuses_existing_root_cache_and_inspection_without_mutation() {
+    let f = Fixture::new();
+    f.docker("echo DOCKER_MUST_NOT_RUN >&2; exit 91");
+    let root = f.0.join("absent-root");
+    for action in ["inspect", "inspect-registry"] {
+        let result = f.run(
+            INSTALL,
+            &[action, "--cold", "--root", root.to_str().unwrap()],
+        );
+        assert_eq!(result.status.code(), Some(2));
+        assert!(!root.exists());
+        assert!(!String::from_utf8_lossy(&result.stderr).contains("DOCKER_MUST_NOT_RUN"));
+    }
+    fs::create_dir(&root).unwrap();
+    let marker = root.join("preserve");
+    fs::write(&marker, b"existing data").unwrap();
+    let existing = f.run(
+        INSTALL,
+        &["online", "--cold", "--root", root.to_str().unwrap()],
+    );
+    assert_eq!(existing.status.code(), Some(2));
+    assert_eq!(fs::read(&marker).unwrap(), b"existing data");
+    assert_eq!(fs::read_dir(&root).unwrap().count(), 1);
+    let absent = f.0.join("other-root");
+    let cache = f.0.join("existing-cache");
+    fs::create_dir(&cache).unwrap();
+    let denied = f.run(
+        INSTALL,
+        &[
+            "online",
+            "--cold",
+            "--root",
+            absent.to_str().unwrap(),
+            "--cache-dir",
+            cache.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(denied.status.code(), Some(2));
+    assert!(!absent.exists());
+    let duplicate = f.run(
+        INSTALL,
+        &[
+            "online",
+            "--cold",
+            "--cold",
+            "--root",
+            absent.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(duplicate.status.code(), Some(2));
+    assert!(!absent.exists());
+}
+
+#[test]
+fn cold_flag_reaches_existing_native_plan_and_install_owner() {
+    let source = fs::read_to_string(INSTALL).unwrap();
+    assert!(source.contains("cold_args=(--cold)"));
+    assert!(source.contains("--platform linux-x64 \"${cold_args[@]}\""));
+    assert!(
+        source.contains("--registry \"${root}/component-registry\" \\\n  \"${cold_args[@]}\" \\")
+    );
+    assert!(!source.contains("docker volume rm") && !source.contains("docker image rm"));
+    assert!(source.contains("--cold requires absent acquisition root and cache"));
+}
 
 #[test]
 fn verified_public_executable_is_container_readable_without_writable_bits() {

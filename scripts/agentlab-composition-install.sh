@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-version="40ecdf4b"
-control_url="https://github.com/yxsicd/agentlabrelease/releases/download/control-01b77751-linux-x64/agentlabctl-01b77751-linux-x64"
-control_sha256="c7ea030447d77c0f9530cf65b94a1dbd5852ea85f45aa59b86b0d3bb81c788ff"
-control_bytes="4361888"
+version="f2e87a57"
+control_url="https://github.com/yxsicd/agentlabrelease/releases/download/control-f2e87a57-linux-x64/agentlabctl-f2e87a57-linux-x64"
+control_sha256="01f1fbc1b3f31675306e042ae50479e71c3ad009252e1bfa73c8e52cd0bfca0a"
+control_bytes="4719496"
 lock_url="https://github.com/yxsicd/agentlabrelease/releases/download/candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64/environment-lock.json"
 lock_sha256="ac9192c09ee9e3488f2e874ddeb7b5d5dc0ec422aa09e728a49cb037f1ef333e"
 lock_bytes="6515"
@@ -12,14 +12,17 @@ lock_bytes="6515"
 usage() {
   cat <<'EOF'
 Usage:
-  agentlab-composition-install.sh online [--plan] [--root DIR] [--cache-dir DIR]
-  agentlab-composition-install.sh offline [--plan] --control FILE --lock FILE [--root DIR] [--cache-dir DIR]
+  agentlab-composition-install.sh online [--cold] [--plan] [--root DIR] [--cache-dir DIR]
+  agentlab-composition-install.sh offline [--cold] [--plan] --control FILE --lock FILE [--root DIR] [--cache-dir DIR]
   agentlab-composition-install.sh inspect --root DIR
   agentlab-composition-install.sh inspect-registry --root DIR
 
 --plan acquires verified assets into the private root/cache, then produces a
 no-Docker-write plan instead of installing. inspect uses already acquired bytes
 and creates no files or Docker resources. A plan does not verify installed bytes.
+--cold requires a previously absent private root/cache, new component registry,
+and every selected image and pack absent on the chosen daemon. It refuses reuse;
+it never deletes an existing component or retries as a warm installation.
 
 Online bootstrap verifies the static agentlabctl with a host checksum command.
 The trusted control binary then performs all remaining downloads, verification,
@@ -45,8 +48,10 @@ cache_dir=""
 control=""
 lock=""
 plan=false
+cold=false
 while (( $# )); do
   case "$1" in
+    --cold) [[ "${cold}" == false ]] || { echo "duplicate --cold" >&2; exit 2; }; cold=true; shift ;;
     --plan) plan=true; shift ;;
     --root) root="${2:?--root requires a directory}"; shift 2 ;;
     --cache-dir) cache_dir="${2:?--cache-dir requires a directory}"; shift 2 ;;
@@ -77,6 +82,16 @@ private_directory "${root}" && private_directory "${cache_dir}" || {
   echo "--root and --cache-dir must be dedicated absolute directories without symlink ancestors" >&2
   exit 2
 }
+cold_args=()
+if [[ "${cold}" == true ]]; then
+  [[ "${action}" == online || "${action}" == offline ]] || {
+    echo "--cold is only valid for online/offline acquisition and installation" >&2; exit 2;
+  }
+  [[ ! -e "${root}" && ! -L "${root}" && ! -e "${cache_dir}" && ! -L "${cache_dir}" ]] || {
+    echo "--cold requires absent acquisition root and cache; existing state is preserved" >&2; exit 2;
+  }
+  cold_args=(--cold)
+fi
 [[ "$(uname -s)" == Linux && "$(uname -m)" == x86_64 ]] || {
   echo "this component cut requires Linux x86_64 (including WSL2)" >&2
   exit 2
@@ -201,12 +216,13 @@ docker version >/dev/null
   > "${root}/receipts/fetch.json"
 
 if [[ "${plan}" == true ]]; then
-  exec "${control}" composition plan-docker --dir "${root}/acquired" --platform linux-x64
+  exec "${control}" composition plan-docker --dir "${root}/acquired" --platform linux-x64 "${cold_args[@]}"
 fi
 
 "${control}" composition install-docker \
   --dir "${root}/acquired" --platform linux-x64 \
   --registry "${root}/component-registry" \
+  "${cold_args[@]}" \
   --receipt "${root}/receipts/install.json" \
   > "${root}/receipts/install.stdout.json"
 
