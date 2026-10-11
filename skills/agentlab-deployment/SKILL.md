@@ -13,6 +13,19 @@ Complete the human -> Agent -> GitHub journey using this public repository and
 its referenced public GitHub releases. Do not require AWMCP, a LAN, a particular
 hostname, private source, an existing AgentLab instance, or maintainer credentials.
 
+## Fast route: four deployment scenarios for a fresh Code Agent
+
+**Start with the [four-scenario Code Agent playbook](references/four-scenario-code-agent-playbook.md).** It is the shortest decision route for a machine that needs installing, upgrading, rebuilding or resetting. Choose based on actual installed resources and compatibility, not on hardcoded old-version uninstall recipes.
+
+| Path | When | What changes | Data |
+| --- | --- | --- | --- |
+| **S1 New install** | Compatible host, no existing AgentLab state | Install the selected public release, start and verify what it really supports | Create new |
+| **S2 Compatible upgrade** | Existing service/data contract still valid | Change only updated programs/config, restart affected services | Keep in place |
+| **S3 Incompatible rebuild** | In-place upgrade unsafe, useful data remains | Retain/export data, replace exclusively owned old execution, start fresh, migrate supported data | Preserve recoverable |
+| **S4 Wipe and reinstall** | User explicitly allows loss of this instance's data | Remove exactly owned resources and authorized data, then install fresh | Purge selected set |
+
+Use progressive discovery and concise before/after evidence. Unknown or shared resources are retained; a wipe of **one instance** is never blanket host cleanup. Normal single-machine operations do **not** require the complete two-platform B0–B6 release qualification process. The following sections document current executable component acquisition, detailed resource safety and the important published-capability limits; load them only as required by the chosen path.
+
 ## Select and prepare
 
 The [inspector controller candidate](../../release/components/inspect-controller-candidate-20261009.json)
