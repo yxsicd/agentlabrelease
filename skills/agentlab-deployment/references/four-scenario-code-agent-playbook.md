@@ -93,6 +93,25 @@ Use this when old and new service/data contracts are compatible, or there is a s
 
 Use the selected public release's documented upgrade command **if it actually exists**. The present public component installer uses --cold for a new component installation; **do not run that against an existing instance as an upgrade shortcut**. If no compatible supported upgrade route exists, choose S3 or return a precise unsupported-capability result; do not guess a deploy upgrade CLI.
 
+#### Reuse the MCPGit Program release-line upgrader when MCPGit is the affected component
+
+MCPGit **already implements its own Program upgrade lifecycle**. Do not build a second Program updater inside AgentLab or manually replace an MCPGit container when the installed instance is eligible for MCPGit's native upgrade route.
+
+Read the *current*, public [MCPGit Program upgrade instructions](https://github.com/yxsicd/mcpgitrelease/blob/main/docs/PROGRAM_UPGRADES.md) and the [supervisor same-port upgrade contract](https://github.com/yxsicd/MCPGit/blob/main/docs/SUPERVISOR_PROGRAM_UPGRADES.md) as needed. For a standard MCPGit installation that has a verified host-side `mcpgitctl` instance receipt:
+
+~~~sh
+mcpgitctl --instance NAME upgrade --check
+mcpgitctl --instance NAME upgrade
+~~~
+
+The first command is a no-activation candidate check; the second uses **Program-only** replacement while preserving the recorded data volume, host bind, config, credentials and tool paths. It must refuse a changed Base/Tools/assembly contract rather than silently turning into a destructive full rebuild. A first complete installation establishes the image-bound baseline. Custom networks/mounts/labels or owners with their own deployment controls may require their reviewed owner-provided adapter instead of the generic facade.
+
+For a qualifying long-lived MCPGit instance, the host-side `mcpgitctl --instance NAME auto-upgrade enable` can be configured **once** to follow promoted production releases. Where an installation *actually has* `mcpgit-supervisor` as the running PID 1 with its protected `/admin` API, use that controller's authenticated check/upgrade/rollback and exact status readback for in-container Program hot swaps. Never assume every historical MCPGit container has the supervisor; inspect the deployed runtime and release contract first.
+
+Release selection is not "GitHub Latest". Immutable Program artifacts flow **dev → main → explicit prod promotion**; the default production pointer is `offline-latest.json`. Ordinary changes to dev/main pointers must not be interpreted as production rollout. An update cannot undo committed data/schema migrations; if the current program is not compatible with the stored data, switch to **S3** and preserve recoverable data before any migration.
+
+**Scope:** these are MCPGit **Program** lifecycle operations. They do not magically install or upgrade the complete AgentLab Harness, Pi, SessionFS or other components. Keep each component under its actual owner, and let S2 coordinate only the affected, already-supported update mechanism.
+
 ### S3 — Rebuild incompatible programs while retaining data
 
 Use when a major layout/runtime/API change makes S2 riskier or slower but projects, knowledge, histories or other data might remain valuable.
