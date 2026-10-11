@@ -17,6 +17,8 @@ prerequisite.
   Prefer supervisor-managed, context-isolated subagents assessed through remote
   Participant MCP; no independently configured second model key is required.
 
+For a **new-machine Code Agent asked to install, upgrade, rebuild or wipe**, start with the [four-scenario deployment playbook](skills/agentlab-deployment/references/four-scenario-code-agent-playbook.md). Inspect actual state, choose S1/S2/S3/S4, and use the fastest supported public path while preserving data unless its removal was explicitly authorized. The playbook describes how to decide; it does not claim that the current public release already provides complete-instance lifecycle commands.
+
 For an explicit **local Pi, first-two-knowledge-rings** request, go directly to
 [bounded local knowledge construction](skills/agentlab-harness-developer/SKILL.md#bounded-local-knowledge-construction).
 That section owns the existing launch command and prerequisites. Its Pi is a
