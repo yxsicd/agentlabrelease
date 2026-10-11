@@ -6,6 +6,11 @@ operating its repository-understanding/evaluation flywheel.
 **Start at [SKILL.md](SKILL.md).** A consumer never needs the private AgentLab
 maintenance repository, a specific host, a LAN, or maintainer credentials.
 
+**New-machine Code Agent:** [Choose one of four paths — clean install, compatible upgrade,
+rebuild with retained data, or full instance wipe + reinstall](skills/agentlab-deployment/references/four-scenario-code-agent-playbook.md).
+Start with a bounded inspection, then take the fastest safe route. This is an
+operational decision guide, not a claim of unshipped full-instance functionality.
+
 | Human request | Agent entry |
 | --- | --- |
 | Deploy, inspect, upgrade, roll back or uninstall | [Deployment Skill](skills/agentlab-deployment/SKILL.md) |
