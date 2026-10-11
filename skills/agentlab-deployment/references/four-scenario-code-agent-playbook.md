@@ -2,6 +2,8 @@
 
 **Purpose:** A fresh Code Agent on a new or existing machine should choose the shortest safe path to a working AgentLab installation. Optimize for real service availability and preservation of useful data, not an elaborate deployment framework.
 
+**Current public capability (2026-10-11):** The selected public release qualifies **component cold installation only**. Its manifest explicitly states **fullInstanceLifecycle: not-published**. S1 on a blank machine must NOT be reported as a working complete AgentLab Harness until a real publicly supported instance bootstrap and functional health check succeed. S2–S4 remain operational reasoning paths, not promises of currently shipped one-command lifecycle APIs.
+
 **中文目标：** 新机器上的 Code Agent 先观察现场，再在四种路径中自主选择：全新安装、兼容升级、保留数据重建、彻底清除重装。以最少必要操作完成任务。版本和资源差异由 Agent 基于证据判断，不使用固定历史版本脚本。
 
 **Entry:** [AgentLab public SKILL](../../../SKILL.md) → [deployment SKILL](../SKILL.md) → this playbook. All public release instructions and binaries come from the same pinned Git commit and its referenced immutable assets. No private maintainer repository, fixed hostname, AWMCP endpoint or pre-existing AgentLab is a prerequisite.
