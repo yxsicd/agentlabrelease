@@ -1,0 +1,44 @@
+{
+  "schema": "agentlab.controller_candidate.v1",
+  "status": "candidate-not-current-installation",
+  "controller": "release/components/control-08d367d1-linux-x64.json",
+  "releaseTag": "control-08d367d1-linux-x64",
+  "unchangedComposition": "release/candidates/40ecdf4b-linux-x64/publication.json",
+  "environmentLock": "release/candidates/40ecdf4b-linux-x64/environment-lock.json",
+  "currentInstaller": "release/components/installer-eee1e1e-linux-x64.json",
+  "currentInstallerSelectsCandidate": false,
+  "selectionPolicy": "explicit-candidate-only-no-current-installation-or-promotion",
+  "qualification": {
+    "source": "passed",
+    "nativeTests": 87,
+    "staticBuild": "passed",
+    "actualSourceStartup": "passed",
+    "publicFinalUrlReadback": "passed",
+    "installedInspector": "not_run",
+    "twoPlatformColdInstall": "not_run",
+    "fullInstanceDeploy": "missing",
+    "fullHarnessReady": false
+  },
+  "publication": {
+    "status": "published-final-url-verified",
+    "receipt": "docs/evidence/control-candidate-publication-20261012.json",
+    "releaseCreated": true,
+    "assetsUploaded": 2,
+    "finalUrlDownloadPerformed": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true,
+    "intendedTagTarget": "3020679bf95934de68ff8e1ee9813f587f2ab6c4"
+  },
+  "previousCandidate": "release/components/inspect-controller-candidate-20261009.json",
+  "nextSourceSlice": {
+    "owner": "existing Rust agentlabctl deploy module and owning AgentLab private authority readers",
+    "gap": "Trusted Owner/Session/current instance inputs and full lifecycle remain unavailable; component registry is not deletion or activation authority",
+    "deliverable": "Connect existing authenticated request context and qualified Owner/Session receipts to existing deployment controller before any effect",
+    "forbidden": [
+      "new lifecycle engine",
+      "Owner authority synthesized from JSON",
+      "deletion inferred from component history"
+    ],
+    "implementationNotIncluded": true
+  }
+}

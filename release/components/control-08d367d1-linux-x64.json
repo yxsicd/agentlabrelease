@@ -1,0 +1,49 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "control",
+  "value": {
+    "sourceRevision": "08d367d18e4c03161dc70eeae1907dd2b0372972",
+    "platform": "linux-x64",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-08d367d1-linux-x64/agentlabctl-08d367d1-linux-x64",
+    "bytes": 5535208,
+    "sha256": "40e82237a24269b46b5bc37e31b370f5de630902f41746eb0b9583da39c626a9"
+  },
+  "contracts": {
+    "planWrites": false,
+    "planVerifiesInstalledBytes": false,
+    "registryQualification": "historical-component-only-not-runtime-activation-or-deletion-authority",
+    "consumerMountComparison": "full-field-order-independent-multiset-no-deduplication",
+    "coldPolicy": "all-new-required-no-warm-fallback",
+    "nativeDeploymentInputSchema": "agentlab.deploy_bundle.v3",
+    "admissionObservations": "independent-gates-do-not-authenticate-owner-or-grant-effects",
+    "deploymentEffectsSupported": false,
+    "fullHarnessReady": false
+  },
+  "build": {
+    "sourceWorktreeClean": true,
+    "target": "x86_64-unknown-linux-musl",
+    "profile": "release-locked-offline",
+    "rustc": "1.96.0",
+    "builder": "scripts/agentlabctl-build.sh",
+    "builderSha256": "f2b7df4d7de6ca97a504ae22da1079b931fdcc596b867a7f7703cc29f463a474",
+    "staticCrt": true,
+    "relocationModel": "static",
+    "interpreterSegments": 0,
+    "neededDynamicLibraries": 0,
+    "binaryExecutedDuringQualification": true
+  },
+  "qualification": {
+    "status": "source-native-static-qualified-candidate-only",
+    "nativeRustTests": 87,
+    "nativeTestsFailed": 0,
+    "actualPublicLockDigestStartup": "passed",
+    "strictClippy": "passed",
+    "earlierStaticFailuresRetained": true,
+    "earlierStaticStartupExit": -11,
+    "installedInspectorRevalidation": false,
+    "twoPlatformColdInstallRevalidation": false,
+    "runtimeLifecycleReady": false,
+    "fullHarnessReady": false,
+    "strictClippyEvidence": "4d69d791 bin-and-tests strict pass; no Rust product/test changes through08d367d1"
+  }
+}

@@ -15,19 +15,23 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
-The [inspector controller candidate](../../release/components/inspect-controller-candidate-20261009.json)
+The [control candidate](../../release/components/control-candidate-20261012.json)
 is tracked independently from the current installation selection. Its static
-binary and descriptor are now published, with independent anonymous GitHub
-download size/SHA readback in the graph-selected receipt. The previous quota
-failure remains recorded. GitHub reports API immutable=false: assets are
-digest-pinned and never overwritten by this publisher, not platform-enforced
-immutable. Skills/documentation-only edits require Git synchronization, not a
-new executable release. This candidate fixes
-order-only Docker mount comparison while preserving real drift and writable
-consumer refusal. Source/static/download evidence is not installed-inspector
-or cold-install acceptance. The current installer still selects f2e87a57; do
-not replace its controller or borrow its cold proof to qualify this candidate.
-The candidate graph also records the next existing-deploy-owner SOURCE slice.
+binary and byte-exact descriptor are published; the selected sealed receipt
+binds anonymous final GitHub download size/SHA, ELF and source identities.
+Clean-source native87/87 and actual static lock-digest startup passed.
+This qualifies the candidate's source and distribution, while installed
+inspector, two-platform cold and full-instance lifecycle remain unrun.
+The current installer still selects f2e87a57. Select this candidate explicitly;
+its component registry and independent admission observations do not establish
+authenticated Owner/Session, deployment effects or deletion authority.
+GitHub reports API immutable=false; digest pins and no-overwrite publisher
+policy preserve asset identity. Earlier static/interpreter/startup failures are
+retained. The [previous inspector candidate](../../release/components/inspect-controller-candidate-20261009.json)
+and its original quota/failure evidence remain historical entries.
+Skills-only changes synchronize Git rather than uploading executable assets.
+The next owning deployment slice connects current-qualified inputs and trusted
+Owner/Session receipts through existing AgentLab interfaces.
 
 1. Pin a full release-repository commit. Read its component descriptors and
    acceptance limits. Resolve mutable channels once, then use exact bytes/digests.

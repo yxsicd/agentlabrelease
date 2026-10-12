@@ -1,0 +1,75 @@
+{
+  "schema": "agentlab.controller_publication_receipt.v1",
+  "status": "passed-publication-and-anonymous-byte-readback",
+  "observedAt": "2026-10-12T06:29:59Z",
+  "sourceRevision": "08d367d18e4c03161dc70eeae1907dd2b0372972",
+  "sourceQualification": "fresh native87/87 and clean-source canonical static startup; existing strict bin/tests Clippy unchanged",
+  "reusedRetainedBuild": true,
+  "rebuilt": false,
+  "release": {
+    "url": "https://github.com/yxsicd/agentlabrelease/releases/tag/control-08d367d1-linux-x64",
+    "id": 410254370,
+    "tag": "control-08d367d1-linux-x64",
+    "tagTarget": "3020679bf95934de68ff8e1ee9813f587f2ab6c4",
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "quotaAdmission": {
+    "exactReleaseLookupStatus": 404,
+    "exactResponseRemaining": 4444,
+    "exactResponseResetEpoch": 1791786625,
+    "endpointHeadersAuthoritative": true
+  },
+  "assets": [
+    {
+      "assetId": 632888151,
+      "bytes": 5535208,
+      "downloadedBytes": 5535208,
+      "downloadedSha256": "40e82237a24269b46b5bc37e31b370f5de630902f41746eb0b9583da39c626a9",
+      "matchesApiAndRetainedArtifact": true,
+      "name": "agentlabctl-08d367d1-linux-x64",
+      "sha256": "40e82237a24269b46b5bc37e31b370f5de630902f41746eb0b9583da39c626a9",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-08d367d1-linux-x64/agentlabctl-08d367d1-linux-x64"
+    },
+    {
+      "assetId": 632888202,
+      "bytes": 2021,
+      "downloadedBytes": 2021,
+      "downloadedSha256": "207e22600887ef88603a8e3d269c3bf1582d9566dd88b67ecf5f4742b1f54f7d",
+      "matchesApiAndRetainedArtifact": true,
+      "name": "control-08d367d1-linux-x64.json",
+      "sha256": "207e22600887ef88603a8e3d269c3bf1582d9566dd88b67ecf5f4742b1f54f7d",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-08d367d1-linux-x64/control-08d367d1-linux-x64.json"
+    }
+  ],
+  "download": {
+    "anonymous": true,
+    "usedFinalGitHubReleaseUrls": true,
+    "independentFromUpload": true,
+    "staticElfVerified": true,
+    "elfInterpreterSegments": 0,
+    "elfDynamicSegments": 0,
+    "elfNeededLibraries": 0,
+    "binaryExecuted": false,
+    "installed": false
+  },
+  "unchanged": {
+    "currentInstaller": true,
+    "runtimeImage": true,
+    "program": true,
+    "developerTools": true,
+    "harmonySdk": true,
+    "mcpgitIntegration": true
+  },
+  "acceptanceLimits": {
+    "installedInspectorQualified": false,
+    "twoPlatformColdInstallQualified": false,
+    "fullInstanceLifecycleQualified": false,
+    "fullHarnessReady": false,
+    "completeFlywheelQualified": false,
+    "productionPromotionQualified": false
+  },
+  "previousFailures": "Interpreter/static startup failures retained in Source08d367d1 history and private authoritative Works; no failed output published"
+}

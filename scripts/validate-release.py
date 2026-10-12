@@ -5,6 +5,29 @@ import pathlib
 import re
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def validate_candidate_static_build(build, receipt):
+    """Keep legacy ELF evidence; require independent proof for the new builder."""
+    assert build["target"] == "x86_64-unknown-linux-musl"
+    assert build["interpreterSegments"] == 0
+    if "dynamicSegments" in build:
+        assert build["dynamicSegments"] == 0
+    else:
+        assert build["neededDynamicLibraries"] == 0
+        assert build["staticCrt"] is True and build["relocationModel"] == "static"
+        assert receipt is not None
+        download = receipt["download"]
+        assert download["anonymous"] is True
+        assert download["usedFinalGitHubReleaseUrls"] is True
+        assert download["independentFromUpload"] is True
+        assert download["staticElfVerified"] is True
+        assert download["binaryExecuted"] is False and download["installed"] is False
+        assert download["elfInterpreterSegments"] == 0
+        assert download["elfDynamicSegments"] == 0
+        assert download["elfNeededLibraries"] == 0
+
+
 manifest = json.loads((ROOT / "manifest.json").read_text())
 provenance = json.loads((ROOT / "provenance.json").read_text())
 index = json.loads((ROOT / "package-index.json").read_text())
@@ -46,7 +69,10 @@ if manifest.get("controllerCandidate"):
     assert candidate_control["contracts"]["fullHarnessReady"] is False
     assert candidate_control["build"]["sourceWorktreeClean"] is True
     assert candidate_control["build"]["target"] == "x86_64-unknown-linux-musl"
-    assert candidate_control["build"]["interpreterSegments"] == candidate_control["build"]["dynamicSegments"] == 0
+    candidate_receipt = None
+    if candidate["qualification"]["publicFinalUrlReadback"] == "passed":
+        candidate_receipt = json.loads((ROOT / candidate["publication"]["receipt"]).read_text())
+    validate_candidate_static_build(candidate_control["build"], candidate_receipt)
     assert candidate_control["qualification"]["installedInspectorRevalidation"] is False
     assert candidate_control["qualification"]["twoPlatformColdInstallRevalidation"] is False
     candidate_value = candidate_control["value"]
