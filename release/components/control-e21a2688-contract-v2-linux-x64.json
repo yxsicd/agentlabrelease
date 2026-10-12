@@ -1,0 +1,59 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "control",
+  "value": {
+    "sourceRevision": "e21a2688187ebe2ba3660e29e23cc89b2d8849ae",
+    "platform": "linux-x64",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-e21a2688-linux-x64/agentlabctl-e21a2688-linux-x64",
+    "bytes": 5535208,
+    "sha256": "af35570fd8a087495fff186d885fb6b8ba63b74383c993bd9d24158372a82c1d"
+  },
+  "contracts": {
+    "planWrites": false,
+    "planVerifiesInstalledBytes": false,
+    "registryQualification": "historical-component-only-not-runtime-activation-or-deletion-authority",
+    "coldPolicy": "all-new-required-no-warm-fallback",
+    "nativeDeploymentInputSchema": "agentlab.deploy_bundle.v3",
+    "sharedNativeLibrary": true,
+    "declaredInputFacadeAuthenticatesCaller": false,
+    "deploymentEffectsSupported": false,
+    "fullHarnessReady": false,
+    "consumerMountComparison": "full-field-order-independent-multiset-no-deduplication"
+  },
+  "build": {
+    "sourceWorktreeClean": true,
+    "target": "x86_64-unknown-linux-musl",
+    "profile": "release-locked-offline",
+    "rustc": "1.96.0",
+    "builder": "scripts/agentlabctl-build.sh",
+    "builderSha256": "f2b7df4d7de6ca97a504ae22da1079b931fdcc596b867a7f7703cc29f463a474",
+    "staticCrt": true,
+    "relocationModel": "static",
+    "interpreterSegments": 0,
+    "neededDynamicLibraries": 0,
+    "binaryExecutedDuringQualification": true
+  },
+  "qualification": {
+    "status": "source-native-static-qualified-candidate-only",
+    "nativeRustTests": 87,
+    "nativeTestsTarget": "library; binary tests0",
+    "nativeTestsFailed": 0,
+    "strictAllTargetClippy": "passed",
+    "nativeProducerPythonTests": 15,
+    "maintainerSkillsTests": 70,
+    "controlledCliCases": 12,
+    "composeClientConfig": "passed",
+    "actualPublicLockDigestStartup": "passed",
+    "implementationAndTestInverse": "original implementation/test bodies restored after relocation",
+    "broadPythonSuite": {
+      "passed": 50,
+      "errors": 1,
+      "status": "unchanged-baseline-error-missing-private-Colima-env"
+    },
+    "installedInspectorRevalidation": false,
+    "twoPlatformColdInstallRevalidation": false,
+    "authenticatedOwnerSession": false,
+    "runtimeLifecycleReady": false,
+    "fullHarnessReady": false
+  }
+}

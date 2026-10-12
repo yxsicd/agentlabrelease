@@ -15,23 +15,31 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
-The [control candidate](../../release/components/control-candidate-20261012.json)
-is tracked independently from the current installation selection. Its static
-binary and byte-exact descriptor are published; the selected sealed receipt
-binds anonymous final GitHub download size/SHA, ELF and source identities.
-Clean-source native87/87 and actual static lock-digest startup passed.
-This qualifies the candidate's source and distribution, while installed
-inspector, two-platform cold and full-instance lifecycle remain unrun.
-The current installer still selects f2e87a57. Select this candidate explicitly;
-its component registry and independent admission observations do not establish
-authenticated Owner/Session, deployment effects or deletion authority.
-GitHub reports API immutable=false; digest pins and no-overwrite publisher
-policy preserve asset identity. Earlier static/interpreter/startup failures are
-retained. The [previous inspector candidate](../../release/components/inspect-controller-candidate-20261009.json)
-and its original quota/failure evidence remain historical entries.
-Skills-only changes synchronize Git rather than uploading executable assets.
-The next owning deployment slice connects current-qualified inputs and trusted
-Owner/Session receipts through existing AgentLab interfaces.
+The [control candidate](../../release/components/control-candidate-e21a2688-20261012.json)
+is tracked independently from the current installation. Its clean-source static
+binary and selected corrected descriptor are public; the sealed receipt binds
+anonymous final GitHub size/SHA, ELF and source identities. The controller has
+one reusable native Rust core and a preserved CLI. Native87, strict all-target
+Clippy, native Python15, Skills70 and12 controlled actual CLI/Compose cases pass.
+The broad Python suite retains one unchanged missing-private-env baseline error.
+
+The first descriptor omitted the mandatory mount-comparison contract. It remains
+an explicit incomplete historical asset; the separately named corrected2302-byte
+descriptor is selected. The binary was uploaded once and neither original asset
+was rewritten. Exact3-name release allowlist and2 selected asset receipts remain
+distinct. GitHub API immutable=false; digest pins and publisher no-overwrite
+policy preserve bytes.
+
+Installed inspector, new Linux/WSL2 cold and full-instance lifecycle for this cut
+remain unrun. Current installer still selects f2e87a57. Source/library/distribution
+does not authenticate a caller or establish Owner/Session, effects or deletion
+authority. The [previous08d candidate](../../release/components/control-candidate-20261012.json)
+and earlier quota/interpreter/startup evidence remain historical.
+The next host-controller adapter reuses actual trusted caller and qualified
+Session interfaces; protected Owner configuration location is pending. Do not
+grant a workspace sandbox host administration roots, Docker socket or credentials
+to call the shared core. Skills-only changes synchronize Git without payload
+uploads.
 
 1. Pin a full release-repository commit. Read its component descriptors and
    acceptance limits. Resolve mutable channels once, then use exact bytes/digests.

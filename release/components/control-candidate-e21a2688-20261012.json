@@ -1,0 +1,51 @@
+{
+  "schema": "agentlab.controller_candidate.v1",
+  "status": "candidate-not-current-installation",
+  "controller": "release/components/control-e21a2688-contract-v2-linux-x64.json",
+  "releaseTag": "control-e21a2688-linux-x64",
+  "unchangedComposition": "release/candidates/40ecdf4b-linux-x64/publication.json",
+  "environmentLock": "release/candidates/40ecdf4b-linux-x64/environment-lock.json",
+  "currentInstaller": "release/components/installer-eee1e1e-linux-x64.json",
+  "currentInstallerSelectsCandidate": false,
+  "selectionPolicy": "explicit-candidate-only-no-current-installation-or-promotion",
+  "qualification": {
+    "source": "passed",
+    "nativeTests": 87,
+    "staticBuild": "passed",
+    "actualSourceStartup": "passed",
+    "publicFinalUrlReadback": "passed",
+    "installedInspector": "not_run",
+    "twoPlatformColdInstall": "not_run",
+    "fullInstanceDeploy": "missing",
+    "fullHarnessReady": false
+  },
+  "publication": {
+    "status": "published-final-url-verified",
+    "receipt": "docs/evidence/control-e21a2688-candidate-publication-20261012.json",
+    "releaseCreated": true,
+    "assetsUploaded": 3,
+    "selectedAssets": 2,
+    "finalUrlDownloadPerformed": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true,
+    "intendedTagTarget": "25291d6601a4e7dab37a29296af029d778cf591a",
+    "historicalIncompleteDescriptor": {
+      "name": "control-e21a2688-linux-x64.json",
+      "bytes": 2213,
+      "sha256": "538a1b468ec59acffdb281dee9776fc7428ba87a6eac6fdd7ccde5ddddca4cf2"
+    }
+  },
+  "previousCandidate": "release/components/control-candidate-20261012.json",
+  "nextSourceSlice": {
+    "owner": "same native host-controller library and existing trusted application/qualified Owner/Session readers",
+    "gap": "Actual protected Owner authentication configuration location pending; full public instance provisioner and lifecycle remain unavailable",
+    "deliverable": "Connect the owning host-controller private caller and captured qualified Session through the shared native core; no Sandbox host administration grant",
+    "forbidden": [
+      "new lifecycle engine",
+      "Owner synthesized from JSON/defaults/maintenance Person",
+      "Docker socket/admin roots/credentials granted to workspace sandbox",
+      "deletion inferred from component history"
+    ],
+    "implementationNotIncluded": true
+  }
+}

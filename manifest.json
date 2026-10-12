@@ -4,7 +4,7 @@
   "status": "consumer-candidate",
   "distributionAuthority": "containing public Git commit",
   "entrypoint": "SKILL.md",
-  "controllerCandidate": "release/components/control-candidate-20261012.json",
+  "controllerCandidate": "release/components/control-candidate-e21a2688-20261012.json",
   "platforms": [
     "linux-x64",
     "wsl2-x64"

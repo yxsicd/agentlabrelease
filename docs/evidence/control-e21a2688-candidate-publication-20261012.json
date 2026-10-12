@@ -1,0 +1,76 @@
+{
+  "schema": "agentlab.controller_publication_receipt.v1",
+  "status": "passed-publication-and-anonymous-byte-readback",
+  "observedAt": "2026-10-12T19:01:03.162Z",
+  "sourceRevision": "e21a2688187ebe2ba3660e29e23cc89b2d8849ae",
+  "sourceQualification": "Native library87/87, strict all-target Clippy, native Python15 and Skills70; twelve controlled actual CLI cases/Compose config plus clean-source static startup. Broad Python51 retains unchanged missing-private-Colima-env baseline error.",
+  "release": {
+    "url": "https://github.com/yxsicd/agentlabrelease/releases/tag/control-e21a2688-linux-x64",
+    "id": 410906027,
+    "tag": "control-e21a2688-linux-x64",
+    "tagTarget": "25291d6601a4e7dab37a29296af029d778cf591a",
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true,
+    "exactAssetCount": 3
+  },
+  "assets": [
+    {
+      "assetId": 634658821,
+      "name": "agentlabctl-e21a2688-linux-x64",
+      "bytes": 5535208,
+      "sha256": "af35570fd8a087495fff186d885fb6b8ba63b74383c993bd9d24158372a82c1d",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-e21a2688-linux-x64/agentlabctl-e21a2688-linux-x64",
+      "downloadedBytes": 5535208,
+      "downloadedSha256": "af35570fd8a087495fff186d885fb6b8ba63b74383c993bd9d24158372a82c1d",
+      "matchesApiAndRetainedArtifact": true
+    },
+    {
+      "assetId": 634674949,
+      "name": "control-e21a2688-contract-v2-linux-x64.json",
+      "bytes": 2302,
+      "sha256": "f477fd0549da99e8ccb7fb1c5ebf0ac0ca189b711c92ca87994b60a5e8190253",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-e21a2688-linux-x64/control-e21a2688-contract-v2-linux-x64.json",
+      "downloadedBytes": 2302,
+      "downloadedSha256": "f477fd0549da99e8ccb7fb1c5ebf0ac0ca189b711c92ca87994b60a5e8190253",
+      "matchesApiAndRetainedArtifact": true
+    }
+  ],
+  "download": {
+    "anonymous": true,
+    "usedFinalGitHubReleaseUrls": true,
+    "independentFromUpload": true,
+    "staticElfVerified": true,
+    "elfInterpreterSegments": 0,
+    "elfDynamicSegments": 0,
+    "elfNeededLibraries": 0,
+    "binaryExecuted": false,
+    "installed": false
+  },
+  "retainedHistoricalIncompleteDescriptor": {
+    "name": "control-e21a2688-linux-x64.json",
+    "bytes": 2213,
+    "sha256": "538a1b468ec59acffdb281dee9776fc7428ba87a6eac6fdd7ccde5ddddca4cf2"
+  },
+  "metadataCorrection": {
+    "requiredField": "contracts.consumerMountComparison",
+    "originalDescriptorOverwritten": false,
+    "correctedDescriptorSelected": true,
+    "binaryUploadedAgain": false,
+    "releaseAllowlist": [
+      "agentlabctl-e21a2688-linux-x64",
+      "control-e21a2688-linux-x64.json",
+      "control-e21a2688-contract-v2-linux-x64.json"
+    ]
+  },
+  "acceptanceLimits": {
+    "installedInspectorQualified": false,
+    "twoPlatformColdInstallQualified": false,
+    "fullInstanceLifecycleQualified": false,
+    "authenticatedOwnerSessionQualified": false,
+    "fullHarnessReady": false,
+    "completeFlywheelQualified": false,
+    "productionPromotionQualified": false
+  }
+}
