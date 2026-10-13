@@ -4,7 +4,7 @@
   "status": "consumer-candidate",
   "distributionAuthority": "containing public Git commit",
   "entrypoint": "SKILL.md",
-  "controllerCandidate": "release/components/control-candidate-e21a2688-20261012.json",
+  "controllerCandidate": "release/components/control-candidate-f5a03f12-20261013.json",
   "platforms": [
     "linux-x64",
     "wsl2-x64"
@@ -54,7 +54,14 @@
   "newInstanceNetwork": {
     "name": "armnet",
     "selection": "inventory-first-ranked-non-overlapping-private-ipv4",
-    "inventory": ["host-addresses", "all-route-tables", "gateways", "dns-resolvers", "docker-ipam", "wsl-host-network"],
+    "inventory": [
+      "host-addresses",
+      "all-route-tables",
+      "gateways",
+      "dns-resolvers",
+      "docker-ipam",
+      "wsl-host-network"
+    ],
     "existingNetwork": "preserve-if-admitted",
     "fallbackPrivateIPv4Range": "192.168.0.0/16",
     "avoidCommonLanAndVirtualizationDefaults": true,
@@ -67,7 +74,10 @@
     "requestSchema": "schemas/source-material-request.schema.json",
     "guidance": "skills/agentlab-harness-developer/references/source-material.md",
     "validatorSource": "crates/agentlab_code_analysis/src/source_material.rs",
-    "inputKinds": ["git-http", "archive"],
+    "inputKinds": [
+      "git-http",
+      "archive"
+    ],
     "archiveBaselineMode": "initialize-project-git-and-commit-source-baseline",
     "targetRepositoryHostRestriction": null,
     "qualification": "contract-only-not-runtime-intake",

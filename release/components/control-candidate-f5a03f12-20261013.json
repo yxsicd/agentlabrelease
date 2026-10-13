@@ -1,0 +1,48 @@
+{
+  "schema": "agentlab.controller_candidate.v1",
+  "status": "candidate-not-current-installation",
+  "controller": "release/components/control-f5a03f12-linux-x64.json",
+  "releaseTag": "control-f5a03f12-linux-x64",
+  "unchangedComposition": "release/candidates/40ecdf4b-linux-x64/publication.json",
+  "environmentLock": "release/candidates/40ecdf4b-linux-x64/environment-lock.json",
+  "currentInstaller": "release/components/installer-eee1e1e-linux-x64.json",
+  "currentInstallerSelectsCandidate": false,
+  "selectionPolicy": "explicit-candidate-only-no-current-installation-or-promotion",
+  "qualification": {
+    "source": "passed",
+    "nativeTests": 119,
+    "staticBuild": "passed",
+    "actualSourceStartup": "passed",
+    "publicFinalUrlReadback": "passed",
+    "installedInspector": "not_run",
+    "twoPlatformColdInstall": "not_run",
+    "fullInstanceDeploy": "missing",
+    "fullHarnessReady": false,
+    "featureNativeTests": 123,
+    "publicLinuxReadonlyExecution": "passed-existing-intent-read-and-fresh-network-plan"
+  },
+  "publication": {
+    "status": "published-final-url-verified",
+    "receipt": "docs/evidence/control-f5a03f12-candidate-publication-20261013.json",
+    "releaseCreated": true,
+    "assetsUploaded": 2,
+    "selectedAssets": 2,
+    "finalUrlDownloadPerformed": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true,
+    "intendedTagTarget": "0fa21c9dd0712185314a36605a1668267a2898d4"
+  },
+  "previousCandidate": "release/components/control-candidate-e21a2688-20261012.json",
+  "nextSourceSlice": {
+    "owner": "Existing native host-controller resource provisioner and journal; trusted application Owner/Session readers",
+    "gap": "Public complete-instance resource provisioner/lifecycle missing; actual protected Owner authentication configuration location remains pending",
+    "deliverable": "Prepare actual owned instance resources, bind exact deployment identities, then authenticate Owner/Session and run Harmony multiround feedback",
+    "forbidden": [
+      "new lifecycle engine",
+      "Owner synthesized from JSON/defaults/maintenance Person",
+      "Docker socket/admin roots/credentials granted to workspace sandbox",
+      "deletion inferred from component history"
+    ],
+    "implementationNotIncluded": true
+  }
+}

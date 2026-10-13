@@ -1,0 +1,67 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "control",
+  "value": {
+    "sourceRevision": "f5a03f123f036c7f0d8839ba0900a56936d046bc",
+    "platform": "linux-x64",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-f5a03f12-linux-x64/agentlabctl-f5a03f12-linux-x64",
+    "bytes": 5785064,
+    "sha256": "23a8a6767468bc1ebc13f24e1acec0b6d8c074568cd59255a94568bd0cd7fe8e"
+  },
+  "contracts": {
+    "planWrites": false,
+    "planVerifiesInstalledBytes": false,
+    "registryQualification": "historical-component-only-not-runtime-activation-or-deletion-authority",
+    "coldPolicy": "all-new-required-no-warm-fallback",
+    "nativeDeploymentInputSchema": "agentlab.deploy_bundle.v3",
+    "sharedNativeLibrary": true,
+    "declaredInputFacadeAuthenticatesCaller": false,
+    "deploymentEffectsSupported": false,
+    "fullHarnessReady": false,
+    "consumerMountComparison": "full-field-order-independent-multiset-no-deduplication",
+    "nativeNetworkInventoryPlanner": true,
+    "declaredPhysicalNetworkBinding": true,
+    "coldPreparationIntentJournal": true,
+    "coldPreparationIntentSchema": "agentlab.deploy_preparation_request.v1",
+    "resourcePreparationCompleted": false
+  },
+  "build": {
+    "sourceWorktreeClean": true,
+    "target": "x86_64-unknown-linux-musl",
+    "profile": "release-locked-offline",
+    "rustc": "1.96.0",
+    "builder": "scripts/agentlabctl-build.sh",
+    "builderSha256": "f2b7df4d7de6ca97a504ae22da1079b931fdcc596b867a7f7703cc29f463a474",
+    "staticCrt": true,
+    "relocationModel": "static",
+    "interpreterSegments": 0,
+    "neededDynamicLibraries": 0,
+    "binaryExecutedDuringQualification": true
+  },
+  "qualification": {
+    "status": "source-native-static-qualified-candidate-only",
+    "nativeRustTests": 119,
+    "nativeTestsTarget": "library; binary tests0",
+    "nativeTestsFailed": 0,
+    "strictAllTargetClippy": "passed",
+    "nativeProducerPythonTests": 15,
+    "maintainerSkillsTests": 70,
+    "controlledCliCases": 12,
+    "composeClientConfig": "passed",
+    "actualPublicLockDigestStartup": "passed",
+    "broadPythonSuite": {
+      "passed": 50,
+      "errors": 1,
+      "status": "unchanged-baseline-error-missing-private-Colima-env"
+    },
+    "installedInspectorRevalidation": false,
+    "twoPlatformColdInstallRevalidation": false,
+    "authenticatedOwnerSession": false,
+    "runtimeLifecycleReady": false,
+    "fullHarnessReady": false,
+    "featureNativeRustTests": 123,
+    "feature": "trusted-deployment-inputs",
+    "actualPrivateNetworkIntentLifecycle": "passed-admit-exact-retry-reconcile-read-no-resource-effects",
+    "actualNetworkConsumerGraphUnchanged": true
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "schema": "agentlab.controller_publication_receipt.v1",
+  "status": "passed-publication-and-anonymous-byte-readback",
+  "observedAt": "2026-10-13T00:36:51.775175Z",
+  "sourceRevision": "f5a03f123f036c7f0d8839ba0900a56936d046bc",
+  "sourceQualification": "Clean f5 Source; default119/feature123 native tests and strict Clippy; native Python15, Skills70 and12 controlled CLI/Compose cases. Broad Python51 retains unchanged missing-private-Colima-env error. Real private intent lifecycle passed without resource effects.",
+  "release": {
+    "url": "https://github.com/yxsicd/agentlabrelease/releases/tag/control-f5a03f12-linux-x64",
+    "id": 411108554,
+    "tag": "control-f5a03f12-linux-x64",
+    "tagTarget": "0fa21c9dd0712185314a36605a1668267a2898d4",
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true,
+    "exactAssetCount": 2
+  },
+  "assets": [
+    {
+      "assetId": 635404228,
+      "name": "agentlabctl-f5a03f12-linux-x64",
+      "bytes": 5785064,
+      "sha256": "23a8a6767468bc1ebc13f24e1acec0b6d8c074568cd59255a94568bd0cd7fe8e",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-f5a03f12-linux-x64/agentlabctl-f5a03f12-linux-x64",
+      "downloadedBytes": 5785064,
+      "downloadedSha256": "23a8a6767468bc1ebc13f24e1acec0b6d8c074568cd59255a94568bd0cd7fe8e",
+      "matchesApiAndRetainedArtifact": true
+    },
+    {
+      "assetId": 635404227,
+      "name": "control-f5a03f12-linux-x64.json",
+      "bytes": 2685,
+      "sha256": "b601b2097d897f3a0395ee058105e61601c7bc6eff9ce2797d1b1868b9cf5a78",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-f5a03f12-linux-x64/control-f5a03f12-linux-x64.json",
+      "downloadedBytes": 2685,
+      "downloadedSha256": "b601b2097d897f3a0395ee058105e61601c7bc6eff9ce2797d1b1868b9cf5a78",
+      "matchesApiAndRetainedArtifact": true
+    }
+  ],
+  "download": {
+    "anonymous": true,
+    "usedFinalGitHubReleaseUrls": true,
+    "independentFromUpload": true,
+    "staticElfVerified": true,
+    "elfInterpreterSegments": 0,
+    "elfDynamicSegments": 0,
+    "elfNeededLibraries": 0,
+    "binaryExecuted": false,
+    "installed": false
+  },
+  "linuxConsumerExecution": {
+    "passed": true,
+    "binaryExecuted": true,
+    "downloadedBinarySha256": "23a8a6767468bc1ebc13f24e1acec0b6d8c074568cd59255a94568bd0cd7fe8e",
+    "operations": [
+      "deploy read existing private cold intent",
+      "deploy plan-network fresh name addresses2"
+    ],
+    "canonicalIntentBytesUnchanged": true,
+    "independentNetworkGraphUnchanged": true,
+    "networkCount": 8,
+    "consumerCount": 26,
+    "networkEffects": false,
+    "resourcePreparationCompleted": false,
+    "installedInspectorQualified": false,
+    "actualAuthenticatedOwnerSession": false,
+    "fullHarnessReady": false,
+    "harmonyQualified": false
+  },
+  "acceptanceLimits": {
+    "installedInspectorQualified": false,
+    "twoPlatformColdInstallQualified": false,
+    "fullInstanceLifecycleQualified": false,
+    "authenticatedOwnerSessionQualified": false,
+    "fullHarnessReady": false,
+    "completeFlywheelQualified": false,
+    "productionPromotionQualified": false
+  }
+}

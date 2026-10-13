@@ -15,31 +15,38 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
-The [control candidate](../../release/components/control-candidate-e21a2688-20261012.json)
-is tracked independently from the current installation. Its clean-source static
-binary and selected corrected descriptor are public; the sealed receipt binds
-anonymous final GitHub size/SHA, ELF and source identities. The controller has
-one reusable native Rust core and a preserved CLI. Native87, strict all-target
-Clippy, native Python15, Skills70 and12 controlled actual CLI/Compose cases pass.
-The broad Python suite retains one unchanged missing-private-env baseline error.
+The [control candidate](../../release/components/control-candidate-f5a03f12-20261013.json)
+provides the current native controller through public GitHub assets. Download its
+descriptor and executable into a private acquisition directory and verify their
+declared sizes and SHA-256 values before execution. The sealed receipt records
+anonymous final-URL Linux acquisition, static ELF identity and subsequent bounded
+execution of the downloaded binary.
 
-The first descriptor omitted the mandatory mount-comparison contract. It remains
-an explicit incomplete historical asset; the separately named corrected2302-byte
-descriptor is selected. The binary was uploaded once and neither original asset
-was rewritten. Exact3-name release allowlist and2 selected asset receipts remain
-distinct. GitHub API immutable=false; digest pins and publisher no-overwrite
-policy preserve bytes.
+This cut adds read-only network planning, exact declared deployment-network
+binding, and a durable cold network preparation intent. A preparation intent
+records the request before a new physical network ID exists; it does not create
+a network or grant execution permission. Native119 default and123 optional-feature
+tests, strict Clippy, native Python15, Skills70 and12 controlled CLI/Compose
+cases passed. The broad Python suite retains one unchanged private-env error.
 
-Installed inspector, new Linux/WSL2 cold and full-instance lifecycle for this cut
-remain unrun. Current installer still selects f2e87a57. Source/library/distribution
-does not authenticate a caller or establish Owner/Session, effects or deletion
-authority. The [previous08d candidate](../../release/components/control-candidate-20261012.json)
-and earlier quota/interpreter/startup evidence remain historical.
-The next host-controller adapter reuses actual trusted caller and qualified
-Session interfaces; protected Owner configuration location is pending. Do not
-grant a workspace sandbox host administration roots, Docker socket or credentials
-to call the shared core. Skills-only changes synchronize Git without payload
-uploads.
+After verification, the downloaded executable can inventory a proposed network:
+
+    /absolute/private/root/agentlabctl-f5a03f12-linux-x64 deploy plan-network --name armnet --addresses 2
+
+Use the actual declared service address demand. The result is a plan; immediately
+reinventory before any separately authorized resource creation. Public Linux
+read-only execution preserved all8 networks and26 consumers and the existing
+intent bytes. It does not qualify resource preparation, installed payload
+inspection, Owner/Session or a complete instance.
+
+Current installer still selects f2e87a57. New Linux/WSL2 cold installation and
+full-instance lifecycle for this candidate remain unrun. GitHub API
+immutable=false; pinned digests and the publisher no-overwrite policy preserve
+asset identity. The [previous shared-core candidate](../../release/components/control-candidate-e21a2688-20261012.json)
+and its original incomplete descriptor remain unchanged historical evidence.
+The next delivery step is actual owned instance preparation and authenticated
+Owner/Session, followed by Harmony execution and feedback reuse. Do not grant
+workspace sandboxes host administration roots, Docker sockets or credentials.
 
 1. Pin a full release-repository commit. Read its component descriptors and
    acceptance limits. Resolve mutable channels once, then use exact bytes/digests.
