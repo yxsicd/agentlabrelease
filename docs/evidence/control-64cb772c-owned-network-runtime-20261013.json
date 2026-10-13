@@ -1,0 +1,74 @@
+{
+  "schema": "agentlab.owned_network_runtime_receipt.v1",
+  "status": "physical-network-created-recorded-id-preparation-withheld",
+  "observedAt": "2026-10-13T12:43:27Z",
+  "sourceRevision": "64cb772c330c4c322a2c3fe59b214056de35cd4c",
+  "controllerPublicationRevision": "3791a8b3fdc103e6ee1789366921f1ab64635239",
+  "publicControllerSha256": "95a89a42b6c18a7412fe91631a4f48b6e01231b48f0ef9c4fbe6e69eed6ce9b2",
+  "hostOperator": {
+    "actualUid": 1000,
+    "effectiveUid": 1000,
+    "selectedLocalUnixDaemonIndependentlyVerified": true,
+    "dockerSocketReadWrite": true,
+    "applicationOwnerAuthenticated": false
+  },
+  "operations": [
+    {
+      "operation": "prepare-network-intent",
+      "outcome": "refused-before-journal-or-resource-write",
+      "reason": "Network snapshot hash was incorrectly supplied as component inventory hash; original request/receipt retained"
+    },
+    {
+      "operation": "prepare-network-intent corrected exact component hash",
+      "outcome": "generation1-intent-recorded"
+    },
+    {
+      "operation": "prepare-network",
+      "invocations": 1,
+      "outcome": "generation3-successful-physical-id-recorded-completion-withheld",
+      "reason": "network inventory changed during planning"
+    },
+    {
+      "operation": "observe-network-preparation generation3",
+      "outcome": "refused-completion-with-journal-unchanged",
+      "reason": "unrelated host network inventory changed; prepared receipt withheld"
+    }
+  ],
+  "independentReadback": {
+    "exactRecordedPhysicalId": true,
+    "exactNameLabelsAndLayoutCheckedByNative": true,
+    "unrelatedNetworksUnchanged": 8,
+    "consumersUnchanged": 26,
+    "totalNetworksAfter": 9,
+    "oldIntentJournalBytesUnchanged": true,
+    "ownedNetworkEndpointCount": 0,
+    "creationNeverReplayed": true,
+    "resourceDeleted": false
+  },
+  "inventoryDifference": {
+    "nativeProjectionHashMatched": true,
+    "extraRouteCidr": "169.254.0.0/16",
+    "interface": "exact-owned-new-bridge",
+    "gateway": null,
+    "kernelDirect": false,
+    "scope": "link",
+    "metric": 1000,
+    "removingOnlyExactExtraRouteReconstructsOriginalBaseline": true,
+    "diagnosticReconstructionGrantsAuthority": false,
+    "routeModifiedOrIgnoredForCompletion": false
+  },
+  "journal": {
+    "generation": 3,
+    "phase": "network_creation_return_recorded",
+    "prepared": false,
+    "successfulCreatedIdRetainedPrivately": true,
+    "recovery": "readback-only; do not replay creation; current Source refuses completion while additional route lies outside its admitted delta"
+  },
+  "acceptanceLimits": {
+    "ownedNetworkPreparationQualified": false,
+    "completeInstanceDeploymentQualified": false,
+    "authenticatedOwnerSessionQualified": false,
+    "harmonyMultiroundQualified": false,
+    "feedbackReuseQualified": false
+  }
+}

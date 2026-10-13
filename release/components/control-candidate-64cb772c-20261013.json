@@ -20,7 +20,7 @@
     "fullHarnessReady": false,
     "featureNativeTests": 133,
     "publicLinuxReadonlyExecution": "passed-existing-intent-read-and-fresh-network-plan",
-    "actualOwnedNetworkCreation": "not_run",
+    "actualOwnedNetworkCreation": "physical-id-recorded-generation3-preparation-withheld-extra-host-route",
     "ownedNetworkSourceControls": 10
   },
   "publication": {
@@ -32,7 +32,8 @@
     "finalUrlDownloadPerformed": true,
     "apiImmutable": false,
     "noOverwritePolicy": true,
-    "intendedTagTarget": "8ab3d43a5f3ccdf905316807516eecb78e4ef4c1"
+    "intendedTagTarget": "8ab3d43a5f3ccdf905316807516eecb78e4ef4c1",
+    "runtimeReceipt": "docs/evidence/control-64cb772c-owned-network-runtime-20261013.json"
   },
   "previousCandidate": "release/components/control-candidate-f5a03f12-20261013.json",
   "nextSourceSlice": {
@@ -46,6 +47,7 @@
       "deletion inferred from component history"
     ],
     "implementationNotIncluded": false,
-    "includedScope": "Native owned-network preparation only; full-instance resource and authenticated Owner/Session closure remains missing"
+    "includedScope": "Native owned-network preparation only; full-instance resource and authenticated Owner/Session closure remains missing",
+    "hostNetworkGate": "Explicitly resolve the extra owned-interface169.254/16 route under actual Host policy; preserve generation3/ID and never replay creation"
   }
 }

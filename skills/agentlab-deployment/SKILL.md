@@ -30,7 +30,12 @@ creation result is retained for readback and never replayed. Host operator acces
 is separate from authenticated application Owner/Session access.
 Native129 default and133 optional-feature tests, including10 preparation controls,
 strict Clippy, native Python15 and Skills70 passed. The broad Python suite retains
-one unchanged private-env error. Actual network creation remains unqualified.
+one unchanged private-env error. A later actual Linux creation returned a physical
+ID, recorded at journal generation3. Completion was refused after an additional
+169.254.0.0/16 route appeared on the new bridge. The
+[actual receipt](../../docs/evidence/control-64cb772c-owned-network-runtime-20261013.json)
+retains that refusal: the network and route remain, creation is never replayed,
+and preparation/full-instance readiness remains unqualified.
 
 After verification, the downloaded executable can inventory a proposed network:
 
