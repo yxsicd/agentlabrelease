@@ -1,0 +1,79 @@
+{
+  "schema": "agentlab.controller_publication_receipt.v1",
+  "status": "passed-publication-and-anonymous-byte-readback",
+  "observedAt": "2026-10-13T12:27:42.795952+00:00",
+  "sourceRevision": "64cb772c330c4c322a2c3fe59b214056de35cd4c",
+  "sourceQualification": "Clean64cb native default129/feature133,10 owned-network controls, strict Clippy/format, native Python15 and Skills70. Old journal/read parity and3 new CLI negative cases pass. Broad Python retains prior private-env error. Actual resource creation and authenticated Owner/Session remain unqualified.",
+  "release": {
+    "url": "https://github.com/yxsicd/agentlabrelease/releases/tag/control-64cb772c-linux-x64",
+    "id": 411648797,
+    "tag": "control-64cb772c-linux-x64",
+    "tagTarget": "8ab3d43a5f3ccdf905316807516eecb78e4ef4c1",
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true,
+    "exactAssetCount": 2
+  },
+  "assets": [
+    {
+      "assetId": 636963202,
+      "name": "agentlabctl-64cb772c-linux-x64",
+      "bytes": 5858792,
+      "sha256": "95a89a42b6c18a7412fe91631a4f48b6e01231b48f0ef9c4fbe6e69eed6ce9b2",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-64cb772c-linux-x64/agentlabctl-64cb772c-linux-x64",
+      "downloadedBytes": 5858792,
+      "downloadedSha256": "95a89a42b6c18a7412fe91631a4f48b6e01231b48f0ef9c4fbe6e69eed6ce9b2",
+      "matchesApiAndRetainedArtifact": true
+    },
+    {
+      "assetId": 636963205,
+      "name": "control-64cb772c-linux-x64.json",
+      "bytes": 3291,
+      "sha256": "48d30282d31f37d543467bb8fc53626d76cf0b31368158d9b4f251422b076a14",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-64cb772c-linux-x64/control-64cb772c-linux-x64.json",
+      "downloadedBytes": 3291,
+      "downloadedSha256": "48d30282d31f37d543467bb8fc53626d76cf0b31368158d9b4f251422b076a14",
+      "matchesApiAndRetainedArtifact": true
+    }
+  ],
+  "download": {
+    "anonymous": true,
+    "usedFinalGitHubReleaseUrls": true,
+    "independentFromUpload": true,
+    "staticElfVerified": true,
+    "elfInterpreterSegments": 0,
+    "elfDynamicSegments": 0,
+    "elfNeededLibraries": 0,
+    "binaryExecuted": false,
+    "installed": false
+  },
+  "linuxConsumerExecution": {
+    "passed": true,
+    "binaryExecuted": true,
+    "downloadedBinarySha256": "95a89a42b6c18a7412fe91631a4f48b6e01231b48f0ef9c4fbe6e69eed6ce9b2",
+    "operations": [
+      "deploy read existing private cold intent",
+      "deploy plan-network fresh name addresses2"
+    ],
+    "canonicalIntentBytesUnchanged": true,
+    "independentNetworkGraphUnchanged": true,
+    "networkCount": 8,
+    "consumerCount": 26,
+    "networkEffects": false,
+    "resourcePreparationCompleted": false,
+    "installedInspectorQualified": false,
+    "actualAuthenticatedOwnerSession": false,
+    "fullHarnessReady": false,
+    "harmonyQualified": false
+  },
+  "acceptanceLimits": {
+    "installedInspectorQualified": false,
+    "twoPlatformColdInstallQualified": false,
+    "fullInstanceLifecycleQualified": false,
+    "authenticatedOwnerSessionQualified": false,
+    "fullHarnessReady": false,
+    "completeFlywheelQualified": false,
+    "productionPromotionQualified": false
+  }
+}
