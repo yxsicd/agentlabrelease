@@ -15,20 +15,24 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
-The [control candidate](../../release/components/control-candidate-64cb772c-20261013.json)
+The [control candidate](../../release/components/control-candidate-63d3d17f-20261013.json)
 provides the current native controller through public GitHub assets. Download its
 descriptor and executable into a private acquisition directory and verify their
 declared sizes and SHA-256 values before execution. The sealed receipt records
 anonymous final-URL Linux acquisition, static ELF identity and subsequent bounded
 execution of the downloaded binary.
 
-This cut adds native owned-network preparation to the same durable journal.
+This cut binds actual kernel UID and frozen Unix socket identity/read-write
+rights to an opaque exact physical network receipt in the same native journal.
+Completion rechecks Host rights and matches the daemon/resource/full attempt
+after request and component revalidation. JSON, intents and maintenance Person
+identity cannot supply Host authority or authenticated application Owner.
 The explicit local Host operator records an attempt before one Docker creation;
 completion requires the recorded physical ID, exact layout and ownership labels,
 unchanged unrelated inventory, and rechecked request/component inputs. An unknown
 creation result is retained for readback and never replayed. Host operator access
 is separate from authenticated application Owner/Session access.
-Native129 default and133 optional-feature tests, including10 preparation controls,
+Native134 default and138 optional-feature tests, including5 new Host/receipt controls,
 strict Clippy, native Python15 and Skills70 passed. The broad Python suite retains
 one unchanged private-env error. A later actual Linux creation returned a physical
 ID, recorded at journal generation3. Completion was refused after an additional
@@ -39,18 +43,18 @@ and preparation/full-instance readiness remains unqualified.
 
 After verification, the downloaded executable can inventory a proposed network:
 
-    /absolute/private/root/agentlabctl-64cb772c-linux-x64 deploy plan-network --name armnet --addresses 2
+    /absolute/private/root/agentlabctl-63d3d17f-linux-x64 deploy plan-network --name armnet --addresses 2
 
 Use the actual declared service address demand. The result is a plan; immediately
 reinventory before any separately authorized resource creation. Public Linux
-read-only execution preserved all8 networks and26 consumers and the existing
-intent bytes. It does not qualify resource preparation, installed payload
+read-only execution preserved all9 networks and26 consumers and generation3
+journal bytes, including the expected additional-route refusal. It does not qualify resource preparation, installed payload
 inspection, Owner/Session or a complete instance.
 
 Current installer still selects f2e87a57. New Linux/WSL2 cold installation and
 full-instance lifecycle for this candidate remain unrun. GitHub API
 immutable=false; pinned digests and the publisher no-overwrite policy preserve
-asset identity. The [previous intent candidate](../../release/components/control-candidate-f5a03f12-20261013.json)
+asset identity. The [previous network candidate](../../release/components/control-candidate-64cb772c-20261013.json)
 and earlier shared-core descriptors remain unchanged historical evidence.
 The next delivery step is actual owned instance preparation and authenticated
 Owner/Session, followed by Harmony execution and feedback reuse. Do not grant

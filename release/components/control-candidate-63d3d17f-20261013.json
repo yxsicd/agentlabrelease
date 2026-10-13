@@ -1,0 +1,54 @@
+{
+  "schema": "agentlab.controller_candidate.v1",
+  "status": "candidate-not-current-installation",
+  "controller": "release/components/control-63d3d17f-linux-x64.json",
+  "releaseTag": "control-63d3d17f-linux-x64",
+  "unchangedComposition": "release/candidates/40ecdf4b-linux-x64/publication.json",
+  "environmentLock": "release/candidates/40ecdf4b-linux-x64/environment-lock.json",
+  "currentInstaller": "release/components/installer-eee1e1e-linux-x64.json",
+  "currentInstallerSelectsCandidate": false,
+  "selectionPolicy": "explicit-candidate-only-no-current-installation-or-promotion",
+  "qualification": {
+    "source": "passed",
+    "nativeTests": 134,
+    "staticBuild": "passed",
+    "actualSourceStartup": "passed",
+    "publicFinalUrlReadback": "passed",
+    "installedInspector": "not_run",
+    "twoPlatformColdInstall": "not_run",
+    "fullInstanceDeploy": "missing",
+    "fullHarnessReady": false,
+    "featureNativeTests": 138,
+    "publicLinuxReadonlyExecution": "passed-read-plan-and-expected-generation3-host-route-refusal",
+    "actualOwnedNetworkCreation": "not_run-for-this-cut",
+    "authenticatedHostReceiptSourceControls": 5,
+    "actualOwnedNetworkPreparation": "not_qualified-retained-generation3"
+  },
+  "publication": {
+    "status": "published-final-url-verified",
+    "receipt": "docs/evidence/control-63d3d17f-candidate-publication-20261013.json",
+    "releaseCreated": true,
+    "assetsUploaded": 2,
+    "selectedAssets": 2,
+    "finalUrlDownloadPerformed": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true,
+    "intendedTagTarget": "77f632894d628b886263d6e090a703df5bf31238",
+    "runtimeReceipt": "docs/evidence/control-64cb772c-owned-network-runtime-20261013.json"
+  },
+  "previousCandidate": "release/components/control-candidate-64cb772c-20261013.json",
+  "nextSourceSlice": {
+    "owner": "Existing native host-controller resource provisioner and journal; trusted application Owner/Session readers",
+    "gap": "Public complete-instance resource provisioner/lifecycle missing; actual protected Owner authentication configuration location remains pending",
+    "deliverable": "Prepare actual owned instance resources, bind exact deployment identities, then authenticate Owner/Session and run Harmony multiround feedback",
+    "forbidden": [
+      "new lifecycle engine",
+      "Owner synthesized from JSON/defaults/maintenance Person",
+      "Docker socket/admin roots/credentials granted to workspace sandbox",
+      "deletion inferred from component history"
+    ],
+    "implementationNotIncluded": false,
+    "includedScope": "Actual kernel/socket Host authority and exact private physical receipt binding; strict extra-route refusal. Full-instance resources/actual Owner/Session closure remain missing.",
+    "hostNetworkGate": "Explicitly resolve the extra owned-interface169.254/16 route under actual Host policy; preserve generation3/ID and never replay creation"
+  }
+}

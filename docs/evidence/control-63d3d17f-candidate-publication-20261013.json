@@ -1,0 +1,85 @@
+{
+  "schema": "agentlab.controller_publication_receipt.v1",
+  "status": "passed-publication-and-anonymous-byte-readback",
+  "observedAt": "2026-10-13T17:26:36.669462+00:00",
+  "sourceRevision": "63d3d17f9f0d1997eb3492387bd33aec7b9bf5d7",
+  "sourceQualification": "Clean63d3 Source:134 default/138 feature,5 new actual Host/physical receipt controls, strict Clippy/format/static, native Python15 and Skills70. Actual readonly generation3 observation retains strict extra-route refusal. Prior broad private-env error retained. No actual Owner/Session/full-instance or network completion.",
+  "release": {
+    "url": "https://github.com/yxsicd/agentlabrelease/releases/tag/control-63d3d17f-linux-x64",
+    "id": 411933183,
+    "tag": "control-63d3d17f-linux-x64",
+    "tagTarget": "77f632894d628b886263d6e090a703df5bf31238",
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true,
+    "exactAssetCount": 2
+  },
+  "assets": [
+    {
+      "assetId": 637741099,
+      "name": "agentlabctl-63d3d17f-linux-x64",
+      "bytes": 5866984,
+      "sha256": "55ffc59a864a1a1c734cbd6bff339019901027bff0431b07311268dc05304fca",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-63d3d17f-linux-x64/agentlabctl-63d3d17f-linux-x64",
+      "downloadedBytes": 5866984,
+      "downloadedSha256": "55ffc59a864a1a1c734cbd6bff339019901027bff0431b07311268dc05304fca",
+      "matchesApiAndRetainedArtifact": true
+    },
+    {
+      "assetId": 637741097,
+      "name": "control-63d3d17f-linux-x64.json",
+      "bytes": 3695,
+      "sha256": "37def55fb6f72e8926a114e57688e4b1e52ea8ef1426ed0b0343f279c40b01ad",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-63d3d17f-linux-x64/control-63d3d17f-linux-x64.json",
+      "downloadedBytes": 3695,
+      "downloadedSha256": "37def55fb6f72e8926a114e57688e4b1e52ea8ef1426ed0b0343f279c40b01ad",
+      "matchesApiAndRetainedArtifact": true
+    }
+  ],
+  "download": {
+    "anonymous": true,
+    "usedFinalGitHubReleaseUrls": true,
+    "independentFromUpload": true,
+    "staticElfVerified": true,
+    "elfInterpreterSegments": 0,
+    "elfDynamicSegments": 0,
+    "elfNeededLibraries": 0,
+    "binaryExecuted": false,
+    "installed": false
+  },
+  "linuxConsumerExecution": {
+    "passed": true,
+    "binaryExecuted": true,
+    "downloadedBinarySha256": "55ffc59a864a1a1c734cbd6bff339019901027bff0431b07311268dc05304fca",
+    "operations": [
+      "deploy read existing recorded generation3",
+      "deploy plan-network fresh name addresses8",
+      "deploy observe-network-preparation generation3 expected strict route refusal"
+    ],
+    "canonicalIntentBytesUnchanged": true,
+    "independentNetworkGraphUnchanged": true,
+    "networkCount": 9,
+    "consumerCount": 26,
+    "networkEffects": false,
+    "resourcePreparationCompleted": false,
+    "installedInspectorQualified": false,
+    "actualAuthenticatedOwnerSession": false,
+    "fullHarnessReady": false,
+    "harmonyQualified": false,
+    "expectedRouteRefusal": {
+      "exit": 1,
+      "category": "actual-host-policy-review-required"
+    },
+    "journalGeneration": 3
+  },
+  "acceptanceLimits": {
+    "installedInspectorQualified": false,
+    "twoPlatformColdInstallQualified": false,
+    "fullInstanceLifecycleQualified": false,
+    "authenticatedOwnerSessionQualified": false,
+    "fullHarnessReady": false,
+    "completeFlywheelQualified": false,
+    "productionPromotionQualified": false
+  }
+}
