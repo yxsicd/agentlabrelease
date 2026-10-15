@@ -130,6 +130,31 @@ if manifest.get("controllerCandidate"):
             assert asset["downloadedBytes"] == asset["bytes"]
             assert asset["downloadedSha256"] == asset["sha256"]
             assert asset["matchesApiAndRetainedArtifact"] is True
+    if candidate.get("nativeProducer"):
+        producer = json.loads((ROOT / candidate["nativeProducer"]).read_text())
+        assert producer["schema"] == "agentlab.component_update.v1"
+        assert producer["component"] == "native-renderer"
+        assert producer["contracts"]["renderOnly"] is True
+        assert producer["contracts"]["applicationOwnerGrant"] is False
+        assert producer["contracts"]["runtimeLifecycleEffects"] is False
+        assert producer["qualification"]["actualPrivatePositiveRender"] is False
+        assert producer["qualification"]["fullHarnessReady"] is False
+        proof = json.loads((ROOT / candidate["nativeProducerPublication"]).read_text())
+        assert proof["schema"] == "agentlab.native_producer_publication_receipt.v1"
+        assert proof["sourceRevision"] == producer["value"]["sourceRevision"]
+        assert set(proof["anonymousTwoHost"]) == {"hwlinux", "aiwsl"}
+        for host in proof["anonymousTwoHost"].values():
+            assert host["anonymous"] is True and host["allPayloadHashesVerified"] is True
+            assert host["payloadFiles"] == producer["qualification"]["payloadFiles"]
+            assert host["actualPrivateRender"] is False and host["fullInstanceReady"] is False
+            archive = host["files"][producer["value"]["artifact"].rsplit("/", 1)[1]]
+            assert archive["exit"] == 0
+            assert archive["sha256"] == producer["value"]["sha256"]
+            assert archive["bytes"] == producer["value"]["bytes"]
+            descriptor = host["files"][pathlib.Path(candidate["nativeProducer"]).name]
+            actual = (ROOT / candidate["nativeProducer"]).read_bytes()
+            assert descriptor["sha256"] == hashlib.sha256(actual).hexdigest()
+            assert descriptor["bytes"] == len(actual)
 agent = manifest["referenceAgent"]
 assert agent["piPackage"] == "@earendil-works/pi-coding-agent" and agent["piVersion"] == "1.1.0"
 assert agent["delegatePackage"] == "@bermudi/pi-delegate" and agent["delegateVersion"] == "0.4.0"

@@ -15,7 +15,7 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
-The [control candidate](../../release/components/control-candidate-5764c614-20261015.json)
+The [control candidate](../../release/components/control-candidate-5764c614-native-render-20261015.json)
 provides the fixed native Host cold-bootstrap CLI. Verify the descriptor and
 executable sizes and SHA-256 before execution. Anonymous final-URL downloads and
 bounded read-only execution passed independently on Linux and WSL2. The static
@@ -34,7 +34,7 @@ Generation 1 or 2 is accepted only for the matching original operation. Failure
 or an unknown result is not retried; read back that original operation. Host and
 Owner-bound journals cannot adopt each other even with identical plan bytes.
 Do not invent a bundle, accept requested Owner fields as authority, or grant the
-workspace a Docker socket. The bundle producer/installed composition binding and
+workspace a Docker socket. Positive producer/installed composition integration and
 real cold startup remain unqualified; this command is not a complete installation
 recipe. After startup, actual application login and Session/physical Ready remain
 independent requirements.
@@ -51,6 +51,28 @@ Do not recreate that network or replay unknown effects. Refresh exact resources
 and corresponding Host permission before any actual change.
 GitHub reports immutable=false; fixed digests and the no-overwrite policy preserve
 this candidate's identity.
+
+
+### Render the native bundle
+
+The [fixed standalone producer](../../release/components/native-render-ff676e1cc48e.json)
+packages the same owning renderer with its exact templates and helpers. Download
+the declared archive, verify size/SHA-256, and extract it into a new private
+directory. Read its README and native-render-producer.json; private maintenance
+source is not required. Explicit actual local deployment configuration, installed
+composition receipt and deploy_bindings.v2 are still required. No host config,
+env file or credential is included.
+
+From the extracted directory, render into an existing caller-owned mode0700 parent:
+
+    python3 scripts/agentlab-native-render.py own-instance --config /absolute/private/config.json --composition-receipt /absolute/private/install.json --native-plan-bindings /absolute/private/bindings.json --output-dir /absolute/private/rendered
+
+The entry forces render-only and rejects execution, transport and auth switches.
+It does not retry or remove partial output. Linux/WSL anonymous download,
+all16 payload hashes and standalone help/missing-input/effect-denial checks passed.
+Actual positive render with real private inputs, cold startup and Owner/Session
+remain unqualified. The producer is not a substitute for authentication or fresh
+physical resource checks.
 
 1. Pin a full release-repository commit. Read its component descriptors and
    acceptance limits. Resolve mutable channels once, then use exact bytes/digests.

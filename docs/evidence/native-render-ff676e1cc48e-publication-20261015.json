@@ -1,0 +1,125 @@
+{
+  "schema": "agentlab.native_producer_publication_receipt.v1",
+  "status": "passed-public-byte-and-entry-readback-only",
+  "sourceRevision": "ff676e1cc48e16d88c493718bdac2d58c3d2b507",
+  "publication": {
+    "schema": "agentlab.release_publication_attempt.v1",
+    "tag": "native-render-ff676e1cc48e",
+    "source": "ff676e1cc48e16d88c493718bdac2d58c3d2b507",
+    "phase": "published_candidate",
+    "attempted": [
+      "create-release",
+      "agentlab-native-render-ff676e1cc48e.tar.gz",
+      "native-render-ff676e1cc48e.json"
+    ],
+    "at": "2026-10-15T22:55:39.085409+00:00",
+    "releaseId": 414350604,
+    "html_url": "https://github.com/yxsicd/agentlabrelease/releases/tag/native-render-ff676e1cc48e",
+    "assets": [
+      {
+        "id": 645428104,
+        "name": "agentlab-native-render-ff676e1cc48e.tar.gz",
+        "size": 48119,
+        "digest": "sha256:11af252531da23810c69216e2208858b42e63366e5bf496a369963306a7049ed",
+        "browser_download_url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-ff676e1cc48e/agentlab-native-render-ff676e1cc48e.tar.gz"
+      },
+      {
+        "id": 645428149,
+        "name": "native-render-ff676e1cc48e.json",
+        "size": 1233,
+        "digest": "sha256:44fb5d3878917512cfec808a51f0853c721911edde7a5071e4480952da68d789",
+        "browser_download_url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-ff676e1cc48e/native-render-ff676e1cc48e.json"
+      }
+    ]
+  },
+  "anonymousTwoHost": {
+    "hwlinux": {
+      "schema": "agentlab.public_native_producer_acquisition.v1",
+      "anonymous": true,
+      "files": {
+        "agentlab-native-render-ff676e1cc48e.tar.gz": {
+          "exit": 0,
+          "stderr": "",
+          "bytes": 48119,
+          "sha256": "11af252531da23810c69216e2208858b42e63366e5bf496a369963306a7049ed"
+        },
+        "native-render-ff676e1cc48e.json": {
+          "exit": 0,
+          "stderr": "",
+          "bytes": 1233,
+          "sha256": "44fb5d3878917512cfec808a51f0853c721911edde7a5071e4480952da68d789"
+        }
+      },
+      "actualPrivateRender": false,
+      "actualColdStartup": false,
+      "fullInstanceReady": false,
+      "payloadFiles": 16,
+      "allPayloadHashesVerified": true,
+      "entryCases": [
+        {
+          "case": "help",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "case": "core_missing_private_inputs",
+          "exit": 1,
+          "stderr": "FAIL: native render did not complete; preserve and inspect original private inputs/output\n"
+        },
+        {
+          "case": "effect_flag_denied",
+          "exit": 2,
+          "stderr": "FAIL: invalid native render arguments; use --help\n"
+        }
+      ],
+      "privateSourceNotRequired": true,
+      "observed_at": "2026-10-15T22:56:41.907189+00:00"
+    },
+    "aiwsl": {
+      "schema": "agentlab.public_native_producer_acquisition.v1",
+      "anonymous": true,
+      "files": {
+        "agentlab-native-render-ff676e1cc48e.tar.gz": {
+          "exit": 0,
+          "stderr": "",
+          "bytes": 48119,
+          "sha256": "11af252531da23810c69216e2208858b42e63366e5bf496a369963306a7049ed"
+        },
+        "native-render-ff676e1cc48e.json": {
+          "exit": 0,
+          "stderr": "",
+          "bytes": 1233,
+          "sha256": "44fb5d3878917512cfec808a51f0853c721911edde7a5071e4480952da68d789"
+        }
+      },
+      "actualPrivateRender": false,
+      "actualColdStartup": false,
+      "fullInstanceReady": false,
+      "payloadFiles": 16,
+      "allPayloadHashesVerified": true,
+      "entryCases": [
+        {
+          "case": "help",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "case": "core_missing_private_inputs",
+          "exit": 1,
+          "stderr": "FAIL: native render did not complete; preserve and inspect original private inputs/output\n"
+        },
+        {
+          "case": "effect_flag_denied",
+          "exit": 2,
+          "stderr": "FAIL: invalid native render arguments; use --help\n"
+        }
+      ],
+      "privateSourceNotRequired": true,
+      "observed_at": "2026-10-15T22:56:40.003317+00:00"
+    }
+  },
+  "actualPrivatePositiveRender": false,
+  "actualColdStartup": false,
+  "OwnerSessionReady": false,
+  "fullHarnessReady": false
+}

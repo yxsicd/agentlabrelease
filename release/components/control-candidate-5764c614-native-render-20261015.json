@@ -1,0 +1,41 @@
+{
+  "schema": "agentlab.controller_candidate.v1",
+  "status": "candidate-not-current-installation",
+  "controller": "release/components/control-5764c614-linux-x64.json",
+  "releaseTag": "control-5764c614-linux-x64",
+  "unchangedComposition": "release/candidates/40ecdf4b-linux-x64/publication.json",
+  "environmentLock": "release/candidates/40ecdf4b-linux-x64/environment-lock.json",
+  "currentInstaller": "release/components/installer-eee1e1e-linux-x64.json",
+  "currentInstallerSelectsCandidate": false,
+  "selectionPolicy": "explicit-candidate-only-no-current-installation-or-promotion",
+  "previousCandidate": "release/components/control-candidate-5764c614-20261015.json",
+  "qualification": {
+    "source": "passed",
+    "newHostPrivateControls": 5,
+    "affectedExecutionPrivateControls": 13,
+    "staticBuild": "passed",
+    "publicFinalUrlReadback": "passed",
+    "twoPlatformPublicReadonlyExecution": "passed",
+    "installedInspector": "not_run",
+    "twoPlatformColdInstall": "not_run",
+    "fullInstanceDeploy": "missing",
+    "fullHarnessReady": false
+  },
+  "publication": {
+    "status": "published-final-url-verified",
+    "receipt": "docs/evidence/control-5764c614-candidate-publication-20261015.json",
+    "releaseCreated": true,
+    "assetsUploaded": 2,
+    "selectedAssets": 2,
+    "finalUrlDownloadPerformed": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "nextSourceSlice": {
+    "deliverable": "Generate exact v3 deployment bundle from independently qualified installed composition and owning configuration; qualify original registry and fresh Host conditions before cold startup. After startup authenticate actual application Owner and qualify Session/Ready/business, then Harmony feedback reuse.",
+    "includedScope": "Callable native Host-only cold-bootstrap with original actor-bound one-attempt journal; no Owner/Session grant",
+    "fullInstanceQualified": false
+  },
+  "nativeProducer": "release/components/native-render-ff676e1cc48e.json",
+  "nativeProducerPublication": "docs/evidence/native-render-ff676e1cc48e-publication-20261015.json"
+}

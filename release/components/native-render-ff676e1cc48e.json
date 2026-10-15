@@ -1,0 +1,34 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "native-renderer",
+  "value": {
+    "sourceRevision": "ff676e1cc48e16d88c493718bdac2d58c3d2b507",
+    "platform": "python3-stdlib",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-ff676e1cc48e/agentlab-native-render-ff676e1cc48e.tar.gz",
+    "bytes": 48119,
+    "sha256": "11af252531da23810c69216e2208858b42e63366e5bf496a369963306a7049ed",
+    "manifestSha256": "a5594dc0c14e2b09301cbffbfde7dce3aa0ac3890e9e82a05c7bee06b54fc6ad"
+  },
+  "contracts": {
+    "pythonMinimum": "3.10",
+    "entrypoint": "scripts/agentlab-native-render.py",
+    "bundleSchema": "agentlab.deploy_bundle.v3",
+    "sameOwningProducer": true,
+    "renderOnly": true,
+    "requiresActualLocalPrivateInputs": true,
+    "applicationOwnerGrant": false,
+    "runtimeLifecycleEffects": false
+  },
+  "qualification": {
+    "payloadFiles": 16,
+    "fullFileHashesVerified": true,
+    "sourceEntryControls": 5,
+    "standaloneEntryControls": 4,
+    "deterministicArchive": true,
+    "privateSourceCheckoutRequired": false,
+    "actualPrivatePositiveRender": false,
+    "actualColdStartup": false,
+    "OwnerSessionReady": false,
+    "fullHarnessReady": false
+  }
+}
