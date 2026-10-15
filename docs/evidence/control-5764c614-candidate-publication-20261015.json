@@ -1,0 +1,115 @@
+{
+  "schema": "agentlab.controller_publication_receipt.v1",
+  "status": "passed-publication-and-anonymous-byte-readback",
+  "sourceRevision": "5764c61487e4f9705470d70369ad23a8167272f8",
+  "observedAt": "2026-10-15T22:33:26.281215+00:00",
+  "release": {
+    "tag": "control-5764c614-linux-x64",
+    "id": 414336930,
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "assets": [
+    {
+      "name": "agentlabctl-5764c61487e4-linux-x64",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-5764c614-linux-x64/agentlabctl-5764c61487e4-linux-x64",
+      "bytes": 6301744,
+      "sha256": "b28fa3472f829c40aaafac73caa8684b94dcbaeb55236daa7ee216991f2d9488",
+      "downloadedBytes": 6301744,
+      "downloadedSha256": "b28fa3472f829c40aaafac73caa8684b94dcbaeb55236daa7ee216991f2d9488",
+      "matchesApiAndRetainedArtifact": true
+    },
+    {
+      "name": "control-5764c614-linux-x64.json",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-5764c614-linux-x64/control-5764c614-linux-x64.json",
+      "bytes": 1904,
+      "sha256": "a02438c3208a0e31f19c90fa11749b77405447fba269e48cc417363dbb17af87",
+      "downloadedBytes": 1904,
+      "downloadedSha256": "a02438c3208a0e31f19c90fa11749b77405447fba269e48cc417363dbb17af87",
+      "matchesApiAndRetainedArtifact": true
+    }
+  ],
+  "download": {
+    "anonymous": true,
+    "elfInterpreterSegments": 0,
+    "elfDynamicSegments": 1,
+    "elfNeededLibraries": 0,
+    "binaryExecuted": false,
+    "usedFinalGitHubReleaseUrls": true,
+    "independentFromUpload": true,
+    "staticElfVerified": true,
+    "installed": false,
+    "elfType": 3
+  },
+  "subsequentPublicReadonlyExecution": {
+    "hwlinux": {
+      "observedAt": "2026-10-15T22:32:40.035435+00:00",
+      "anonymous": true,
+      "files": {
+        "agentlabctl-5764c61487e4-linux-x64": {
+          "exit": 0,
+          "stderr": "",
+          "sha256": "b28fa3472f829c40aaafac73caa8684b94dcbaeb55236daa7ee216991f2d9488",
+          "bytes": 6301744
+        },
+        "control-5764c614-linux-x64.json": {
+          "exit": 0,
+          "stderr": "",
+          "sha256": "a02438c3208a0e31f19c90fa11749b77405447fba269e48cc417363dbb17af87",
+          "bytes": 1904
+        }
+      },
+      "selfDigest": {
+        "exit": 0,
+        "stdout": "b28fa3472f829c40aaafac73caa8684b94dcbaeb55236daa7ee216991f2d9488\n",
+        "stderr": ""
+      },
+      "invalidGeneration": {
+        "exit": 1,
+        "stdout": "",
+        "stderr": "FAIL: cold bootstrap requires generation1 or2; read original operation without replay\n"
+      },
+      "actualLifecycle": false,
+      "fullInstance": false
+    },
+    "aiwsl": {
+      "observedAt": "2026-10-15T22:32:33.721016+00:00",
+      "anonymous": true,
+      "files": {
+        "agentlabctl-5764c61487e4-linux-x64": {
+          "exit": 0,
+          "stderr": "",
+          "sha256": "b28fa3472f829c40aaafac73caa8684b94dcbaeb55236daa7ee216991f2d9488",
+          "bytes": 6301744
+        },
+        "control-5764c614-linux-x64.json": {
+          "exit": 0,
+          "stderr": "",
+          "sha256": "a02438c3208a0e31f19c90fa11749b77405447fba269e48cc417363dbb17af87",
+          "bytes": 1904
+        }
+      },
+      "selfDigest": {
+        "exit": 0,
+        "stdout": "b28fa3472f829c40aaafac73caa8684b94dcbaeb55236daa7ee216991f2d9488\n",
+        "stderr": ""
+      },
+      "invalidGeneration": {
+        "exit": 1,
+        "stdout": "",
+        "stderr": "FAIL: cold bootstrap requires generation1 or2; read original operation without replay\n"
+      },
+      "actualLifecycle": false,
+      "fullInstance": false
+    }
+  },
+  "acceptanceLimits": {
+    "actualHostColdStartup": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullInstanceLifecycle": false,
+    "HarmonyFeedbackLoop": false
+  }
+}

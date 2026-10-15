@@ -1,0 +1,52 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "control",
+  "value": {
+    "sourceRevision": "5764c61487e4f9705470d70369ad23a8167272f8",
+    "platform": "linux-x64",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-5764c614-linux-x64/agentlabctl-5764c61487e4-linux-x64",
+    "bytes": 6301744,
+    "sha256": "b28fa3472f829c40aaafac73caa8684b94dcbaeb55236daa7ee216991f2d9488"
+  },
+  "contracts": {
+    "nativeDeploymentInputSchema": "agentlab.deploy_bundle.v3",
+    "sharedNativeLibrary": true,
+    "hostOnlyColdBootstrapCLI": true,
+    "coldBootstrapJournal": "actor-bound-once-generation1-or2-no-replay",
+    "deploymentEffectsSupported": true,
+    "deploymentEffectScope": "explicit-local-host-cold-compose-bootstrap-once",
+    "hostOperatorIsApplicationOwner": false,
+    "applicationOwnerSessionGrant": false,
+    "runtimeActivationSupported": false,
+    "fullHarnessReady": false,
+    "resourceDeletionSupported": false,
+    "unknownEffectReplayAllowed": false,
+    "legacyPythonUpBridge": false
+  },
+  "build": {
+    "sourceWorktreeClean": true,
+    "target": "x86_64-unknown-linux-musl",
+    "profile": "release-locked-offline",
+    "features": [
+      "trusted-deployment-inputs"
+    ],
+    "rustc": "1.96.0",
+    "staticCrt": true,
+    "staticPie": true,
+    "interpreterSegments": 0
+  },
+  "qualification": {
+    "status": "component-static-cli-qualified-candidate-only",
+    "newHostPrivateControls": 5,
+    "directlyAffectedPrivateControls": 13,
+    "scopedDefaultFeatureClippy": "passed",
+    "maintainerSkillsTests": 70,
+    "actualPrivateCliInvalidGeneration": "nonzero-before-input-io",
+    "unsupportedVersionOption": "usage-exit2-existing-behavior",
+    "twoPlatformPublicAcquisition": "pending",
+    "actualHostColdStartup": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullHarnessReady": false
+  }
+}

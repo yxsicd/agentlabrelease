@@ -15,50 +15,42 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
-The [control candidate](../../release/components/control-candidate-63d3d17f-20261013.json)
-provides the current native controller through public GitHub assets. Download its
-descriptor and executable into a private acquisition directory and verify their
-declared sizes and SHA-256 values before execution. The sealed receipt records
-anonymous final-URL Linux acquisition, static ELF identity and subsequent bounded
-execution of the downloaded binary.
+The [control candidate](../../release/components/control-candidate-5764c614-20261015.json)
+provides the fixed native Host cold-bootstrap CLI. Verify the descriptor and
+executable sizes and SHA-256 before execution. Anonymous final-URL downloads and
+bounded read-only execution passed independently on Linux and WSL2. The static
+musl PIE has no ELF interpreter or imported libraries. Publication byte inspection
+and subsequent Linux/WSL execution are separately scoped in the sealed receipt.
 
-This cut binds actual kernel UID and frozen Unix socket identity/read-write
-rights to an opaque exact physical network receipt in the same native journal.
-Completion rechecks Host rights and matches the daemon/resource/full attempt
-after request and component revalidation. JSON, intents and maintenance Person
-identity cannot supply Host authority or authenticated application Owner.
-The explicit local Host operator records an attempt before one Docker creation;
-completion requires the recorded physical ID, exact layout and ownership labels,
-unchanged unrelated inventory, and rechecked request/component inputs. An unknown
-creation result is retained for readback and never replayed. Host operator access
-is separate from authenticated application Owner/Session access.
-Native134 default and138 optional-feature tests, including5 new Host/receipt controls,
-strict Clippy, native Python15 and Skills70 passed. The broad Python suite retains
-one unchanged private-env error. A later actual Linux creation returned a physical
-ID, recorded at journal generation3. Completion was refused after an additional
-169.254.0.0/16 route appeared on the new bridge. The
-[actual receipt](../../docs/evidence/control-64cb772c-owned-network-runtime-20261013.json)
-retains that refusal: the network and route remain, creation is never replayed,
-and preparation/full-instance readiness remains unqualified.
+Cold physical startup uses actual kernel UID, frozen Unix socket rights and
+fresh daemon/resource checks. It does not require logging into an instance that
+has not started, and it does not grant application Owner or Session authority.
+The explicit command consumes an exact v3 private deployment bundle, qualified
+component registry and original journal operation:
 
-After verification, the downloaded executable can inventory a proposed network:
+    /absolute/private/root/agentlabctl-5764c61487e4-linux-x64 deploy cold-bootstrap /absolute/private/bundle --registry /absolute/private/component-registry --journal /absolute/private/operation-journal --operation original-operation-id --expected-generation 1
 
-    /absolute/private/root/agentlabctl-63d3d17f-linux-x64 deploy plan-network --name armnet --addresses 2
+Generation 1 or 2 is accepted only for the matching original operation. Failure
+or an unknown result is not retried; read back that original operation. Host and
+Owner-bound journals cannot adopt each other even with identical plan bytes.
+Do not invent a bundle, accept requested Owner fields as authority, or grant the
+workspace a Docker socket. The bundle producer/installed composition binding and
+real cold startup remain unqualified; this command is not a complete installation
+recipe. After startup, actual application login and Session/physical Ready remain
+independent requirements.
 
-Use the actual declared service address demand. The result is a plan; immediately
-reinventory before any separately authorized resource creation. Public Linux
-read-only execution preserved all9 networks and26 consumers and generation3
-journal bytes, including the expected additional-route refusal. It does not qualify resource preparation, installed payload
-inspection, Owner/Session or a complete instance.
+The existing installer still selects f2e87a57. This candidate has not passed
+complete two-platform cold install, full instance lifecycle, Owner/Session, or
+Harmony feedback reuse. New Host5 and affected execution13 private controls are
+Source evidence. They are not runtime acceptance. Existing component identities
+remain selected until separately qualified.
 
-Current installer still selects f2e87a57. New Linux/WSL2 cold installation and
-full-instance lifecycle for this candidate remain unrun. GitHub API
-immutable=false; pinned digests and the publisher no-overwrite policy preserve
-asset identity. The [previous network candidate](../../release/components/control-candidate-64cb772c-20261013.json)
-and earlier shared-core descriptors remain unchanged historical evidence.
-The next delivery step is actual owned instance preparation and authenticated
-Owner/Session, followed by Harmony execution and feedback reuse. Do not grant
-workspace sandboxes host administration roots, Docker sockets or credentials.
+The historical [owned-network receipt](../../docs/evidence/control-64cb772c-owned-network-runtime-20261013.json)
+retains generation3, its physical ID and the extra 169.254/16 route refusal.
+Do not recreate that network or replay unknown effects. Refresh exact resources
+and corresponding Host permission before any actual change.
+GitHub reports immutable=false; fixed digests and the no-overwrite policy preserve
+this candidate's identity.
 
 1. Pin a full release-repository commit. Read its component descriptors and
    acceptance limits. Resolve mutable channels once, then use exact bytes/digests.

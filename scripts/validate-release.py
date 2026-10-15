@@ -11,6 +11,20 @@ def validate_candidate_static_build(build, receipt):
     """Keep legacy ELF evidence; require independent proof for the new builder."""
     assert build["target"] == "x86_64-unknown-linux-musl"
     assert build["interpreterSegments"] == 0
+    if build.get("staticPie") is True:
+        # A musl static PIE has a relocation DYNAMIC segment, but no loader or
+        # imported libraries. Require independently downloaded ELF bytes.
+        assert build["staticCrt"] is True
+        assert receipt is not None
+        download = receipt["download"]
+        for key in ("anonymous", "usedFinalGitHubReleaseUrls", "independentFromUpload", "staticElfVerified"):
+            assert download[key] is True
+        assert download["binaryExecuted"] is False and download["installed"] is False
+        assert download["elfType"] == 3
+        assert download["elfInterpreterSegments"] == 0
+        assert download["elfDynamicSegments"] == 1
+        assert download["elfNeededLibraries"] == 0
+        return
     if "dynamicSegments" in build:
         assert build["dynamicSegments"] == 0
     else:
@@ -73,14 +87,23 @@ if manifest.get("controllerCandidate"):
     if candidate["qualification"]["publicFinalUrlReadback"] == "passed":
         candidate_receipt = json.loads((ROOT / candidate["publication"]["receipt"]).read_text())
     validate_candidate_static_build(candidate_control["build"], candidate_receipt)
-    assert candidate_control["qualification"]["installedInspectorRevalidation"] is False
-    assert candidate_control["qualification"]["twoPlatformColdInstallRevalidation"] is False
+    host_bootstrap = candidate_control["contracts"].get("hostOnlyColdBootstrapCLI") is True
+    if host_bootstrap:
+        assert candidate_control["contracts"]["applicationOwnerSessionGrant"] is False
+        assert candidate_control["contracts"]["runtimeActivationSupported"] is False
+        assert candidate_control["contracts"]["unknownEffectReplayAllowed"] is False
+        for key in ("actualHostColdStartup", "authenticatedOwnerSession", "physicalReady", "fullHarnessReady"):
+            assert candidate_control["qualification"][key] is False
+    else:
+        assert candidate_control["qualification"]["installedInspectorRevalidation"] is False
+        assert candidate_control["qualification"]["twoPlatformColdInstallRevalidation"] is False
     candidate_value = candidate_control["value"]
     assert re.fullmatch(r"[0-9a-f]{40}", candidate_value["sourceRevision"])
     assert re.fullmatch(r"[0-9a-f]{64}", candidate_value["sha256"])
     assert candidate_value["bytes"] > 0
     assert f'/releases/download/{candidate["releaseTag"]}/' in candidate_value["artifact"]
-    assert candidate_control["contracts"]["consumerMountComparison"] == "full-field-order-independent-multiset-no-deduplication"
+    if not host_bootstrap:
+        assert candidate_control["contracts"]["consumerMountComparison"] == "full-field-order-independent-multiset-no-deduplication"
     if candidate["qualification"]["publicFinalUrlReadback"] == "passed":
         publication_receipt = json.loads((ROOT / candidate["publication"]["receipt"]).read_text())
         assert publication_receipt["schema"] == "agentlab.controller_publication_receipt.v1"

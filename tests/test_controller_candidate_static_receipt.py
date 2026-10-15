@@ -55,6 +55,22 @@ class CandidateStaticReceiptTests(unittest.TestCase):
         with self.assertRaises(KeyError):
             check(changed, self.receipt)
 
+    def test_static_pie_requires_exact_independent_elf_identity(self):
+        build = {"target": "x86_64-unknown-linux-musl", "interpreterSegments": 0,
+                 "staticCrt": True, "staticPie": True}
+        receipt = copy.deepcopy(self.receipt)
+        receipt["download"].update(elfType=3, elfDynamicSegments=1)
+        check(build, receipt)
+        for key, value in [("elfType", 2), ("elfDynamicSegments", 0),
+                           ("elfInterpreterSegments", 1), ("elfNeededLibraries", 1),
+                           ("anonymous", False), ("binaryExecuted", True)]:
+            with self.subTest(key=key), self.assertRaises(AssertionError):
+                changed = copy.deepcopy(receipt)
+                changed["download"][key] = value
+                check(build, changed)
+        with self.assertRaises(AssertionError):
+            check(build, None)
+
 
 if __name__ == "__main__":
     unittest.main()
