@@ -1,0 +1,39 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "native-renderer",
+  "value": {
+    "sourceRevision": "4b8c210e91e50c200f3d4d32c5342ab920a86104",
+    "platform": "python3-stdlib",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-4b8c210e91e5/agentlab-native-render-4b8c210e91e5.tar.gz",
+    "bytes": 48145,
+    "sha256": "df96fe46e515fe53a20f0b696c887cc23ed24d423b3a62097f2ca8b6274ea7ff",
+    "manifestSha256": "793e2f98f1fc172d837e8152ef40a3921280ad1b7db98059f96b928433cdca07"
+  },
+  "contracts": {
+    "pythonMinimum": "3.10",
+    "entrypoint": "scripts/agentlab-native-render.py",
+    "bundleSchema": "agentlab.deploy_bundle.v3",
+    "sameOwningProducer": true,
+    "renderOnly": true,
+    "requiresActualLocalPrivateInputs": true,
+    "applicationOwnerGrant": false,
+    "runtimeLifecycleEffects": false
+  },
+  "qualification": {
+    "payloadFiles": 16,
+    "fullFileHashesVerified": true,
+    "sourceMountedRootControls": 2,
+    "focusedEntryControls": 6,
+    "actualPrivatePositiveRender": false,
+    "actualColdStartup": false,
+    "OwnerSessionReady": false,
+    "fullHarnessReady": false
+  },
+  "repair": {
+    "issue": "Pre-mount0700 did not protect the newly mounted Btrfs root",
+    "policy": "Apply0700 only after verified Btrfs identity in fresh and already-mounted branches",
+    "previousSource": "1e4c82e8dea73581eee5c7a7ac52dec4ec97c3b0",
+    "originalFailureRetained": true,
+    "actualConvergenceQualified": false
+  }
+}

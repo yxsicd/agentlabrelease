@@ -1,0 +1,98 @@
+{
+  "schema": "agentlab.native_producer_publication_receipt.v1",
+  "status": "passed-public-byte-readback-only",
+  "sourceRevision": "4b8c210e91e50c200f3d4d32c5342ab920a86104",
+  "publication": {
+    "assets": [
+      {
+        "browser_download_url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-4b8c210e91e5/agentlab-native-render-4b8c210e91e5.tar.gz",
+        "digest": "sha256:df96fe46e515fe53a20f0b696c887cc23ed24d423b3a62097f2ca8b6274ea7ff",
+        "id": 645599829,
+        "name": "agentlab-native-render-4b8c210e91e5.tar.gz",
+        "size": 48145
+      },
+      {
+        "browser_download_url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-4b8c210e91e5/native-render-4b8c210e91e5.json",
+        "digest": "sha256:e4c0baeb8c1f41567bffbac0d4539008a89801297f01d1e7bd11af74b4830694",
+        "id": 645599832,
+        "name": "native-render-4b8c210e91e5.json",
+        "size": 1495
+      }
+    ],
+    "html_url": "https://github.com/yxsicd/agentlabrelease/releases/tag/native-render-4b8c210e91e5",
+    "id": 414397539,
+    "immutable": false,
+    "tag_name": "native-render-4b8c210e91e5",
+    "target_commitish": "2cba145a344efab7bcec8c365d772dde684837bf",
+    "phase": "published_candidate",
+    "noOverwritePolicy": true
+  },
+  "anonymousTwoHost": {
+    "hwlinux": {
+      "schema": "agentlab.native_producer_acquisition.v1",
+      "anonymous": true,
+      "authorizationHeaderSent": false,
+      "sourceRevision": "4b8c210e91e50c200f3d4d32c5342ab920a86104",
+      "phase": "acquired_verified",
+      "files": {
+        "agentlab-native-render-4b8c210e91e5.tar.gz": {
+          "exit": 0,
+          "bytes": 48145,
+          "sha256": "df96fe46e515fe53a20f0b696c887cc23ed24d423b3a62097f2ca8b6274ea7ff",
+          "finalHost": "release-assets.githubusercontent.com",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-4b8c210e91e5/agentlab-native-render-4b8c210e91e5.tar.gz"
+        },
+        "native-render-4b8c210e91e5.json": {
+          "exit": 0,
+          "bytes": 1495,
+          "sha256": "e4c0baeb8c1f41567bffbac0d4539008a89801297f01d1e7bd11af74b4830694",
+          "finalHost": "release-assets.githubusercontent.com",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-4b8c210e91e5/native-render-4b8c210e91e5.json"
+        }
+      },
+      "actualPrivateRender": false,
+      "fullInstanceReady": false,
+      "allPayloadHashesVerified": true,
+      "payloadFiles": 16,
+      "unitGuardFixIncluded": true,
+      "mountedRootPolicyFixIncluded": true,
+      "observedAt": "2026-10-16T00:19:46.714190+00:00"
+    },
+    "aiwsl": {
+      "schema": "agentlab.native_producer_acquisition.v1",
+      "anonymous": true,
+      "authorizationHeaderSent": false,
+      "sourceRevision": "4b8c210e91e50c200f3d4d32c5342ab920a86104",
+      "phase": "acquired_verified",
+      "files": {
+        "agentlab-native-render-4b8c210e91e5.tar.gz": {
+          "exit": 0,
+          "bytes": 48145,
+          "sha256": "df96fe46e515fe53a20f0b696c887cc23ed24d423b3a62097f2ca8b6274ea7ff",
+          "finalHost": "release-assets.githubusercontent.com",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-4b8c210e91e5/agentlab-native-render-4b8c210e91e5.tar.gz"
+        },
+        "native-render-4b8c210e91e5.json": {
+          "exit": 0,
+          "bytes": 1495,
+          "sha256": "e4c0baeb8c1f41567bffbac0d4539008a89801297f01d1e7bd11af74b4830694",
+          "finalHost": "release-assets.githubusercontent.com",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-4b8c210e91e5/native-render-4b8c210e91e5.json"
+        }
+      },
+      "actualPrivateRender": false,
+      "fullInstanceReady": false,
+      "allPayloadHashesVerified": true,
+      "payloadFiles": 16,
+      "unitGuardFixIncluded": true,
+      "mountedRootPolicyFixIncluded": true,
+      "observedAt": "2026-10-16T00:19:45.063165+00:00"
+    }
+  },
+  "sourceMountedRootControls": 2,
+  "affectedEntryControls": 6,
+  "actualPrivatePositiveRender": false,
+  "actualColdStartup": false,
+  "OwnerSessionReady": false,
+  "fullHarnessReady": false
+}
