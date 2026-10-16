@@ -15,7 +15,7 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
-The [control candidate](../../release/components/control-candidate-69b934a0-wsl-inventory-20261016.json)
+The [control candidate](../../release/components/control-candidate-69b934a0-native-render-4aef783e-20261016.json)
 provides the fixed native Host cold-bootstrap CLI. Verify the descriptor and
 executable sizes and SHA-256 before execution. Anonymous final-URL downloads and
 bounded read-only execution passed independently on Linux and WSL2. The static
@@ -40,10 +40,14 @@ operation or infer application authority from corrected declarations.
 Cold physical startup uses actual kernel UID, frozen Unix socket rights and
 fresh daemon/resource checks. It does not require logging into an instance that
 has not started, and it does not grant application Owner or Session authority.
-The explicit command consumes an exact v3 private deployment bundle, qualified
-component registry and original journal operation:
+The commands consume an exact v3 private deployment bundle and qualified
+component registry. Initialize a NEW disjoint private journal and original
+operation with admit generation0, then execute that SAME operation at generation1.
+The intent records input identity only; actual Host admission remains independent:
 
-    /absolute/private/root/agentlabctl-69b934a08153-linux-x64 deploy cold-bootstrap /absolute/private/bundle --registry /absolute/private/component-registry --journal /absolute/private/operation-journal --operation original-operation-id --expected-generation 1
+    /absolute/private/root/agentlabctl-69b934a08153-linux-x64 deploy admit /absolute/private/bundle --registry /absolute/private/component-registry --journal /absolute/private/NEW-operation-journal --operation NEW-original-operation-id --expected-generation 0
+
+    /absolute/private/root/agentlabctl-69b934a08153-linux-x64 deploy cold-bootstrap /absolute/private/bundle --registry /absolute/private/component-registry --journal /absolute/private/NEW-operation-journal --operation NEW-original-operation-id --expected-generation 1
 
 Generation 1 or 2 is accepted only for the matching original operation. Failure
 or an unknown result is not retried; read back that original operation. Host and
@@ -70,6 +74,12 @@ this candidate's identity.
 
 ### Render the native bundle
 
+The selected4aef783e producer now requires an existing toolchains.json bind
+source. Its actual WSL bundle passes all9normalized bind-source checks and6Host
+identities. An initialized original Host operation reached execution but returned
+exit1; independent readback finds no instance containers/data volume. Preserve
+that generation4 operation without retry. Complete startup remains unqualified.
+
 The same public4b8c210e producer now has an actual private positive render on
 WSL2:16configuration byte identities and6physical participant identities were
 independently verified. Acquire the program and prepare private inputs under
@@ -90,7 +100,7 @@ preserved; use this new fixed package and a newly admitted operation after
 reading back the original effect. Existing producer and component bytes remain
 available under their original identities.
 
-The [fixed standalone producer](../../release/components/native-render-4b8c210e91e5.json)
+The [fixed standalone producer](../../release/components/native-render-4aef783e6c4e.json)
 packages the same owning renderer with its exact templates and helpers. Download
 the declared archive, verify size/SHA-256, and extract it into a new private
 directory. Read its README and native-render-producer.json; private maintenance

@@ -1,0 +1,46 @@
+{
+  "schema": "agentlab.controller_candidate.v1",
+  "status": "candidate-not-current-installation",
+  "controller": "release/components/control-69b934a0-linux-x64.json",
+  "releaseTag": "control-69b934a0-linux-x64",
+  "unchangedComposition": "release/candidates/40ecdf4b-linux-x64/publication.json",
+  "environmentLock": "release/candidates/40ecdf4b-linux-x64/environment-lock.json",
+  "currentInstaller": "release/components/installer-eee1e1e-linux-x64.json",
+  "currentInstallerSelectsCandidate": false,
+  "selectionPolicy": "explicit-candidate-only-no-current-installation-or-promotion",
+  "previousCandidate": "release/components/control-candidate-69b934a0-wsl-inventory-20261016.json",
+  "qualification": {
+    "source": "passed",
+    "newWindowsPrivateControls": 4,
+    "newWslResolverPrivateControls": 1,
+    "staticBuild": "passed",
+    "publicFinalUrlReadback": "passed",
+    "twoPlatformPublicReadonlyExecution": "passed",
+    "actualWslNetworkObservation": "declared-networks-match-live-policy",
+    "installedInspector": "not_run",
+    "twoPlatformColdInstall": "not_run",
+    "fullInstanceDeploy": "missing",
+    "fullHarnessReady": false,
+    "actualHostColdStartup": "execution-returned-failure-generation4"
+  },
+  "publication": {
+    "status": "published-final-url-verified",
+    "receipt": "docs/evidence/control-69b934a0-candidate-publication-20261016.json",
+    "releaseCreated": true,
+    "assetsUploaded": 2,
+    "selectedAssets": 2,
+    "finalUrlDownloadPerformed": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "nextSourceSlice": {
+    "deliverable": "Read the original generation4 operation and owning data-volume preparation/Compose dependency contract without replay; fix only a proven gap before a new admitted operation.",
+    "includedScope": "Controller-owned live Windows+Linux/Docker network capture, private one-attempt Host startup; no application authority conversion",
+    "fullInstanceQualified": false
+  },
+  "nativeProducer": "release/components/native-render-4aef783e6c4e.json",
+  "nativeProducerPublication": "docs/evidence/native-render-4aef783e6c4e-publication-20261016.json",
+  "physicalStoragePreparation": "docs/evidence/native-storage-4b8c210e-20261016.json",
+  "actualNativeRenderQualification": "docs/evidence/native-render-4aef783e6c4e-positive-20261016.json",
+  "actualColdStartupObservation": "docs/evidence/native-bind-safe-startup-return-20261016.json"
+}

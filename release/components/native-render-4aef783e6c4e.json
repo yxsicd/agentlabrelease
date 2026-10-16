@@ -1,0 +1,39 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "native-renderer",
+  "value": {
+    "sourceRevision": "4aef783e6c4e8a18ced6884ec635c7a7dcda569a",
+    "platform": "python3-stdlib",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-4aef783e6c4e/agentlab-native-render-4aef783e6c4e.tar.gz",
+    "bytes": 48191,
+    "sha256": "367a1075091675cca97b2909e3a18aabb6d9a949a536d34fb1e28bc92a30fbc9",
+    "manifestSha256": "df1d0a113b019e6dfdc501fef4a9e80a618170a3bac50fd4139850459a09d842"
+  },
+  "contracts": {
+    "pythonMinimum": "3.10",
+    "entrypoint": "scripts/agentlab-native-render.py",
+    "bundleSchema": "agentlab.deploy_bundle.v3",
+    "sameOwningProducer": true,
+    "renderOnly": true,
+    "requiresActualLocalPrivateInputs": true,
+    "applicationOwnerGrant": false,
+    "runtimeLifecycleEffects": false
+  },
+  "qualification": {
+    "payloadFiles": 16,
+    "fullFileHashesVerified": true,
+    "affectedToolchainRenderTests": 1,
+    "maintainerSkillsTests": 70,
+    "actualPrivatePositiveRender": false,
+    "actualColdStartup": false,
+    "OwnerSessionReady": false,
+    "fullHarnessReady": false
+  },
+  "repair": {
+    "issue": "Actual normalized toolchains.json bind lacked explicit create_host_path:false",
+    "policy": "Same read-only source/target in long bind form; existing sources only and no automatic Host path creation",
+    "previousSource": "4b8c210e91e50c200f3d4d32c5342ab920a86104",
+    "originalFailureRetained": true,
+    "actualConvergenceQualified": false
+  }
+}

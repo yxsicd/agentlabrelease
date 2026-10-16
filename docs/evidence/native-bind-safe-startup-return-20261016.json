@@ -1,0 +1,25 @@
+{
+  "schema": "agentlab.actual_host_startup_attempt.v1",
+  "controllerSource": "69b934a0815350976f3ed753206adc4765c3872a",
+  "producerSource": "4aef783e6c4e8a18ced6884ec635c7a7dcda569a",
+  "status": "actual-execution-returned-failure",
+  "journalInitializedByDeclaredAdmit": true,
+  "intentGrantsAuthority": false,
+  "originalOperationInvokedOnce": true,
+  "journalGeneration": 4,
+  "phase": "execution_return_recorded",
+  "executionScope": "host_bootstrap",
+  "executionExitCode": 1,
+  "originalReadbackOnly": true,
+  "effectReplayed": false,
+  "independentInventory": {
+    "instanceContainerCount": 0,
+    "instanceDataVolumeExists": false
+  },
+  "failureCause": "not-yet-proven-from-original-execution-diagnostics",
+  "earlierMissingJournalAttemptPreserved": true,
+  "actualColdStartup": false,
+  "OwnerSessionReady": false,
+  "fullHarnessReady": false,
+  "nextAction": "Inspect the original execution diagnostics and owning data-volume preparation/Compose dependency contract without replay; do not infer success or repair by unrecorded resource creation."
+}
