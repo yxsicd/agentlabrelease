@@ -88,6 +88,17 @@ GitHub reports immutable=false; fixed digests and the no-overwrite policy preser
 this candidate's identity.
 
 
+### Prepare the selected local network
+
+Use the [native preparation contract](../../docs/deploy-network-preparation.md)
+with the fixed public controller, exact qualified registry and separately
+authorized local Host caller. It captures fresh inventory and journals a single
+creation attempt; an intent or supplied target does not grant permission.
+An [actual isolated Linux operation](../../docs/evidence/hwlinux-isolated-network-prepared-20261016.json)
+now reaches generation4 with independent physical ID/bridge/routes readback.
+The old default-daemon network and generation3/extra route remain unchanged.
+This is one network prerequisite, not full-instance or Owner/Session readiness.
+
 ### Actual native Linux physical storage
 
 The fixed public producer also has [real native Linux storage evidence](../../docs/evidence/hwlinux-actual-storage-preparation-20261016.json): its original

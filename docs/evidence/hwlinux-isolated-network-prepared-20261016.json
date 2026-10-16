@@ -1,0 +1,76 @@
+{
+  "schema": "agentlab.actual_isolated_daemon_owned_network_readback.v1",
+  "observedAt": "2026-10-16T03:33:58.739316+00:00",
+  "operation": "al07-hwlinux-bc845-network-20261016T0331Z",
+  "wrapperSha256": "5f604cedd1b7999f045a18f0ae04679e8c44aa710eb42dbae3b8bca76eca6032",
+  "journalSha256": "84e23e6e8a9ace718a9e333851504c7e2dbf14d35430a1fd4b1ca4a5085c9d0f",
+  "generation": 4,
+  "phase": "network_prepared",
+  "targetDaemon": "bc8450d8-8aef-487d-8098-ed09f37e5750",
+  "network": {
+    "id": "5e73175ff8ce8fbc983b2421da837ba0f68fa9e643b4dbadc65b9c1c51fd4af3",
+    "name": "armnet",
+    "driver": "bridge",
+    "scope": "local",
+    "ipv6": false,
+    "internal": false,
+    "ipam": [
+      {
+        "Subnet": "10.203.1.0/24",
+        "Gateway": "10.203.1.1"
+      }
+    ],
+    "bridge": "br-5e73175ff8ce",
+    "containers": 0,
+    "labelKeys": [
+      "io.agentlab.preparation.nonce",
+      "io.agentlab.preparation.operation",
+      "io.agentlab.preparation.operator",
+      "io.agentlab.preparation.project",
+      "io.agentlab.preparation.request"
+    ],
+    "operationBound": true,
+    "actualUidBound": true,
+    "labelsSha256": "958bb75cc458128315d89d9050c70ccd14c577b7e7f3def0454dcf4ea75f7aae"
+  },
+  "bridgeAddresses": {
+    "exit": 0,
+    "stdout": "[{\"ifindex\":762,\"ifname\":\"br-5e73175ff8ce\",\"flags\":[\"NO-CARRIER\",\"BROADCAST\",\"MULTICAST\",\"UP\"],\"mtu\":1500,\"qdisc\":\"noqueue\",\"operstate\":\"DOWN\",\"group\":\"default\",\"addr_info\":[{\"family\":\"inet\",\"local\":\"10.203.1.1\",\"prefixlen\":24,\"broadcast\":\"10.203.1.255\",\"scope\":\"global\",\"label\":\"br-5e73175ff8ce\",\"valid_life_time\":4294967295,\"preferred_life_time\":4294967295}]}]\n",
+    "stderr": ""
+  },
+  "bridgeRoutes": {
+    "exit": 0,
+    "stdout": "[{\"dst\":\"10.203.1.0/24\",\"protocol\":\"kernel\",\"scope\":\"link\",\"prefsrc\":\"10.203.1.1\",\"flags\":[\"linkdown\"]},{\"type\":\"local\",\"dst\":\"10.203.1.1\",\"table\":\"local\",\"protocol\":\"kernel\",\"scope\":\"host\",\"prefsrc\":\"10.203.1.1\",\"flags\":[]},{\"type\":\"broadcast\",\"dst\":\"10.203.1.255\",\"table\":\"local\",\"protocol\":\"kernel\",\"scope\":\"link\",\"prefsrc\":\"10.203.1.1\",\"flags\":[\"linkdown\"]}]\n",
+    "stderr": ""
+  },
+  "oldJournalUnchanged": true,
+  "oldDefaultNetwork": {
+    "exit": 0,
+    "stdout": "255ba59495a35718279577b7c8685d6c7121aa6a7dcf1d94d0d3226c6efc6937 agentlab-01a129c3-64cb\n",
+    "stderr": ""
+  },
+  "oldDefaultBridgeRoutes": {
+    "exit": 0,
+    "stdout": "[{\"dst\":\"10.203.0.0/24\",\"protocol\":\"kernel\",\"scope\":\"link\",\"prefsrc\":\"10.203.0.1\",\"flags\":[\"linkdown\"]},{\"dst\":\"169.254.0.0/16\",\"scope\":\"link\",\"metric\":1000,\"flags\":[\"linkdown\"]},{\"type\":\"local\",\"dst\":\"10.203.0.1\",\"table\":\"local\",\"protocol\":\"kernel\",\"scope\":\"host\",\"prefsrc\":\"10.203.0.1\",\"flags\":[]},{\"type\":\"broadcast\",\"dst\":\"10.203.0.255\",\"table\":\"local\",\"protocol\":\"kernel\",\"scope\":\"link\",\"prefsrc\":\"10.203.0.1\",\"flags\":[\"linkdown\"]}]\n",
+    "stderr": ""
+  },
+  "selectedContainers": {
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "actualRootUid": 0,
+  "applicationOwnerSession": false,
+  "instanceStarted": false,
+  "qualifiedScope": "only exact isolated-daemon owned-network preparation",
+  "controllerSource": "6bd1df9f33de30bd6d13a8e95cd7ec29a4f978ce",
+  "creationReplayed": false,
+  "qualification": {
+    "physicalNetworkPrepared": true,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullInstanceStarted": false,
+    "fullTwoHostCold": false,
+    "HarmonyFeedback": false
+  }
+}
