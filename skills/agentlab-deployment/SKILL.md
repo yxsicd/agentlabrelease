@@ -15,7 +15,7 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
-The [control candidate](../../release/components/control-candidate-5764c614-native-render-4b8c210e-20261016.json)
+The [control candidate](../../release/components/control-candidate-5764c614-native-positive-20261016.json)
 provides the fixed native Host cold-bootstrap CLI. Verify the descriptor and
 executable sizes and SHA-256 before execution. Anonymous final-URL downloads and
 bounded read-only execution passed independently on Linux and WSL2. The static
@@ -34,8 +34,8 @@ Generation 1 or 2 is accepted only for the matching original operation. Failure
 or an unknown result is not retried; read back that original operation. Host and
 Owner-bound journals cannot adopt each other even with identical plan bytes.
 Do not invent a bundle, accept requested Owner fields as authority, or grant the
-workspace a Docker socket. Positive producer/installed composition integration and
-real cold startup remain unqualified; this command is not a complete installation
+workspace a Docker socket. One actual private producer/installed composition integration passed;
+real cold startup remains unqualified; this command is not a complete installation
 recipe. After startup, actual application login and Session/physical Ready remain
 independent requirements.
 
@@ -54,6 +54,14 @@ this candidate's identity.
 
 
 ### Render the native bundle
+
+The same public4b8c210e producer now has an actual private positive render on
+WSL2:16configuration byte identities and6physical participant identities were
+independently verified. Acquire the program and prepare private inputs under
+the intended renderer/Host caller UID; Root execution requires Root-owned
+public helper files and private runtime projections. Preserve failed attempts
+and never relax ownership checks. Instance startup and Owner/Session remain
+separate gates; private configuration and credential bytes are not published.
 
 The fixed public producer now converges the verified existing Btrfs root to
 0700 after mount validation. Actual WSL2 readback preserves mount/image/unit
@@ -82,8 +90,8 @@ From the extracted directory, render into an existing caller-owned mode0700 pare
 The entry forces render-only and rejects execution, transport and auth switches.
 It does not retry or remove partial output. Linux/WSL anonymous download,
 all16 payload hashes and standalone help/missing-input/effect-denial checks passed.
-Actual positive render with real private inputs, cold startup and Owner/Session
-remain unqualified. The producer is not a substitute for authentication or fresh
+Actual private positive rendering passed on WSL2; cold startup and actual
+Owner/Session remain unqualified. The producer is not a substitute for authentication or fresh
 physical resource checks.
 
 1. Pin a full release-repository commit. Read its component descriptors and
