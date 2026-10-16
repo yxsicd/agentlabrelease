@@ -1,0 +1,36 @@
+{
+  "schema": "agentlab.actual_cold_start_observation.v1",
+  "sourceRevision": "69b934a0815350976f3ed753206adc4765c3872a",
+  "controller": "release/components/control-69b934a0-linux-x64.json",
+  "producer": "release/components/native-render-4b8c210e91e5.json",
+  "observedAt": "2026-10-16T01:39:37Z",
+  "status": "refused-before-resource-effects",
+  "originalOperationInvokedOnce": true,
+  "exit": 1,
+  "error": "native Compose resource intent mismatch",
+  "independentReadback": {
+    "deploymentJournalExists": false,
+    "instanceContainersExist": false,
+    "instanceDataVolumeExists": false,
+    "earlierFailurePreserved": true,
+    "unknownReplayed": false
+  },
+  "diagnosis": {
+    "scope": "actual private normalized Compose diagnostic; not effect authority",
+    "role": "mcpgit-loopback",
+    "networkMode": "service:original-primary-service",
+    "declaredEffectiveNetworkCount": 0,
+    "actualEffectiveNetworkCount": 1,
+    "otherServiceNetworkCountsMatch": true,
+    "allThreeServiceMountCountsMatch": true,
+    "forbiddenResourceFieldsPresent": false
+  },
+  "nextAction": "Fix the original native producer effective-network declaration for shared-namespace loopback roles. Publish a new producer, produce a new exact bundle and admit a new original operation; never edit the failed bundle or replay its request.",
+  "acceptanceLimits": {
+    "coldStartup": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullInstanceLifecycle": false,
+    "HarmonyFeedbackLoop": false
+  }
+}

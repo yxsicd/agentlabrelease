@@ -29,6 +29,12 @@ observation passes. Missing/denied capture or drift still refuses. This proves
 the network observation only; application Owner/Session and actual cold startup
 remain independent. Preserve the original5764 failure and never replay it.
 
+Actual startup with the new controller currently refuses the producer's shared
+sidecar network declaration before creating resources. The separate
+[actual observation](../../docs/evidence/control-69b934a0-actual-cold-refusal-20261016.json)
+retains that failure. A corrected public producer and new exact bundle are
+required; do not edit the failed bundle or retry its original operation.
+
 Cold physical startup uses actual kernel UID, frozen Unix socket rights and
 fresh daemon/resource checks. It does not require logging into an instance that
 has not started, and it does not grant application Owner or Session authority.

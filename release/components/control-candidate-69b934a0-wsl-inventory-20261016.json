@@ -20,7 +20,8 @@
     "installedInspector": "not_run",
     "twoPlatformColdInstall": "not_run",
     "fullInstanceDeploy": "missing",
-    "fullHarnessReady": false
+    "fullHarnessReady": false,
+    "actualHostColdStartup": "refused-before-effects-resource-intent-mismatch"
   },
   "publication": {
     "status": "published-final-url-verified",
@@ -33,12 +34,13 @@
     "noOverwritePolicy": true
   },
   "nextSourceSlice": {
-    "deliverable": "Actual original Host cold-bootstrap using fixed public controller after fresh resource/network admission; independent actual Owner/Session and Ready/business/Harmony afterward",
+    "deliverable": "Fix original native producer shared-namespace loopback effective network declarations, publish a new public producer and new exact bundle, then independently admit a new original Host startup; Owner/Session/Ready/Harmony remain open.",
     "includedScope": "Controller-owned live Windows+Linux/Docker network capture, private one-attempt Host startup; no application authority conversion",
     "fullInstanceQualified": false
   },
   "nativeProducer": "release/components/native-render-4b8c210e91e5.json",
   "nativeProducerPublication": "docs/evidence/native-render-4b8c210e91e5-publication-20261016.json",
   "physicalStoragePreparation": "docs/evidence/native-storage-4b8c210e-20261016.json",
-  "actualNativeRenderQualification": "docs/evidence/native-render-4b8c210e91e5-positive-20261016.json"
+  "actualNativeRenderQualification": "docs/evidence/native-render-4b8c210e91e5-positive-20261016.json",
+  "actualColdStartupObservation": "docs/evidence/control-69b934a0-actual-cold-refusal-20261016.json"
 }
