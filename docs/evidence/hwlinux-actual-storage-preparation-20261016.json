@@ -1,0 +1,95 @@
+{
+  "schema": "agentlab.actual_public_hwlinux_storage_preparation.v1",
+  "observedAt": "2026-10-16T03:17:23.704727+00:00",
+  "platform": "hwlinux-linux-x64",
+  "publicProducer": "4aef783e6c4e8a18ced6884ec635c7a7dcda569a",
+  "scriptSha256": "eb0205c717304e0795af433804bd8ea142bf69a9f01109f6c11d1d87532ba1ba",
+  "originalOperation": "al07-hwlinux-storage-20261016T0316Z",
+  "operationJournalSha256": "9444c7e8433c7f891cca1153ac0d2ff03eeb377cee409ebe4e7ee9c38d8cc3ab",
+  "exit": 0,
+  "storage": {
+    "device": 1048577,
+    "inode": 256,
+    "uid": 0,
+    "mode": "0o700",
+    "mount": {
+      "exit": 0,
+      "stdout": "{\n   \"filesystems\": [\n      {\n         \"target\": \"/var/lib/agentlab/al07-20261015/sessionfs\",\n         \"source\": \"/dev/loop15\",\n         \"fstype\": \"btrfs\",\n         \"options\": \"rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=5,subvol=/\",\n         \"propagation\": \"shared\"\n      }\n   ]\n}\n",
+      "stderr": ""
+    }
+  },
+  "image": {
+    "device": 66306,
+    "inode": 57934201,
+    "bytes": 34359738368,
+    "allocatedBytes": 5152768,
+    "uid": 0,
+    "mode": "0o600"
+  },
+  "unit": {
+    "name": "var-lib-agentlab-al07\\x2d20261015-sessionfs.mount",
+    "state": {
+      "exit": 0,
+      "stdout": "LoadState=loaded\nActiveState=active\nSubState=mounted\nFragmentPath=/etc/systemd/system/var-lib-agentlab-al07\\x2d20261015-sessionfs.mount\nUnitFileState=enabled\n",
+      "stderr": ""
+    },
+    "sha256": "3aec8627a3b2e1689cfbc2f1b518cae1a9d6dbccab8e59b618d58830de5a211b"
+  },
+  "quota": {
+    "exit": 0,
+    "stdout": "qgroupid         rfer         excl \n--------         ----         ---- \n0/5          16.00KiB     16.00KiB \n",
+    "stderr": ""
+  },
+  "originalNetworkAndGeneration3JournalPreserved": true,
+  "oldOwnedDockerDaemonPreserved": true,
+  "mountNamespaceMatchesDockerDaemon": true,
+  "qualification": {
+    "physicalStorage": true,
+    "exportPrepared": false,
+    "controlPrepared": false,
+    "credentialsPrepared": false,
+    "componentQualification": true,
+    "instanceStarted": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullTwoHostCold": false,
+    "HarmonyFeedback": false
+  },
+  "componentQualification": {
+    "observedAt": "2026-10-16T03:22:23.062820+00:00",
+    "operationJournalSha256": "7564e3b1b73a0c83a37027f2e0ace8926d72f9aed748e9dfd9e2e773864c3ea3",
+    "registrySha256": "eb72098de789fdbbfc5c1b783acc3d466f306fdbf341f5713128aa5d329ef85f",
+    "registryBytes": 2835,
+    "receiptSha256": "6bf13fc74b3c7937c9e3b0d1295c76708c76a0bd096762f6d7599e23749d0969",
+    "receiptBytes": 5562,
+    "receiptUid": 0,
+    "receiptMode": "0o600",
+    "generation": 1,
+    "pending": false,
+    "targetDaemon": "bc8450d8-8aef-487d-8098-ed09f37e5750",
+    "installationPolicy": "verified-reuse-allowed",
+    "coldEnvironmentQualified": false,
+    "allFourPacksAndImageReused": true,
+    "remainingContainers": 0,
+    "resolvedContracts": {
+      "agentlab.private-tool-dispatch-correlation": 2,
+      "agentlab.runtime": 1,
+      "agentlab.template-qualification-reader": 2,
+      "container.runtime": 1,
+      "mcpgit.session-template-contract": 11
+    }
+  },
+  "networkPlan": {
+    "scope": "readonly-local-linux-ipv4-snapshot",
+    "targetDaemon": "bc8450d8-8aef-487d-8098-ed09f37e5750",
+    "rejectedSubnet": "10.203.0.0/24",
+    "reasons": [
+      "host-interface-overlap",
+      "host-route-overlap"
+    ],
+    "proposedSubnet": "10.203.1.0/24",
+    "created": false,
+    "freshInventoryRequiredBeforeEffects": true,
+    "snapshotIncludedOwnQualificationHelper": true
+  }
+}

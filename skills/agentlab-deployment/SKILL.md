@@ -88,6 +88,17 @@ GitHub reports immutable=false; fixed digests and the no-overwrite policy preser
 this candidate's identity.
 
 
+### Actual native Linux physical storage
+
+The fixed public producer also has [real native Linux storage evidence](../../docs/evidence/hwlinux-actual-storage-preparation-20261016.json): its original
+Linux preparation script created a task-owned32GiB sparse Btrfs image, mounted
+root0700, enabled the canonical systemd mount unit and made quotas readable.
+Independent readback preserves the existing network/generation3 journal and
+old isolated Docker daemon. This qualifies that storage slice only. Export,
+control, credential projections, complete instance, application Owner/Session
+and physical Ready still need independent evidence; do not replay the original
+storage operation or recreate its now-present image.
+
 ### Supply application login before complete-instance acceptance
 
 The native Host bootstrap prepares physical resources; it does not invent a
