@@ -1,0 +1,127 @@
+{
+  "schema": "agentlab.native_producer_publication_receipt.v1",
+  "sourceRevision": "6b0008c12214bec8a1e1dc294708f92749e7febc",
+  "observedAt": "2026-10-16T04:12:53.812555+00:00",
+  "release": {
+    "tag": "native-render-6b0008c12214",
+    "id": 414529055,
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "assets": [
+    {
+      "name": "agentlab-native-render-6b0008c12214.tar.gz",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-6b0008c12214/agentlab-native-render-6b0008c12214.tar.gz",
+      "bytes": 48307,
+      "sha256": "a1be72d5a5b5e02f82a23c5ead067ff1734e3c0c3aa12d9cfd3b71663976f2a2",
+      "downloadedBytes": 48307,
+      "downloadedSha256": "a1be72d5a5b5e02f82a23c5ead067ff1734e3c0c3aa12d9cfd3b71663976f2a2",
+      "matchesApiAndRetainedArtifact": true
+    },
+    {
+      "name": "native-render-6b0008c12214.json",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-6b0008c12214/native-render-6b0008c12214.json",
+      "bytes": 1694,
+      "sha256": "433e521a01a1f79f968ae182f9060e980f8b172fcbc8f9e2b5e144cf08a21bd9",
+      "downloadedBytes": 1694,
+      "downloadedSha256": "433e521a01a1f79f968ae182f9060e980f8b172fcbc8f9e2b5e144cf08a21bd9",
+      "matchesApiAndRetainedArtifact": true
+    }
+  ],
+  "anonymousTwoHost": {
+    "hwlinux": {
+      "observedAt": "2026-10-16T04:10:29.947454+00:00",
+      "directory": "/home/huawei/.local/share/agentlab/public-native-render-6b0008c1-01a129c3-20261016",
+      "anonymous": true,
+      "files": {
+        "agentlab-native-render-6b0008c12214.tar.gz": {
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-6b0008c12214/agentlab-native-render-6b0008c12214.tar.gz",
+          "exit": 0,
+          "bytes": 48307,
+          "sha256": "a1be72d5a5b5e02f82a23c5ead067ff1734e3c0c3aa12d9cfd3b71663976f2a2"
+        },
+        "native-render-6b0008c12214.json": {
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-6b0008c12214/native-render-6b0008c12214.json",
+          "exit": 0,
+          "bytes": 1694,
+          "sha256": "433e521a01a1f79f968ae182f9060e980f8b172fcbc8f9e2b5e144cf08a21bd9"
+        }
+      },
+      "allPayloadHashesVerified": true,
+      "payloadFiles": 16,
+      "helpExit": 0,
+      "privateOriginControls": {
+        "tests": 4,
+        "redirectStatusSubcases": 10,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "....\n----------------------------------------------------------------------\nRan 4 tests in 0.055s\n\nOK\n",
+        "sourceTestSha256": "19c78ed36e2db3f3837fde40f97f66ccaa3c9c2d26087368c9ed3c745b571640",
+        "onlyTestModuleLocatorAdapted": true,
+        "testedPayloadSha256": "f1c015056d57b590b11e526fc04f57608ca0a04ed09ff311a28a614e979126e6",
+        "realCredentialUsed": false
+      },
+      "actualPrivateRender": false,
+      "fullInstanceReady": false
+    },
+    "aiwsl": {
+      "observedAt": "2026-10-16T04:10:31.839386+00:00",
+      "directory": "/home/yxsicd/.local/share/agentlab/public-native-render-6b0008c1-01a129c3-20261016",
+      "anonymous": true,
+      "files": {
+        "agentlab-native-render-6b0008c12214.tar.gz": {
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-6b0008c12214/agentlab-native-render-6b0008c12214.tar.gz",
+          "exit": 0,
+          "bytes": 48307,
+          "sha256": "a1be72d5a5b5e02f82a23c5ead067ff1734e3c0c3aa12d9cfd3b71663976f2a2"
+        },
+        "native-render-6b0008c12214.json": {
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-6b0008c12214/native-render-6b0008c12214.json",
+          "exit": 0,
+          "bytes": 1694,
+          "sha256": "433e521a01a1f79f968ae182f9060e980f8b172fcbc8f9e2b5e144cf08a21bd9"
+        }
+      },
+      "allPayloadHashesVerified": true,
+      "payloadFiles": 16,
+      "helpExit": 0,
+      "privateOriginControls": {
+        "tests": 4,
+        "redirectStatusSubcases": 10,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "....\n----------------------------------------------------------------------\nRan 4 tests in 0.321s\n\nOK\n",
+        "sourceTestSha256": "19c78ed36e2db3f3837fde40f97f66ccaa3c9c2d26087368c9ed3c745b571640",
+        "onlyTestModuleLocatorAdapted": true,
+        "testedPayloadSha256": "f1c015056d57b590b11e526fc04f57608ca0a04ed09ff311a28a614e979126e6",
+        "realCredentialUsed": false
+      },
+      "actualPrivateRender": false,
+      "fullInstanceReady": false
+    }
+  },
+  "privateControls": {
+    "newSourceTests": 4,
+    "redirectStatusSubcases": 10,
+    "affectedProjectorTests": 10,
+    "requiredSkillsTests": 70,
+    "publishedPayloadOriginTestsPerHost": 4,
+    "realCredentialUsed": false
+  },
+  "preservedFailures": {
+    "oldCrossOriginBaseline": "docs/evidence/credential-origin-and-redirect-open-20261016.json",
+    "firstMimeFixtureFailure": "0c52: empty202retainedSSEtype; fixture corrected, productionSSEdecoder unchanged",
+    "firstBuildRefusal": "0c55: outputdirabsent,0c56 actualreadbacknone/clean and freshfence before0c57 mkdir+build"
+  },
+  "qualification": {
+    "redirectRefusalPrivate": true,
+    "actualNewPrivateRender": false,
+    "actualNewStartup": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullInstance": false,
+    "HarmonyFeedback": false
+  }
+}

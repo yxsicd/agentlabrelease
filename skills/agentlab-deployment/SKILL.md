@@ -15,7 +15,7 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
-The [control candidate](../../release/components/control-candidate-6bd1df9f-native-render-4aef783e-20261016.json)
+The [control candidate](../../release/components/control-candidate-6bd1df9f-native-render-6b0008c1-20261016.json)
 provides the fixed native Host cold-bootstrap CLI. Controller6bd1df9f now prepares
 the original declared instance data volume inside the durable one-attempt Host
 execution: an absent volume is created once with an operation/UID/nonce receipt,
@@ -88,6 +88,19 @@ GitHub reports immutable=false; fixed digests and the no-overwrite policy preser
 this candidate's identity.
 
 
+### Fixed original-origin credential transport
+
+The selected6b0008c1 producer now rejects redirects in the original shared
+SafeGit HTTP client. Four new private controls preserve originalPOST/auth/MCP
+Session and JSON/SSE/empty success, while five redirect statuses for each same
+and different origin make zero follow-up requests. Both exact hosts acquired
+final public bytes, verified all16payload files and passed those4controls against
+the actual downloaded projector. Read the [new publication](../../docs/evidence/native-render-6b0008c12214-publication-20261016.json).
+The old redirect baseline, corrected MIME fixture failure and output-directory
+build refusal remain separate evidence. Existing4aef bundles/instances and all
+older assets are unchanged; no new private render, businessAuth or complete
+instance/Harmony acceptance is inferred from these private tests.
+
 ### Preserve the credential service origin
 
 Read the [actual origin intake and OPEN Source control](../../docs/evidence/credential-origin-and-redirect-open-20261016.json).
@@ -98,7 +111,7 @@ the intended host before moving or using credentials. Runtime WebSocket routing
 and SafeGit HTTP MCP projection are separate transports. Resolve a credential
 manifest basename under its owning credential root, not the shell directory.
 
-The current4aef producer contains an OPEN projector transport issue: a private
+The preserved4aef producer has the following historical OPEN transport issue: a private
 loopback control reproduces automatic303 redirect of an authenticatedPOST into
 a different-originGET with its dummy authorization. No real credential was used.
 Redirect refusal is not yet qualified; do not treat this producer as an origin
@@ -152,7 +165,7 @@ it, inject an environment through Docker exec, or fabricate Owner admission.
 
 ### Render the native bundle
 
-The selected4aef783e producer now requires an existing toolchains.json bind
+The earlier4aef783e producer requires an existing toolchains.json bind
 source. Its actual WSL bundle passes all9normalized bind-source checks and6Host
 identities. An initialized original Host operation reached execution but returned
 exit1; independent readback finds no instance containers/data volume. Preserve
@@ -178,7 +191,7 @@ preserved; use this new fixed package and a newly admitted operation after
 reading back the original effect. Existing producer and component bytes remain
 available under their original identities.
 
-The [fixed standalone producer](../../release/components/native-render-4aef783e6c4e.json)
+The [fixed standalone producer](../../release/components/native-render-6b0008c12214.json)
 packages the same owning renderer with its exact templates and helpers. Download
 the declared archive, verify size/SHA-256, and extract it into a new private
 directory. Read its README and native-render-producer.json; private maintenance

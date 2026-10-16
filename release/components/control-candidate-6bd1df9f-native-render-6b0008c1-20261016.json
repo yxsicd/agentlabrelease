@@ -1,0 +1,43 @@
+{
+  "schema": "agentlab.controller_candidate.v1",
+  "status": "candidate-not-current-installation",
+  "controller": "release/components/control-6bd1df9f-linux-x64.json",
+  "releaseTag": "control-6bd1df9f-linux-x64",
+  "unchangedComposition": "release/candidates/40ecdf4b-linux-x64/publication.json",
+  "environmentLock": "release/candidates/40ecdf4b-linux-x64/environment-lock.json",
+  "currentInstaller": "release/components/installer-eee1e1e-linux-x64.json",
+  "currentInstallerSelectsCandidate": false,
+  "selectionPolicy": "explicit-candidate-only-no-current-installation-or-promotion",
+  "previousCandidate": "release/components/control-candidate-6bd1df9f-native-render-4aef783e-20261016.json",
+  "qualification": {
+    "source": "passed",
+    "newDataVolumePrivateControls": 6,
+    "staticBuild": "passed",
+    "publicFinalUrlReadback": "passed",
+    "twoPlatformPublicAcquisition": "passed-byte-readback",
+    "twoPlatformPublicReadonlyExecution": "harness-invalid-usage-exit2-preserved",
+    "installedInspector": "not_run",
+    "twoPlatformColdInstall": "not_run",
+    "fullInstanceDeploy": "missing",
+    "fullHarnessReady": false,
+    "actualHostColdStartup": "previous-4aef-producer-cut-only; no newstartup",
+    "newProducerOriginPrivateTests": 4
+  },
+  "publication": {
+    "status": "published-final-url-verified",
+    "receipt": "docs/evidence/control-6bd1df9f-candidate-publication-20261016.json",
+    "releaseCreated": true,
+    "assetsUploaded": 2,
+    "selectedAssets": 2,
+    "finalUrlDownloadPerformed": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "nextSourceSlice": {
+    "deliverable": "Consume fixed producer only after qualified genuine origin/private inputs, preserve actual existing instances and original operations; realOwner/Session/Ready remains separate.",
+    "includedScope": "Original shared SafeGit projector refuses redirects; no runtime or Owner/config promotion",
+    "fullInstanceQualified": false
+  },
+  "nativeProducer": "release/components/native-render-6b0008c12214.json",
+  "nativeProducerPublication": "docs/evidence/native-render-6b0008c12214-publication-20261016.json"
+}

@@ -1,0 +1,42 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "native-renderer",
+  "value": {
+    "sourceRevision": "6b0008c12214bec8a1e1dc294708f92749e7febc",
+    "platform": "python3-stdlib",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-6b0008c12214/agentlab-native-render-6b0008c12214.tar.gz",
+    "bytes": 48307,
+    "sha256": "a1be72d5a5b5e02f82a23c5ead067ff1734e3c0c3aa12d9cfd3b71663976f2a2",
+    "manifestSha256": "c21f0dc2c0effe1da1d6cf1cae134f63f25af34e61adcf0ab0412de03ab8dbaa"
+  },
+  "contracts": {
+    "pythonMinimum": "3.10",
+    "entrypoint": "scripts/agentlab-native-render.py",
+    "bundleSchema": "agentlab.deploy_bundle.v3",
+    "sameOwningProducer": true,
+    "renderOnly": true,
+    "requiresActualLocalPrivateInputs": true,
+    "applicationOwnerGrant": false,
+    "runtimeLifecycleEffects": false,
+    "credentialProjectionRedirects": "rejected-session-local-original-endpoint-only"
+  },
+  "qualification": {
+    "payloadFiles": 16,
+    "fullFileHashesVerified": true,
+    "maintainerSkillsTests": 70,
+    "actualPrivatePositiveRender": false,
+    "actualColdStartup": false,
+    "OwnerSessionReady": false,
+    "fullHarnessReady": false,
+    "newPrivateHttpOriginTests": 4,
+    "redirectStatusSubcases": 10,
+    "affectedProjectorTests": 10
+  },
+  "repair": {
+    "issue": "Original SafeGit client forwarded dummy authorization on303 to another origin",
+    "policy": "Reject all redirects; original endpoint/POST/auth/session and successful JSON/SSE/empty handling preserved",
+    "previousSource": "4aef783e6c4e8a18ced6884ec635c7a7dcda569a",
+    "originalFailureRetained": true,
+    "actualConvergenceQualified": false
+  }
+}
