@@ -34,7 +34,7 @@
     "noOverwritePolicy": true
   },
   "nextSourceSlice": {
-    "deliverable": "Fix original native producer shared-namespace loopback effective network declarations, publish a new public producer and new exact bundle, then independently admit a new original Host startup; Owner/Session/Ready/Harmony remain open.",
+    "deliverable": "Correct the private effective-network bindings input, render a new exact bundle using the unchanged public producer, then freshly admit a new original Host startup. Preserve failed inputs/bundle/requests; actual Owner/Session/Ready/Harmony remain open.",
     "includedScope": "Controller-owned live Windows+Linux/Docker network capture, private one-attempt Host startup; no application authority conversion",
     "fullInstanceQualified": false
   },

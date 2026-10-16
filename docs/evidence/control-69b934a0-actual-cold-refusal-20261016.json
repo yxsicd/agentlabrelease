@@ -23,9 +23,10 @@
     "actualEffectiveNetworkCount": 1,
     "otherServiceNetworkCountsMatch": true,
     "allThreeServiceMountCountsMatch": true,
-    "forbiddenResourceFieldsPresent": false
+    "forbiddenResourceFieldsPresent": false,
+    "owningProducerIntake": "native_plan_files copies services from explicit private bindings.services; observed empty declaration originated in prepared bindings, not computed network inheritance"
   },
-  "nextAction": "Fix the original native producer effective-network declaration for shared-namespace loopback roles. Publish a new producer, produce a new exact bundle and admit a new original operation; never edit the failed bundle or replay its request.",
+  "nextAction": "Inspect and correct the owning private bindings.services effective-network input, then use the SAME unchanged public producer to render a NEW exact bundle in a new directory. Preserve the failed input/bundle and original operation. Do not manufacture a program upgrade for an input error; patch Source only if a separate concrete implementation gap is proven.",
   "acceptanceLimits": {
     "coldStartup": false,
     "authenticatedOwnerSession": false,
