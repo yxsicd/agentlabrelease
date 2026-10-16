@@ -88,6 +88,25 @@ GitHub reports immutable=false; fixed digests and the no-overwrite policy preser
 this candidate's identity.
 
 
+### Preserve the credential service origin
+
+Read the [actual origin intake and OPEN Source control](../../docs/evidence/credential-origin-and-redirect-open-20261016.json).
+A Docker-local Global/Gateway name or application-local forwarding URL is not
+a portable cross-host service origin. The inspected existing backend mappings
+publish no host ports; obtain a separately qualified origin/configuration for
+the intended host before moving or using credentials. Runtime WebSocket routing
+and SafeGit HTTP MCP projection are separate transports. Resolve a credential
+manifest basename under its owning credential root, not the shell directory.
+
+The current4aef producer contains an OPEN projector transport issue: a private
+loopback control reproduces automatic303 redirect of an authenticatedPOST into
+a different-originGET with its dummy authorization. No real credential was used.
+Redirect refusal is not yet qualified; do not treat this producer as an origin
+qualification or automatically relocate an endpoint. The next owning Source
+fix must preserve the original endpoint/context and reject redirects, with new
+private controls and a separately published immutable producer. Existing bytes
+and the original failure remain preserved; no Source fix or realAuth is claimed.
+
 ### Prepare the selected local network
 
 Use the [native preparation contract](../../docs/deploy-network-preparation.md)
