@@ -1,0 +1,112 @@
+{
+  "schema": "agentlab.controller_publication_receipt.v1",
+  "status": "passed-publication-and-anonymous-byte-readback",
+  "sourceRevision": "6bd1df9f33de30bd6d13a8e95cd7ec29a4f978ce",
+  "observedAt": "2026-10-16T02:50:54.132569+00:00",
+  "release": {
+    "tag": "control-6bd1df9f-linux-x64",
+    "id": 414482124,
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "assets": [
+    {
+      "name": "agentlabctl-6bd1df9f33de-linux-x64",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-6bd1df9f-linux-x64/agentlabctl-6bd1df9f33de-linux-x64",
+      "bytes": 6342704,
+      "sha256": "6347c8a325f548caa8ee911bcd0eb7eff26ca4580d65e56b3a68141854564883",
+      "downloadedBytes": 6342704,
+      "downloadedSha256": "6347c8a325f548caa8ee911bcd0eb7eff26ca4580d65e56b3a68141854564883",
+      "matchesApiAndRetainedArtifact": true
+    },
+    {
+      "name": "control-6bd1df9f-linux-x64.json",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-6bd1df9f-linux-x64/control-6bd1df9f-linux-x64.json",
+      "bytes": 2091,
+      "sha256": "ca6c8a27679e2a73248657882e3e64140bccf19944c4f79ccf63144922c2bb0f",
+      "downloadedBytes": 2091,
+      "downloadedSha256": "ca6c8a27679e2a73248657882e3e64140bccf19944c4f79ccf63144922c2bb0f",
+      "matchesApiAndRetainedArtifact": true
+    }
+  ],
+  "download": {
+    "elfType": 3,
+    "elfInterpreterSegments": 0,
+    "elfDynamicSegments": 1,
+    "elfNeededLibraries": 0,
+    "staticElfVerified": true,
+    "binaryExecuted": false,
+    "installed": false,
+    "anonymous": true,
+    "usedFinalGitHubReleaseUrls": true,
+    "independentFromUpload": true
+  },
+  "acceptanceLimits": {
+    "actualHostColdStartup": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullInstanceLifecycle": false,
+    "HarmonyFeedbackLoop": false
+  },
+  "priorFailuresPreserved": [
+    "Original69b934a0 generation4 returned failure; never replayed",
+    "Copy tool returned internal error; exact destination bytes independently verified; no repeated copy",
+    "Both anonymous host downloads succeeded; harness then called nonexistent digest-self and failed exit2. Preserved as harness failure, not binary failure/pass."
+  ],
+  "anonymousTwoHost": {
+    "hwlinux": {
+      "uid": 0,
+      "anonymous": true,
+      "files": {
+        "control-6bd1df9f-linux-x64.json": {
+          "bytes": 2091,
+          "sha256": "ca6c8a27679e2a73248657882e3e64140bccf19944c4f79ccf63144922c2bb0f",
+          "mode": "0o444",
+          "uid": 0
+        },
+        "agentlabctl-6bd1df9f33de-linux-x64": {
+          "bytes": 6342704,
+          "sha256": "6347c8a325f548caa8ee911bcd0eb7eff26ca4580d65e56b3a68141854564883",
+          "mode": "0o555",
+          "uid": 0
+        }
+      },
+      "readOnlyInvocation": {
+        "command": "digest-self",
+        "exit": 2,
+        "validDeclaredCommand": false,
+        "harnessFailurePreserved": true
+      },
+      "actualLifecycle": false,
+      "fullInstance": false
+    },
+    "aiwsl": {
+      "uid": 0,
+      "anonymous": true,
+      "files": {
+        "agentlabctl-6bd1df9f33de-linux-x64": {
+          "bytes": 6342704,
+          "sha256": "6347c8a325f548caa8ee911bcd0eb7eff26ca4580d65e56b3a68141854564883",
+          "mode": "0o555",
+          "uid": 0
+        },
+        "control-6bd1df9f-linux-x64.json": {
+          "bytes": 2091,
+          "sha256": "ca6c8a27679e2a73248657882e3e64140bccf19944c4f79ccf63144922c2bb0f",
+          "mode": "0o444",
+          "uid": 0
+        }
+      },
+      "readOnlyInvocation": {
+        "command": "digest-self",
+        "exit": 2,
+        "validDeclaredCommand": false,
+        "harnessFailurePreserved": true
+      },
+      "actualLifecycle": false,
+      "fullInstance": false
+    }
+  }
+}

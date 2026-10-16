@@ -15,8 +15,24 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
-The [control candidate](../../release/components/control-candidate-69b934a0-native-render-4aef783e-20261016.json)
-provides the fixed native Host cold-bootstrap CLI. Verify the descriptor and
+The [control candidate](../../release/components/control-candidate-6bd1df9f-native-render-4aef783e-20261016.json)
+provides the fixed native Host cold-bootstrap CLI. Controller6bd1df9f now prepares
+the original declared instance data volume inside the durable one-attempt Host
+execution: an absent volume is created once with an operation/UID/nonce receipt,
+while existing volumes require the declared exact identity. Both are inspected
+again before container use. Lost results, foreign races or drift stop without
+retry, adoption or deletion. Source6private controls passed; real startup is
+tracked separately from these checks.
+
+An actual new WSL Host operation now returns exit0. Independent readback
+confirms the operation-bound data volume and all3original containers running
+and healthy. The [runtime receipt](../../docs/evidence/control-6bd1df9f-actual-host-startup-20261016.json)
+preserves the old failed operation. This is Host startup using qualified
+existing components, not two-host component cold installation or application
+Owner/Session/physical Ready/Harmony qualification. Continue from the existing
+containers; do not repeat the cold-bootstrap operation.
+
+The earlier69b934a0 candidate provides the fixed native Host cold-bootstrap CLI. Verify the descriptor and
 executable sizes and SHA-256 before execution. Anonymous final-URL downloads and
 bounded read-only execution passed independently on Linux and WSL2. The static
 musl PIE has no ELF interpreter or imported libraries. Publication byte inspection
@@ -45,9 +61,9 @@ component registry. Initialize a NEW disjoint private journal and original
 operation with admit generation0, then execute that SAME operation at generation1.
 The intent records input identity only; actual Host admission remains independent:
 
-    /absolute/private/root/agentlabctl-69b934a08153-linux-x64 deploy admit /absolute/private/bundle --registry /absolute/private/component-registry --journal /absolute/private/NEW-operation-journal --operation NEW-original-operation-id --expected-generation 0
+    /absolute/private/root/agentlabctl-6bd1df9f33de-linux-x64 deploy admit /absolute/private/bundle --registry /absolute/private/component-registry --journal /absolute/private/NEW-operation-journal --operation NEW-original-operation-id --expected-generation 0
 
-    /absolute/private/root/agentlabctl-69b934a08153-linux-x64 deploy cold-bootstrap /absolute/private/bundle --registry /absolute/private/component-registry --journal /absolute/private/NEW-operation-journal --operation NEW-original-operation-id --expected-generation 1
+    /absolute/private/root/agentlabctl-6bd1df9f33de-linux-x64 deploy cold-bootstrap /absolute/private/bundle --registry /absolute/private/component-registry --journal /absolute/private/NEW-operation-journal --operation NEW-original-operation-id --expected-generation 1
 
 Generation 1 or 2 is accepted only for the matching original operation. Failure
 or an unknown result is not retried; read back that original operation. Host and

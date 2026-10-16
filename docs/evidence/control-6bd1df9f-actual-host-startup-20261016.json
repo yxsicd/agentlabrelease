@@ -1,0 +1,221 @@
+{
+  "schema": "agentlab.actual_controller_host_startup_receipt.v1",
+  "observedAt": "2026-10-16T02:51:29.285028+00:00",
+  "sourceRevision": "6bd1df9f33de30bd6d13a8e95cd7ec29a4f978ce",
+  "platform": "aiwsl-linux-x64",
+  "originalOperationId": "al07-data-volume-6bd1-host-cold-20261016T0250Z",
+  "journalGeneration": 4,
+  "journalPhase": "execution_return_recorded",
+  "journalSha256": "9c985b6377dfcceff855c95ffcfc98575bad2655971bda472e1cf0d71b7f709b",
+  "executionExitCode": 0,
+  "operationWrapperSha256": "908452b8cc88d2552f5bd5fb1431abe3febeabd59a8a3a9ca427df8b4ba9f0b4",
+  "previousOperationUnchanged": true,
+  "originalReplayed": false,
+  "dataVolume": {
+    "name": "vol-data-al07-20261015",
+    "createdAt": "2026-10-16T05:50:25+03:00",
+    "driver": "local",
+    "scope": "local",
+    "options": null,
+    "labelKeys": [
+      "io.agentlab.instance.nonce",
+      "io.agentlab.instance.operation",
+      "io.agentlab.instance.operator",
+      "io.agentlab.instance.project"
+    ],
+    "labelsSha256": "5ccd0590f47228f83c63316ce3b34df701e23e0aebd6ce586d1316c63aa6f924",
+    "operationBound": true,
+    "actualUidBound": true
+  },
+  "containers": [
+    {
+      "id": "b05a71da43569bec332db0b820a5c31c8a792d65178350c84f3ad5f153c5b9cd",
+      "name": "/al07-20261015-mcpgit-loopback",
+      "service": "al07-20261015-mcpgit-loopback",
+      "imageId": "sha256:2128b0fdba2e7e3297533869ce0533944f348ea7f5b0fa1dc9832ba825a0bd74",
+      "status": "running",
+      "running": true,
+      "exitCode": 0,
+      "health": "healthy",
+      "startedAt": "2026-10-16T02:50:32.899396675Z",
+      "ports": {},
+      "networks": {},
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "vol-agentlab-pack-agentlab-release-40ecdf4b-linux-x64-bc92bc4588bd",
+          "destination": "/agentlab-release",
+          "rw": false,
+          "propagation": ""
+        }
+      ]
+    },
+    {
+      "id": "020d00480322c84f161d31a4ef867e1b46d1a61bb8602b32e5b905c28f55eec7",
+      "name": "/al07-20261015",
+      "service": "al07-20261015",
+      "imageId": "sha256:2128b0fdba2e7e3297533869ce0533944f348ea7f5b0fa1dc9832ba825a0bd74",
+      "status": "running",
+      "running": true,
+      "exitCode": 0,
+      "health": "healthy",
+      "startedAt": "2026-10-16T02:50:32.653141932Z",
+      "ports": {
+        "8080/tcp": null
+      },
+      "networks": {
+        "armnet": {
+          "networkId": "18f45f3b323871a592db2f684aef0a9a8fcf51147511dde4d986dc5bf0246130",
+          "ip": "172.18.0.32"
+        }
+      },
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "vol-agentlab-pack-agentlab-release-40ecdf4b-linux-x64-bc92bc4588bd",
+          "destination": "/agentlab-release",
+          "rw": false,
+          "propagation": ""
+        },
+        {
+          "type": "volume",
+          "name": "vol-data-al07-20261015",
+          "destination": "/project",
+          "rw": true,
+          "propagation": ""
+        },
+        {
+          "type": "volume",
+          "name": "vol-agentlab-pack-developer-tools-e443b17a-linux-x64-58bc13e984f7",
+          "destination": "/tools",
+          "rw": false,
+          "propagation": ""
+        },
+        {
+          "type": "volume",
+          "name": "vol-agentlab-pack-harmony-cli-6.1.1.300-linux-x64-8fc2199afaea",
+          "destination": "/opt/harmony",
+          "rw": false,
+          "propagation": ""
+        },
+        {
+          "type": "bind",
+          "name": null,
+          "destination": "/run/agentlab/toolchains.json",
+          "rw": false,
+          "propagation": "rprivate"
+        },
+        {
+          "type": "bind",
+          "name": null,
+          "destination": "/run/secrets/agentlab-sessionfs-client",
+          "rw": false,
+          "propagation": "rprivate"
+        },
+        {
+          "type": "bind",
+          "name": null,
+          "destination": "/run/secrets/mcpgit",
+          "rw": false,
+          "propagation": "rprivate"
+        },
+        {
+          "type": "volume",
+          "name": "vol-agentlab-pack-harmony-cli-6.1.1.300-linux-x64-8fc2199afaea",
+          "destination": "/opt/agentlab/toolchains/harmony",
+          "rw": false,
+          "propagation": ""
+        },
+        {
+          "type": "volume",
+          "name": "vol-agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64-4106f23863e7",
+          "destination": "/opt/agentlab/toolchains/harmony-build-kit",
+          "rw": false,
+          "propagation": ""
+        },
+        {
+          "type": "bind",
+          "name": null,
+          "destination": "/run/agentlab/sessionfs/control",
+          "rw": false,
+          "propagation": "rprivate"
+        },
+        {
+          "type": "bind",
+          "name": null,
+          "destination": "/run/agentlab/sessionfs/exports",
+          "rw": true,
+          "propagation": "rslave"
+        }
+      ]
+    },
+    {
+      "id": "e061f3a4a159e23ef18b0562b0fc3d5cdf48f477aaa2c450a04e7a9776ad5458",
+      "name": "/al07-20261015-sessionfs",
+      "service": "al07-20261015-sessionfs",
+      "imageId": "sha256:2128b0fdba2e7e3297533869ce0533944f348ea7f5b0fa1dc9832ba825a0bd74",
+      "status": "running",
+      "running": true,
+      "exitCode": 0,
+      "health": "healthy",
+      "startedAt": "2026-10-16T02:50:26.037026604Z",
+      "ports": {},
+      "networks": {
+        "none": {
+          "networkId": "a757c22e83ce4e432a9c413889e3df34d3870f97868b25c72c659547efb0e1c9",
+          "ip": ""
+        }
+      },
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "vol-agentlab-pack-agentlab-release-40ecdf4b-linux-x64-bc92bc4588bd",
+          "destination": "/agentlab-release",
+          "rw": false,
+          "propagation": ""
+        },
+        {
+          "type": "bind",
+          "name": null,
+          "destination": "/run/secrets/agentlab-sessionfs",
+          "rw": false,
+          "propagation": "rprivate"
+        },
+        {
+          "type": "bind",
+          "name": null,
+          "destination": "/run/agentlab/sessionfs/control",
+          "rw": true,
+          "propagation": "rprivate"
+        },
+        {
+          "type": "bind",
+          "name": null,
+          "destination": "/run/agentlab/sessionfs/exports",
+          "rw": true,
+          "propagation": "rshared"
+        },
+        {
+          "type": "bind",
+          "name": null,
+          "destination": "/var/lib/agentlab/sessionfs",
+          "rw": true,
+          "propagation": "rprivate"
+        }
+      ]
+    }
+  ],
+  "networkRetained": true,
+  "actualHostColdStartup": true,
+  "qualification": {
+    "componentInstallMode": "verified-reuse-allowed-existing-components",
+    "twoPlatformColdInstall": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "workspaceWriteCommitReadback": false,
+    "uninstallReinstall": false,
+    "HarmonyFeedbackLoop": false,
+    "fullInstance": false
+  },
+  "nextAction": "Validate real application Owner/Session authentication and SessionFS physical Ready on these exact original containers; no startup replay."
+}

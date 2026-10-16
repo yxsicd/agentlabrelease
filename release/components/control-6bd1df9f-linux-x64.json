@@ -1,0 +1,53 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "control",
+  "value": {
+    "sourceRevision": "6bd1df9f33de30bd6d13a8e95cd7ec29a4f978ce",
+    "platform": "linux-x64",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-6bd1df9f-linux-x64/agentlabctl-6bd1df9f33de-linux-x64",
+    "bytes": 6342704,
+    "sha256": "6347c8a325f548caa8ee911bcd0eb7eff26ca4580d65e56b3a68141854564883"
+  },
+  "contracts": {
+    "nativeDeploymentInputSchema": "agentlab.deploy_bundle.v3",
+    "sharedNativeLibrary": true,
+    "hostOnlyColdBootstrapCLI": true,
+    "coldBootstrapJournal": "actor-bound-once-generation1-or2-no-replay",
+    "deploymentEffectsSupported": true,
+    "deploymentEffectScope": "explicit-local-host-cold-compose-bootstrap-once",
+    "hostOperatorIsApplicationOwner": false,
+    "applicationOwnerSessionGrant": false,
+    "runtimeActivationSupported": false,
+    "fullHarnessReady": false,
+    "resourceDeletionSupported": false,
+    "unknownEffectReplayAllowed": false,
+    "legacyPythonUpBridge": false,
+    "wslWindowsHostInventory": "controller-owned-live-PowerShell-IPv4-address-ActiveStore-route-DNS",
+    "callerWindowsInventoryAccepted": false,
+    "windowsRoutesInheritLinuxBridgeExemption": false,
+    "instanceDataVolumePreparation": "original-typed-identity-journaled-once-kernel-Host-bound-create-or-exact-preserve-double-readback",
+    "unknownDataVolumeCreateReplayAllowed": false
+  },
+  "build": {
+    "sourceWorktreeClean": true,
+    "target": "x86_64-unknown-linux-musl",
+    "profile": "release-locked",
+    "features": [
+      "trusted-deployment-inputs"
+    ],
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "staticCrt": true,
+    "staticPie": true,
+    "interpreterSegments": 0
+  },
+  "qualification": {
+    "status": "source-static-build-candidate-only",
+    "newDataVolumePrivateControls": 6,
+    "maintainerSkillsTests": 70,
+    "twoPlatformPublicAcquisition": "pending",
+    "actualHostColdStartup": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullHarnessReady": false
+  }
+}
