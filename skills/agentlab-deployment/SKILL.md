@@ -15,12 +15,19 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
-The [control candidate](../../release/components/control-candidate-5764c614-native-positive-20261016.json)
+The [control candidate](../../release/components/control-candidate-69b934a0-wsl-inventory-20261016.json)
 provides the fixed native Host cold-bootstrap CLI. Verify the descriptor and
 executable sizes and SHA-256 before execution. Anonymous final-URL downloads and
 bounded read-only execution passed independently on Linux and WSL2. The static
 musl PIE has no ELF interpreter or imported libraries. Publication byte inspection
 and subsequent Linux/WSL execution are separately scoped in the sealed receipt.
+
+The new69b934a0 cut closes an actual WSL cold-start refusal by privately reading
+Windows IPv4 addresses, active routes and DNS alongside Linux/Docker inventory.
+Both hosts independently acquired final public bytes; actual WSL declared-network
+observation passes. Missing/denied capture or drift still refuses. This proves
+the network observation only; application Owner/Session and actual cold startup
+remain independent. Preserve the original5764 failure and never replay it.
 
 Cold physical startup uses actual kernel UID, frozen Unix socket rights and
 fresh daemon/resource checks. It does not require logging into an instance that
@@ -28,7 +35,7 @@ has not started, and it does not grant application Owner or Session authority.
 The explicit command consumes an exact v3 private deployment bundle, qualified
 component registry and original journal operation:
 
-    /absolute/private/root/agentlabctl-5764c61487e4-linux-x64 deploy cold-bootstrap /absolute/private/bundle --registry /absolute/private/component-registry --journal /absolute/private/operation-journal --operation original-operation-id --expected-generation 1
+    /absolute/private/root/agentlabctl-69b934a08153-linux-x64 deploy cold-bootstrap /absolute/private/bundle --registry /absolute/private/component-registry --journal /absolute/private/operation-journal --operation original-operation-id --expected-generation 1
 
 Generation 1 or 2 is accepted only for the matching original operation. Failure
 or an unknown result is not retried; read back that original operation. Host and

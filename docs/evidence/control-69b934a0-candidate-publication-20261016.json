@@ -1,0 +1,133 @@
+{
+  "schema": "agentlab.controller_publication_receipt.v1",
+  "status": "passed-publication-and-anonymous-byte-readback",
+  "sourceRevision": "69b934a0815350976f3ed753206adc4765c3872a",
+  "observedAt": "2026-10-16T01:33:38Z",
+  "release": {
+    "tag": "control-69b934a0-linux-x64",
+    "id": 414439018,
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "assets": [
+    {
+      "name": "agentlabctl-69b934a08153-linux-x64",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-69b934a0-linux-x64/agentlabctl-69b934a08153-linux-x64",
+      "bytes": 6309936,
+      "sha256": "7b7cfe7797aacc424c2de51220b07508cb455791dbd297af6dfa68df2d0c1596",
+      "downloadedBytes": 6309936,
+      "downloadedSha256": "7b7cfe7797aacc424c2de51220b07508cb455791dbd297af6dfa68df2d0c1596",
+      "matchesApiAndRetainedArtifact": true
+    },
+    {
+      "name": "control-69b934a0-linux-x64.json",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-69b934a0-linux-x64/control-69b934a0-linux-x64.json",
+      "bytes": 1983,
+      "sha256": "693f1f9ce6ac4cb0588d816880f6470e98218350541127ec6ad590d11ab7002c",
+      "downloadedBytes": 1983,
+      "downloadedSha256": "693f1f9ce6ac4cb0588d816880f6470e98218350541127ec6ad590d11ab7002c",
+      "matchesApiAndRetainedArtifact": true
+    }
+  ],
+  "download": {
+    "elfType": 3,
+    "elfInterpreterSegments": 0,
+    "elfDynamicSegments": 1,
+    "elfNeededLibraries": 0,
+    "staticElfVerified": true,
+    "binaryExecuted": false,
+    "installed": false,
+    "anonymous": true,
+    "usedFinalGitHubReleaseUrls": true,
+    "independentFromUpload": true
+  },
+  "subsequentPublicReadonlyExecution": {
+    "hwlinux": {
+      "observedAt": "2026-10-16T01:32:47.889671+00:00",
+      "anonymous": true,
+      "files": {
+        "agentlabctl-69b934a08153-linux-x64": {
+          "exit": 0,
+          "stderr": "",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-69b934a0-linux-x64/agentlabctl-69b934a08153-linux-x64",
+          "bytes": 6309936,
+          "sha256": "7b7cfe7797aacc424c2de51220b07508cb455791dbd297af6dfa68df2d0c1596"
+        },
+        "control-69b934a0-linux-x64.json": {
+          "exit": 0,
+          "stderr": "",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-69b934a0-linux-x64/control-69b934a0-linux-x64.json",
+          "bytes": 1983,
+          "sha256": "693f1f9ce6ac4cb0588d816880f6470e98218350541127ec6ad590d11ab7002c"
+        }
+      },
+      "selfDigest": {
+        "exit": 0,
+        "stdout": "7b7cfe7797aacc424c2de51220b07508cb455791dbd297af6dfa68df2d0c1596\n",
+        "stderr": ""
+      },
+      "actualLifecycle": false,
+      "fullInstance": false
+    },
+    "aiwsl": {
+      "observedAt": "2026-10-16T01:32:49.349870+00:00",
+      "anonymous": true,
+      "files": {
+        "agentlabctl-69b934a08153-linux-x64": {
+          "exit": 0,
+          "stderr": "",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-69b934a0-linux-x64/agentlabctl-69b934a08153-linux-x64",
+          "bytes": 6309936,
+          "sha256": "7b7cfe7797aacc424c2de51220b07508cb455791dbd297af6dfa68df2d0c1596"
+        },
+        "control-69b934a0-linux-x64.json": {
+          "exit": 0,
+          "stderr": "",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-69b934a0-linux-x64/control-69b934a0-linux-x64.json",
+          "bytes": 1983,
+          "sha256": "693f1f9ce6ac4cb0588d816880f6470e98218350541127ec6ad590d11ab7002c"
+        }
+      },
+      "selfDigest": {
+        "exit": 0,
+        "stdout": "7b7cfe7797aacc424c2de51220b07508cb455791dbd297af6dfa68df2d0c1596\n",
+        "stderr": ""
+      },
+      "actualLifecycle": false,
+      "fullInstance": false,
+      "actualNetworkObservation": {
+        "observedAt": "2026-10-16T01:33:38.336905+00:00",
+        "exit": 0,
+        "coverage": "input-bound-network-policy-observation",
+        "mutates": false,
+        "networkObservation": {
+          "category": "declared_networks_match_live_policy",
+          "daemonIdentityMatched": true,
+          "declaredNetworkCount": 1,
+          "policyMatched": true,
+          "serviceReferenceCount": 1,
+          "status": "observed"
+        },
+        "activationAllowed": false,
+        "authenticatedOwnerVerified": false
+      }
+    }
+  },
+  "acceptanceLimits": {
+    "actualHostColdStartup": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullInstanceLifecycle": false,
+    "HarmonyFeedbackLoop": false
+  },
+  "priorActualRefusal": {
+    "controller": "5764c61487e4f9705470d70369ad23a8167272f8",
+    "error": "WSL Windows-host network inventory required",
+    "exit": 1,
+    "independentlyObservedNewResources": false,
+    "originalFailurePreserved": true,
+    "originalReplayed": false
+  }
+}

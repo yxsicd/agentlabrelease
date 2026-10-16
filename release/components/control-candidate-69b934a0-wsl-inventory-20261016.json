@@ -1,0 +1,44 @@
+{
+  "schema": "agentlab.controller_candidate.v1",
+  "status": "candidate-not-current-installation",
+  "controller": "release/components/control-69b934a0-linux-x64.json",
+  "releaseTag": "control-69b934a0-linux-x64",
+  "unchangedComposition": "release/candidates/40ecdf4b-linux-x64/publication.json",
+  "environmentLock": "release/candidates/40ecdf4b-linux-x64/environment-lock.json",
+  "currentInstaller": "release/components/installer-eee1e1e-linux-x64.json",
+  "currentInstallerSelectsCandidate": false,
+  "selectionPolicy": "explicit-candidate-only-no-current-installation-or-promotion",
+  "previousCandidate": "release/components/control-candidate-5764c614-native-positive-20261016.json",
+  "qualification": {
+    "source": "passed",
+    "newWindowsPrivateControls": 4,
+    "newWslResolverPrivateControls": 1,
+    "staticBuild": "passed",
+    "publicFinalUrlReadback": "passed",
+    "twoPlatformPublicReadonlyExecution": "passed",
+    "actualWslNetworkObservation": "declared-networks-match-live-policy",
+    "installedInspector": "not_run",
+    "twoPlatformColdInstall": "not_run",
+    "fullInstanceDeploy": "missing",
+    "fullHarnessReady": false
+  },
+  "publication": {
+    "status": "published-final-url-verified",
+    "receipt": "docs/evidence/control-69b934a0-candidate-publication-20261016.json",
+    "releaseCreated": true,
+    "assetsUploaded": 2,
+    "selectedAssets": 2,
+    "finalUrlDownloadPerformed": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "nextSourceSlice": {
+    "deliverable": "Actual original Host cold-bootstrap using fixed public controller after fresh resource/network admission; independent actual Owner/Session and Ready/business/Harmony afterward",
+    "includedScope": "Controller-owned live Windows+Linux/Docker network capture, private one-attempt Host startup; no application authority conversion",
+    "fullInstanceQualified": false
+  },
+  "nativeProducer": "release/components/native-render-4b8c210e91e5.json",
+  "nativeProducerPublication": "docs/evidence/native-render-4b8c210e91e5-publication-20261016.json",
+  "physicalStoragePreparation": "docs/evidence/native-storage-4b8c210e-20261016.json",
+  "actualNativeRenderQualification": "docs/evidence/native-render-4b8c210e91e5-positive-20261016.json"
+}
