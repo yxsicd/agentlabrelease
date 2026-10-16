@@ -15,7 +15,7 @@ hostname, private source, an existing AgentLab instance, or maintainer credentia
 
 ## Select and prepare
 
-The [control candidate](../../release/components/control-candidate-5764c614-native-render-20261015.json)
+The [control candidate](../../release/components/control-candidate-5764c614-native-render-1e4c82e8-20261016.json)
 provides the fixed native Host cold-bootstrap CLI. Verify the descriptor and
 executable sizes and SHA-256 before execution. Anonymous final-URL downloads and
 bounded read-only execution passed independently on Linux and WSL2. The static
@@ -55,7 +55,20 @@ this candidate's identity.
 
 ### Render the native bundle
 
-The [fixed standalone producer](../../release/components/native-render-ff676e1cc48e.json)
+A real WSL2 task-owned Btrfs preparation now mounts successfully with quota and
+an active/enabled unit. Independent readback found mounted root mode0755, so
+private storage readiness remains OPEN: the original prepare script needs its
+0700 policy applied after mounting and on the already-mounted path. Preserve
+that observation and require the next fixed public cut before continued use.
+This physical resource evidence grants no Owner/Session or instance readiness.
+
+The fixed 1e4c82e8 producer validates the canonical systemd mount-unit roundtrip
+for supported hyphenated instance names. The earlier real prepare rejection is
+preserved; use this new fixed package and a newly admitted operation after
+reading back the original effect. Existing producer and component bytes remain
+available under their original identities.
+
+The [fixed standalone producer](../../release/components/native-render-1e4c82e8dea7.json)
 packages the same owning renderer with its exact templates and helpers. Download
 the declared archive, verify size/SHA-256, and extract it into a new private
 directory. Read its README and native-render-producer.json; private maintenance

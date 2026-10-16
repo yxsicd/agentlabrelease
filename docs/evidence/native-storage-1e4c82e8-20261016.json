@@ -1,0 +1,36 @@
+{
+  "schema": "agentlab.native_storage_preparation_receipt.v1",
+  "sourceRevision": "1e4c82e8dea73581eee5c7a7ac52dec4ec97c3b0",
+  "publicProducer": "release/components/native-render-1e4c82e8dea7.json",
+  "status": "actual-mounted-with-private-mode-open",
+  "platform": "wsl2-x64",
+  "originalFailedOperationRetained": true,
+  "newOperation": "al07-btrfs-prepare-fixed-20261016T0005Z",
+  "actualOperatorUid": 0,
+  "scriptExit": 0,
+  "physical": {
+    "filesystem": "btrfs",
+    "sparseImageBytes": 34359738368,
+    "backingImageMatches": true,
+    "systemdUnitActive": true,
+    "systemdUnitEnabled": true,
+    "quotaShowExit": 0,
+    "mountId": 260,
+    "device": 88,
+    "inode": 256,
+    "uid": 0,
+    "mode": "0o755"
+  },
+  "privateRootMode": {
+    "expected": "0o700",
+    "observed": "0o755",
+    "qualified": false,
+    "reason": "chmod before mounting changes the covered directory; the new Btrfs filesystem root retains its default mode. Fix original prepare script post-mount and already-mounted branches, publish before real use."
+  },
+  "independentReadbackOperation": "exec-00000000000001b5",
+  "operationJournalSha256": "152f25c57baf632acc303b90fcf35e111e3c7a07bfd8ec24bb399ee078be75f7",
+  "actualPrivatePositiveRender": false,
+  "actualColdStartup": false,
+  "OwnerSessionReady": false,
+  "fullHarnessReady": false
+}

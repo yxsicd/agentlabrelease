@@ -1,0 +1,95 @@
+{
+  "schema": "agentlab.native_producer_publication_receipt.v1",
+  "status": "passed-public-byte-readback-only",
+  "sourceRevision": "1e4c82e8dea73581eee5c7a7ac52dec4ec97c3b0",
+  "publication": {
+    "schema": "agentlab.release_publication_attempt.v1",
+    "tag": "native-render-1e4c82e8dea7",
+    "source": "1e4c82e8dea73581eee5c7a7ac52dec4ec97c3b0",
+    "phase": "published_candidate",
+    "releaseId": 414388518,
+    "html_url": "https://github.com/yxsicd/agentlabrelease/releases/tag/native-render-1e4c82e8dea7",
+    "immutable": false,
+    "noOverwritePolicy": true,
+    "assets": [
+      {
+        "id": 645565996,
+        "name": "agentlab-native-render-1e4c82e8dea7.tar.gz",
+        "size": 48130,
+        "digest": "sha256:ae1fef00dce261ed7c707331f9f81744c067baf41102f26e35729480899a0f92"
+      },
+      {
+        "id": 645566000,
+        "name": "native-render-1e4c82e8dea7.json",
+        "size": 1433,
+        "digest": "sha256:2295bc846d025dc40f76eb7400b3993f87ecc2b98ebd2736c74b344749a24ddf"
+      }
+    ]
+  },
+  "anonymousTwoHost": {
+    "hwlinux": {
+      "schema": "agentlab.native_producer_acquisition.v1",
+      "anonymous": true,
+      "authorizationHeaderSent": false,
+      "sourceRevision": "1e4c82e8dea73581eee5c7a7ac52dec4ec97c3b0",
+      "phase": "acquired_verified",
+      "files": {
+        "agentlab-native-render-1e4c82e8dea7.tar.gz": {
+          "exit": 0,
+          "bytes": 48130,
+          "sha256": "ae1fef00dce261ed7c707331f9f81744c067baf41102f26e35729480899a0f92",
+          "finalHost": "release-assets.githubusercontent.com",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-1e4c82e8dea7/agentlab-native-render-1e4c82e8dea7.tar.gz"
+        },
+        "native-render-1e4c82e8dea7.json": {
+          "exit": 0,
+          "bytes": 1433,
+          "sha256": "2295bc846d025dc40f76eb7400b3993f87ecc2b98ebd2736c74b344749a24ddf",
+          "finalHost": "release-assets.githubusercontent.com",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-1e4c82e8dea7/native-render-1e4c82e8dea7.json"
+        }
+      },
+      "actualPrivateRender": false,
+      "fullInstanceReady": false,
+      "allPayloadHashesVerified": true,
+      "payloadFiles": 16,
+      "unitGuardFixIncluded": true,
+      "observedAt": "2026-10-16T00:03:39.261131+00:00"
+    },
+    "aiwsl": {
+      "schema": "agentlab.native_producer_acquisition.v1",
+      "anonymous": true,
+      "authorizationHeaderSent": false,
+      "sourceRevision": "1e4c82e8dea73581eee5c7a7ac52dec4ec97c3b0",
+      "phase": "acquired_verified",
+      "files": {
+        "agentlab-native-render-1e4c82e8dea7.tar.gz": {
+          "exit": 0,
+          "bytes": 48130,
+          "sha256": "ae1fef00dce261ed7c707331f9f81744c067baf41102f26e35729480899a0f92",
+          "finalHost": "release-assets.githubusercontent.com",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-1e4c82e8dea7/agentlab-native-render-1e4c82e8dea7.tar.gz"
+        },
+        "native-render-1e4c82e8dea7.json": {
+          "exit": 0,
+          "bytes": 1433,
+          "sha256": "2295bc846d025dc40f76eb7400b3993f87ecc2b98ebd2736c74b344749a24ddf",
+          "finalHost": "release-assets.githubusercontent.com",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-1e4c82e8dea7/native-render-1e4c82e8dea7.json"
+        }
+      },
+      "actualPrivateRender": false,
+      "fullInstanceReady": false,
+      "allPayloadHashesVerified": true,
+      "payloadFiles": 16,
+      "unitGuardFixIncluded": true,
+      "observedAt": "2026-10-16T00:03:40.004641+00:00"
+    }
+  },
+  "sourceUnitIdentityControls": 4,
+  "unchangedEntryControlsNotRepeated": true,
+  "actualPrivatePositiveRender": false,
+  "actualColdStartup": false,
+  "OwnerSessionReady": false,
+  "fullHarnessReady": false
+}

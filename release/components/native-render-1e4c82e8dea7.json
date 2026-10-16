@@ -1,0 +1,37 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "native-renderer",
+  "value": {
+    "sourceRevision": "1e4c82e8dea73581eee5c7a7ac52dec4ec97c3b0",
+    "platform": "python3-stdlib",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-1e4c82e8dea7/agentlab-native-render-1e4c82e8dea7.tar.gz",
+    "bytes": 48130,
+    "sha256": "ae1fef00dce261ed7c707331f9f81744c067baf41102f26e35729480899a0f92",
+    "manifestSha256": "24d77f4c9282b2c3f17d637156e16ea8bc9d8496ca188432ef01b701f6a7b330"
+  },
+  "contracts": {
+    "pythonMinimum": "3.10",
+    "entrypoint": "scripts/agentlab-native-render.py",
+    "bundleSchema": "agentlab.deploy_bundle.v3",
+    "sameOwningProducer": true,
+    "renderOnly": true,
+    "requiresActualLocalPrivateInputs": true,
+    "applicationOwnerGrant": false,
+    "runtimeLifecycleEffects": false
+  },
+  "qualification": {
+    "payloadFiles": 16,
+    "fullFileHashesVerified": true,
+    "sourceUnitIdentityControls": 4,
+    "actualPrivatePositiveRender": false,
+    "actualColdStartup": false,
+    "OwnerSessionReady": false,
+    "fullHarnessReady": false
+  },
+  "repair": {
+    "issue": "Literal hyphens in instance names were compared to an unescaped systemd mount unit",
+    "unitIdentity": "Canonical systemd unit must roundtrip to the exact mount path",
+    "previousSource": "ff676e1cc48e16d88c493718bdac2d58c3d2b507",
+    "originalFailureRetained": true
+  }
+}
