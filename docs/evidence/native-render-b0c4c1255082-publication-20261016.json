@@ -1,0 +1,110 @@
+{
+  "schema": "agentlab.native_producer_publication_receipt.v1",
+  "sourceRevision": "b0c4c1255082d4eb58007fc71057b7b6ae986f80",
+  "observedAt": "2026-10-16T07:34:17.027367+00:00",
+  "release": {
+    "tag": "native-render-b0c4c1255082",
+    "id": 414664863,
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "assets": [
+    {
+      "name": "agentlab-native-render-b0c4c1255082.tar.gz",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-b0c4c1255082/agentlab-native-render-b0c4c1255082.tar.gz",
+      "bytes": 48307,
+      "sha256": "f31d22ab0b52522f77d961a63ec2b987f2adf8e78b47809be23c1147acd82be8",
+      "matchesApiAndRetainedArtifact": true,
+      "downloadedBytes": 48307,
+      "downloadedSha256": "f31d22ab0b52522f77d961a63ec2b987f2adf8e78b47809be23c1147acd82be8"
+    },
+    {
+      "name": "native-render-b0c4c1255082.json",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-b0c4c1255082/native-render-b0c4c1255082.json",
+      "bytes": 2070,
+      "sha256": "73eb6ca4b3e25ebf0b101c637c0be7fd6179713354980f96cb747d5b2ddaf4bc",
+      "matchesApiAndRetainedArtifact": true,
+      "downloadedBytes": 2070,
+      "downloadedSha256": "73eb6ca4b3e25ebf0b101c637c0be7fd6179713354980f96cb747d5b2ddaf4bc"
+    }
+  ],
+  "anonymousTwoHost": {
+    "hwlinux": {
+      "observedAt": "2026-10-16T07:26:24.978186+00:00",
+      "directory": "/home/huawei/.local/share/agentlab/public-native-render-b0c4c125-01a129c3-20261016",
+      "anonymous": true,
+      "files": {
+        "agentlab-native-render-b0c4c1255082.tar.gz": {
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-b0c4c1255082/agentlab-native-render-b0c4c1255082.tar.gz",
+          "exit": 0,
+          "bytes": 48307,
+          "sha256": "f31d22ab0b52522f77d961a63ec2b987f2adf8e78b47809be23c1147acd82be8"
+        },
+        "native-render-b0c4c1255082.json": {
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-b0c4c1255082/native-render-b0c4c1255082.json",
+          "exit": 0,
+          "bytes": 2070,
+          "sha256": "73eb6ca4b3e25ebf0b101c637c0be7fd6179713354980f96cb747d5b2ddaf4bc"
+        }
+      },
+      "allPayloadHashesVerified": true,
+      "payloadFiles": 16,
+      "owningDeployerSha256": "64a84d5f86c703b16003a078ce555f51400ed3c54c099452e902db4e3604c3a8",
+      "actualPrivateRender": false,
+      "fullInstanceReady": false
+    },
+    "aiwsl": {
+      "observedAt": "2026-10-16T07:26:26.908478+00:00",
+      "directory": "/home/yxsicd/.local/share/agentlab/public-native-render-b0c4c125-01a129c3-20261016",
+      "anonymous": true,
+      "files": {
+        "agentlab-native-render-b0c4c1255082.tar.gz": {
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-b0c4c1255082/agentlab-native-render-b0c4c1255082.tar.gz",
+          "exit": 0,
+          "bytes": 48307,
+          "sha256": "f31d22ab0b52522f77d961a63ec2b987f2adf8e78b47809be23c1147acd82be8"
+        },
+        "native-render-b0c4c1255082.json": {
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-b0c4c1255082/native-render-b0c4c1255082.json",
+          "exit": 0,
+          "bytes": 2070,
+          "sha256": "73eb6ca4b3e25ebf0b101c637c0be7fd6179713354980f96cb747d5b2ddaf4bc"
+        }
+      },
+      "allPayloadHashesVerified": true,
+      "payloadFiles": 16,
+      "owningDeployerSha256": "64a84d5f86c703b16003a078ce555f51400ed3c54c099452e902db4e3604c3a8",
+      "actualPrivateRender": false,
+      "fullInstanceReady": false
+    }
+  },
+  "privateControls": {
+    "newTemplatePredicateTests": 3,
+    "requiredSkillsTests": 70,
+    "realOwnerQualified": false
+  },
+  "actualOriginalPreflight": {
+    "originalProducer6bExit": 1,
+    "fixedProducerB0c4Exit": 1,
+    "check": "mcpgit.template-authority",
+    "componentExpectedDigest": "62cfbfe535fb44dd2c3b8d61ce928642783b01cd90990c54cf38dfd5be21a139",
+    "observedLiveLockDigest": "8d78db2000cefe232940e1a9200bdb66b480ef19d8e29fc72b5594e384f3c344",
+    "publishedRuntimeCanonicalDigestWithSameRepoRevisions": "835a13eae4a5e1dfa1fff4439392fcfffe9b245c6b75e4647c3ba6246b1fe7e9",
+    "liveSessionTables": 43,
+    "runtimeRequiredSessionTables": 47,
+    "instanceUpdated": false,
+    "originalFailureRetained": true,
+    "digestFencePreserved": true
+  },
+  "qualification": {
+    "v2SchemaCompatibilityPrivate": true,
+    "actualNewPrivateRender": false,
+    "actualNewStartup": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullInstance": false,
+    "HarmonyFeedback": false
+  }
+}

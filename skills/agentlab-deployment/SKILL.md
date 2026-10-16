@@ -9,13 +9,17 @@ metadata:
 
 # AgentLab deployment
 
+## Published template-v2 producer and actual template drift
+
+Fixed producer b0c4c1255082 is published with both-host final-URL/all16 payload byte proofs. Original prerequisite accepts published lockv1/v2 with exact digest/status/organization fences retained; new predicate3 and Skills70 pass. The authorized real isolated login update remains unapplied: original6b and fixedb0c preflights both refused. Componentcontract expects62cf...; current live lock8d78... has43Sessiontables. Actual runtime canonical constructor requires47 and produces835a... for those old repository IDs/revisions. Authenticated read-only runtime metadata/canonical generation succeeded without repository mutation. Resolve the pinned current template/qualification with original tools, preserve both refusals/private credentials, and do not weaken the digest fence or modify otherinstances.
+
 Complete the human -> Agent -> GitHub journey using this public repository and
 its referenced public GitHub releases. Do not require AWMCP, a LAN, a particular
 hostname, private source, an existing AgentLab instance, or maintainer credentials.
 
 ## Select and prepare
 
-The [control candidate](../../release/components/control-candidate-6bd1df9f-native-render-6b0008c1-20261016.json)
+The [control candidate](../../release/components/control-candidate-6bd1df9f-native-render-b0c4c125-20261016.json)
 provides the fixed native Host cold-bootstrap CLI. Controller6bd1df9f now prepares
 the original declared instance data volume inside the durable one-attempt Host
 execution: an absent volume is created once with an operation/UID/nonce receipt,
@@ -191,7 +195,7 @@ preserved; use this new fixed package and a newly admitted operation after
 reading back the original effect. Existing producer and component bytes remain
 available under their original identities.
 
-The [fixed standalone producer](../../release/components/native-render-6b0008c12214.json)
+The [fixed standalone producer](../../release/components/native-render-b0c4c1255082.json)
 packages the same owning renderer with its exact templates and helpers. Download
 the declared archive, verify size/SHA-256, and extract it into a new private
 directory. Read its README and native-render-producer.json; private maintenance

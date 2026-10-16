@@ -1,0 +1,49 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "native-renderer",
+  "value": {
+    "sourceRevision": "b0c4c1255082d4eb58007fc71057b7b6ae986f80",
+    "platform": "python3-stdlib",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-b0c4c1255082/agentlab-native-render-b0c4c1255082.tar.gz",
+    "bytes": 48307,
+    "sha256": "f31d22ab0b52522f77d961a63ec2b987f2adf8e78b47809be23c1147acd82be8",
+    "manifestSha256": "c964c19a062e419bd935e56fe70889313d3ecd7b71ff44e5392f01c77ed856aa"
+  },
+  "contracts": {
+    "pythonMinimum": "3.10",
+    "entrypoint": "scripts/agentlab-native-render.py",
+    "bundleSchema": "agentlab.deploy_bundle.v3",
+    "sameOwningProducer": true,
+    "renderOnly": true,
+    "requiresActualLocalPrivateInputs": true,
+    "applicationOwnerGrant": false,
+    "runtimeLifecycleEffects": false,
+    "credentialProjectionRedirects": "rejected-session-local-original-endpoint-only",
+    "templateLockSchemas": [
+      "agentlab.mcpgit.template-lock.v1",
+      "agentlab.mcpgit.template-lock.v2"
+    ],
+    "templateQualificationDigestFence": "unchanged-exact-component-graph-identity"
+  },
+  "qualification": {
+    "payloadFiles": 16,
+    "fullFileHashesVerified": true,
+    "maintainerSkillsTests": 70,
+    "actualPrivatePositiveRender": false,
+    "actualColdStartup": false,
+    "OwnerSessionReady": false,
+    "fullHarnessReady": false,
+    "newPrivateHttpOriginTests": 4,
+    "redirectStatusSubcases": 10,
+    "affectedProjectorTests": 10,
+    "templateAuthorityPredicateTests": 3,
+    "unchangedCredentialOriginQualificationSource": "6b0008c12214bec8a1e1dc294708f92749e7febc"
+  },
+  "repair": {
+    "issue": "Original deployment prerequisite rejected published runtime40ecdf template-lockv2 before isolated login update",
+    "policy": "Accept publishedv1/v2 only; preserve exact lock/qualification/organization digest and qualifiedstatus guards",
+    "previousSource": "6b0008c12214bec8a1e1dc294708f92749e7febc",
+    "originalFailureRetained": true,
+    "actualConvergenceQualified": false
+  }
+}
