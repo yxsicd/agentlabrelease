@@ -88,6 +88,27 @@ GitHub reports immutable=false; fixed digests and the no-overwrite policy preser
 this candidate's identity.
 
 
+### Supply application login before complete-instance acceptance
+
+The native Host bootstrap prepares physical resources; it does not invent a
+login credential. Provide nonempty `basicAuthUser` and `basicAuthPassword` in
+the intended deployment or its private `defaults` configuration before the
+original render/start workflow. Keep that file private and outside Git, and
+never put the password in commands, evidence or a public example. Use an
+independently authorized credential source; do not reuse fixture/example
+passwords or another service profile. Existing `AL_OWNER_*` declarations and
+Host Root rights are separate from real application Owner authentication.
+
+The [actual configuration read](../../docs/evidence/original-instance-auth-configuration-gap-20261016.json)
+shows why this matters: three healthy containers and anonymous discovery200
+coexist with business status503 `authentication_unconfigured` when both Basic
+fields are empty. This is missing configuration, not a wrong-password result
+or an authenticated Owner/Session. The existing producer preserves the supplied
+inputs; no new renderer defect is claimed. Correct an existing instance only
+through its owning admitted reconfiguration/reinstall workflow. The public
+once-only cold command is not a reconfigure or restart operation; never replay
+it, inject an environment through Docker exec, or fabricate Owner admission.
+
 ### Render the native bundle
 
 The selected4aef783e producer now requires an existing toolchains.json bind

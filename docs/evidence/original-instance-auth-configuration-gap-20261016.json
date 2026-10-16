@@ -1,0 +1,53 @@
+{
+  "schema": "agentlab.actual_application_auth_configuration_read.v1",
+  "observedAt": "2026-10-16T03:00:16.684897+00:00",
+  "originalContainer": "020d00480322c84f161d31a4ef867e1b46d1a61bb8602b32e5b905c28f55eec7",
+  "runtimeRevision": "40ecdf4b774572ee2d0e6dc0dc1332fba755fbd6",
+  "method": "GET",
+  "declaredPath": "/api/service/v1/status",
+  "authorizationSupplied": false,
+  "response": {
+    "status": 503,
+    "body": "authentication_unconfigured"
+  },
+  "privateInputObservation": {
+    "configuredBasicUsername": false,
+    "configuredBasicPassword": false,
+    "actualContainerMatches": true,
+    "credentialValuesPublished": false
+  },
+  "effectLimits": {
+    "authenticationAttempted": false,
+    "ownerSessionQualified": false,
+    "physicalReadyQualified": false,
+    "settingsChanged": false,
+    "containersRecreated": false,
+    "originalStartupReplayed": false
+  },
+  "independentSecondHostRead": {
+    "uid": 0,
+    "CAP_NET_ADMIN": true,
+    "CAP_SYS_ADMIN": true,
+    "existingResourcesPreserved": true
+  },
+  "pendingReadOnlyObservation": {
+    "action": "declared observe-sessionfs",
+    "submission": "peer_direct control timeout without operation id",
+    "exactPrivateResultReadback": "same route timeout",
+    "originalReissued": false,
+    "hostDownInferred": false,
+    "resolvedBy": "same-route exact cached result readback021a; original observer never reissued",
+    "resultFileSha256": "8820b1ba423b62b3ae8e4c305c2986de5ee0966a93885ff39dddb5ae0ad144bb",
+    "originalExit": 0
+  },
+  "nextAction": "Supply independently authorized task-instance Basic configuration through the owning deployment workflow; retain configured Owner and validate actual HTTP/MCP and SessionFS separately. Continue separately admitted second-host preparation.",
+  "sessionfsServiceObservation": {
+    "category": "service_capability_only",
+    "ownerAuthenticated": false,
+    "projectedOwnerDeclarationMatched": true,
+    "requiredOperationCount": 10,
+    "serviceAuthenticated": true,
+    "sessionVerified": false,
+    "status": "observed"
+  }
+}
