@@ -1,0 +1,39 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "native-renderer",
+  "value": {
+    "sourceRevision": "6a69f84123c98057ea120f11d28882db66896c2f",
+    "platform": "python3-stdlib",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-6a69f84123c9/agentlab-native-render-6a69f84123c9.tar.gz",
+    "bytes": 48945,
+    "sha256": "30eec89394d916e1eae722fc548e487452eadfdc214f1bd67014e67361e6eaf7",
+    "manifestSha256": "fbfb5f1d53718f6de3dcd2f9c7f326491bd9c0cb700abb0624044f4b9eb5b7b3"
+  },
+  "publishedManifest": {
+    "path": "release/components/manifests/native-render-6a69f84123c9.json",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-6a69f84123c9/native-render-producer.json",
+    "bytes": 3333,
+    "sha256": "fbfb5f1d53718f6de3dcd2f9c7f326491bd9c0cb700abb0624044f4b9eb5b7b3"
+  },
+  "contracts": {
+    "pythonMinimum": "3.10",
+    "entrypoint": "scripts/agentlab-native-render.py",
+    "bundleSchema": "agentlab.deploy_bundle.v3",
+    "sameOwningProducer": true,
+    "renderOnly": true,
+    "requiresActualLocalPrivateInputs": true,
+    "applicationOwnerGrant": false,
+    "runtimeLifecycleEffects": false,
+    "credentialProjectionRedirects": "rejected-original-endpoint-only",
+    "credentialBinding": "original-nonsecret-controller-receipt-not-secret-value-hash"
+  },
+  "qualification": {
+    "payloadFiles": 16,
+    "fullFileHashesVerified": true,
+    "actualPrivatePositiveRender": true,
+    "actualColdStartup": false,
+    "OwnerSessionReady": false,
+    "fullHarnessReady": false
+  },
+  "scope": "Render/acquisition only. Original real private render is separate; no complete cold or application grant."
+}

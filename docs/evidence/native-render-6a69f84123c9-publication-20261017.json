@@ -1,0 +1,79 @@
+{
+  "schema": "agentlab.native_producer_publication_receipt.v2",
+  "sourceRevision": "6a69f84123c98057ea120f11d28882db66896c2f",
+  "observedAt": "2026-10-17T00:59:00Z",
+  "release": {
+    "id": 415460280,
+    "tag_name": "native-render-6a69f84123c9",
+    "draft": false,
+    "prerelease": false,
+    "immutable": false
+  },
+  "selectedAssets": [
+    {
+      "name": "agentlab-native-render-6a69f84123c9.tar.gz",
+      "bytes": 48945,
+      "digest": "sha256:30eec89394d916e1eae722fc548e487452eadfdc214f1bd67014e67361e6eaf7",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-6a69f84123c9/agentlab-native-render-6a69f84123c9.tar.gz",
+      "sha256": "30eec89394d916e1eae722fc548e487452eadfdc214f1bd67014e67361e6eaf7",
+      "downloadedBytes": 48945,
+      "downloadedSha256": "30eec89394d916e1eae722fc548e487452eadfdc214f1bd67014e67361e6eaf7"
+    },
+    {
+      "name": "native-render-producer.json",
+      "bytes": 3333,
+      "digest": "sha256:fbfb5f1d53718f6de3dcd2f9c7f326491bd9c0cb700abb0624044f4b9eb5b7b3",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/native-render-6a69f84123c9/native-render-producer.json",
+      "sha256": "fbfb5f1d53718f6de3dcd2f9c7f326491bd9c0cb700abb0624044f4b9eb5b7b3",
+      "downloadedBytes": 3333,
+      "downloadedSha256": "fbfb5f1d53718f6de3dcd2f9c7f326491bd9c0cb700abb0624044f4b9eb5b7b3"
+    }
+  ],
+  "anonymousTwoHost": {
+    "hwlinux": {
+      "anonymous": true,
+      "allPayloadHashesVerified": true,
+      "payloadFiles": 16,
+      "sourceRevision": "6a69f84123c98057ea120f11d28882db66896c2f",
+      "actualPrivateRender": false,
+      "fullInstanceReady": false,
+      "originalReturnedAt": "2026-10-16T23:31:46.591589+00:00",
+      "scope": "Original public acquisition/help, before later private render",
+      "files": {
+        "agentlab-native-render-6a69f84123c9.tar.gz": {
+          "exit": 0,
+          "bytes": 48945,
+          "sha256": "30eec89394d916e1eae722fc548e487452eadfdc214f1bd67014e67361e6eaf7"
+        },
+        "native-render-producer.json": {
+          "exit": 0,
+          "bytes": 3333,
+          "sha256": "fbfb5f1d53718f6de3dcd2f9c7f326491bd9c0cb700abb0624044f4b9eb5b7b3"
+        }
+      }
+    },
+    "aiwsl": {
+      "anonymous": true,
+      "allPayloadHashesVerified": true,
+      "payloadFiles": 16,
+      "sourceRevision": "6a69f84123c98057ea120f11d28882db66896c2f",
+      "actualPrivateRender": false,
+      "fullInstanceReady": false,
+      "originalReturnedAt": "2026-10-16T23:31:47.292633+00:00",
+      "scope": "Original public acquisition/help, before later private render",
+      "files": {
+        "agentlab-native-render-6a69f84123c9.tar.gz": {
+          "exit": 0,
+          "bytes": 48945,
+          "sha256": "30eec89394d916e1eae722fc548e487452eadfdc214f1bd67014e67361e6eaf7"
+        },
+        "native-render-producer.json": {
+          "exit": 0,
+          "bytes": 3333,
+          "sha256": "fbfb5f1d53718f6de3dcd2f9c7f326491bd9c0cb700abb0624044f4b9eb5b7b3"
+        }
+      }
+    }
+  },
+  "source": "Read original closed acquisition receipts; no producer/runtime replay. Separate SHA256SUMS remains unchanged."
+}

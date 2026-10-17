@@ -1,0 +1,67 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "control",
+  "value": {
+    "sourceRevision": "60c812418f499af52a57469e3e1a1fce877dedad",
+    "platform": "linux-x64",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-60c81241-linux-x64/agentlabctl-60c812418f49-linux-x64",
+    "bytes": 6182456,
+    "sha256": "c92cba55f716b1388b22f57c5e52c821eeadc7e9ba256e1842b2c9fb4171437f"
+  },
+  "publishedManifest": {
+    "path": "release/components/manifests/control-60c812418f49.json",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-60c81241-linux-x64/agentlab-control-current.json",
+    "bytes": 1126,
+    "sha256": "295a81498615b88033f3fb537ee4e9cbc42718bb172adb3079a9f6837d795121"
+  },
+  "contracts": {
+    "nativeDeploymentInputSchema": "agentlab.deploy_bundle.v3",
+    "sharedNativeLibrary": true,
+    "hostOnlyColdBootstrapCLI": true,
+    "coldBootstrapJournal": "actor-bound-once-generation1-or2-no-replay",
+    "deploymentEffectsSupported": true,
+    "deploymentEffectScope": "explicit-local-host-cold-bootstrap-or-exact-container-retirement",
+    "hostOperatorIsApplicationOwner": false,
+    "applicationOwnerSessionGrant": false,
+    "runtimeActivationSupported": false,
+    "fullHarnessReady": false,
+    "resourceDeletionSupported": true,
+    "unknownEffectReplayAllowed": false,
+    "legacyPythonUpBridge": false,
+    "wslWindowsHostInventory": "controller-owned-live-PowerShell-IPv4-address-ActiveStore-route-DNS",
+    "callerWindowsInventoryAccepted": false,
+    "windowsRoutesInheritLinuxBridgeExemption": false,
+    "instanceDataVolumePreparation": "original-typed-identity-journaled-once-kernel-Host-bound-create-or-exact-preserve-double-readback",
+    "unknownDataVolumeCreateReplayAllowed": false,
+    "hostOnlyRetirementCLI": true,
+    "retirementJournal": "agentlab.host_retirement_journal.v1",
+    "dataDeletionSupported": false,
+    "retains": "data/component volumes, networks, credentials and Host directories",
+    "workloadQuiescenceGranted": false,
+    "fullInstanceUninstallQualified": false,
+    "unknownRetirementReplayAllowed": false,
+    "resourceDeletionScope": "exact-selected-containers-only"
+  },
+  "build": {
+    "sourceWorktreeClean": true,
+    "target": "x86_64-unknown-linux-musl",
+    "profile": "release-locked",
+    "features": [
+      "trusted-deployment-inputs"
+    ],
+    "staticCrt": true,
+    "staticPie": false,
+    "relocationModel": "static",
+    "interpreterSegments": 0,
+    "neededDynamicLibraries": 0
+  },
+  "qualification": {
+    "status": "public-static-and-two-host-readonly-candidate",
+    "newRetirementPrivateControls": 5,
+    "twoPlatformPublicAcquisition": "passed-byte-readback",
+    "actualHostColdStartup": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullHarnessReady": false
+  }
+}

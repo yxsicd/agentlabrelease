@@ -1,0 +1,32 @@
+{
+  "assets": [
+    {
+      "bytes": 6182456,
+      "embeddedCapabilities": [
+        "capability-pack-zstd-v1",
+        "composition-fetch-v2",
+        "composition-install-docker-v2",
+        "docker-image-install-v1",
+        "docker-volume-install-v1",
+        "guided-proxy-recovery-v1",
+        "persistent-proxy-config-v1",
+        "resumable-fetch-v1"
+      ],
+      "embeddedProxyCatalog": {
+        "schema": "agentlab.proxy_catalog.v1",
+        "sha256": "0f925a37cf33a154476ab746a023a4e8c487d66aa24e1ee76765d6bde56813e8",
+        "version": "2026-08-01"
+      },
+      "executableFormat": "elf-static-musl",
+      "filename": "agentlabctl-60c812418f49-linux-x64",
+      "kind": "agentlabctl",
+      "platform": "linux-x64",
+      "sha256": "c92cba55f716b1388b22f57c5e52c821eeadc7e9ba256e1842b2c9fb4171437f",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-60c81241-linux-x64/agentlabctl-60c812418f49-linux-x64"
+    }
+  ],
+  "schema": "agentlab.control_release.v1",
+  "slot": "current",
+  "sourceRevision": "60c812418f499af52a57469e3e1a1fce877dedad",
+  "version": "60c812418f49"
+}

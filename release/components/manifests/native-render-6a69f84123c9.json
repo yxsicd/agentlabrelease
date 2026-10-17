@@ -1,0 +1,90 @@
+{
+  "applicationOwnerGrant": false,
+  "bundleSchema": "agentlab.deploy_bundle.v3",
+  "entrypoint": "scripts/agentlab-native-render.py",
+  "files": {
+    "release/bundles/agentlab/bundle.env.tpl": {
+      "bytes": 547,
+      "mode": "0o644",
+      "sha256": "fcb9e381ce5d6ae0df756060a03494b137ce5a9c74f424116027a59331c0ccd2"
+    },
+    "release/bundles/agentlab/docker-compose.mcpgit-loopback.yaml.tpl": {
+      "bytes": 879,
+      "mode": "0o644",
+      "sha256": "95124c1071309f8bd0a05f2392c6fafef7407e43dac1e84508689d8ff072ce5d"
+    },
+    "release/bundles/agentlab/docker-compose.sandbox-loopback.yaml.tpl": {
+      "bytes": 590,
+      "mode": "0o644",
+      "sha256": "25a3aefb937e61367e35264b8ea3c7a8c00b7fe4023de8c99263e9be72596581"
+    },
+    "release/bundles/agentlab/docker-compose.sessionfs.yaml.tpl": {
+      "bytes": 3022,
+      "mode": "0o644",
+      "sha256": "6e669102821465ae94a5bb691ece421d9c2424ed0c06f3b7194524caefaaee28"
+    },
+    "release/bundles/agentlab/docker-compose.yaml.tpl": {
+      "bytes": 2180,
+      "mode": "0o644",
+      "sha256": "d283aabca0809ffd4105fb4fa6e0da6ae65f73a482cbe6cf40047f9f3e2dbcfb"
+    },
+    "release/bundles/agentlab/manifest.json": {
+      "bytes": 1059,
+      "mode": "0o644",
+      "sha256": "20aa685364b941db48866222c23c6104c7de9a50f0bc605a85120edf82dcb19d"
+    },
+    "release/native-render/README.md": {
+      "bytes": 1784,
+      "mode": "0o644",
+      "sha256": "082d487f653e927cb7f5112d09d4ba646108db629039234cf3d8f5cd3b718e81"
+    },
+    "sandbox-rs/crates/agentlabctl/startup-role-privileges.json": {
+      "bytes": 2103,
+      "mode": "0o644",
+      "sha256": "0f83a40f9f8504163fde55febb453010342da02d1c8d29eb733395030c0c6e1b"
+    },
+    "scripts/agentlab-agentweb-deploy.py": {
+      "bytes": 148048,
+      "mode": "0o755",
+      "sha256": "c799cd19daf8685b3ac3284709a568fe91ce9bd7b4ce987163b6d74622db5d9c"
+    },
+    "scripts/agentlab-mcpgit-safegit-projector.py": {
+      "bytes": 15944,
+      "mode": "0o755",
+      "sha256": "f1c015056d57b590b11e526fc04f57608ca0a04ed09ff311a28a614e979126e6"
+    },
+    "scripts/agentlab-native-render.py": {
+      "bytes": 2990,
+      "mode": "0o755",
+      "sha256": "2c4d53f6c3e286b677f1e3f52c8d798fae8dc06f023672be253a3fce0cfd9dce"
+    },
+    "scripts/agentlab-sessionfs-colima-prepare.sh": {
+      "bytes": 3671,
+      "mode": "0o755",
+      "sha256": "67d6d3e05e58b593437d3b44625ca122be144909a95a1f19210195def5b5dbf8"
+    },
+    "scripts/agentlab-sessionfs-host-preflight.sh": {
+      "bytes": 5042,
+      "mode": "0o755",
+      "sha256": "34786d3e6f201422b772e7937391c9b4ac2f4f86429d960f0cae2222bc4d49eb"
+    },
+    "scripts/agentlab-sessionfs-linux-prepare.sh": {
+      "bytes": 3830,
+      "mode": "0o644",
+      "sha256": "eb0205c717304e0795af433804bd8ea142bf69a9f01109f6c11d1d87532ba1ba"
+    },
+    "scripts/agentlab-sessionfs-safegit-projector.py": {
+      "bytes": 11235,
+      "mode": "0o755",
+      "sha256": "e7299e19d74aa1d6905f0a5cc3c558db935b8af5c64e83675a5ebcf8dea4689e"
+    },
+    "scripts/agentlab-sessionfs-safegit-reconcile.py": {
+      "bytes": 6898,
+      "mode": "0o644",
+      "sha256": "8a06014f5b0eba76a5506bf57c56e409669f61791e307291a9721f5f7f45f72d"
+    }
+  },
+  "renderOnly": true,
+  "schema": "agentlab.native_render_producer.v1",
+  "sourceRevision": "6a69f84123c98057ea120f11d28882db66896c2f"
+}

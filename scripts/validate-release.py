@@ -42,6 +42,62 @@ def validate_candidate_static_build(build, receipt):
         assert download["elfNeededLibraries"] == 0
 
 
+def validate_published_manifest(component, assets, root):
+    """Bind a Git wrapper to exact official published manifest and payload."""
+    ref = component["publishedManifest"]
+    assert set(ref) == {"path", "artifact", "bytes", "sha256"}
+    path = pathlib.PurePosixPath(ref["path"])
+    assert not path.is_absolute() and ".." not in path.parts
+    local = root / path
+    assert not local.is_symlink() and local.resolve().is_relative_to(root.resolve())
+    raw = local.read_bytes()
+    assert len(raw) == ref["bytes"] and hashlib.sha256(raw).hexdigest() == ref["sha256"]
+    value = component["value"]
+    base = value["artifact"].rsplit("/", 1)[0] + "/"
+    assert base.startswith("https://github.com/yxsicd/agentlabrelease/releases/download/")
+    assert ref["artifact"].startswith(base)
+    selected = [a for a in assets if a["url"] == ref["artifact"]]
+    assert len(selected) == 1
+    assert selected[0]["bytes"] == ref["bytes"] and selected[0]["sha256"] == ref["sha256"]
+    doc = json.loads(raw)
+    assert doc["sourceRevision"] == value["sourceRevision"]
+    if component["component"] == "control":
+        assert doc["schema"] == "agentlab.control_release.v1"
+        assert doc["slot"] == "current" and doc["version"] == value["sourceRevision"][:12]
+        found = [a for a in doc["assets"] if a["platform"] == value["platform"]]
+        assert len(found) == 1
+        for a, b in [("url", "artifact"), ("bytes", "bytes"), ("sha256", "sha256")]:
+            assert found[0][a] == value[b]
+        assert found[0]["kind"] == "agentlabctl" and found[0]["executableFormat"] == "elf-static-musl"
+    else:
+        assert component["component"] == "native-renderer"
+        assert doc["schema"] == "agentlab.native_render_producer.v1"
+        assert doc["applicationOwnerGrant"] is False and doc["renderOnly"] is True
+        assert doc["bundleSchema"] == component["contracts"]["bundleSchema"]
+        assert doc["entrypoint"] == component["contracts"]["entrypoint"]
+        assert len(doc["files"]) == component["qualification"]["payloadFiles"]
+        assert value["manifestSha256"] == ref["sha256"]
+        for name, entry in doc["files"].items():
+            p = pathlib.PurePosixPath(name)
+            assert not p.is_absolute() and ".." not in p.parts
+            assert entry["bytes"] > 0 and re.fullmatch(r"[0-9a-f]{64}", entry["sha256"])
+    return doc
+
+def validate_native_render_integration(producer, integration):
+    assert integration["schema"] == "agentlab.native_render_integration_receipt.v1"
+    assert integration["sourceRevision"] == producer["value"]["sourceRevision"]
+    assert integration["renderOnly"] is True
+    for key in ("applicationOwnerGrant", "runtimeActivation", "fullInstanceQualified"):
+        assert integration[key] is False
+    assert set(integration["hosts"]) == {"hwlinux", "aiwsl"}
+    for result in integration["hosts"].values():
+        assert result["source"] == integration["sourceRevision"]
+        assert result["exit"] == 0 and result["status"] == "returned" and result["renderOnly"] is True
+        assert result["bundle"]["schema"] == producer["contracts"]["bundleSchema"]
+        assert re.fullmatch(r"[0-9a-f]{64}", result["bundle"]["sha256"])
+        assert result["bundle"]["configurationCount"] > 0 and result["bundle"]["serviceCount"] > 0
+
+
 manifest = json.loads((ROOT / "manifest.json").read_text())
 provenance = json.loads((ROOT / "provenance.json").read_text())
 index = json.loads((ROOT / "package-index.json").read_text())
@@ -123,9 +179,12 @@ if manifest.get("controllerCandidate"):
         assert len(assets) == 2 and len({a["name"] for a in assets}) == 2
         binary = next(a for a in assets if a["url"] == candidate_value["artifact"])
         assert binary["bytes"] == candidate_value["bytes"] and binary["sha256"] == candidate_value["sha256"]
-        descriptor = next(a for a in assets if a["url"].endswith('/' + pathlib.Path(candidate["controller"]).name))
-        assert descriptor["bytes"] == (ROOT / candidate["controller"]).stat().st_size
-        assert descriptor["sha256"] == hashlib.sha256((ROOT / candidate["controller"]).read_bytes()).hexdigest()
+        if candidate_control.get("publishedManifest"):
+            validate_published_manifest(candidate_control, assets, ROOT)
+        else:
+            descriptor = next(a for a in assets if a["url"].endswith('/' + pathlib.Path(candidate["controller"]).name))
+            assert descriptor["bytes"] == (ROOT / candidate["controller"]).stat().st_size
+            assert descriptor["sha256"] == hashlib.sha256((ROOT / candidate["controller"]).read_bytes()).hexdigest()
         for asset in assets:
             assert asset["downloadedBytes"] == asset["bytes"]
             assert asset["downloadedSha256"] == asset["sha256"]
@@ -137,10 +196,18 @@ if manifest.get("controllerCandidate"):
         assert producer["contracts"]["renderOnly"] is True
         assert producer["contracts"]["applicationOwnerGrant"] is False
         assert producer["contracts"]["runtimeLifecycleEffects"] is False
-        assert producer["qualification"]["actualPrivatePositiveRender"] is False
+        if producer["qualification"]["actualPrivatePositiveRender"] is True:
+            assert producer.get("publishedManifest") and candidate.get("nativeProducerIntegration")
+            validate_native_render_integration(producer, json.loads((ROOT / candidate["nativeProducerIntegration"]).read_text()))
+        else:
+            assert producer["qualification"]["actualPrivatePositiveRender"] is False
         assert producer["qualification"]["fullHarnessReady"] is False
         proof = json.loads((ROOT / candidate["nativeProducerPublication"]).read_text())
-        assert proof["schema"] == "agentlab.native_producer_publication_receipt.v1"
+        if producer.get("publishedManifest"):
+            assert proof["schema"] == "agentlab.native_producer_publication_receipt.v2"
+            validate_published_manifest(producer, proof["selectedAssets"], ROOT)
+        else:
+            assert proof["schema"] == "agentlab.native_producer_publication_receipt.v1"
         assert proof["sourceRevision"] == producer["value"]["sourceRevision"]
         assert set(proof["anonymousTwoHost"]) == {"hwlinux", "aiwsl"}
         for host in proof["anonymousTwoHost"].values():
@@ -151,8 +218,13 @@ if manifest.get("controllerCandidate"):
             assert archive["exit"] == 0
             assert archive["sha256"] == producer["value"]["sha256"]
             assert archive["bytes"] == producer["value"]["bytes"]
-            descriptor = host["files"][pathlib.Path(candidate["nativeProducer"]).name]
-            actual = (ROOT / candidate["nativeProducer"]).read_bytes()
+            if producer.get("publishedManifest"):
+                ref = producer["publishedManifest"]
+                descriptor = host["files"][ref["artifact"].rsplit("/", 1)[1]]
+                actual = (ROOT / ref["path"]).read_bytes()
+            else:
+                descriptor = host["files"][pathlib.Path(candidate["nativeProducer"]).name]
+                actual = (ROOT / candidate["nativeProducer"]).read_bytes()
             assert descriptor["sha256"] == hashlib.sha256(actual).hexdigest()
             assert descriptor["bytes"] == len(actual)
 agent = manifest["referenceAgent"]

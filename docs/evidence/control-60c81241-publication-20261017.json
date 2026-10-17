@@ -1,0 +1,131 @@
+{
+  "schema": "agentlab.controller_publication_receipt.v1",
+  "status": "passed-publication-and-anonymous-byte-readback",
+  "sourceRevision": "60c812418f499af52a57469e3e1a1fce877dedad",
+  "observedAt": "2026-10-17T00:59:00Z",
+  "release": {
+    "tag": "control-60c81241-linux-x64",
+    "id": 415495852,
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "assets": [
+    {
+      "name": "agentlabctl-60c812418f49-linux-x64",
+      "bytes": 6182456,
+      "sha256": "c92cba55f716b1388b22f57c5e52c821eeadc7e9ba256e1842b2c9fb4171437f",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-60c81241-linux-x64/agentlabctl-60c812418f49-linux-x64",
+      "downloadedBytes": 6182456,
+      "downloadedSha256": "c92cba55f716b1388b22f57c5e52c821eeadc7e9ba256e1842b2c9fb4171437f",
+      "matchesApiAndRetainedArtifact": true
+    },
+    {
+      "name": "agentlab-control-current.json",
+      "bytes": 1126,
+      "sha256": "295a81498615b88033f3fb537ee4e9cbc42718bb172adb3079a9f6837d795121",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-60c81241-linux-x64/agentlab-control-current.json",
+      "downloadedBytes": 1126,
+      "downloadedSha256": "295a81498615b88033f3fb537ee4e9cbc42718bb172adb3079a9f6837d795121",
+      "matchesApiAndRetainedArtifact": true
+    }
+  ],
+  "download": {
+    "anonymous": true,
+    "usedFinalGitHubReleaseUrls": true,
+    "independentFromUpload": true,
+    "staticElfVerified": true,
+    "binaryExecuted": false,
+    "installed": false,
+    "elfType": 2,
+    "elfMachine": 62,
+    "elfInterpreterSegments": 0,
+    "elfDynamicSegments": 0,
+    "elfNeededLibraries": 0,
+    "bytes": 6182456,
+    "sha256": "c92cba55f716b1388b22f57c5e52c821eeadc7e9ba256e1842b2c9fb4171437f",
+    "scope": "independent Mac full public byte and ELF inspection only; separate host readonly execution evidence"
+  },
+  "anonymousTwoHost": {
+    "hwlinux": {
+      "uid": 0,
+      "anonymous": true,
+      "files": {
+        "agentlabctl-60c812418f49-linux-x64": {
+          "bytes": 6182456,
+          "sha256": "c92cba55f716b1388b22f57c5e52c821eeadc7e9ba256e1842b2c9fb4171437f",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-60c81241-linux-x64/agentlabctl-60c812418f49-linux-x64"
+        },
+        "agentlab-control-current.json": {
+          "bytes": 1126,
+          "sha256": "295a81498615b88033f3fb537ee4e9cbc42718bb172adb3079a9f6837d795121",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-60c81241-linux-x64/agentlab-control-current.json"
+        }
+      },
+      "digestExecution": {
+        "exit": 0,
+        "sha256": "c92cba55f716b1388b22f57c5e52c821eeadc7e9ba256e1842b2c9fb4171437f",
+        "stderr": ""
+      },
+      "originalColdRead": {
+        "exit": 0,
+        "stderr": "",
+        "schema": "agentlab.deploy_operation_inspection.v2",
+        "operationId": "al07-public-hw-20261017-host-bootstrap-20261017T0007Z",
+        "generation": 4,
+        "phase": "execution_return_recorded",
+        "executionExitCode": 0,
+        "hostBootstrapUid": null
+      },
+      "actualLifecycle": false,
+      "fullInstance": false
+    },
+    "aiwsl": {
+      "uid": 0,
+      "anonymous": true,
+      "files": {
+        "agentlabctl-60c812418f49-linux-x64": {
+          "bytes": 6182456,
+          "sha256": "c92cba55f716b1388b22f57c5e52c821eeadc7e9ba256e1842b2c9fb4171437f",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-60c81241-linux-x64/agentlabctl-60c812418f49-linux-x64"
+        },
+        "agentlab-control-current.json": {
+          "bytes": 1126,
+          "sha256": "295a81498615b88033f3fb537ee4e9cbc42718bb172adb3079a9f6837d795121",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-60c81241-linux-x64/agentlab-control-current.json"
+        }
+      },
+      "digestExecution": {
+        "exit": 0,
+        "sha256": "c92cba55f716b1388b22f57c5e52c821eeadc7e9ba256e1842b2c9fb4171437f",
+        "stderr": ""
+      },
+      "originalColdRead": {
+        "exit": 0,
+        "stderr": "",
+        "schema": "agentlab.deploy_operation_inspection.v2",
+        "operationId": "al07-public-ai-20261017-host-bootstrap-20261016T2359Z",
+        "generation": 4,
+        "phase": "execution_return_recorded",
+        "executionExitCode": 0,
+        "hostBootstrapUid": null
+      },
+      "actualLifecycle": false,
+      "fullInstance": false
+    }
+  },
+  "acceptanceLimits": {
+    "actualHostColdStartup": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullInstanceLifecycle": false,
+    "HarmonyFeedbackLoop": false
+  },
+  "priorFailuresPreserved": [
+    "Original rustfmt PATH harness failure before compile; corrected original0efc passed",
+    "Absolute patch header refused before writes; exact readback/fresh fence preceded relative patch",
+    "Old operation failures/unknowns and original6bd digest-self harness failure remain unchanged"
+  ],
+  "scope": "Mac independent public bytes/ELF and separate real host readonly consumers; no retirement or new startup"
+}

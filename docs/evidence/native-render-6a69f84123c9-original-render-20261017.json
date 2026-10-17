@@ -1,0 +1,39 @@
+{
+  "schema": "agentlab.native_render_integration_receipt.v1",
+  "sourceRevision": "6a69f84123c98057ea120f11d28882db66896c2f",
+  "renderOnly": true,
+  "applicationOwnerGrant": false,
+  "runtimeActivation": false,
+  "fullInstanceQualified": false,
+  "hosts": {
+    "hwlinux": {
+      "exit": 0,
+      "status": "returned",
+      "source": "6a69f84123c98057ea120f11d28882db66896c2f",
+      "renderOnly": true,
+      "uid": 0,
+      "observedAt": "2026-10-16T23:55:04.427796+00:00",
+      "bundle": {
+        "sha256": "e0bdf123384f88a946ca8d09d21887f8bb16b0fb4bc1276cb27da596a098e0e3",
+        "schema": "agentlab.deploy_bundle.v3",
+        "configurationCount": 15,
+        "serviceCount": 3
+      }
+    },
+    "aiwsl": {
+      "exit": 0,
+      "status": "returned",
+      "source": "6a69f84123c98057ea120f11d28882db66896c2f",
+      "renderOnly": true,
+      "uid": 0,
+      "observedAt": "2026-10-16T23:55:05.515908+00:00",
+      "bundle": {
+        "sha256": "db7da9d9cf7ddd836d68a3a9cb39ca6816c363daf3f3178ea5179c8437254017",
+        "schema": "agentlab.deploy_bundle.v3",
+        "configurationCount": 15,
+        "serviceCount": 3
+      }
+    }
+  },
+  "scope": "Original actual private render only. No private config, credentials or endpoints included."
+}
