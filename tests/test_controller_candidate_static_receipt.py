@@ -1,6 +1,7 @@
 import ast
 import copy
 import pathlib
+import json
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -71,6 +72,27 @@ class CandidateStaticReceiptTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             check(build, None)
 
+
+    def test_new_actual_two_host_digest_is_not_relabelled_unexecuted(self):
+        receipt = json.loads((ROOT / "docs/evidence/control-59539118-publication-20261020.json").read_text())
+        self.assertIs(receipt["download"]["binaryExecuted"], True)
+        check(self.build, receipt)
+
+    def test_two_host_digest_rejects_effects_drift_and_missing_provenance(self):
+        original = json.loads((ROOT / "docs/evidence/control-59539118-publication-20261020.json").read_text())
+        for mutation in ("command", "effects", "missing-host", "binary", "digest", "failed", "missing-whole"):
+            receipt = copy.deepcopy(original)
+            execution = receipt["readOnlyExecution"]
+            host = execution["hosts"]["aiwsl"]
+            if mutation == "command": host["argv"][0] = "deploy"
+            elif mutation == "effects": host["actualLifecycleEffects"] = True
+            elif mutation == "missing-host": del execution["hosts"]["hwlinux"]
+            elif mutation == "binary": execution["binarySha256"] = "f" * 64
+            elif mutation == "digest": execution["expectedDigest"] = "f" * 64
+            elif mutation == "failed": host["exitCode"] = 1
+            elif mutation == "missing-whole": host["wholeAssetReadback"] = False
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                check(self.build, receipt)
 
 if __name__ == "__main__":
     unittest.main()

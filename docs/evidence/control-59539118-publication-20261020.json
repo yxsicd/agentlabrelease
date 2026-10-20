@@ -1,0 +1,79 @@
+{
+  "schema": "agentlab.controller_publication_receipt.v1",
+  "status": "passed-publication-and-anonymous-byte-readback",
+  "sourceRevision": "5953911841faf389e2eecffeadbe6ca240dd54fa",
+  "observedAt": "2026-10-20T20:32:31.309752+00:00",
+  "release": {
+    "id": 418841094,
+    "tag": "control-59539118-linux-x64",
+    "draft": false,
+    "prerelease": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "acceptanceLimits": {
+    "fullInstanceUninstall": false,
+    "fullHarnessReady": false,
+    "actualOwnerGranted": false,
+    "fullGoal": false
+  },
+  "download": {
+    "anonymous": true,
+    "usedFinalGitHubReleaseUrls": true,
+    "independentFromUpload": true,
+    "staticElfVerified": true,
+    "binaryExecuted": true,
+    "installed": false,
+    "elfInterpreterSegments": 0,
+    "elfDynamicSegments": 0,
+    "elfNeededLibraries": 0
+  },
+  "assets": [
+    {
+      "name": "agentlabctl-5953911841fa-linux-x64",
+      "bytes": 8132152,
+      "sha256": "ee15669643129270fafe75778afbf67875752460ac94d69d1cfba5fc2d05b960",
+      "phase": "upload_returned",
+      "assetId": 660401885,
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-59539118-linux-x64/agentlabctl-5953911841fa-linux-x64",
+      "downloadedBytes": 8132152,
+      "downloadedSha256": "ee15669643129270fafe75778afbf67875752460ac94d69d1cfba5fc2d05b960",
+      "matchesApiAndRetainedArtifact": true
+    },
+    {
+      "name": "agentlab-control-current.json",
+      "bytes": 1126,
+      "sha256": "3289e19b5651818b68f4b154ff4fefa1f6da716253b62afab5a6b8061b8159c7",
+      "phase": "upload_returned",
+      "assetId": 660401937,
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-59539118-linux-x64/agentlab-control-current.json",
+      "downloadedBytes": 1126,
+      "downloadedSha256": "3289e19b5651818b68f4b154ff4fefa1f6da716253b62afab5a6b8061b8159c7",
+      "matchesApiAndRetainedArtifact": true
+    }
+  ],
+  "readOnlyExecution": {
+    "binarySha256": "ee15669643129270fafe75778afbf67875752460ac94d69d1cfba5fc2d05b960",
+    "expectedDigest": "3289e19b5651818b68f4b154ff4fefa1f6da716253b62afab5a6b8061b8159c7",
+    "hosts": {
+      "hwlinux": {
+        "argv": [
+          "digest",
+          "/var/lib/agentlab/al07-public244-20261020T1107Z/native277-public-control595-acquisition-20261020T2029Z/agentlab-control-current.json"
+        ],
+        "exitCode": 0,
+        "actualLifecycleEffects": false,
+        "wholeAssetReadback": true
+      },
+      "aiwsl": {
+        "argv": [
+          "digest",
+          "/var/lib/agentlab/al07-complete244-ai/native277-public-control595-acquisition-20261020T2029Z/agentlab-control-current.json"
+        ],
+        "exitCode": 0,
+        "actualLifecycleEffects": false,
+        "wholeAssetReadback": true
+      }
+    }
+  }
+}

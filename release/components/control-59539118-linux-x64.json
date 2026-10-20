@@ -1,0 +1,74 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "control",
+  "value": {
+    "sourceRevision": "5953911841faf389e2eecffeadbe6ca240dd54fa",
+    "platform": "linux-x64",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-59539118-linux-x64/agentlabctl-5953911841fa-linux-x64",
+    "bytes": 8132152,
+    "sha256": "ee15669643129270fafe75778afbf67875752460ac94d69d1cfba5fc2d05b960"
+  },
+  "publishedManifest": {
+    "path": "release/components/manifests/control-5953911841fa.json",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-59539118-linux-x64/agentlab-control-current.json",
+    "bytes": 1126,
+    "sha256": "3289e19b5651818b68f4b154ff4fefa1f6da716253b62afab5a6b8061b8159c7"
+  },
+  "contracts": {
+    "nativeDeploymentInputSchema": "agentlab.deploy_bundle.v3",
+    "sharedNativeLibrary": true,
+    "hostOnlyColdBootstrapCLI": true,
+    "coldBootstrapJournal": "actor-bound-once-generation1-or2-no-replay",
+    "deploymentEffectsSupported": true,
+    "deploymentEffectScope": "explicit-local-host-cold-bootstrap-or-bound-container/export/storage/data-retirement",
+    "hostOperatorIsApplicationOwner": false,
+    "applicationOwnerSessionGrant": false,
+    "runtimeActivationSupported": false,
+    "fullHarnessReady": false,
+    "resourceDeletionSupported": true,
+    "unknownEffectReplayAllowed": false,
+    "legacyPythonUpBridge": false,
+    "wslWindowsHostInventory": "controller-owned-live-PowerShell-IPv4-address-ActiveStore-route-DNS",
+    "callerWindowsInventoryAccepted": false,
+    "windowsRoutesInheritLinuxBridgeExemption": false,
+    "instanceDataVolumePreparation": "original-typed-identity-journaled-once-kernel-Host-bound-create-or-exact-preserve-double-readback",
+    "unknownDataVolumeCreateReplayAllowed": false,
+    "hostOnlyRetirementCLI": true,
+    "retirementJournal": "agentlab.host_retirement_journal.v1",
+    "dataDeletionSupported": true,
+    "retains": "shared readonly components, networks, credentials and control directories; full uninstall not qualified",
+    "workloadQuiescenceGranted": false,
+    "fullInstanceUninstallQualified": false,
+    "unknownRetirementReplayAllowed": false,
+    "resourceDeletionScope": "exact-own-containers/Host-exports/storage-image/mutable-data; each separately admitted",
+    "hostDataPurgeJournal": "agentlab.host_data_purge.v1",
+    "dataPurgeOriginalStorageRequired": true,
+    "dataPurgeForce": false,
+    "dataPurgeUnknownReplayAllowed": false
+  },
+  "build": {
+    "sourceWorktreeClean": true,
+    "target": "x86_64-unknown-linux-musl",
+    "profile": "release-locked",
+    "features": [
+      "trusted-deployment-inputs"
+    ],
+    "staticCrt": true,
+    "staticPie": false,
+    "relocationModel": "static",
+    "interpreterSegments": 0,
+    "neededDynamicLibraries": 0
+  },
+  "qualification": {
+    "status": "public-static-and-two-host-readonly-candidate",
+    "newRetirementPrivateControls": 11,
+    "twoPlatformPublicAcquisition": "passed-byte-readback",
+    "actualHostColdStartup": false,
+    "authenticatedOwnerSession": false,
+    "physicalReady": false,
+    "fullHarnessReady": false,
+    "controllerUnitTestsPassed": 525,
+    "controllerUnitTestsIgnored": 9,
+    "strictClippy": "FAILED101;41 diagnostic records in unchanged parent primary files; no changed-file diagnostic"
+  }
+}

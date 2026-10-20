@@ -11,17 +11,20 @@ metadata:
 
 ## Current native controller candidate
 
-The [selected candidate](../../release/components/control-candidate-60c81241-native-render-6a69f841-20261017.json)
-pins static controller60c and owning renderer6a. Read
-[native Host lifecycle](../../docs/native-host-lifecycle.md) for exact acquisition,
-actual Host/application permissions, original-operation readback and the new
-data-preserving container-retirement command.
+The [selected candidate](../../release/components/control-candidate-59539118-native277-20261020.json)
+pins public static controller595. Both hwlinux and aiwsl independently downloaded
+its final public binary and manifest, verified their complete SHA-256, and ran
+the read-only digest command. See [native Host lifecycle](../../docs/native-host-lifecycle.md).
 
-Official published manifests bind exact bytes, Source revision and payload URL/
-digest. Git wrappers are not claimed to be downloaded Release assets. Both hosts
-acquired60c, executed its valid digest command and read existing original
-generation4 journals. No retirement/new startup ran. Renderer6a's original
-two-host acquisition and actual private render remain separately scoped.
+AL and its internal MCPGit use one product-managed login/configuration. Requested
+Owner fields do not grant permission, and Host Root is a separate physical
+operator scope. Do not ask users to provision a second MCPGit account for AL.
+
+This controller adds explicit instance-owned mutable-data purge after original
+container and storage retirement. Source unit tests passed525 with9 ignored;
+strict Clippy remains failed on unchanged parent files. Actual data purge and
+full uninstall/reinstall with this cut are not qualified. Existing component
+composition is unchanged; this candidate is not a whole-instance promotion.
 
 The unchanged [component installer](../../scripts/agentlab-composition-install.sh)
 still uses its declared composition/controller. For component-only installation:

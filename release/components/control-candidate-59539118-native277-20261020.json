@@ -1,0 +1,40 @@
+{
+  "schema": "agentlab.controller_candidate.v1",
+  "status": "candidate-not-current-installation",
+  "unchangedComposition": "release/candidates/40ecdf4b-linux-x64/publication.json",
+  "environmentLock": "release/candidates/40ecdf4b-linux-x64/environment-lock.json",
+  "currentInstaller": "release/components/installer-eee1e1e-linux-x64.json",
+  "currentInstallerSelectsCandidate": false,
+  "selectionPolicy": "explicit-candidate-only-no-current-installation-or-promotion",
+  "controller": "release/components/control-59539118-linux-x64.json",
+  "releaseTag": "control-59539118-linux-x64",
+  "previousCandidate": "release/components/control-candidate-60c81241-native-render-6a69f841-20261017.json",
+  "qualification": {
+    "source": "passed",
+    "staticBuild": "passed",
+    "publicFinalUrlReadback": "passed",
+    "twoPlatformPublicAcquisition": "passed-byte-readback",
+    "twoPlatformPublicReadonlyExecution": "passed-digest",
+    "installedInspector": "not_run",
+    "twoPlatformColdInstall": "not_run",
+    "fullInstanceDeploy": "missing",
+    "fullHarnessReady": false,
+    "newRetirementPrivateControls": 11,
+    "actualHostRetirement": false
+  },
+  "publication": {
+    "status": "published-final-url-verified",
+    "receipt": "docs/evidence/control-59539118-publication-20261020.json",
+    "releaseCreated": true,
+    "assetsUploaded": 2,
+    "selectedAssets": 2,
+    "finalUrlDownloadPerformed": true,
+    "apiImmutable": false,
+    "noOverwritePolicy": true
+  },
+  "nativeProducer": "release/components/native-render-6a69f84123c9.json",
+  "nativeProducerPublication": "docs/evidence/native-render-6a69f84123c9-publication-20261017.json",
+  "nativeProducerIntegration": "docs/evidence/native-render-6a69f84123c9-original-render-20261017.json",
+  "operations": "docs/native-host-lifecycle.md",
+  "nextAction": "Use public595 for independently admitted original lifecycle. Full uninstall still lacks owning network/credentials/control cleanup and actual bothhost acceptance. Complete installer/runtime current component graph is not silently promoted."
+}

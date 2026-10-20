@@ -1,8 +1,8 @@
 # Native Host bootstrap and retained-data container retirement
 
 Pin the containing public Git commit and read the selected
-[controller candidate](../release/components/control-candidate-60c81241-native-render-6a69f841-20261017.json).
-It selects controller60c and owning renderer6a. The current component
+[controller candidate](../release/components/control-candidate-59539118-native277-20261020.json).
+It selects controller595 and owning renderer6a. The current component
 installer/composition is unchanged. Candidate availability is not complete
 installation, application Owner authority or promotion.
 
@@ -17,8 +17,7 @@ Use the declared digest command for a no-write executable check:
 
     agentlabctl digest /absolute/path/to/controller
 
-Both hosts acquired control60c, performed that check and read their original
-successful install journals. No retirement or new startup was executed.
+Both hosts acquired control595 and performed the digest check against its exact published manifest. This cut has not executed real retirement or new startup.
 
 ## Actual authority and original operations
 
@@ -64,6 +63,32 @@ Read the original retirement without effects:
 
 Failure/lost/unknown effects allow original journal and resource readback only.
 Never reissue retirement, including under a different operation ID or path.
+
+## Explicit mutable-data purge
+
+After separately admitted original container retirement and owning storage
+retirement, the new command can remove only the original instance-owned mutable
+data volumes. Never use it as a replacement for workload quiescence or storage
+retirement. Require a verified backup and explicit purge scope first.
+
+    agentlabctl deploy purge-data-host /absolute/private/bundle --registry /absolute/private/registry --retired-journal /absolute/private/original-retirement --storage-journal /absolute/private/original-storage --journal /absolute/private/NEW-data-purge --operation NEW-data-operation --confirm-project EXACT-project
+
+An original unknown storage result requires exact owning readback and its sealed
+finalization receipt, supplied with --storage-finalization. Unknown deletion
+results permit original readback only:
+
+    agentlabctl deploy read-data-purge /absolute/private/original-data-purge
+
+New container retirement receipts capture mutable-volume identity. A volume
+originally absent from the installation plan cannot be adopted for purge using
+an older receipt that lacks this original identity. The command checks current
+daemon/project/volume identity, storage absence and all container consumers,
+writes durable intent before non-force deletion, and preserves shared component
+volumes. No automatic retry, force, prune or unknown-effect replay is available.
+
+This is public Source/private qualification plus two-host executable acquisition,
+not actual purge or full uninstall acceptance. Network, credentials and control
+directory cleanup and both-host full reinstall remain open.
 
 ## Reinstall and remaining acceptance
 

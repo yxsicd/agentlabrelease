@@ -9,6 +9,19 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 def validate_candidate_static_build(build, receipt):
     """Keep legacy ELF evidence; require independent proof for the new builder."""
+    if receipt is not None and receipt["download"]["binaryExecuted"] is True:
+        assert "readOnlyExecution" in receipt
+        execution = receipt["readOnlyExecution"]
+        binary = next(a for a in receipt["assets"] if a["name"].startswith("agentlabctl-"))
+        descriptor = next(a for a in receipt["assets"] if a["name"] == "agentlab-control-current.json")
+        assert execution["binarySha256"] == binary["sha256"]
+        assert execution["expectedDigest"] == descriptor["sha256"]
+        assert set(execution["hosts"]) == {"hwlinux", "aiwsl"}
+        for host in execution["hosts"].values():
+            assert len(host["argv"]) == 2 and host["argv"][0] == "digest"
+            assert host["argv"][1].startswith("/") and host["argv"][1].endswith("/agentlab-control-current.json")
+            assert host["exitCode"] == 0 and host["actualLifecycleEffects"] is False
+            assert host["wholeAssetReadback"] is True
     assert build["target"] == "x86_64-unknown-linux-musl"
     assert build["interpreterSegments"] == 0
     if build.get("staticPie") is True:
@@ -19,7 +32,7 @@ def validate_candidate_static_build(build, receipt):
         download = receipt["download"]
         for key in ("anonymous", "usedFinalGitHubReleaseUrls", "independentFromUpload", "staticElfVerified"):
             assert download[key] is True
-        assert download["binaryExecuted"] is False and download["installed"] is False
+        assert type(download["binaryExecuted"]) is bool and download["installed"] is False
         assert download["elfType"] == 3
         assert download["elfInterpreterSegments"] == 0
         assert download["elfDynamicSegments"] == 1
@@ -36,7 +49,7 @@ def validate_candidate_static_build(build, receipt):
         assert download["usedFinalGitHubReleaseUrls"] is True
         assert download["independentFromUpload"] is True
         assert download["staticElfVerified"] is True
-        assert download["binaryExecuted"] is False and download["installed"] is False
+        assert type(download["binaryExecuted"]) is bool and download["installed"] is False
         assert download["elfInterpreterSegments"] == 0
         assert download["elfDynamicSegments"] == 0
         assert download["elfNeededLibraries"] == 0
@@ -173,7 +186,7 @@ if manifest.get("controllerCandidate"):
         assert all(value is False for value in publication_receipt["acceptanceLimits"].values())
         assert publication_receipt["download"]["anonymous"] is True
         assert publication_receipt["download"]["usedFinalGitHubReleaseUrls"] is True
-        assert publication_receipt["download"]["binaryExecuted"] is False
+        assert type(publication_receipt["download"]["binaryExecuted"]) is bool
         assert publication_receipt["download"]["installed"] is False
         assets = publication_receipt["assets"]
         assert len(assets) == 2 and len({a["name"] for a in assets}) == 2
