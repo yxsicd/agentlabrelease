@@ -143,3 +143,30 @@ pass. Readback settlement, input-integrity checks and assessment may be automate
 only after exact original publication binding; settlement itself grants neither
 a model retry nor Host/checker-effect authority. Keep native budget and controller
 publication/readback time separate.
+
+
+Use [`assess-declared-report.py`](../../../scripts/assess-declared-report.py)
+for a report-content slice: a versioned `agentlab.report_contract.v1` JSON declares
+criterion IDs, rule kinds, compared field names/types, report-reference IDs and
+field constraints. Expected business values remain in a separate private oracle.
+The same contract generates the public guide and drives the checker; do not
+hand-maintain a second field guide. The adjacent
+[regression examples](../../../scripts/test_declared_report.py) show the minimal
+contract/oracle shape and rejection boundaries.
+
+```sh
+python3 scripts/assess-declared-report.py describe --contract contract.json --output output-guide.md
+python3 scripts/assess-declared-report.py assess --contract contract.json --oracle oracle.private.json --report student.json --timing posthoc --output reassessment.json
+```
+
+Freeze the contract, generated guide, checker and private oracle digests BEFORE
+an assessed run; publish only the guide/contract to the participant. `--timing
+frozen` labels the requested mode, not proof of pre-run freezing: retain the
+external freeze receipt. A later correction uses `posthoc`, binds the unchanged
+student SHA and original frozen assessment separately, and explains every policy
+change. A descriptive report ID is accepted only with exactly one declared token;
+ambiguous/unknown tokens, duplicate observations and changed business values fail.
+Evidence paths compare the full captured absolute path, not a matching basename.
+These content checks do not authenticate evidence, execute selectors, grant
+Host effects or establish independent whole-task success. Missing private oracle
+inputs are evaluator errors, never student failures or inferred expected values.
