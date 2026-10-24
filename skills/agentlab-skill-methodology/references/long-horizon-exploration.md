@@ -106,3 +106,15 @@ alongside semantic/planning help. Assisted passage with those changes supports a
 bounded observation, not the isolated causal benefit of one hint or independent
 whole-task success. Keep old portable packages tied to their original checkpoints
 until the new state is actually captured and restored.
+
+## Report actions and outcomes before event volume
+
+Present execution operations, unique tool calls, help and independently checked
+delivery ahead of raw-event totals. Count native tool-call identities once;
+streamed message fragments, tool progress and duplicate notifications are not
+additional actions. Publish the covered-operation denominator; unextracted legacy
+history, missing terminals and conflicting results stay unknown. A normal tool
+return is not task progress, while a failed compile can provide useful evidence.
+Use source-grounded findings and independent outcomes to describe benefit or
+repetition; do not infer either from return status or synthesize a useful-call
+score without the needed observations. Keep raw counts in completeness details.
