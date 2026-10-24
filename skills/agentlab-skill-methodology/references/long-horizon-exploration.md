@@ -80,3 +80,16 @@ is not a model-wide inability. Score policy may change without changing facts.
 Learning benefit requires later admitted use and measured comparison; do not
 infer it from writing a Skill. Future independent assessment must disclose its
 start point and assistance history, separate from exploration-time passage.
+
+## Prove execution before interpreting a timeout
+
+Keep request preparation/preflight, request sent, runtime admission, participant
+prompt acceptance, observed tool actions and publication as separate milestones.
+A Ready workspace or a successful capability discovery is not proof that a new
+participant started. Bind observations to the exact new request/operation/base;
+never use the previous completed operation or its timeout as the new outcome.
+Without admission or prompt-acceptance evidence, retain submission status and
+help delivery as unknown; do not add a failed student run, count a delivered
+hint or attribute the outer wait to model thinking. Read the original effect
+through its declared boundary before a dependent continuation; do not replay it
+or widen the task into an infrastructure campaign.
