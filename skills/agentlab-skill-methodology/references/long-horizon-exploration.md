@@ -118,3 +118,14 @@ return is not task progress, while a failed compile can provide useful evidence.
 Use source-grounded findings and independent outcomes to describe benefit or
 repetition; do not infer either from return status or synthesize a useful-call
 score without the needed observations. Keep raw counts in completeness details.
+
+## Preserve partial capability evidence when delivery fails
+
+An empty final report does not erase authenticated tool actions and immutable
+intermediate outputs. Compare those outputs independently and name their scope;
+do not credit the controller's comparison as the student's reasoning or promote
+the entire task to success. Treat absent report fields as one delivery barrier
+when they share that cause. Before assigning a navigation failure to the model,
+check whether the current project/source entry was clear among historical files.
+For late-result recovery use live scoped capsule identity and original-operation
+readback, not an old physical root or the previous lease's successful operation.
