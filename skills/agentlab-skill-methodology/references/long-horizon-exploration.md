@@ -33,6 +33,25 @@ Skills are the durable home for reusable judgment and actionable guidance, with
 references/scripts where useful. Facts and hypotheses support that knowledge;
 not every timeout or isolated failure becomes a permanent Skill rule.
 
+## Evaluator owns the assessment; student artifacts are not grades
+
+The student solves the task and may submit code, tests, measurements, logs or
+an explanation if these are genuine task deliverables. The evaluation system
+independently checks those artifacts against captured execution and the frozen
+oracle, attributes assistance, and generates per-case and aggregate reports.
+Never accept a student's self-assigned pass, score, help attribution or capability
+claim as authoritative evaluation evidence. A teacher assisting execution must
+not silently author a student's artifact and credit it to the student.
+
+A measurement summary is a task artifact, not the evaluation report. Distinguish
+raw measurements, the student's interpretation, independent recomputation and
+the final judgment. A missing summary can fail an explicitly declared delivery
+criterion while valid measured progress remains visible; it does not by itself
+prove the underlying functionality or measurement ability failed. Do not require
+a student to grade itself or narrate teacher help as a substitute for evaluator
+instrumentation. Correct future task contracts prospectively; retain original
+frozen outcomes and label any posthoc reinterpretation separately.
+
 ## Exploration assesses the student while constructing the case
 
 Two uses of the same evidence must remain visible:
