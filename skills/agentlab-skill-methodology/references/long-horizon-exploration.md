@@ -257,6 +257,44 @@ Host effects or establish independent whole-task success. Missing private oracle
 inputs are evaluator errors, never student failures or inferred expected values.
 
 
+## Audit numeric correctness, evidence fidelity and useful progress separately
+
+A participant can compute the correct aggregate while corrupting a copied raw
+record. Independently compare the selected original tool IDs, timestamps,
+metric definitions, units and samples; recompute the aggregate; then compare
+claimed verbatim content with the original bytes. Keep these separate findings.
+A changed unused column still invalidates a verbatim claim without making an
+unchanged aggregate numerically wrong. Preserve the original and student bytes;
+never repair the submission and credit the correction to the participant.
+
+Prefer exact captured blobs plus references/digests over manually reconstructing
+raw output. Declare excerpts and any whitespace normalization. An accurate
+excerpt is different from invented data; record a misleading verbatim label
+without multiplying it into several numeric failures. Observation by mtime or
+nominal UI input supports a narrower claim than unchanged source hashes or a
+verified semantic interaction. Keep unsupported claims and missing evidence
+visible at that narrower scope.
+
+Use the same captured tool records to annotate task-relevant benefit separately
+from reported tool status: an initial failed probe may discover a useful
+constraint; repeating the same refuted filter may add no observable information.
+Retain what changed, the counterexample available then and later use of the
+result. A participant's self-correction is counterevidence to a blanket inability
+claim, even if another defect survives. Counts of normal returns and checker
+criteria are neither usefulness scores nor participant pass rates. Keep weights
+separate and unknown causal benefit explicitly unknown.
+
+For offline retention, freeze the chosen tool-record oracle and evaluator code
+outside the restored participant workspace. Bind their digests to the exact
+original operation/checkpoint and preserve the declared semantic outcome across
+hosts, including its failures. Exclude nondeterministic annotation timestamps
+only through an explicit comparison projection. An excerpt's hash identifies
+that excerpt; independently retained original-fact provenance establishes its
+source. Omitted Agent context means a post-state grading replay, not automatic
+qualification to resume a prompt that depends on that private context. Stop once
+the selected code/evidence and independent outcome reproduce; return to the
+application's next meaningful barrier.
+
 ## Reproduce retained outcomes before expanding the case
 
 Use the existing patch/case restore path and an externally retained case digest.
