@@ -11,6 +11,12 @@ Use `skills/agentlab-skill-methodology/SKILL.md` for method/instance layers.
 Select maintenance versus operations via `skills/registry.json`. Maintenance
 Skills own benchmark methods and seed publication; operations deploy public
 components or consume fixed snapshots and return evidence for the next cut.
+Here `maintenance` means maintaining evaluation methods, target-project knowledge
+and task seeds while USING AgentLab. It does not mean changing AgentLab platform
+implementation. Reusable usage methods belong in this release Skill library;
+target-instance Skills and observations follow the methodology's TableGit cuts.
+Use the existing experiment-learning promotion path instead of creating another
+knowledge store or treating a platform-maintainer handoff as consumer guidance.
 
 Read `skills/agentlab-harness-developer/SKILL.md` completely before designing or
 running an Agent evaluation. Treat manifests and receipts as authority; never

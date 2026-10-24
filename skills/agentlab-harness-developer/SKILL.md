@@ -14,6 +14,14 @@ SKILL URL and separately configured authorization from the operator. For
 installation or historical removal, use [deployment](../agentlab-deployment/SKILL.md).
 Do not assume a hostname, port, private repository, host filesystem or framework.
 
+## Exploration versus fixed assessment
+
+When constructing a longer case, use [long-horizon exploration](../agentlab-skill-methodology/references/long-horizon-exploration.md)
+to record minimal help, subsequent barriers and exact checkpoint lineage. In a
+fixed assessment consume the frozen inputs and permitted assistance policy.
+Case exploration, assessed performance and knowledge promotion are different
+claims; this operations Skill never grants platform-maintainer access.
+
 ## Discover before acting
 
 Fetch the instance SKILL without credentials and follow its explicit
