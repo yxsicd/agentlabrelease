@@ -129,3 +129,17 @@ when they share that cause. Before assigning a navigation failure to the model,
 check whether the current project/source entry was clear among historical files.
 For late-result recovery use live scoped capsule identity and original-operation
 readback, not an old physical root or the previous lease's successful operation.
+
+## Keep declared output and grader constraints aligned
+
+Freeze field meanings and accepted representations from the same declared
+contract used by the private checker. A human-readable report reference is not
+an executable UI selector: do not silently import a bare-ID dispatch restriction
+into a report field that did not declare it. If real output exposes that gap,
+retain the original frozen verdict and publish a separately versioned, explicitly
+posthoc semantic review. Never edit student bytes or rerun the model merely to
+satisfy the hidden restriction; do not present posthoc acceptance as a frozen
+pass. Readback settlement, input-integrity checks and assessment may be automated
+only after exact original publication binding; settlement itself grants neither
+a model retry nor Host/checker-effect authority. Keep native budget and controller
+publication/readback time separate.
