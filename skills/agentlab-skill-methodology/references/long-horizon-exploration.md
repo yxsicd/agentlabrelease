@@ -314,3 +314,39 @@ Report archive bytes AND shared baseline/patch bytes, omitted caches/SDK/context
 and the selected-code scope. Small compressed evidence is not full-machine restore
 or proof that future branches have constant cost. Stop portability repair once
 this case's declared scope restores; return to evaluation and difficulty discovery.
+
+
+## Bind editable UI actions to actual state
+
+Evaluate the chain independently: intended test value -> observed editable-field
+value -> actual submitted action -> observed application result. A text-input
+command may append instead of replace. A soft keyboard or modal can move the
+viewport and hide controls, so a previously valid coordinate is not a durable
+selector. Refresh the actual hierarchy/bounds after state changes and verify the
+field contains the intended value before interpreting a business result. Failed
+input setup does not establish a parser defect; a successful positive case does
+not establish the unexecuted negative cases.
+
+Read the actual representation of interface metadata. Bounds encoded as a string
+are not nested numeric arrays. Keep repeated assumptions, their diagnostics and
+any eventual schema correction visible in the same trajectory. A shell pipeline
+or wrapper may report zero while its output contains an exception or rejected
+device command. Tool status, domain outcome, information gained and later use
+remain separate; do not derive a useful-call rate from exit codes alone.
+
+Freeze input-method readiness and allowed system-dialog interactions as part of
+the environment contract before an app-only assessment. A first-use keyboard
+consent/setup screen is a distinct operator decision, not authority implied by
+asking the student to type. Missing preflight is a Harness finding; student
+interaction outside the frozen scope is still recorded separately. Never grant
+consent, infer OS permissions or alter another environment merely to clear this
+gate. Record precisely what changed and leave unobserved permission effects
+unknown. Do not retroactively expand the allowed scope or erase the original run.
+
+Preserve intermediate code, compiler output, artifact identity and verified UI
+states when final task files are empty. Treat the missing final delivery as one
+barrier, while distinguishing successful implementation/build/deployment from
+unexecuted business checks. Time to first edit is observable preparation, not by
+itself proof of wasted thinking. Freeze a narrowly attributable continuation only
+after the original operation is resolved; help can cross a barrier to expose the
+next one without replacing the earlier outcome.
