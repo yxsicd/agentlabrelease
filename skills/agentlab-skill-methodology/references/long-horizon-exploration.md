@@ -170,3 +170,24 @@ Evidence paths compare the full captured absolute path, not a matching basename.
 These content checks do not authenticate evidence, execute selectors, grant
 Host effects or establish independent whole-task success. Missing private oracle
 inputs are evaluator errors, never student failures or inferred expected values.
+
+
+## Reproduce retained outcomes before expanding the case
+
+Use the existing patch/case restore path and an externally retained case digest.
+Declare the selected source slice separately from inherited baseline files; a
+synthetic offline baseline file is not necessarily a published Session artifact.
+When constructing a new patch from a shared Git bundle, explicitly select the
+registered immutable base commit in a fresh disposable working source. A successful
+clone may have no checked-out HEAD; never infer its branch from the source name.
+Read back partial generations before correcting a rejected capture.
+
+Consume the case's confined logical mappings instead of hardcoding historical
+artifact directories. Keep controller-private oracles out of the restored student
+workspace. Test both exact file/tree identity and the actual evaluator outcome on
+another host; preserve failures and help attribution across points. Keep original
+frozen grades and corrected posthoc grades separate even when both reproduce.
+Report archive bytes AND shared baseline/patch bytes, omitted caches/SDK/context,
+and the selected-code scope. Small compressed evidence is not full-machine restore
+or proof that future branches have constant cost. Stop portability repair once
+this case's declared scope restores; return to evaluation and difficulty discovery.
