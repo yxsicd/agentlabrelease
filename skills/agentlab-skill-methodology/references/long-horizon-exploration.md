@@ -93,3 +93,16 @@ help delivery as unknown; do not add a failed student run, count a delivered
 hint or attribute the outer wait to model thinking. Read the original effect
 through its declared boundary before a dependent continuation; do not replay it
 or widen the task into an infrastructure campaign.
+
+## Attribute passage after help
+
+When an exact late original result proves prompt acceptance and publication,
+append that result to the same case; preserve the earlier transport uncertainty
+as a historical observation. Do not replay the request to obtain a cleaner run.
+A report write followed by independent content checks can distinguish a delivery
+barrier from incorrect analysis. Tool success or runtime completion alone cannot.
+Record every changed condition, including clarified public contract fields,
+alongside semantic/planning help. Assisted passage with those changes supports a
+bounded observation, not the isolated causal benefit of one hint or independent
+whole-task success. Keep old portable packages tied to their original checkpoints
+until the new state is actually captured and restored.
