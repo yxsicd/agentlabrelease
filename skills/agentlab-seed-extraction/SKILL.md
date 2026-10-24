@@ -10,7 +10,13 @@ metadata:
 
 # Seed extraction maintenance
 
-Combine repository maintainer Skill rows, typed dependency facts and archived analysis results from fixed cuts. Construct tasks with a concrete requirement, baseline source/environment, cross-file impact, staged user demands and observable acceptance checks.
+For teacher/student construction follow [long-horizon exploration](../agentlab-skill-methodology/references/long-horizon-exploration.md).
+It produces BOTH a student assessment (including scored help dependence) and a
+refined case. Discovered barriers and Forks do not require staged final tasks;
+a final task may expose one complete objective. Preserve constructor/participant
+roles, exact assistance and capability/cause evidence through case revisions.
+
+Combine repository maintainer Skill rows, typed dependency facts and archived analysis results from fixed cuts. Construct tasks with a concrete requirement, baseline source/environment, cross-file impact, user-visible objectives and observable acceptance checks. Stage the user demands only when the actual task requires it.
 
 Treat case generation as an iterative search over a revision-bound knowledge
 cut, never as a one-pass export. A scope Skill that only names files,

@@ -9,6 +9,21 @@ metadata:
 
 # Two-layer Skill methodology
 
+This is the method for USING AgentLab to maintain evaluation knowledge, not for
+maintaining AgentLab platform implementation. Method and target-instance Skills
+are both durable knowledge assets. The maintainer Skill system of a TARGET
+PROJECT also accumulates its contracts, verification methods and task seeds;
+extract a general recipe into this method layer only with supporting evidence.
+
+Use [long-horizon exploration and learning](references/long-horizon-exploration.md)
+for teacher-assisted difficulty discovery, tool-progress diagnosis and deciding
+which reusable guidance to improve. Its canonical destinations are the existing
+Skill layers and experiment-learning pipeline below, not another note database.
+Exploration itself assesses the participating student: assistance dependence
+counts in a separately versioned score, while exact facts/help remain immutable.
+The final hosted task need not expose exploration stages. Use the reference for
+evidence-grounded strengths, weaknesses and cause hypotheses.
+
 Every stage has two layers, independent from maintenance/operations roles:
 
 | Stage | Method Skill | Target instance Skill |

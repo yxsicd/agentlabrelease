@@ -35,6 +35,13 @@ distributes public instructions, executables, templates and immutable manifests;
 the deployed instance owns runtime state and authenticated evidence. Credentials
 and private evaluator answers are never public assets.
 
+For repository understanding, long-horizon case exploration or reusable learning,
+start with [the two-layer methodology](skills/agentlab-skill-methodology/SKILL.md).
+Its maintenance role builds evaluation knowledge USING AL; it is distinct from
+maintaining AL implementation. Follow [long-horizon exploration and learning](skills/agentlab-skill-methodology/references/long-horizon-exploration.md)
+when help is needed to discover subsequent barriers. Target-specific knowledge
+stays in its instance Skill cut; general methods are maintained here.
+
 Use the [registry](skills/registry.json) for progressive method selection. There
 is one current consumer contract, not a compatibility matrix of old installers.
 Historical releases remain immutable evidence, not current installation recipes.

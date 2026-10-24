@@ -9,6 +9,13 @@ metadata:
 
 # Experiment learning and publication
 
+For teacher-assisted discovery, follow [long-horizon exploration](../agentlab-skill-methodology/references/long-horizon-exploration.md).
+Help extends the case past an observed barrier to expose the next one; it is not
+independent student passage or an objective to improve a particular student's
+score. Retain tool execution, check verdict, information gained and later
+progress as separate evidence. Candidate mechanism explanations remain scoped
+interpretations until validation and the existing explicit promotion below.
+
 Consume fixed evaluation-instance and knowledge cuts. Use generic TableGit
 programming analysis; retain its exact code/request, input cut and typed result
 in analysis_records. Keep raw producer evidence complete. A failed Agent action
