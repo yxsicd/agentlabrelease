@@ -9,6 +9,14 @@ metadata:
 
 # Benchmark operations
 
+Use [long-horizon exploration and diagnosis](../agentlab-skill-methodology/references/long-horizon-exploration.md)
+for assisted exploratory assessment as well as frozen hosted evaluation. Count
+help delivered to this student, including during case construction, under the
+versioned assistance policy; do not transfer prior students' help penalties to a
+new run. Report evidence-backed strengths/weaknesses, assistance dependence and
+cause hypotheses separately from final correctness. Final tasks need not reveal
+or enforce the exploration's internal A/B/C checkpoints.
+
 Consume a fixed Release composition, Skill-library version and three-table snapshot receipt. Import the snapshot into the evaluation repository using [the existing import command](../../examples/knowledge-seed/README.md). Record imported/source cuts and table digests before starting a campaign. Do not regenerate tasks or reinterpret their grading contract during an active assessment.
 
 Use [AgentLab Harness Developer](../agentlab-harness-developer/SKILL.md) for actual Session, Turn, checkpoint, Fork, execution and capture operations. Follow the [public demos](../../examples/README.md) and their capability receipts. Strong supervisors, scripted supervisors and assessed Agents are different roles; supervisor control is recorded evidence, not participant authority.

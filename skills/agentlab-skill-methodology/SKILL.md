@@ -19,6 +19,10 @@ Use [long-horizon exploration and learning](references/long-horizon-exploration.
 for teacher-assisted difficulty discovery, tool-progress diagnosis and deciding
 which reusable guidance to improve. Its canonical destinations are the existing
 Skill layers and experiment-learning pipeline below, not another note database.
+Exploration itself assesses the participating student: assistance dependence
+counts in a separately versioned score, while exact facts/help remain immutable.
+The final hosted task need not expose exploration stages. Use the reference for
+evidence-grounded strengths, weaknesses and cause hypotheses.
 
 Every stage has two layers, independent from maintenance/operations roles:
 

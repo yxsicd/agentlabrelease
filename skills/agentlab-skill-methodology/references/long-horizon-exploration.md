@@ -6,7 +6,7 @@ Use this method to extend a real application case and accumulate reusable
 knowledge while USING AgentLab. It composes the existing goal, codebase/program
 analysis, seed, calibration, operations, asset-model and experiment-learning Skills
 selected through [the registry](../../registry.json); it adds no runtime API,
-permission, table, scoring policy or automatic stopping mechanism.
+permission, table, fixed scoring weights or automatic stopping mechanism.
 
 The release `maintenance` role maintains evaluation knowledge. It is not the
 role that changes AL's implementation. A platform repair addresses a demonstrated
@@ -32,6 +32,72 @@ blocking capability under its separate authority, then returns to the case.
 Skills are the durable home for reusable judgment and actionable guidance, with
 references/scripts where useful. Facts and hypotheses support that knowledge;
 not every timeout or isolated failure becomes a permanent Skill rule.
+
+## Exploration assesses the student while constructing the case
+
+Two uses of the same evidence must remain visible:
+
+| Mode | Purpose and teacher role | Student assessment |
+|---|---|---|
+| Assisted case exploration | Discover barriers, help across A to expose B/C, retain checkpoint/Fork alternatives and refine a long-horizon task | Assess THIS student before and after help. Assistance dependence counts against independent performance under a separately versioned scoring policy; construction is not an exemption. |
+| Frozen hosted evaluation | Give a participant the frozen task/start state and assistance/budget policy; let it plan, execute and verify | Record independent progress and any newly delivered help for THIS run. Prior students' help is construction provenance, not a penalty transferred to a new participant. |
+
+Exploration simultaneously produces a student evaluation and a better case.
+Crossing A with help never clears the original deficit or turns teacher work into
+student work. Do not stop observing at the first failure: retain assisted passage
+so later independent strengths and further help dependence remain measurable.
+A teacher-only solution is construction evidence, not a student completion.
+
+A/B/C are discovered difficulty mechanisms, not mandatory learner-visible stages.
+The final task may be one complete objective with ordinary acceptance conditions;
+let the student choose its plan. Keep internal checkpoints for restoration and
+diagnosis without requiring staged release, teacher-led gates or exactly three
+phases unless the actual task calls for them. Freeze each exploration attempt's
+inputs and preserve versioned case refinements; do not rewrite earlier results.
+
+## Diagnose strengths, weaknesses and causes from the trajectory
+
+For each meaningful demand/barrier, connect the following in the EXISTING
+execution, intervention, evidence and learning records (not a new database):
+
+- Demand and conditions: required capability, task/source/start point, actual
+  Agent/model/API/runtime, thinking policy, tools, environment and budgets.
+- Observed student behavior: original operation/tool references, relevant actions,
+  errors, detours, information gained and actual intermediate/final outputs. Link
+  independent checks; distinguish no attempt, unknown observation and failed attempt.
+- Help and dependence: exact delivered content/type, recipient and time, pre/post
+  checkpoint, teacher actions including direct edits/device work, and observed cost
+  (time/tokens where available, unknown otherwise). Include help during construction.
+- Subsequent behavior: what the student then did independently, whether help
+  enabled passage, remaining failure and the next barrier. Claimed success alone
+  does not show that the intervention worked.
+- Diagnosis: bounded strength/weakness observation, candidate mechanism,
+  alternative causes/counterevidence, evidence references, confidence basis and
+  the next observation that could discriminate explanations or test transfer.
+
+Useful capability labels include repository understanding, planning/decomposition,
+implementation, tool discovery/use, feedback-driven recovery, validation and
+final delivery. They are diagnostic vocabulary, not mandatory fixed weights or
+evidence that every dimension was measured. Separate task correctness, assisted
+reach, tool success, useful progress, completion time and delivery reliability.
+Avoid multiplying one shared delivery/lookup failure into many ability deficits.
+
+Help is also a diagnostic probe. If a tool-location hint is followed by successful
+student device actions, that supports a tool-discovery/access hypothesis, rather
+than proving an inability to operate devices. Without a prior opportunity to act,
+record actual help/dependence but leave unaided capability unmeasured. Multiple
+simultaneous changes in time, environment, task scope or help confound causal
+attribution. Harness/provider/Oracle faults stay distinct from student deficits;
+absence of private reasoning is not evidence of a particular thought process.
+
+Reports must present observed strengths, observed weaknesses, assistance
+requirements and cause hypotheses WITH supporting/counterevidence and limits,
+not just a pass rate. One run supports a context-bound observation; promote a
+model-level capability boundary only after relevant repetitions, other barriers
+or transfer evidence. Keep raw facts/help types immutable and score weights in a
+separate versioned projection, so help can be penalized and rescored without
+rewriting execution history. Preserving facts does not mean exempting help from
+scoring. Do not invent universal penalty values or silently replace old grades.
 
 ## Extend one real path
 
