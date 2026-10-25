@@ -21,7 +21,7 @@ Consume a fixed Release composition, Skill-library version and three-table snaps
 
 Use [AgentLab Harness Developer](../agentlab-harness-developer/SKILL.md) for actual Session, Turn, checkpoint, Fork, execution and capture operations. Follow the [public demos](../../examples/README.md) and their capability receipts. Strong supervisors, scripted supervisors and assessed Agents are different roles; supervisor control is recorded evidence, not participant authority.
 
-For a new campaign without an explicit model selection, read [default-models.json](default-models.json): assess GLM 5.3 Flash and DeepSeek V4.1 Flash. Keep thinking enabled and freeze each effective effort setting; model inclusion is not runtime availability. Verify the exact target-instance route before dispatch, record an unavailable model as not run, and never substitute another model or rewrite a completed frozen cohort.
+For a new campaign without an explicit model selection, read [default-models.json](default-models.json): assess GLM 5.3 Flash, DeepSeek V4.1 Flash and MiniMax M3.1 Flash. Keep thinking enabled and freeze each effective effort setting; model inclusion is not runtime availability. Verify the exact target-instance route before dispatch, record an unavailable model as not run, and never substitute another model or rewrite a completed frozen cohort.
 
 Pin the participant implementation, adapter, model, environment and task. Keep Agent runtime dependencies outside the project Workspace. The Harness captures controlled LLM/MCP/tools and workspace outcomes independently; retain complete raw test evidence and failures without redaction or subject-supplied capture claims.
 
