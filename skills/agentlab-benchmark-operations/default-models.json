@@ -1,0 +1,11 @@
+{
+  "schema": "agentlab.benchmark-default-models.v1",
+  "modelIds": [
+    "glm-5.3-flash",
+    "deepseek-v4.1-flash"
+  ],
+  "thinking": "enabled; freeze actual effort per campaign",
+  "selection": "These are default assessed students, not an exhaustive LLMRS catalog or proof of runtime availability. An explicit campaign override must be recorded.",
+  "comparison": "Freeze identical task, clean seed, Agent version, tools, budget and assistance policy. Record effective per-model thinking and provider API/version separately. Preserve old frozen results; adding a model creates a new run, never rewrites historical conditions.",
+  "availability": "Check exact target-instance model route before dispatch. Missing routes remain not_run, never silently substitute another model."
+}
