@@ -478,3 +478,7 @@ metadata does not imply every historical row has been reaudited.
 For public delivery, use [public report publication](public-report-publishing.md).
 Export reviewed allowlisted summaries; preserve independent assessment, original
 failures and help attribution. Raw traces and portable task archives remain private.
+
+Use [Agent evaluation report contracts](agent-evaluation-report.md) to separate
+protocol/configuration, task versus stage outcomes, cost coverage, reliability,
+assistance and run-linked evidence. Never turn dependent exploration into ranking.
