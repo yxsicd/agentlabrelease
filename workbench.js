@@ -7,7 +7,7 @@
   const backdrop = document.getElementById("drawer-backdrop");
   const mobile = matchMedia("(max-width:760px)");
   const labels = {"model-campaign":"三模型同题评测","frozen-cohort":"冻结整题与跨机还原",process:"调用收益证据",judgment:"判定与完整性",difficulty:"难点与能力路径","assistance-ledger":"11项帮助台账","protocol-ready":"可比运行输入",protocol:"评测协议与配置",results:"阶段结果与口径",cost:"耗时与Token证据",attribution:"学生／Harness归因",gaps:"正式评测剩余差距",overview:"总体概览",report:"完整评测报告",capabilities:"能力与难点",help:"教师帮助归因",history:"执行轨迹摘要",portability:"跨机迁移复核"};
-  const base = new URL("reports/calendar/2026-10-25-v7/", location.href);
+  const base = new URL("reports/calendar/2026-10-25-v8/", location.href);
   const storageKey = "agentlab.public-workbench.v1";
   const defaults = {view:"overview",left:true,right:true,bottom:true,leftSize:224,rightSize:278,bottomSize:166};
   let state = {...defaults};
