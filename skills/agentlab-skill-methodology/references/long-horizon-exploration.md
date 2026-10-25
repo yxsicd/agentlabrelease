@@ -400,3 +400,33 @@ widen directory permission to hide a failed operation. Read the original durable
 operation status after uncertainty, never repeat a write based on transport exit
 or a successful HTTP envelope. A completed checkpoint can retain a FAILED command;
 check command status, actual bytes and Ready independently before the next turn.
+
+
+## Analyze accumulated evidence before adding more runs
+
+For a single longitudinal case, publish a reviewed analysis revision before
+expanding the case count. Keep the current attempt's operation, evidence SHA cut
+and eight-dimensional judgments aligned. An older or unscoped diagnosis must
+move to explicitly historical material; retaining its prose must not retain a
+CURRENT designation. Preserve original input bytes and prior report revisions.
+
+Show the covered-operation numerator/denominator next to tool metrics. Count
+unique tool starts, not streaming messages; report normal responses, explicit
+errors and unknown results separately. A normal response is not semantic success
+or useful progress. An informative failure may help isolate a defect. Without
+reviewed action-level outcome labels, utility rate stays unknown. Link reviewed
+failures, recovery, detours and validation outcomes to original operation/call
+identities and pinned evidence; a selected episode list is not full coverage.
+
+Classify intervention events only from evidence-backed types. Count one accepted
+event once even if it has several tags. Missing legacy types stay unclassified,
+not no-help. Keep task selection/context, harness restoration, solving hints and
+direct teacher actions distinguishable; weights and penalties are separately
+versioned. Before/after progress alone does not establish that help caused it.
+
+Use exact original readback to settle pending publication; do not rerun the
+student to repair missing report facts. A newly published operation can enter the
+qualified cohort without erasing its inherited assistance or earlier failures.
+Report revisions must identify their evidence cutoff, coverage gaps, configuration
+labels versus verified profiles, and unmeasured performance/billing. Final grades
+are produced independently by the evaluation system/teacher, not the student.
