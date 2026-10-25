@@ -1,0 +1,13 @@
+{
+  "schema": "agentlab.public-reports.v1",
+  "reports": [
+    {
+      "id": "calendar",
+      "version": "2026-10-25",
+      "title": "Calendar 长程任务评测",
+      "url": "calendar/2026-10-25/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false
+    }
+  ]
+}

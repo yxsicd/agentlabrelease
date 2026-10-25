@@ -1,0 +1,462 @@
+{
+  "schema": "agentlab.public-evaluation.v1",
+  "version": "2026-10-25",
+  "evidenceDate": "2026-10-25",
+  "caseTitle": "Calendar：代码开发、设备验证与长程交付",
+  "target": {
+    "repository": "openharmony/applications_calendar",
+    "commit": "a44b0ad503f69e50943520a0ea569c9cfcb09a57",
+    "scope": "minimal extracted ArkUI acceptance app, not full Calendar"
+  },
+  "assessmentAuthority": "评测系统与教师独立审阅，学生交付物不作为最终成绩",
+  "scope": "单个提取的ArkUI验收应用，来自目标库；受辅助的长程任务，不代表整个Calendar项目或模型总体能力",
+  "wholeIndependentTaskPass": false,
+  "score": null,
+  "scorePolicy": "事实与评分权重分离；尚未设定总分，不作模型排名",
+  "metrics": {
+    "caseCount": 1,
+    "operationCount": 31,
+    "helpContextEvents": 11,
+    "studentDurationMs": 6235294,
+    "uiEvidenceChecksPassed": 7,
+    "uiEvidenceChecksTotal": 7
+  },
+  "tools": {
+    "identifiedCalls": 373,
+    "coveredOperations": 19,
+    "totalOperations": 31,
+    "unavailableOperations": 12,
+    "returnedWithoutError": 361,
+    "returnedWithError": 12,
+    "unknownResultCalls": 0
+  },
+  "outcomeCounts": {
+    "independent_qualified": 4,
+    "assisted_qualified": 4,
+    "failed": 7,
+    "partial": 15,
+    "completed_ungraded": 1
+  },
+  "dimensions": [
+    {
+      "id": "functional",
+      "name": "功能正确性",
+      "status": "observed_assisted_ui_7_of_7",
+      "finding": "跨受辅助继续轮次，7/7项UI已独立观察：548完成6项，550完成旧MO,-1FR示例。前轮超时/未交付保持原结论；不是整题独立通过。"
+    },
+    {
+      "id": "compile_recovery",
+      "name": "编译与自主纠错",
+      "status": "historical_build_only",
+      "finding": "先前543有实际ArkTS编译7088ms/HAP50152B与部署证据，其原操作发布问题另记；本轮不改代码、不新增编译安装通过次数。"
+    },
+    {
+      "id": "tools",
+      "name": "工具使用与异常判断",
+      "status": "observed_recovery_with_detours",
+      "finding": "548的44次调用显式报错0，但MOVE_END实际参数错误，学生改用数字删除键恢复；最后重复整数按钮是弯路。550的22次调用取得旧示例实际输入/结果；不能把正常返回率当收益率。"
+    },
+    {
+      "id": "constraints",
+      "name": "约束、上下文与证据保真",
+      "status": "observed_with_delivery_gaps",
+      "finding": "本轮三个源码哈希保持原值，验证JSON5302B/raw6723B均非空；548学生摘要只更新5项而轨迹含第6项，过时摘要保留。任务交付文件不是最终成绩。"
+    },
+    {
+      "id": "device",
+      "name": "部署交互与视觉验证",
+      "status": "observed_structured_ui",
+      "finding": "548实际进程32050→9710→10089并恢复草稿/求值对；550在同一重启后的进程中点击原MO,-1FR按钮并显示正确结果。证据来自结构化控件树，不据此宣称图像视觉理解能力。"
+    },
+    {
+      "id": "performance",
+      "name": "性能测量分析与优化",
+      "status": "not_measured_this_extension",
+      "finding": "这次扩展没有性能测量或优化验收。同步flush在每次输入变化中的开销仍是待测假设；功能/UI成功不能升级为性能通过。"
+    },
+    {
+      "id": "efficiency",
+      "name": "效率、成本与弯路",
+      "status": "measured_with_scope_limits",
+      "finding": "548原生600726ms超时、44调用；550正式原生210063ms完成、22调用。两轮任务范围不同，不据此计算速度提升。精确token和账单需独立口径，未换算费用。"
+    },
+    {
+      "id": "independence",
+      "name": "独立性与帮助依赖",
+      "status": "assisted_continuation_attributed",
+      "finding": "当前共11个已接收帮助/上下文事件，类型与权重分离；550只有收尾范围说明，没有新在线解法或教师代码/设备操作。547机械恢复属于Harness投入，旧源码不计新独立实现。 550原操作现已正式完成并发布，帮助归因不因发布完成而取消。"
+    }
+  ],
+  "capabilityClaims": [
+    {
+      "title": "能构造测试输入，并在规划帮助后接通运行",
+      "finding": "观察到35项输入的实际写入和后续35/35真实执行；设计能力、执行交付和完整任务验收应分别评价。",
+      "confidence": "case_observation",
+      "alternativeExplanations": [
+        "仅限当前解析器任务",
+        "续跑获得额外预算与教师规划提示，不能记为原轮独立完成"
+      ]
+    },
+    {
+      "title": "具备局部设备操作自纠错能力",
+      "finding": "命令参数错误被外层成功掩盖，但学生随后按用法调整，清空并替换文本，继续取得重启后的状态证据。",
+      "confidence": "case_observation",
+      "alternativeExplanations": [
+        "继承既有设备配置和历史辅助上下文",
+        "工具接口的错误包装与输入状态增加了任务难度，不全归因于模型"
+      ]
+    },
+    {
+      "title": "剩余目标覆盖与收尾规划仍值得考察",
+      "finding": "前轮重复整数检查，原示例按钮未覆盖；下一轮在缩窄任务范围后才补齐。它提示收尾规划问题，但尚不足以证明模型普遍不擅长长程任务。",
+      "confidence": "hypothesis",
+      "alternativeExplanations": [
+        "前轮受预算终止",
+        "后轮任务范围更窄且继承已验证状态",
+        "单个辅助任务不足以外推模型总体能力"
+      ]
+    }
+  ],
+  "assistanceComparisons": [
+    {
+      "title": "测试设计走向可运行验证：有帮助依赖，也有后续新卡点",
+      "beforeFinding": "设计35项测试输入，但180.548秒超时前未交付可运行测试。",
+      "helpFinding": "教师提示优先把已有cases.json接上tests.ts并实际运行，不提供测试答案。",
+      "afterFinding": "141.996秒的续跑中实际执行35/35，保存交付物；随后UI接口计划仍未通过，完整任务未通过。",
+      "confounders": [
+        "追加了执行预算",
+        "继承前轮已产出的测试输入和上下文",
+        "不是随机对照，也不是相同起点独立重跑"
+      ],
+      "causalEffectEstablished": false
+    }
+  ],
+  "reviewCoverage": {
+    "reviewedCalls": 8,
+    "identifiedCalls": 373,
+    "globalUsefulCallFraction": null
+  },
+  "helpClassification": {
+    "eventCount": 11,
+    "typedEvents": 8,
+    "unclassifiedEvents": 3,
+    "tagAssignments": 16
+  },
+  "operations": [
+    {
+      "sequence": 1,
+      "phase": "功能Fork",
+      "model": "glm-5.3-flash",
+      "runtimeStatus": "completed",
+      "outcome": "independent_qualified",
+      "durationMs": 104958,
+      "finding": "11/11；首编通过；5项UI由Host执行"
+    },
+    {
+      "sequence": 2,
+      "phase": "功能Fork",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "independent_qualified",
+      "durationMs": 123093,
+      "finding": "11/11；首编失败后自主修复；5项UI由Host执行"
+    },
+    {
+      "sequence": 3,
+      "phase": "性能/plan",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 175518,
+      "finding": "性能探索中间轮，不能单独当完整任务通过"
+    },
+    {
+      "sequence": 4,
+      "phase": "性能/feedback",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 77019,
+      "finding": "性能探索中间轮，不能单独当完整任务通过"
+    },
+    {
+      "sequence": 5,
+      "phase": "性能/H1",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 83102,
+      "finding": "性能探索中间轮，不能单独当完整任务通过"
+    },
+    {
+      "sequence": 6,
+      "phase": "性能/context",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 59297,
+      "finding": "性能探索中间轮，不能单独当完整任务通过"
+    },
+    {
+      "sequence": 7,
+      "phase": "性能/H2",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 51572,
+      "finding": "性能探索中间轮，不能单独当完整任务通过"
+    },
+    {
+      "sequence": 8,
+      "phase": "性能/budget-timeout",
+      "model": "glm-5.3",
+      "runtimeStatus": "timeout",
+      "outcome": "failed",
+      "durationMs": 180374,
+      "finding": "预算超时，保留失败"
+    },
+    {
+      "sequence": 9,
+      "phase": "性能/byte-exact-final",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "assisted_qualified",
+      "durationMs": 69011,
+      "finding": "帮助及追加预算后的分析合格；不是独立180秒成功"
+    },
+    {
+      "sequence": 10,
+      "phase": "验证/tests",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "independent_qualified",
+      "durationMs": 137100,
+      "finding": "40/40；8类变异；6项学生选择的UI由Host操作"
+    },
+    {
+      "sequence": 11,
+      "phase": "验证/initial-ui-failed",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "failed",
+      "durationMs": 86440,
+      "finding": "6项解释正确但原始输入保真失败，原FAIL保留"
+    },
+    {
+      "sequence": 12,
+      "phase": "验证/teacher-assisted-fidelity",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "assisted_qualified",
+      "durationMs": 66605,
+      "finding": "一次教师定位/提取方法帮助后恢复原始数据"
+    },
+    {
+      "sequence": 13,
+      "phase": "独立验证尝试",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "failed",
+      "durationMs": 180548,
+      "finding": "独立设计35例；独立核验35/35及8类变异有效；未交付可运行测试，180秒预算超时。"
+    },
+    {
+      "sequence": 14,
+      "phase": "规划帮助后的验证",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 141996,
+      "finding": "帮助1后实际运行35/35并保存5文件；UI接口计划被拒，完整任务未通过。"
+    },
+    {
+      "sequence": 15,
+      "phase": "接口反馈／上游失败",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "failed",
+      "outcome": "failed",
+      "durationMs": 5622,
+      "finding": "上游502，0学生工具；未测得格式修复能力，不归因为学生能力失败。"
+    },
+    {
+      "sequence": 16,
+      "phase": "接口自修正",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "failed",
+      "durationMs": 90383,
+      "finding": "读取正确ID却置于controlId，selector仍是描述；90秒超时。"
+    },
+    {
+      "sequence": 17,
+      "phase": "字段契约帮助后",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "failed",
+      "durationMs": 180404,
+      "finding": "帮助2后6个selector正确；报告未更新，180秒超时。"
+    },
+    {
+      "sequence": 18,
+      "phase": "真实反馈解读",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "failed",
+      "durationMs": 180524,
+      "finding": "实际工具算对CPU/PSS；未写报告，180秒超时。报告交付失败不等于计算能力错误。"
+    },
+    {
+      "sequence": 19,
+      "phase": "帮助后反馈报告交付",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "completed",
+      "outcome": "assisted_qualified",
+      "durationMs": 128116,
+      "finding": "H3交付优先级提示后128秒完成，报告14/14；同时澄清既有枚举契约，不归因于单一因素。"
+    },
+    {
+      "sequence": 20,
+      "phase": "学生自主设备操作／报告未交付",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "partial",
+      "durationMs": 180364,
+      "finding": "现有SDK/专属连接下自主点击并读取两项UI，原生180秒超时；报告0字节，不能记作整任务完成。无新增语义帮助。"
+    },
+    {
+      "sequence": 21,
+      "phase": "设备结果报告补写／契约口径分离",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 77777,
+      "finding": "报告4243B已交付，原生77.8秒完成。冻结判据8/13因selector描述/裸ID口径失败保留；事后独立内容复核2/2一致，不冒充冻结PASS。无新增语义帮助。"
+    },
+    {
+      "sequence": 22,
+      "phase": "同一任务性能粗测／Harness恢复",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "failed",
+      "outcome": "partial",
+      "durationMs": 331296,
+      "finding": "实际10条RSS采样，缺awk后自主找到cut；CPU汇总/报告未完成。原生failed伴随输出流缺finish_reason，不能归因为学生能力不足；原504保留。"
+    },
+    {
+      "sequence": 23,
+      "phase": "性能采集自主执行／原发布延迟追回",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "partial",
+      "durationMs": 360725,
+      "finding": "原生360.725秒timeout；自主hidumper取得5CPU/3PSS采样，两个任务交付物仍0B。原发布已精确追回，无新提示/重跑；系统收尾耗时单独记录。"
+    },
+    {
+      "sequence": 24,
+      "phase": "性能证据持久化／一次规划帮助后执行",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "partial",
+      "durationMs": 360644,
+      "finding": "帮助后学生写出2JSON；主要数值/算术正确，原始CPU分列抄录错误保留。native timeout360.644秒与语义评价分开；无重放。"
+    },
+    {
+      "sequence": 25,
+      "phase": "自主业务UI验证→粗测→交付",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "completed",
+      "outcome": "independent_qualified",
+      "durationMs": 287285,
+      "finding": "本轮无新增帮助，287.285秒完成真实业务UI状态验证、4CPU/3PSS粗测及2JSON交付；22独立核验满足，性能因果表述有限。原生/检查点/字节正式闭合，历史失败和帮助保留。"
+    },
+    {
+      "sequence": 26,
+      "phase": "自主自由输入实现→首次编译→部署→UI部分验证",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "partial",
+      "durationMs": 600849,
+      "finding": "600.849秒预算终止；自主代码/首次编译/部署/真实整数正例成立，输入替换/动态视口/最终交付/作用域仍未满足或未验证；53调用/新增帮助0，原失败保留。"
+    },
+    {
+      "sequence": 27,
+      "phase": "教师帮助后的真实自由输入恢复与证据交付",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 497406,
+      "finding": "学生帮助后完成5项真实界面验证及两份非空JSON，耗时497.406秒；时间字段误写2025、输入追加后恢复及4显式错误保留。系统曾取错revision导致404，交付脚本修复后16份快照证据全部读回且原字节不变。"
+    },
+    {
+      "sequence": 28,
+      "phase": "新增状态恢复要求：首次模型请求502，能力未评测",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "failed",
+      "outcome": "completed_ungraded",
+      "durationMs": 5686,
+      "finding": "原操作和失败事实已正式发布；上游502发生于工具调用前，0工具/源码未改，学生能力不评分。HTTP200与exitCode0不能替代原生failed。功能需求仍未完成；0新帮助/8历史帮助。"
+    },
+    {
+      "sequence": 29,
+      "phase": "隔离Fork恢复材料试验（Harness混杂）",
+      "model": "Pi1.4.0 / GLM-5.3-Flash / high",
+      "runtimeStatus": "timeout",
+      "outcome": "partial",
+      "durationMs": 600791,
+      "finding": "600.791秒超时；45次工具调用、2次报错，原始源码恢复2/3精确、无UI验收。长Base64材料交付是Harness混杂；不能据此推断鸿蒙持久化能力。1次帮助和旧源码输入已披露。"
+    },
+    {
+      "sequence": 30,
+      "phase": "同任务重启验证（6/7）",
+      "model": "Pi1.4.0 / GLM-5.3-Flash / high",
+      "runtimeStatus": "timeout",
+      "outcome": "partial",
+      "durationMs": 600726,
+      "finding": "600.726秒超时保留。44调用/44结果；独立核验6/7UI，学生JSON更新5项、第6项在轨迹中；MOVE_END参数错误自行恢复，旧示例按钮未完成。"
+    },
+    {
+      "sequence": 31,
+      "phase": "同任务旧示例按钮收尾",
+      "model": "Pi1.4.0 / GLM-5.3-Flash / high",
+      "runtimeStatus": "completed",
+      "outcome": "assisted_qualified",
+      "durationMs": 210063,
+      "finding": "原MO,-1FR按钮实际输入/结果经系统独立核验；22调用；继承辅助上下文，本轮无在线解法或教师设备操作。正式原操作完成、published与Ready一致，不是整题独立通过。"
+    }
+  ],
+  "portable": {
+    "hosts": [
+      "macOS",
+      "Linux"
+    ],
+    "sameArchiveVerified": true,
+    "reportJSONEqual": true,
+    "reportHTMLEqual": true,
+    "retainedPoints": 6,
+    "archiveBytes": 2930300,
+    "latestPatchBytes": 25354,
+    "sharedBaseBytes": 7094,
+    "selectedFiles": 5,
+    "selectedBytes": 28434,
+    "privateEvidenceLogicalBytes": 66928226,
+    "newStudentOrDeviceActions": 0,
+    "scope": "选定源码与证据的恢复、历史UI证据判断和报告离线重算；第二台机器未重新编译、操作设备或继续学生Agent。SDK、构建缓存和整个Capsule未恢复。旧图片预览未纳入本次重算视图，原始材料单独保留。"
+  },
+  "cost": {
+    "billing": null,
+    "performanceThisExtension": "未新增性能测量；构建耗时、模型运行时长和应用性能分开记录"
+  },
+  "provenance": {
+    "privateReportSHA256": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+    "reviewPolicy": "reviewed-actions-and-assistance-1",
+    "publicProjectionPolicy": "allowlist-v1",
+    "privateArtifactsPublished": false
+  },
+  "limitations": [
+    "31轮是同一用例的历史执行操作，不是31道独立题。",
+    "7/7是跨受辅助续跑得到的UI历史证据检查，不是整题独立通过率。",
+    "8次关键调用为定向审阅，不能外推全程有效调用率。",
+    "帮助后的进展伴随额外预算、已有产物和上下文变化，不能作单一因果归因。",
+    "历史配置文字标签尚未按完整实测配置归一，不能据此排名模型。",
+    "私有原始轨迹、评测器、任务包、服务地址和登录信息不在公开站点。"
+  ]
+}
