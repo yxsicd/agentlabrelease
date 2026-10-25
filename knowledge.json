@@ -1,0 +1,19 @@
+{
+  "schema": "agentlab.knowledge-branch.v1",
+  "targetId": "openharmony-applications-calendar",
+  "sources": [
+    {
+      "repository": "https://github.com/openharmony/applications_calendar.git",
+      "revision": "a44b0ad503f69e50943520a0ea569c9cfcb09a57"
+    }
+  ],
+  "target": {
+    "repository": "https://github.com/yxsicd/applications_calendar.git",
+    "branch": "al-knowledge"
+  },
+  "hub": {
+    "repository": "https://github.com/yxsicd/agentlabrelease.git",
+    "branch": "knowledge/targets/openharmony-applications-calendar"
+  },
+  "entrypoint": "AGENTS.md"
+}

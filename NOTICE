@@ -1,0 +1,5 @@
+Public maintenance knowledge and case references for OpenHarmony Calendar.
+Original target: https://github.com/openharmony/applications_calendar
+Source identity and transport endpoints are recorded in knowledge.json.
+No application source, SDK, build cache, raw Agent session or private judge is
+included in this independent history. License: Apache-2.0; see LICENSE.

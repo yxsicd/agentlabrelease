@@ -1,0 +1,25 @@
+{
+  "schema": "agentlab.public-case-reference.v1",
+  "caseId": "calendar-restart-persistence",
+  "targetId": "openharmony-applications-calendar",
+  "sourceBindings": [
+    {
+      "repository": "https://github.com/openharmony/applications_calendar.git",
+      "revision": "a44b0ad503f69e50943520a0ea569c9cfcb09a57"
+    }
+  ],
+  "task": "task.md",
+  "scope": "Existing extracted recurrence inspector; not full upstream Calendar",
+  "runnableFromKnowledgeBranchAlone": false,
+  "requiredInputs": [
+    "Pinned sample code/patch or admitted semantic case point",
+    "Actual own app/emulator and offline toolchain binding",
+    "Frozen participant/model/thinking/budget and assistance policy",
+    "Independent controller oracle outside participant context"
+  ],
+  "methodRepository": "https://github.com/yxsicd/agentlabrelease.git",
+  "methodRevision": "f4e10fc1ad97c49a2b57ea4ebf899c98e3fa04f0",
+  "methodPath": "skills/agentlab-skill-methodology/references/git-knowledge-branches.md",
+  "assessmentAuthority": "system/controller, never student self-score",
+  "largeAssetsIncluded": false
+}
