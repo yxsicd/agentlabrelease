@@ -156,7 +156,13 @@ def model_campaign(public, intake):
   budget=row['actualRuntimeBinding']['boundValues']; require(budget['--llm-model-id']==model and int(budget['--timeout-ms'])==p['nativeBudgetMs'] and budget['--session-id']==recipient['sessionId'],'actual runner binding mismatch')
   require(row['actualRunnerSHA256']==p['runnerSHA256'],'actual runner mismatch')
   helps=n['newHelpEvents'];require(type(helps) is int and helps>=0,'help count required')
-  record={'model':model,'status':'running','wholeTaskPassed':None,'teacherSolutionHelpEvents':helps,'canonicalPublished':False,'processMetrics':None,'findings':row.get('publicFindings',[]),'evidenceCommitment':hashlib.sha256(json.dumps(row,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()}
+  record={'model':model,'status':row.get('observationState','running'),'wholeTaskPassed':None,'teacherSolutionHelpEvents':helps,'canonicalPublished':False,'processMetrics':None,'findings':row.get('publicFindings',[]),'evidenceCommitment':hashlib.sha256(json.dumps(row,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()}
+  require(record['status'] in ['running','awaiting_publication'],'unsupported observation state')
+  if record['status']=='awaiting_publication':
+   pending=row['pendingOriginalReadback']; live=pending['operationLiveRead']
+   require(pending['readOnlyDiagnosisNotEffectAdmission'] is True and live['operationId']==op and live['requestDigest']==recipient['requestDigest'] and live['state']=='Admitted','pending original-operation binding mismatch')
+   require(row['nativeTerminalObservation']['kind']=='participant_native_session' and re.fullmatch('[0-9a-f]{64}',row['nativeTerminalObservation']['proofSHA256']),'pending native evidence required')
+   record['runtimeObservation']='native_error_observed_canonical_publication_pending'
   review=row.get('review'); metrics=row.get('publishedMetrics')
   if review:
    require(review.get('schema')=='agentlab.independent-frozen-task-review.v1' and review.get('producer')=='teacher_evaluator','independent teacher review required')
@@ -181,11 +187,11 @@ def model_campaign(public, intake):
    record['processMetrics']={'participantDurationMs':original['durationMs'],'nativeRuntimeStatus':original['runtimeStatus'],'nativeEventCount':proof['records'],'toolCalls':t['toolCallCount'],'returnedWithoutError':t['returnedWithoutError'],'returnedWithError':t['returnedWithError'],'qualifiedNativeUsageFields':qualified,'usageQuality':'all_zero_or_missing_unqualified' if allzero else 'native_fields_missing_remain_null','billingCost':None,'globalUsefulCallRate':None,'qualifiedFactCommitment':proof['proofSHA256']}
   attempts.append(record)
  require(seen==set(models),'retain every planned model including unfinished runs')
- result=json.loads(json.dumps(public));result.update(schema='agentlab.public-evaluation.v6',version=intake['publicVersion']);result['modelCampaign']={'schema':'agentlab.public-model-campaign.v1','protocol':{k:p[k] for k in ['models','agent','thinking','nativeBudgetMs','taskSHA256','initialStateRevision','oracleSHA256','gatewaySHA256','runnerSHA256']},'attempts':attempts,'plannedAttempts':len(models),'finishedReviews':sum(r['wholeTaskPassed'] is not None for r in attempts),'wholeTaskPassRate':None,'statisticalStabilityClaim':False,'modelRankingClaim':False,'configurationTrials':[{k:r[k] for k in ['kind','reason','studentCapabilityScore','operatorInterventions','retained','excludedFromMatchedCampaign']} for r in intake.get('configurationTrials',[])],'meaning':'One task, one attempt per model. Pending/incomplete attempts retained. Teacher review is independent; hashes bind bytes, not semantic truth. Native thinking high does not establish equal upstream effort. Historical populations remain separate.'};return result
+ result=json.loads(json.dumps(public));result.update(schema='agentlab.public-evaluation.v6',version=intake['publicVersion']);result.setdefault('agentReport',{})['analysisRevision']='agent-report-'+intake['publicVersion'].rsplit('-',1)[-1];result['modelCampaign']={'schema':'agentlab.public-model-campaign.v1','protocol':{k:p[k] for k in ['models','agent','thinking','nativeBudgetMs','taskSHA256','initialStateRevision','oracleSHA256','gatewaySHA256','runnerSHA256']},'attempts':attempts,'plannedAttempts':len(models),'finishedReviews':sum(r['wholeTaskPassed'] is not None for r in attempts),'wholeTaskPassRate':None,'statisticalStabilityClaim':False,'modelRankingClaim':False,'configurationTrials':[{k:r[k] for k in ['kind','reason','studentCapabilityScore','operatorInterventions','retained','excludedFromMatchedCampaign']} for r in intake.get('configurationTrials',[])],'meaning':'One task, one attempt per model. Pending/incomplete attempts retained. Teacher review is independent; hashes bind bytes, not semantic truth. Native thinking high does not establish equal upstream effort. Historical populations remain separate.'};return result
 
 
 def render_model_campaign(data,page):
- e=lambda x:html.escape(str(x));c=data['modelCampaign']; labels={'running':'执行中，尚未评分','passed':'独立整题验收通过','passed_assisted':'验收通过（有解题帮助）','incomplete':'交付未完成；原因分层记录'};rows=[]
+ e=lambda x:html.escape(str(x));c=data['modelCampaign']; labels={'awaiting_publication':'已观察到流中断；正式结果待核对','running':'执行中，尚未评分','passed':'独立整题验收通过','passed_assisted':'验收通过（有解题帮助）','incomplete':'交付未完成；原因分层记录'};rows=[]
  for r in c['attempts']:
   m=r['processMetrics']; u=m['qualifiedNativeUsageFields'] if m else None
   rows.append('<tr><td>'+e(r['model'])+'</td><td>'+e(labels[r['status']])+'</td><td>'+str(r['teacherSolutionHelpEvents'])+'</td><td>'+e(round(m['participantDurationMs']/60000,2) if m else '待定')+'</td><td>'+e(m['toolCalls'] if m else '待定')+'</td><td>'+e(u['totalTokens'] if u and u['totalTokens'] is not None else '未知／未资格化')+'</td></tr>')
@@ -194,7 +200,7 @@ def render_model_campaign(data,page):
  require('<section id="frozen-cohort">' in page,'existing frozen report anchor required')
  passed=[r['model'] for r in c['attempts'] if r['wholeTaskPassed'] is True]; summary=('新队列整题验收通过：'+', '.join(passed)+'；帮助情况与其余模型状态见本轮表格。') if passed else '新队列状态见本轮表格；尚无已核定的整题通过。'
  page=page.replace('局部自主纠错已有证据；完整任务的独立完成尚未证明。',e(summary)).replace('最新阶段配置卡','历史GLM双轮配置卡').replace('本轮A2/B2冻结整题；不覆盖历史31轮的混合配置。','历史A2/B2冻结整题配置；新三模型队列另列。')
- page=page.replace('版本 2026-10-25-v6','版本 '+e(data['version'])).replace('href="../2026-10-25-v5/">上一报告版本','href="../2026-10-25-v7/">上一报告版本')
+ page=page.replace('版本 2026-10-25-v6','版本 '+e(data['version'])).replace('href="../2026-10-25-v5/">上一报告版本','href="../'+data['version'].rsplit('v',1)[0]+'v'+str(int(data['version'].rsplit('v',1)[1])-1)+'/">上一报告版本')
  return page.replace('<section id="frozen-cohort">',section+'<section id="frozen-cohort">',1).replace('<p class="links">','<p class="links"><a href="#model-campaign">三模型评测</a>',1).replace('整题独立完成结论仍未建立。','历史31轮的整题独立完成结论仍未建立；新队列另列。').replace('综合评测报告 v6','综合评测报告 '+data['version'].rsplit('-',1)[-1]+'').replace('agent-report-v6','agent-report-'+data['version'].rsplit('-',1)[-1]+'')
 
 
