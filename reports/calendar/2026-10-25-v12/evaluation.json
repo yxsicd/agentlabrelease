@@ -1,0 +1,3563 @@
+{
+  "schema": "agentlab.public-evaluation.v6",
+  "version": "2026-10-25-v12",
+  "evidenceDate": "2026-10-25",
+  "caseTitle": "Calendar：代码开发、设备验证与长程交付",
+  "target": {
+    "repository": "openharmony/applications_calendar",
+    "commit": "a44b0ad503f69e50943520a0ea569c9cfcb09a57",
+    "scope": "minimal extracted ArkUI acceptance app, not full Calendar"
+  },
+  "assessmentAuthority": "评测系统与教师独立审阅，学生交付物不作为最终成绩",
+  "scope": "单个提取的ArkUI验收应用，来自目标库；受辅助的长程任务，不代表整个Calendar项目或模型总体能力",
+  "wholeIndependentTaskPass": false,
+  "score": null,
+  "scorePolicy": "事实与评分权重分离；尚未设定总分，不作模型排名",
+  "metrics": {
+    "caseCount": 1,
+    "operationCount": 31,
+    "helpContextEvents": 11,
+    "studentDurationMs": 6235294,
+    "uiEvidenceChecksPassed": 7,
+    "uiEvidenceChecksTotal": 7
+  },
+  "tools": {
+    "identifiedCalls": 373,
+    "coveredOperations": 19,
+    "totalOperations": 31,
+    "unavailableOperations": 12,
+    "returnedWithoutError": 361,
+    "returnedWithError": 12,
+    "unknownResultCalls": 0
+  },
+  "outcomeCounts": {
+    "independent_qualified": 4,
+    "assisted_qualified": 4,
+    "failed": 7,
+    "partial": 15,
+    "completed_ungraded": 1
+  },
+  "dimensions": [
+    {
+      "id": "functional",
+      "name": "功能正确性",
+      "status": "observed_assisted_ui_7_of_7",
+      "finding": "跨受辅助继续轮次，7/7项UI已独立观察：548完成6项，550完成旧MO,-1FR示例。前轮超时/未交付保持原结论；不是整题独立通过。"
+    },
+    {
+      "id": "compile_recovery",
+      "name": "编译与自主纠错",
+      "status": "historical_build_only",
+      "finding": "先前543有实际ArkTS编译7088ms/HAP50152B与部署证据，其原操作发布问题另记；本轮不改代码、不新增编译安装通过次数。"
+    },
+    {
+      "id": "tools",
+      "name": "工具使用与异常判断",
+      "status": "observed_recovery_with_detours",
+      "finding": "548的44次调用显式报错0，但MOVE_END实际参数错误，学生改用数字删除键恢复；最后重复整数按钮是弯路。550的22次调用取得旧示例实际输入/结果；不能把正常返回率当收益率。"
+    },
+    {
+      "id": "constraints",
+      "name": "约束、上下文与证据保真",
+      "status": "observed_with_delivery_gaps",
+      "finding": "本轮三个源码哈希保持原值，验证JSON5302B/raw6723B均非空；548学生摘要只更新5项而轨迹含第6项，过时摘要保留。任务交付文件不是最终成绩。"
+    },
+    {
+      "id": "device",
+      "name": "部署交互与视觉验证",
+      "status": "observed_structured_ui",
+      "finding": "548实际进程32050→9710→10089并恢复草稿/求值对；550在同一重启后的进程中点击原MO,-1FR按钮并显示正确结果。证据来自结构化控件树，不据此宣称图像视觉理解能力。"
+    },
+    {
+      "id": "performance",
+      "name": "性能测量分析与优化",
+      "status": "not_measured_this_extension",
+      "finding": "这次扩展没有性能测量或优化验收。同步flush在每次输入变化中的开销仍是待测假设；功能/UI成功不能升级为性能通过。"
+    },
+    {
+      "id": "efficiency",
+      "name": "效率、成本与弯路",
+      "status": "measured_with_scope_limits",
+      "finding": "548原生600726ms超时、44调用；550正式原生210063ms完成、22调用。两轮任务范围不同，不据此计算速度提升。精确token和账单需独立口径，未换算费用。"
+    },
+    {
+      "id": "independence",
+      "name": "独立性与帮助依赖",
+      "status": "assisted_continuation_attributed",
+      "finding": "当前共11个已接收帮助/上下文事件，类型与权重分离；550只有收尾范围说明，没有新在线解法或教师代码/设备操作。547机械恢复属于Harness投入，旧源码不计新独立实现。 550原操作现已正式完成并发布，帮助归因不因发布完成而取消。"
+    }
+  ],
+  "capabilityClaims": [
+    {
+      "title": "能构造测试输入，并在规划帮助后接通运行",
+      "finding": "观察到35项输入的实际写入和后续35/35真实执行；设计能力、执行交付和完整任务验收应分别评价。",
+      "confidence": "case_observation",
+      "alternativeExplanations": [
+        "仅限当前解析器任务",
+        "续跑获得额外预算与教师规划提示，不能记为原轮独立完成"
+      ]
+    },
+    {
+      "title": "具备局部设备操作自纠错能力",
+      "finding": "命令参数错误被外层成功掩盖，但学生随后按用法调整，清空并替换文本，继续取得重启后的状态证据。",
+      "confidence": "case_observation",
+      "alternativeExplanations": [
+        "继承既有设备配置和历史辅助上下文",
+        "工具接口的错误包装与输入状态增加了任务难度，不全归因于模型"
+      ]
+    },
+    {
+      "title": "剩余目标覆盖与收尾规划仍值得考察",
+      "finding": "前轮重复整数检查，原示例按钮未覆盖；下一轮在缩窄任务范围后才补齐。它提示收尾规划问题，但尚不足以证明模型普遍不擅长长程任务。",
+      "confidence": "hypothesis",
+      "alternativeExplanations": [
+        "前轮受预算终止",
+        "后轮任务范围更窄且继承已验证状态",
+        "单个辅助任务不足以外推模型总体能力"
+      ]
+    }
+  ],
+  "assistanceComparisons": [
+    {
+      "title": "测试设计走向可运行验证：有帮助依赖，也有后续新卡点",
+      "beforeFinding": "设计35项测试输入，但180.548秒超时前未交付可运行测试。",
+      "helpFinding": "教师提示优先把已有cases.json接上tests.ts并实际运行，不提供测试答案。",
+      "afterFinding": "141.996秒的续跑中实际执行35/35，保存交付物；随后UI接口计划仍未通过，完整任务未通过。",
+      "confounders": [
+        "追加了执行预算",
+        "继承前轮已产出的测试输入和上下文",
+        "不是随机对照，也不是相同起点独立重跑"
+      ],
+      "causalEffectEstablished": false
+    }
+  ],
+  "reviewCoverage": {
+    "reviewedCalls": 8,
+    "identifiedCalls": 373,
+    "globalUsefulCallFraction": null
+  },
+  "helpClassification": {
+    "eventCount": 11,
+    "typedEvents": 8,
+    "unclassifiedEvents": 3,
+    "tagAssignments": 16
+  },
+  "operations": [
+    {
+      "sequence": 1,
+      "phase": "功能Fork",
+      "model": "glm-5.3-flash",
+      "runtimeStatus": "completed",
+      "outcome": "independent_qualified",
+      "durationMs": 104958,
+      "finding": "11/11；首编通过；5项UI由Host执行",
+      "anchor": "run-1",
+      "toolCalls": null,
+      "toolReturnedError": null,
+      "toolUnknown": null
+    },
+    {
+      "sequence": 2,
+      "phase": "功能Fork",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "independent_qualified",
+      "durationMs": 123093,
+      "finding": "11/11；首编失败后自主修复；5项UI由Host执行",
+      "anchor": "run-2",
+      "toolCalls": null,
+      "toolReturnedError": null,
+      "toolUnknown": null
+    },
+    {
+      "sequence": 3,
+      "phase": "性能/plan",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 175518,
+      "finding": "性能探索中间轮，不能单独当完整任务通过",
+      "anchor": "run-3",
+      "toolCalls": null,
+      "toolReturnedError": null,
+      "toolUnknown": null
+    },
+    {
+      "sequence": 4,
+      "phase": "性能/feedback",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 77019,
+      "finding": "性能探索中间轮，不能单独当完整任务通过",
+      "anchor": "run-4",
+      "toolCalls": null,
+      "toolReturnedError": null,
+      "toolUnknown": null
+    },
+    {
+      "sequence": 5,
+      "phase": "性能/H1",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 83102,
+      "finding": "性能探索中间轮，不能单独当完整任务通过",
+      "anchor": "run-5",
+      "toolCalls": null,
+      "toolReturnedError": null,
+      "toolUnknown": null
+    },
+    {
+      "sequence": 6,
+      "phase": "性能/context",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 59297,
+      "finding": "性能探索中间轮，不能单独当完整任务通过",
+      "anchor": "run-6",
+      "toolCalls": null,
+      "toolReturnedError": null,
+      "toolUnknown": null
+    },
+    {
+      "sequence": 7,
+      "phase": "性能/H2",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 51572,
+      "finding": "性能探索中间轮，不能单独当完整任务通过",
+      "anchor": "run-7",
+      "toolCalls": null,
+      "toolReturnedError": null,
+      "toolUnknown": null
+    },
+    {
+      "sequence": 8,
+      "phase": "性能/budget-timeout",
+      "model": "glm-5.3",
+      "runtimeStatus": "timeout",
+      "outcome": "failed",
+      "durationMs": 180374,
+      "finding": "预算超时，保留失败",
+      "anchor": "run-8",
+      "toolCalls": null,
+      "toolReturnedError": null,
+      "toolUnknown": null
+    },
+    {
+      "sequence": 9,
+      "phase": "性能/byte-exact-final",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "assisted_qualified",
+      "durationMs": 69011,
+      "finding": "帮助及追加预算后的分析合格；不是独立180秒成功",
+      "anchor": "run-9",
+      "toolCalls": null,
+      "toolReturnedError": null,
+      "toolUnknown": null
+    },
+    {
+      "sequence": 10,
+      "phase": "验证/tests",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "independent_qualified",
+      "durationMs": 137100,
+      "finding": "40/40；8类变异；6项学生选择的UI由Host操作",
+      "anchor": "run-10",
+      "toolCalls": null,
+      "toolReturnedError": null,
+      "toolUnknown": null
+    },
+    {
+      "sequence": 11,
+      "phase": "验证/initial-ui-failed",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "failed",
+      "durationMs": 86440,
+      "finding": "6项解释正确但原始输入保真失败，原FAIL保留",
+      "anchor": "run-11",
+      "toolCalls": null,
+      "toolReturnedError": null,
+      "toolUnknown": null
+    },
+    {
+      "sequence": 12,
+      "phase": "验证/teacher-assisted-fidelity",
+      "model": "glm-5.3",
+      "runtimeStatus": "completed",
+      "outcome": "assisted_qualified",
+      "durationMs": 66605,
+      "finding": "一次教师定位/提取方法帮助后恢复原始数据",
+      "anchor": "run-12",
+      "toolCalls": null,
+      "toolReturnedError": null,
+      "toolUnknown": null
+    },
+    {
+      "sequence": 13,
+      "phase": "独立验证尝试",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "failed",
+      "durationMs": 180548,
+      "finding": "独立设计35例；独立核验35/35及8类变异有效；未交付可运行测试，180秒预算超时。",
+      "anchor": "run-13",
+      "toolCalls": 7,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 14,
+      "phase": "规划帮助后的验证",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 141996,
+      "finding": "帮助1后实际运行35/35并保存5文件；UI接口计划被拒，完整任务未通过。",
+      "anchor": "run-14",
+      "toolCalls": 13,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 15,
+      "phase": "接口反馈／上游失败",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "failed",
+      "outcome": "failed",
+      "durationMs": 5622,
+      "finding": "上游502，0学生工具；未测得格式修复能力，不归因为学生能力失败。",
+      "anchor": "run-15",
+      "toolCalls": 0,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 16,
+      "phase": "接口自修正",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "failed",
+      "durationMs": 90383,
+      "finding": "读取正确ID却置于controlId，selector仍是描述；90秒超时。",
+      "anchor": "run-16",
+      "toolCalls": 6,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 17,
+      "phase": "字段契约帮助后",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "failed",
+      "durationMs": 180404,
+      "finding": "帮助2后6个selector正确；报告未更新，180秒超时。",
+      "anchor": "run-17",
+      "toolCalls": 8,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 18,
+      "phase": "真实反馈解读",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "failed",
+      "durationMs": 180524,
+      "finding": "实际工具算对CPU/PSS；未写报告，180秒超时。报告交付失败不等于计算能力错误。",
+      "anchor": "run-18",
+      "toolCalls": 4,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 19,
+      "phase": "帮助后反馈报告交付",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "completed",
+      "outcome": "assisted_qualified",
+      "durationMs": 128116,
+      "finding": "H3交付优先级提示后128秒完成，报告14/14；同时澄清既有枚举契约，不归因于单一因素。",
+      "anchor": "run-19",
+      "toolCalls": 7,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 20,
+      "phase": "学生自主设备操作／报告未交付",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "partial",
+      "durationMs": 180364,
+      "finding": "现有SDK/专属连接下自主点击并读取两项UI，原生180秒超时；报告0字节，不能记作整任务完成。无新增语义帮助。",
+      "anchor": "run-20",
+      "toolCalls": 19,
+      "toolReturnedError": 1,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 21,
+      "phase": "设备结果报告补写／契约口径分离",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 77777,
+      "finding": "报告4243B已交付，原生77.8秒完成。冻结判据8/13因selector描述/裸ID口径失败保留；事后独立内容复核2/2一致，不冒充冻结PASS。无新增语义帮助。",
+      "anchor": "run-21",
+      "toolCalls": 7,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 22,
+      "phase": "同一任务性能粗测／Harness恢复",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "failed",
+      "outcome": "partial",
+      "durationMs": 331296,
+      "finding": "实际10条RSS采样，缺awk后自主找到cut；CPU汇总/报告未完成。原生failed伴随输出流缺finish_reason，不能归因为学生能力不足；原504保留。",
+      "anchor": "run-22",
+      "toolCalls": 17,
+      "toolReturnedError": 1,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 23,
+      "phase": "性能采集自主执行／原发布延迟追回",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "partial",
+      "durationMs": 360725,
+      "finding": "原生360.725秒timeout；自主hidumper取得5CPU/3PSS采样，两个任务交付物仍0B。原发布已精确追回，无新提示/重跑；系统收尾耗时单独记录。",
+      "anchor": "run-23",
+      "toolCalls": 24,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 24,
+      "phase": "性能证据持久化／一次规划帮助后执行",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "partial",
+      "durationMs": 360644,
+      "finding": "帮助后学生写出2JSON；主要数值/算术正确，原始CPU分列抄录错误保留。native timeout360.644秒与语义评价分开；无重放。",
+      "anchor": "run-24",
+      "toolCalls": 20,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 25,
+      "phase": "自主业务UI验证→粗测→交付",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "completed",
+      "outcome": "independent_qualified",
+      "durationMs": 287285,
+      "finding": "本轮无新增帮助，287.285秒完成真实业务UI状态验证、4CPU/3PSS粗测及2JSON交付；22独立核验满足，性能因果表述有限。原生/检查点/字节正式闭合，历史失败和帮助保留。",
+      "anchor": "run-25",
+      "toolCalls": 29,
+      "toolReturnedError": 1,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 26,
+      "phase": "自主自由输入实现→首次编译→部署→UI部分验证",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "timeout",
+      "outcome": "partial",
+      "durationMs": 600849,
+      "finding": "600.849秒预算终止；自主代码/首次编译/部署/真实整数正例成立，输入替换/动态视口/最终交付/作用域仍未满足或未验证；53调用/新增帮助0，原失败保留。",
+      "anchor": "run-26",
+      "toolCalls": 53,
+      "toolReturnedError": 3,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 27,
+      "phase": "教师帮助后的真实自由输入恢复与证据交付",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "completed",
+      "outcome": "partial",
+      "durationMs": 497406,
+      "finding": "学生帮助后完成5项真实界面验证及两份非空JSON，耗时497.406秒；时间字段误写2025、输入追加后恢复及4显式错误保留。系统曾取错revision导致404，交付脚本修复后16份快照证据全部读回且原字节不变。",
+      "anchor": "run-27",
+      "toolCalls": 48,
+      "toolReturnedError": 4,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 28,
+      "phase": "新增状态恢复要求：首次模型请求502，能力未评测",
+      "model": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "runtimeStatus": "failed",
+      "outcome": "completed_ungraded",
+      "durationMs": 5686,
+      "finding": "原操作和失败事实已正式发布；上游502发生于工具调用前，0工具/源码未改，学生能力不评分。HTTP200与exitCode0不能替代原生failed。功能需求仍未完成；0新帮助/8历史帮助。",
+      "anchor": "run-28",
+      "toolCalls": 0,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 29,
+      "phase": "隔离Fork恢复材料试验（Harness混杂）",
+      "model": "Pi1.4.0 / GLM-5.3-Flash / high",
+      "runtimeStatus": "timeout",
+      "outcome": "partial",
+      "durationMs": 600791,
+      "finding": "600.791秒超时；45次工具调用、2次报错，原始源码恢复2/3精确、无UI验收。长Base64材料交付是Harness混杂；不能据此推断鸿蒙持久化能力。1次帮助和旧源码输入已披露。",
+      "anchor": "run-29",
+      "toolCalls": 45,
+      "toolReturnedError": 2,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 30,
+      "phase": "同任务重启验证（6/7）",
+      "model": "Pi1.4.0 / GLM-5.3-Flash / high",
+      "runtimeStatus": "timeout",
+      "outcome": "partial",
+      "durationMs": 600726,
+      "finding": "600.726秒超时保留。44调用/44结果；独立核验6/7UI，学生JSON更新5项、第6项在轨迹中；MOVE_END参数错误自行恢复，旧示例按钮未完成。",
+      "anchor": "run-30",
+      "toolCalls": 44,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    },
+    {
+      "sequence": 31,
+      "phase": "同任务旧示例按钮收尾",
+      "model": "Pi1.4.0 / GLM-5.3-Flash / high",
+      "runtimeStatus": "completed",
+      "outcome": "assisted_qualified",
+      "durationMs": 210063,
+      "finding": "原MO,-1FR按钮实际输入/结果经系统独立核验；22调用；继承辅助上下文，本轮无在线解法或教师设备操作。正式原操作完成、published与Ready一致，不是整题独立通过。",
+      "anchor": "run-31",
+      "toolCalls": 22,
+      "toolReturnedError": 0,
+      "toolUnknown": 0
+    }
+  ],
+  "portable": {
+    "hosts": [
+      "macOS",
+      "Linux"
+    ],
+    "sameArchiveVerified": true,
+    "reportJSONEqual": true,
+    "reportHTMLEqual": true,
+    "retainedPoints": 6,
+    "archiveBytes": 2930300,
+    "latestPatchBytes": 25354,
+    "sharedBaseBytes": 7094,
+    "selectedFiles": 5,
+    "selectedBytes": 28434,
+    "privateEvidenceLogicalBytes": 66928226,
+    "newStudentOrDeviceActions": 0,
+    "scope": "选定源码与证据的恢复、历史UI证据判断和报告离线重算；第二台机器未重新编译、操作设备或继续学生Agent。SDK、构建缓存和整个Capsule未恢复。旧图片预览未纳入本次重算视图，原始材料单独保留。"
+  },
+  "cost": {
+    "billing": null,
+    "performanceThisExtension": "未新增性能测量；构建耗时、模型运行时长和应用性能分开记录"
+  },
+  "provenance": {
+    "privateReportSHA256": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+    "reviewPolicy": "reviewed-actions-and-assistance-1",
+    "publicProjectionPolicy": "allowlist-v5-separate-frozen-cohort",
+    "privateArtifactsPublished": false
+  },
+  "limitations": [
+    "31轮是同一用例的历史执行操作，不是31道独立题。",
+    "7/7是跨受辅助续跑得到的UI历史证据检查，不是整题独立通过率。",
+    "8次关键调用为定向审阅，不能外推全程有效调用率。",
+    "帮助后的进展伴随额外预算、已有产物和上下文变化，不能作单一因果归因。",
+    "历史配置文字标签尚未按完整实测配置归一，不能据此排名模型。",
+    "私有原始轨迹、评测器、任务包、服务地址和登录信息不在公开站点。"
+  ],
+  "agentReport": {
+    "reportType": "教师辅助的单任务探索性评测 / 非托管排行榜",
+    "evidenceCutoff": "2026-10-25",
+    "analysisRevision": "agent-report-v12",
+    "configuration": {
+      "agent": "Pi",
+      "agentVersion": "1.4.0",
+      "modelId": "glm-5.3-flash",
+      "thinking": "native确认开启 / high",
+      "effectiveProviderEffort": null,
+      "apiProtocolVersion": null,
+      "uniformBudgetCohort": false,
+      "latestConfigurationScope": "最新自由输入及收尾阶段，不追溯覆盖全部历史轮次",
+      "modelLabelsAreNormalizedGroups": false,
+      "environmentVersionManifest": "本公开视图未核定完整OS/SDK/模拟器及工具版本清单"
+    },
+    "sample": {
+      "tasks": 1,
+      "operations": 31,
+      "retainedPoints": 6,
+      "independentRepeatCohort": null,
+      "taskPassRate": null,
+      "passAtK": null,
+      "passPowerK": null,
+      "confidenceInterval": null,
+      "reason": "同一任务的续跑、帮助和配置变化相互依赖；阶段标签不构成整题重复抽样"
+    },
+    "runtimeCounts": {
+      "completed": 17,
+      "timeout": 11,
+      "failed": 3
+    },
+    "executionDurationMs": 6235294,
+    "durationScope": "原生参与者执行时长之和；包含超时轮次，不是应用耗时、纯推理时间或完整项目日历周期",
+    "usageExamples": [
+      {
+        "sequence": 19,
+        "coverage": "observed",
+        "tokens": {
+          "input": 16304,
+          "output": 7882,
+          "cacheRead": 32384,
+          "cacheWrite": 0,
+          "totalTokens": 56570
+        },
+        "billedCost": null,
+        "scope": "原生消息暴露的usage；包含缓存，非账单；partial不作完整执行总量"
+      },
+      {
+        "sequence": 25,
+        "coverage": "observed",
+        "tokens": {
+          "input": 22345,
+          "output": 14221,
+          "cacheRead": 266432,
+          "cacheWrite": 0,
+          "totalTokens": 302998
+        },
+        "billedCost": null,
+        "scope": "原生消息暴露的usage；包含缓存，非账单；partial不作完整执行总量"
+      },
+      {
+        "sequence": 26,
+        "coverage": "partial",
+        "tokens": {
+          "input": 29644,
+          "output": 18852,
+          "cacheRead": 681344,
+          "cacheWrite": 0,
+          "totalTokens": 729840
+        },
+        "billedCost": null,
+        "scope": "原生消息暴露的usage；包含缓存，非账单；partial不作完整执行总量"
+      }
+    ],
+    "usageScope": "本版仅展开两轮observed和一轮partial的逐操作usage，不求全程token或美元总计；旧阶段聚合usage不混入。",
+    "metricDefinitions": [
+      {
+        "id": "task_completion",
+        "name": "整题独立完成率",
+        "value": null,
+        "unit": "率",
+        "denominator": "相同协议下的独立整题执行",
+        "reason": "无合格同协议独立重复队列；不是0%，不可用4/31替代"
+      },
+      {
+        "id": "ui_checks",
+        "name": "受辅助UI历史证据检查",
+        "value": 7,
+        "denominator": 7,
+        "unit": "项",
+        "scope": "跨受辅助续跑累计，不是任务通过率"
+      },
+      {
+        "id": "tool_coverage",
+        "name": "工具明细覆盖",
+        "value": 19,
+        "denominator": 31,
+        "unit": "轮",
+        "scope": "未覆盖轮次不是零调用"
+      },
+      {
+        "id": "tool_return",
+        "name": "未显式报错返回",
+        "value": 361,
+        "denominator": 373,
+        "unit": "调用",
+        "scope": "仅工具返回状态，不等于语义成功或目标收益"
+      },
+      {
+        "id": "useful_calls",
+        "name": "全程有收益调用率",
+        "value": null,
+        "denominator": 373,
+        "unit": "率",
+        "reason": "只定向审阅8次，不足以外推全程"
+      },
+      {
+        "id": "reliability",
+        "name": "多次重复稳定性",
+        "value": null,
+        "denominator": null,
+        "unit": "率",
+        "reason": "需相同任务/配置/预算/起点下预先冻结的独立重复"
+      }
+    ],
+    "failureExamples": [
+      {
+        "sequence": 11,
+        "category": "任务验证失败",
+        "finding": "原生completed，但阶段评测failed：完成运行不等于通过任务。"
+      },
+      {
+        "sequence": 28,
+        "category": "上游故障 / 能力未评测",
+        "finding": "首次模型请求502；保留原生failed，评测记完成未判分，不记学生语义失败。"
+      },
+      {
+        "sequence": 22,
+        "category": "Harness混杂",
+        "finding": "性能粗测伴随Harness恢复，阶段partial；不能把全部中断归咎于模型。"
+      }
+    ],
+    "capabilityEvidence": [
+      [
+        13,
+        14
+      ],
+      [
+        30
+      ],
+      [
+        30,
+        31
+      ]
+    ],
+    "references": [
+      {
+        "name": "SWE-bench",
+        "url": "https://www.swebench.com/",
+        "lesson": "以任务实例为分母定义Resolved，并披露评测集合和运行环境；本报告分开整题与阶段结果。"
+      },
+      {
+        "name": "OSWorld 2.0",
+        "url": "https://osworld-v2.xlang.ai/",
+        "lesson": "分开整题和部分完成，结合轨迹分析长程难点，并披露effort与资源；不移植其分数。"
+      },
+      {
+        "name": "τ-bench",
+        "url": "https://taubench.com/",
+        "lesson": "可核验状态判定与重复可靠性；当前探索续跑不计算pass^k。"
+      },
+      {
+        "name": "HAL",
+        "url": "https://hal.cs.princeton.edu/",
+        "lesson": "关注成本、usage和可复现轨迹；缺账单时不生成美元成本或性价比排名。"
+      },
+      {
+        "name": "Terminal-Bench",
+        "url": "https://www.tbench.ai/",
+        "lesson": "分别披露model、Agent、资源与完成结果；本版导出运行记录，历史冻结配置仍待补。"
+      },
+      {
+        "name": "TheAgentCompany",
+        "url": "https://the-agent-company.com/",
+        "lesson": "完整完成与检查点进展分开；难点审阅不冒充预先冻结的检查点得分。"
+      },
+      {
+        "name": "WebArena",
+        "url": "https://webarena.dev/og/",
+        "lesson": "按任务意图检查真实环境状态；学生提交报告和文件存在不能独立证明完成。"
+      },
+      {
+        "name": "GAIA",
+        "url": "https://huggingface.co/spaces/gaia-benchmark/leaderboard",
+        "lesson": "披露难度与运行选择规则；本版保留当前31轮历史，不选择最佳一轮冒充稳定性。"
+      }
+    ],
+    "remainingGaps": [
+      "没有同配置、同起点、无额外帮助的整题独立重复，不能估计整题通过率、pass@k/pass^k或置信区间。",
+      "最新Agent/model/thinking已明确，但历史预算、完整工具及SDK/模拟器版本尚未归一成可比配置组。",
+      "全程token、有效调用率和账单没有完整核定；只呈现已绑定的样例和覆盖范围。",
+      "教师帮助事实持续计入评价，权重尚未冻结；不输出装饰性总分或雷达分数。",
+      "公开记录只有摘要与校验承诺；原始轨迹、原生操作ID和任务包由授权人员在私有侧复核。"
+    ]
+  },
+  "difficultyReview": {
+    "schema": "agentlab.difficulty-review.v1",
+    "version": "calendar-review-2026-10-25-v1",
+    "evidenceReportCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+    "author": "evaluation_system_with_teacher_review",
+    "scope": "对规范报告31条历史执行的证据性审阅；不是新冻结判分Oracle，不修改原生事实或旧成绩。",
+    "denominator": "七个本次审阅能力条目，不是七道试题；状态为范围内观察，不计算学生通过率。",
+    "rows": [
+      {
+        "id": "test-delivery",
+        "title": "把测试设计接成真实运行闭环",
+        "state": "assisted_progress",
+        "exposure": "reached",
+        "runs": [
+          13,
+          14
+        ],
+        "facts": "第13轮设计35项输入，未交付可运行测试；规划提示后的第14轮实际运行35/35，UI接口计划仍未通过。",
+        "strength": "能构造有效测试输入，并使用已有材料接通执行。",
+        "barrier": "设计到最小可运行交付的收敛。",
+        "hypothesis": "可能需要更强的交付优先级规划；只能解释当前任务。",
+        "alternatives": [
+          "后轮追加执行预算",
+          "继承前轮已有输入与上下文"
+        ],
+        "helpEvents": [
+          "H04"
+        ],
+        "confidence": "case_observation"
+      },
+      {
+        "id": "interface-fidelity",
+        "title": "按契约表达接口并保留原始输入",
+        "state": "assisted_progress",
+        "exposure": "reached",
+        "runs": [
+          11,
+          12,
+          16,
+          17,
+          19
+        ],
+        "facts": "早期输入保真失败；教师定位方法后恢复。随后已找到ID却放错字段，字段契约提示后selector改正；最终交付又获得规划帮助。",
+        "strength": "能根据明确接口反馈修正字段，能进行程序化原数据提取。",
+        "barrier": "从读到正确资料，到按接收方契约正确表达与交付。",
+        "hypothesis": "存在接口映射和最终交付的局部困难，不等于业务推理失败。",
+        "alternatives": [
+          "接收方契约曾有歧义",
+          "预算与上下文在续跑中变化"
+        ],
+        "helpEvents": [
+          "H03",
+          "H05",
+          "H06"
+        ],
+        "confidence": "case_observation"
+      },
+      {
+        "id": "tool-recovery",
+        "title": "遇到工具错误后寻找可行替代路径",
+        "state": "local_autonomy",
+        "exposure": "reached",
+        "runs": [
+          22,
+          30
+        ],
+        "facts": "第22轮缺awk后找到cut继续；第30轮MOVE_END参数错误后自行采用数字删除键并恢复后续操作。",
+        "strength": "观察到局部自主诊断、替代工具和输入状态恢复。",
+        "barrier": "外层成功可能掩盖内部参数错误，需检查实际结果。",
+        "hypothesis": "局部恢复能力已有事实支持；不能由此推出全任务自治。",
+        "alternatives": [
+          "继承已有设备配置与辅助上下文",
+          "第22轮还伴随输出流／Harness故障"
+        ],
+        "helpEvents": [],
+        "confidence": "case_observation"
+      },
+      {
+        "id": "coarse-performance",
+        "title": "把真实性能采样转成可核验交付物",
+        "state": "local_autonomy",
+        "exposure": "reached",
+        "runs": [
+          22,
+          23,
+          24,
+          25
+        ],
+        "facts": "前轮已有采样但未完成报告；帮助后仍保留抄录错误与超时。第25轮无新增帮助，完成业务UI、4CPU/3PSS粗测及2JSON交付。",
+        "strength": "能自主采样、计算并交付可核验粗测证据。",
+        "barrier": "原始采集、计算、保存交付物之间的长程衔接。",
+        "hypothesis": "第25轮阶段闭合成立；不把额外预算／继承材料的收益归因于单一提示。",
+        "alternatives": [
+          "历史教师帮助仍属于继承背景",
+          "粗测不代表精准性能或优化收益验证"
+        ],
+        "helpEvents": [
+          "H07"
+        ],
+        "confidence": "case_observation"
+      },
+      {
+        "id": "free-input-end-to-end",
+        "title": "自由输入从实现到完整独立验收",
+        "state": "unfinished",
+        "exposure": "reached",
+        "runs": [
+          26,
+          27
+        ],
+        "facts": "第26轮自主完成代码、首次编译、部署和整数正例，600.849秒预算终止时输入替换、动态视口与交付未闭合；帮助后的第27轮取得5项UI与两份JSON，仍有原始错误。",
+        "strength": "代码实现、编译部署和部分真实验证已有自主行为证据。",
+        "barrier": "把剩余交互验证、错误恢复和最终交付收敛为完整独立结果。",
+        "hypothesis": "收尾规划可能是困难点，但时间预算与界面状态同样可能解释中断。",
+        "alternatives": [
+          "预算终止",
+          "键盘改变视口且文本发生追加",
+          "后轮继承代码并获得具体反馈"
+        ],
+        "helpEvents": [
+          "H08"
+        ],
+        "confidence": "hypothesis"
+      },
+      {
+        "id": "restart-state",
+        "title": "重启恢复与剩余UI覆盖",
+        "state": "assisted_progress",
+        "exposure": "reached",
+        "runs": [
+          29,
+          30,
+          31
+        ],
+        "facts": "恢复材料试验伴随Harness混杂；恢复旧源码并限定验证后第30轮完成6/7，剩余旧示例由第31轮补齐。跨辅助续跑累计7/7成立。",
+        "strength": "能检查重启后状态，并自行选择、定位及核验剩余示例。",
+        "barrier": "剩余目标覆盖与整题收尾，原生超时及过时摘要保留。",
+        "hypothesis": "重复已验证目标、遗漏剩余按钮提示覆盖规划问题；不是普遍长程能力结论。",
+        "alternatives": [
+          "Harness恢复了旧源码",
+          "后续任务范围更窄且继承已验证状态"
+        ],
+        "helpEvents": [
+          "H09",
+          "H10",
+          "H11"
+        ],
+        "confidence": "case_observation"
+      },
+      {
+        "id": "performance-improvement",
+        "title": "本次扩展的性能优化效果验收",
+        "state": "not_assessed",
+        "exposure": "not_assessed_in_this_extension",
+        "runs": [],
+        "facts": "当前性能维度明确记录本次扩展没有新增性能测量或优化验收；已有粗测不构成优化效果证明。",
+        "strength": "当前不作能力判断。",
+        "barrier": "缺冻结负载、基线与优化后独立对照。",
+        "hypothesis": "没有测量证据，不能推断学生不会优化。",
+        "alternatives": [
+          "当前任务切片没有提供相应对照实验"
+        ],
+        "helpEvents": [],
+        "confidence": "not_assessed",
+        "dimensionEvidence": "performance"
+      }
+    ],
+    "selectionPolicy": "本次只审阅当前规范报告已纳入的31条历史执行；不把旧未知请求推定为失败或成功。",
+    "helpSummaryPolicy": "帮助摘要是公开复述，原文与真实投递证据保留在私有侧；H编号为报告内编号，不是原操作ID。"
+  },
+  "helpLedger": [
+    {
+      "id": "H01",
+      "summary": "提醒必须字段；原始上下文缺失对帮助效果归因有混杂。",
+      "types": [],
+      "boundRecipientRuns": [],
+      "bindingStatus": "legacy_event_without_exact_public_recipient_binding",
+      "scoreWeight": null,
+      "countsAsOneEvent": true
+    },
+    {
+      "id": "H02",
+      "summary": "提供CLI名称标点兼容线索，未提供具体文件名。",
+      "types": [],
+      "boundRecipientRuns": [],
+      "bindingStatus": "legacy_event_without_exact_public_recipient_binding",
+      "scoreWeight": null,
+      "countsAsOneEvent": true
+    },
+    {
+      "id": "H03",
+      "summary": "提示定位原始输入日志及程序化提取方法；未代改代码。",
+      "types": [],
+      "boundRecipientRuns": [],
+      "bindingStatus": "legacy_event_without_exact_public_recipient_binding",
+      "scoreWeight": null,
+      "countsAsOneEvent": true
+    },
+    {
+      "id": "H04",
+      "summary": "优先把已有测试输入接成最小可运行闭环，再完善其他交付。",
+      "types": [
+        "planning_priority"
+      ],
+      "boundRecipientRuns": [
+        14
+      ],
+      "bindingStatus": "original_operation_link",
+      "scoreWeight": null,
+      "countsAsOneEvent": true
+    },
+    {
+      "id": "H05",
+      "summary": "澄清selector字段必须放既有裸ID，不能用描述或替代字段。",
+      "types": [
+        "interface_contract_field_mapping"
+      ],
+      "boundRecipientRuns": [
+        17
+      ],
+      "bindingStatus": "original_operation_link",
+      "scoreWeight": null,
+      "countsAsOneEvent": true
+    },
+    {
+      "id": "H06",
+      "summary": "优先保存基于已有事实的有效交付，未知项诚实保留。",
+      "types": [
+        "delivery_priority_planning"
+      ],
+      "boundRecipientRuns": [
+        19
+      ],
+      "bindingStatus": "original_operation_link",
+      "scoreWeight": null,
+      "countsAsOneEvent": true
+    },
+    {
+      "id": "H07",
+      "summary": "提示复用自己的既有工具证据，先保存最小交付，不重复设备采集。",
+      "types": [
+        "delivery_priority_planning",
+        "own_evidence_location"
+      ],
+      "boundRecipientRuns": [
+        24
+      ],
+      "bindingStatus": "original_operation_link",
+      "scoreWeight": null,
+      "countsAsOneEvent": true
+    },
+    {
+      "id": "H08",
+      "summary": "反馈输入追加、bounds表示、动态视口和增量保存方法。",
+      "types": [
+        "observed_input_state_feedback",
+        "actual_bounds_representation_feedback",
+        "dynamic_viewport_verification_process",
+        "incremental_delivery_process"
+      ],
+      "boundRecipientRuns": [
+        27
+      ],
+      "bindingStatus": "original_operation_link",
+      "scoreWeight": null,
+      "countsAsOneEvent": true
+    },
+    {
+      "id": "H09",
+      "summary": "提供旧学生源码恢复材料及布局／存证提示，存在Harness混杂。",
+      "types": [
+        "preserved_student_source_restoration_material",
+        "prior_barrier_localization",
+        "keyboard_viewport_current_bounds_guidance",
+        "incremental_evidence_delivery"
+      ],
+      "boundRecipientRuns": [
+        29
+      ],
+      "bindingStatus": "original_operation_link",
+      "scoreWeight": null,
+      "countsAsOneEvent": true
+    },
+    {
+      "id": "H10",
+      "summary": "通知Harness已恢复旧源码并限定剩余UI验证，未提供新在线解法。",
+      "types": [
+        "harness_material_restoration_notice",
+        "teacher_selected_remaining_verification_task"
+      ],
+      "boundRecipientRuns": [
+        30
+      ],
+      "bindingStatus": "original_operation_link",
+      "scoreWeight": null,
+      "countsAsOneEvent": true
+    },
+    {
+      "id": "H11",
+      "summary": "交付剩余旧示例回归范围，学生自行选择、定位和验证。",
+      "types": [
+        "teacher_selected_remaining_regression_scope"
+      ],
+      "boundRecipientRuns": [
+        31
+      ],
+      "bindingStatus": "original_operation_link",
+      "scoreWeight": null,
+      "countsAsOneEvent": true
+    }
+  ],
+  "difficultyCounts": {
+    "assisted_progress": 3,
+    "local_autonomy": 2,
+    "unfinished": 1,
+    "not_assessed": 1
+  },
+  "runRecords": [
+    {
+      "runKey": "run-1",
+      "sequence": 1,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "功能Fork",
+      "declaredModelId": null,
+      "reportedConfigurationLabel": "glm-5.3-flash",
+      "nativeStatus": "completed",
+      "stageOutcome": "independent_qualified",
+      "durationMs": 104958,
+      "toolCalls": null,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-2",
+      "sequence": 2,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "功能Fork",
+      "declaredModelId": null,
+      "reportedConfigurationLabel": "glm-5.3",
+      "nativeStatus": "completed",
+      "stageOutcome": "independent_qualified",
+      "durationMs": 123093,
+      "toolCalls": null,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-3",
+      "sequence": 3,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "性能/plan",
+      "declaredModelId": null,
+      "reportedConfigurationLabel": "glm-5.3",
+      "nativeStatus": "completed",
+      "stageOutcome": "partial",
+      "durationMs": 175518,
+      "toolCalls": null,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-4",
+      "sequence": 4,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "性能/feedback",
+      "declaredModelId": null,
+      "reportedConfigurationLabel": "glm-5.3",
+      "nativeStatus": "completed",
+      "stageOutcome": "partial",
+      "durationMs": 77019,
+      "toolCalls": null,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-5",
+      "sequence": 5,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "性能/H1",
+      "declaredModelId": null,
+      "reportedConfigurationLabel": "glm-5.3",
+      "nativeStatus": "completed",
+      "stageOutcome": "partial",
+      "durationMs": 83102,
+      "toolCalls": null,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-6",
+      "sequence": 6,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "性能/context",
+      "declaredModelId": null,
+      "reportedConfigurationLabel": "glm-5.3",
+      "nativeStatus": "completed",
+      "stageOutcome": "partial",
+      "durationMs": 59297,
+      "toolCalls": null,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-7",
+      "sequence": 7,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "性能/H2",
+      "declaredModelId": null,
+      "reportedConfigurationLabel": "glm-5.3",
+      "nativeStatus": "completed",
+      "stageOutcome": "partial",
+      "durationMs": 51572,
+      "toolCalls": null,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-8",
+      "sequence": 8,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "性能/budget-timeout",
+      "declaredModelId": null,
+      "reportedConfigurationLabel": "glm-5.3",
+      "nativeStatus": "timeout",
+      "stageOutcome": "failed",
+      "durationMs": 180374,
+      "toolCalls": null,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-9",
+      "sequence": 9,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "性能/byte-exact-final",
+      "declaredModelId": null,
+      "reportedConfigurationLabel": "glm-5.3",
+      "nativeStatus": "completed",
+      "stageOutcome": "assisted_qualified",
+      "durationMs": 69011,
+      "toolCalls": null,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-10",
+      "sequence": 10,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "验证/tests",
+      "declaredModelId": null,
+      "reportedConfigurationLabel": "glm-5.3",
+      "nativeStatus": "completed",
+      "stageOutcome": "independent_qualified",
+      "durationMs": 137100,
+      "toolCalls": null,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-11",
+      "sequence": 11,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "验证/initial-ui-failed",
+      "declaredModelId": null,
+      "reportedConfigurationLabel": "glm-5.3",
+      "nativeStatus": "completed",
+      "stageOutcome": "failed",
+      "durationMs": 86440,
+      "toolCalls": null,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-12",
+      "sequence": 12,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "验证/teacher-assisted-fidelity",
+      "declaredModelId": null,
+      "reportedConfigurationLabel": "glm-5.3",
+      "nativeStatus": "completed",
+      "stageOutcome": "assisted_qualified",
+      "durationMs": 66605,
+      "toolCalls": null,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-13",
+      "sequence": 13,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "独立验证尝试",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "timeout",
+      "stageOutcome": "failed",
+      "durationMs": 180548,
+      "toolCalls": 7,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-14",
+      "sequence": 14,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "规划帮助后的验证",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "completed",
+      "stageOutcome": "partial",
+      "durationMs": 141996,
+      "toolCalls": 13,
+      "boundHelpEvents": [
+        "H04"
+      ],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-15",
+      "sequence": 15,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "接口反馈／上游失败",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "failed",
+      "stageOutcome": "failed",
+      "durationMs": 5622,
+      "toolCalls": 0,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-16",
+      "sequence": 16,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "接口自修正",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "timeout",
+      "stageOutcome": "failed",
+      "durationMs": 90383,
+      "toolCalls": 6,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-17",
+      "sequence": 17,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "字段契约帮助后",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "timeout",
+      "stageOutcome": "failed",
+      "durationMs": 180404,
+      "toolCalls": 8,
+      "boundHelpEvents": [
+        "H05"
+      ],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-18",
+      "sequence": 18,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "真实反馈解读",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "timeout",
+      "stageOutcome": "failed",
+      "durationMs": 180524,
+      "toolCalls": 4,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-19",
+      "sequence": 19,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "帮助后反馈报告交付",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "completed",
+      "stageOutcome": "assisted_qualified",
+      "durationMs": 128116,
+      "toolCalls": 7,
+      "boundHelpEvents": [
+        "H06"
+      ],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-20",
+      "sequence": 20,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "学生自主设备操作／报告未交付",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "timeout",
+      "stageOutcome": "partial",
+      "durationMs": 180364,
+      "toolCalls": 19,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-21",
+      "sequence": 21,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "设备结果报告补写／契约口径分离",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "completed",
+      "stageOutcome": "partial",
+      "durationMs": 77777,
+      "toolCalls": 7,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-22",
+      "sequence": 22,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "同一任务性能粗测／Harness恢复",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "failed",
+      "stageOutcome": "partial",
+      "durationMs": 331296,
+      "toolCalls": 17,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-23",
+      "sequence": 23,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "性能采集自主执行／原发布延迟追回",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "timeout",
+      "stageOutcome": "partial",
+      "durationMs": 360725,
+      "toolCalls": 24,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-24",
+      "sequence": 24,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "性能证据持久化／一次规划帮助后执行",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "timeout",
+      "stageOutcome": "partial",
+      "durationMs": 360644,
+      "toolCalls": 20,
+      "boundHelpEvents": [
+        "H07"
+      ],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-25",
+      "sequence": 25,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "自主业务UI验证→粗测→交付",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "completed",
+      "stageOutcome": "independent_qualified",
+      "durationMs": 287285,
+      "toolCalls": 29,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-26",
+      "sequence": 26,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "自主自由输入实现→首次编译→部署→UI部分验证",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "timeout",
+      "stageOutcome": "partial",
+      "durationMs": 600849,
+      "toolCalls": 53,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-27",
+      "sequence": 27,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "教师帮助后的真实自由输入恢复与证据交付",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "completed",
+      "stageOutcome": "partial",
+      "durationMs": 497406,
+      "toolCalls": 48,
+      "boundHelpEvents": [
+        "H08"
+      ],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-28",
+      "sequence": 28,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "新增状态恢复要求：首次模型请求502，能力未评测",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "glm-5.3-flash · Pi1.4.0 · thinking high",
+      "nativeStatus": "failed",
+      "stageOutcome": "completed_ungraded",
+      "durationMs": 5686,
+      "toolCalls": 0,
+      "boundHelpEvents": [],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-29",
+      "sequence": 29,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "隔离Fork恢复材料试验（Harness混杂）",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "Pi1.4.0 / GLM-5.3-Flash / high",
+      "nativeStatus": "timeout",
+      "stageOutcome": "partial",
+      "durationMs": 600791,
+      "toolCalls": 45,
+      "boundHelpEvents": [
+        "H09"
+      ],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-30",
+      "sequence": 30,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "同任务重启验证（6/7）",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "Pi1.4.0 / GLM-5.3-Flash / high",
+      "nativeStatus": "timeout",
+      "stageOutcome": "partial",
+      "durationMs": 600726,
+      "toolCalls": 44,
+      "boundHelpEvents": [
+        "H10"
+      ],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    },
+    {
+      "runKey": "run-31",
+      "sequence": 31,
+      "taskKey": "calendar",
+      "mode": "assisted_exploration",
+      "stage": "同任务旧示例按钮收尾",
+      "declaredModelId": "glm-5.3-flash",
+      "reportedConfigurationLabel": "Pi1.4.0 / GLM-5.3-Flash / high",
+      "nativeStatus": "completed",
+      "stageOutcome": "assisted_qualified",
+      "durationMs": 210063,
+      "toolCalls": 22,
+      "boundHelpEvents": [
+        "H11"
+      ],
+      "helpLinkCoverage": "exactly linked recipient subset only; missing link does not mean zero help",
+      "assistanceCondition": "mixed_or_inherited_context",
+      "frozenComparisonInputs": {
+        "taskDefinitionRevision": null,
+        "initialStateRevision": null,
+        "agentBuild": null,
+        "modelVersion": null,
+        "thinkingPolicy": null,
+        "budgetManifest": null,
+        "toolEnvironmentManifest": null,
+        "oracleRevision": null,
+        "assistanceAudit": null,
+        "repeatGroup": null
+      },
+      "reportEvidenceCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+      "readiness": {
+        "reportingMetadataReady": false,
+        "missingFields": [
+          "taskDefinitionRevision",
+          "initialStateRevision",
+          "agentBuild",
+          "modelVersion",
+          "thinkingPolicy",
+          "budgetManifest",
+          "toolEnvironmentManifest",
+          "oracleRevision",
+          "assistanceAudit",
+          "repeatGroup"
+        ],
+        "reasons": [
+          "探索续跑，不是冻结协议下的独立整题执行",
+          "帮助／继承上下文未满足独立队列条件",
+          "冻结配置输入不完整"
+        ],
+        "meaning": "仅报告元数据完整性检查，不认证证据真实性，不授予执行权限，不判定学生通过"
+      }
+    }
+  ],
+  "comparisonProtocol": {
+    "schema": "agentlab.independent-comparison-inputs.v1",
+    "status": "draft_not_executable",
+    "requiredFields": [
+      "taskDefinitionRevision",
+      "initialStateRevision",
+      "agentBuild",
+      "modelVersion",
+      "thinkingPolicy",
+      "budgetManifest",
+      "toolEnvironmentManifest",
+      "oracleRevision",
+      "assistanceAudit",
+      "repeatGroup"
+    ],
+    "readyHistoricalRuns": 0,
+    "reviewedHistoricalRuns": 31,
+    "selectionPolicy": "本次只审阅当前规范报告已纳入的31条历史执行；不把旧未知请求推定为失败或成功。",
+    "scope": "报告所需输入清单；不是已冻结运行配置，不触发学生执行或新安装。",
+    "teacherAssistancePolicy": "探索阶段同样评测学生；帮助和继承上下文计入事实。正式无帮助队列须另行冻结。",
+    "gradingPolicy": "学生交付物由系统独立判定；独立整题、局部自主与帮助后进展分开。"
+  },
+  "processAudit": {
+    "schema": "agentlab.process-audit.v1",
+    "evidenceReportCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+    "selection": "purposefully selected existing review, not random or complete",
+    "identifiedCalls": 373,
+    "reviewedCalls": 8,
+    "unreviewedCalls": 365,
+    "globalUsefulCallRate": null,
+    "rows": [
+      {
+        "id": "A01",
+        "run": 13,
+        "kind": "preparation",
+        "finding": "写出35项测试输入；该轮原生180.548秒超时，尚未交付可运行测试，不能把设计完成算作执行完成。",
+        "reportedIsError": false,
+        "requestSHA256": "7ef976087dfb96b0eff10f83966871af747a5843c33f5d1f968ef4ddb3569b8f",
+        "resultSHA256": "311465e37b24cfd19598da95ae43bc2fdf6e2822062b8e431d60e513888cb5a5",
+        "recoveryOf": null,
+        "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+      },
+      {
+        "id": "A02",
+        "run": 14,
+        "kind": "validation_progress",
+        "finding": "规划帮助后的实际测试命令输出SUMMARY: passed=35 total=35 / EXIT=0；原UI计划仍有selector契约问题，整任务未通过。",
+        "reportedIsError": false,
+        "requestSHA256": "d88c9cc8b0076c1060f691974ec834dbe2cb5c416f1d9ff8dcfb0e32838c83cb",
+        "resultSHA256": "90b4a36ddaa315c222d3f356e570708e8f4653c550328e0f156b2af3f00a32cc",
+        "recoveryOf": null,
+        "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+      },
+      {
+        "id": "A03",
+        "run": 30,
+        "kind": "informative_failure",
+        "finding": "外层isError=false，实际命令返回Invalid parameters及keyEvent用法；暴露命令约束，不能算业务操作成功。",
+        "reportedIsError": false,
+        "requestSHA256": "a2e5e12950dcfba946bddb105f391617f86242a8d634f819523e19b3936e8839",
+        "resultSHA256": "a0aff39b2acff12d5fb965b8930d2899b956a475cb6840675094d9b1d696bda2",
+        "recoveryOf": null,
+        "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+      },
+      {
+        "id": "A04",
+        "run": 30,
+        "kind": "state_recovery",
+        "finding": "学生改用数字删除键，先确认free-input清空，再输入TU,+02FR；恢复来自学生后续操作，没有本轮在线解法帮助。",
+        "reportedIsError": false,
+        "requestSHA256": "502862e5d9fabab36463bca6cb029f7eb67c53241c4aeaabc6c947109e59c93b",
+        "resultSHA256": "c3d7145fa5b8d2a66b223e7fdec1dfdc74a503af125bdaad208c788cfacd0a89",
+        "recoveryOf": "A03",
+        "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+      },
+      {
+        "id": "A05",
+        "run": 30,
+        "kind": "validation_progress",
+        "finding": "重启后新进程9710仍分别显示草稿TU,+02FR和先前求值Input:+03,-2 / Result:[3,-2]，形成持久化行为证据。",
+        "reportedIsError": false,
+        "requestSHA256": "c0a63b28b2ed0057b75e02159a0ead09bfa26cf46aaee0c0b57f01dceb8e1590",
+        "resultSHA256": "a960d00e7e97c443327f7673a186d0654e1bd57d23223a7f135e45851c0667a4",
+        "recoveryOf": null,
+        "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+      },
+      {
+        "id": "A06",
+        "run": 30,
+        "kind": "repeated_check_no_new_requirement",
+        "finding": "再次点击整数求值并得到相同结果；在剩余原示例按钮要求上未增加覆盖。不能由此断言学生毫无收益或给出浪费时间总量。",
+        "reportedIsError": false,
+        "requestSHA256": "11badffafd608c39bbfb95fbe4348c230af02e82e5bef79d5c62bf5052625c0e",
+        "resultSHA256": "5eb1d62f6f24f312c701e4e111cab02d81aa4a961923c008aae1e5b771507f76",
+        "recoveryOf": null,
+        "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+      },
+      {
+        "id": "A07",
+        "run": 31,
+        "kind": "goal_action",
+        "finding": "在收尾范围说明后，学生按当前控件bounds点击原MO,-1FR示例；继承全部既有上下文，不是整题独立新做。",
+        "reportedIsError": false,
+        "requestSHA256": "cf2d99bfe2dd162d93585a7c4c700ce00aafa7347223eb7d5d3c2b487033fd47",
+        "resultSHA256": "d793ee71c953dde15a761b3f3562652054c89c58b520239b3a90c88e3e51b884",
+        "recoveryOf": null,
+        "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+      },
+      {
+        "id": "A08",
+        "run": 31,
+        "kind": "validation_progress",
+        "finding": "原生结果显示Input:MO,-1FR及匹配的星期解析结果，系统独立核验剩余示例检查。",
+        "reportedIsError": false,
+        "requestSHA256": "242a2d00aa0b8c263d21ca6f14f5800e1cdea311996c6cf72588a4c480413b6f",
+        "resultSHA256": "cf2f572c958f909def0f7f68ba85a47f5157b52fb62a48d0cd7382066248c8e1",
+        "recoveryOf": null,
+        "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+      }
+    ],
+    "kindCounts": {
+      "preparation": 1,
+      "validation_progress": 3,
+      "informative_failure": 1,
+      "state_recovery": 1,
+      "repeated_check_no_new_requirement": 1,
+      "goal_action": 1
+    },
+    "judgments": [
+      {
+        "run": 1,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "independent_qualified",
+        "recordedFailureKind": null,
+        "studentCapabilityFailureEstablished": null,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 2,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "independent_qualified",
+        "recordedFailureKind": null,
+        "studentCapabilityFailureEstablished": null,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 3,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": null,
+        "studentCapabilityFailureEstablished": null,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 4,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": null,
+        "studentCapabilityFailureEstablished": null,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 5,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": null,
+        "studentCapabilityFailureEstablished": null,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 6,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": null,
+        "studentCapabilityFailureEstablished": null,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 7,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": null,
+        "studentCapabilityFailureEstablished": null,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 8,
+        "nativeStatus": "timeout",
+        "historicalStageOutcome": "failed",
+        "recordedFailureKind": null,
+        "studentCapabilityFailureEstablished": null,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 9,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "assisted_qualified",
+        "recordedFailureKind": null,
+        "studentCapabilityFailureEstablished": null,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 10,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "independent_qualified",
+        "recordedFailureKind": null,
+        "studentCapabilityFailureEstablished": null,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 11,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "failed",
+        "recordedFailureKind": null,
+        "studentCapabilityFailureEstablished": null,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 12,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "assisted_qualified",
+        "recordedFailureKind": null,
+        "studentCapabilityFailureEstablished": null,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 13,
+        "nativeStatus": "timeout",
+        "historicalStageOutcome": "failed",
+        "recordedFailureKind": "explicit_runtime_timeout",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 14,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": "no_classified_failure",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 15,
+        "nativeStatus": "failed",
+        "historicalStageOutcome": "failed",
+        "recordedFailureKind": "unresolved_failure",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": "上游502且未产生工具调用；保留原阶段标签，该轮未测得工具执行能力。"
+      },
+      {
+        "run": 16,
+        "nativeStatus": "timeout",
+        "historicalStageOutcome": "failed",
+        "recordedFailureKind": "explicit_runtime_timeout",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 17,
+        "nativeStatus": "timeout",
+        "historicalStageOutcome": "failed",
+        "recordedFailureKind": "explicit_runtime_timeout",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 18,
+        "nativeStatus": "timeout",
+        "historicalStageOutcome": "failed",
+        "recordedFailureKind": "explicit_runtime_timeout",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 19,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "assisted_qualified",
+        "recordedFailureKind": "no_classified_failure",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 20,
+        "nativeStatus": "timeout",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": "explicit_runtime_timeout",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 21,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": "no_classified_failure",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 22,
+        "nativeStatus": "failed",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": "model_stream_incomplete",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": "模型流不完整；provider／gateway／client具体归因未闭合。"
+      },
+      {
+        "run": 23,
+        "nativeStatus": "timeout",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": "explicit_runtime_timeout",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 24,
+        "nativeStatus": "timeout",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": "explicit_runtime_timeout",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 25,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "independent_qualified",
+        "recordedFailureKind": "no_classified_failure",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 26,
+        "nativeStatus": "timeout",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": "explicit_runtime_timeout",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 27,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": "no_classified_failure",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 28,
+        "nativeStatus": "failed",
+        "historicalStageOutcome": "completed_ungraded",
+        "recordedFailureKind": "unresolved_failure",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": "上游502且未产生工具调用；保留原阶段标签，该轮未测得工具执行能力。"
+      },
+      {
+        "run": 29,
+        "nativeStatus": "timeout",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": "explicit_runtime_timeout",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 30,
+        "nativeStatus": "timeout",
+        "historicalStageOutcome": "partial",
+        "recordedFailureKind": "explicit_runtime_timeout",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      },
+      {
+        "run": 31,
+        "nativeStatus": "completed",
+        "historicalStageOutcome": "assisted_qualified",
+        "recordedFailureKind": "no_classified_failure",
+        "studentCapabilityFailureEstablished": false,
+        "wholeTaskIndependentVerdict": null,
+        "reviewAnnotation": null
+      }
+    ],
+    "integrity": {
+      "oracleIsolation": "not_audited",
+      "testLeakage": "not_audited",
+      "deadlinePolicyCompliance": "not_audited",
+      "misconductVerdict": null,
+      "meaning": "未审计不代表违规或已通过；探索期教师帮助是披露的评测条件。"
+    },
+    "adjustedPassRate": null
+  },
+  "frozenCohort": {
+    "schema": "agentlab.public-frozen-cohort.v1",
+    "protocol": {
+      "taskSHA256": "99d7af9d555e43a94bb867260fdabaa3a59c0ef7a4118250e4913e40ae832bf2",
+      "initialStateRevision": "5ea3100ed825b5b82ca22073a70f4351cea85c1d",
+      "agent": "Pi1.4.0",
+      "model": "glm-5.3-flash",
+      "thinking": "high",
+      "nativeBudgetMs": 1800000,
+      "gatewaySHA256": "8785abe5aecadc7e3ef74ef5e27311b2f053e25d1284d0bf52a31c4011b4fe70",
+      "oracleSHA256": "77cebf73315fa202d54bafedf526af48e9ef1235a53b243cf24ae063c56eca0c"
+    },
+    "attempts": [
+      {
+        "label": "A2",
+        "status": "published_failed",
+        "newTeacherHelpEvents": 0,
+        "wholeTaskIndependentVerdict": "partial_delivery_runtime_fault",
+        "canonicalPublished": true,
+        "functionalChecks": [
+          {
+            "id": "int-valid",
+            "status": "observed",
+            "finding": "实际输入 +03,-2 并按整数求值，得到 [3,-2]。"
+          },
+          {
+            "id": "int-invalid",
+            "status": "observed",
+            "finding": "实际输入 1,0,2，验证列表整体拒绝为 []。"
+          },
+          {
+            "id": "weekday-invalid",
+            "status": "observed",
+            "finding": "实际输入 MO,0TU,WE，验证整体拒绝为 []。"
+          },
+          {
+            "id": "weekday-valid",
+            "status": "observed",
+            "finding": "实际输入 TU,+02FR，得到周二无序数、周五序数2的结果。"
+          },
+          {
+            "id": "recovery",
+            "status": "observed",
+            "finding": "先观察无效输入失败，再修正为 +03,-2，验证恢复为正确结果。"
+          },
+          {
+            "id": "draft-restart",
+            "status": "behavior_observed_process_identity_incomplete",
+            "finding": "未求值的星期草稿在强停重启后，与上次整数输入和结果分开保留；有停止成功和空 pidof，但缺少重启前后数字进程身份。"
+          },
+          {
+            "id": "evaluated-restart",
+            "status": "behavior_observed_process_identity_incomplete",
+            "finding": "恢复的星期草稿求值后，第二次强停重启保留最新结果；缺少数字进程身份对照。"
+          },
+          {
+            "id": "legacy-button",
+            "status": "observed",
+            "finding": "新增流程之后，六个原按钮全部实际点击，结果符合原解析器。"
+          }
+        ],
+        "deliveryChecks": [
+          {
+            "id": "parser-preserved",
+            "status": "observed",
+            "finding": "提供的解析器哈希未变，不将既有业务逻辑记为学生新实现。"
+          },
+          {
+            "id": "real-tests",
+            "status": "observed",
+            "finding": "先43/44通过，学生定位自己对 1MO 的错误预期并修正，最终45/45且退出码0。这些测试覆盖提供的解析器，不是新增持久化的单元测试覆盖率。"
+          },
+          {
+            "id": "build-deploy",
+            "status": "observed",
+            "finding": "最终源码真实离线构建成功，HAP 55,398字节；实际更新安装与启动，并重新安装观察空初态。完整功能流程在最终重建前完成，相关源码与原调用字节匹配。"
+          },
+          {
+            "id": "final-artifact",
+            "status": "incomplete",
+            "finding": "证据JSON仍为3,573字节的 in-progress 基线记录；早期“后续完整流程”和签名描述当时未获支持。依据真实轨迹审核，不以该声明自证。"
+          }
+        ],
+        "strengths": [
+          {
+            "id": "offline-environment-recovery",
+            "status": "observed",
+            "finding": "自行定位已有离线编译工具、修复ES模块加载，并查询SDK持久化API，没有新装依赖。"
+          },
+          {
+            "id": "test-oracle-debugging",
+            "status": "observed",
+            "finding": "发现并修正自己的测试预期错误，未修改提供的解析器迎合测试。"
+          },
+          {
+            "id": "end-to-end-validation",
+            "status": "observed",
+            "finding": "自行串起输入、求值、UI层级观察、强停重启和旧按钮验证。"
+          }
+        ],
+        "limitations": [
+          {
+            "id": "evidence-completion",
+            "status": "observed",
+            "finding": "最终证据文件未收尾，且有未获支持的早期声明；502中断使最终交付能力判断存在混杂。"
+          },
+          {
+            "id": "test-scope",
+            "status": "observed",
+            "finding": "45项通过仅能说明解析器回归，不能冒充新增持久化单元测试覆盖。"
+          },
+          {
+            "id": "restart-proof",
+            "status": "incomplete",
+            "finding": "缺少冻结判据要求的数字进程身份对照；教师未代补学生证据。"
+          }
+        ],
+        "evidenceCommitment": "f82f07b0b68c79ad4e8d043c0173d53fb016f55f213daf1bd4e51eae913092d1",
+        "faultBoundaries": [
+          {
+            "layer": "native_model_request",
+            "observed": "assistant502 send failure to configured upstream",
+            "rootCause": "not established; provider/gateway/network boundary",
+            "studentAbilityFailureEstablished": false
+          },
+          {
+            "layer": "publication",
+            "observed": "Original operation Completed; immutable checkpoint and ReadyLease converge",
+            "meaning": "Earlier unknown and metric guard refusal retained; no request replay"
+          }
+        ],
+        "processMetrics": {
+          "participantDurationMs": 1489332,
+          "nativeRuntimeStatus": "failed",
+          "nativeEventCount": 34555,
+          "toolCalls": 68,
+          "returnedWithoutError": 67,
+          "returnedWithError": 1,
+          "missingOrConflictingResults": 0,
+          "nativeUsageFields": {
+            "input": 37040,
+            "output": 50292,
+            "cacheRead": 988416,
+            "cacheWrite": 0,
+            "reasoning": 32471,
+            "totalTokens": 1075748
+          },
+          "billingCost": null,
+          "globalUsefulCallRate": null,
+          "meaning": "Tool flags are not command success or usefulness. totalTokens includes cacheRead; reasoning is part of output. Not a billing statement.",
+          "qualifiedFactCommitment": "80c32da3f2d8b2864c901f3f0fd3510b385065c7119610e507ee101b7735b34e"
+        }
+      },
+      {
+        "label": "B2",
+        "status": "published_failed",
+        "newTeacherHelpEvents": 0,
+        "wholeTaskIndependentVerdict": "incomplete_runtime_fault",
+        "canonicalPublished": true,
+        "functionalChecks": [
+          {
+            "id": "int-valid",
+            "status": "not_executed",
+            "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+          },
+          {
+            "id": "int-invalid",
+            "status": "not_executed",
+            "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+          },
+          {
+            "id": "weekday-invalid",
+            "status": "not_executed",
+            "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+          },
+          {
+            "id": "weekday-valid",
+            "status": "not_executed",
+            "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+          },
+          {
+            "id": "recovery",
+            "status": "not_executed",
+            "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+          },
+          {
+            "id": "draft-restart",
+            "status": "not_executed",
+            "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+          },
+          {
+            "id": "evaluated-restart",
+            "status": "not_executed",
+            "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+          },
+          {
+            "id": "legacy-button",
+            "status": "not_executed",
+            "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+          }
+        ],
+        "deliveryChecks": [
+          {
+            "id": "code-changes",
+            "status": "observed",
+            "finding": "新增持久化代码，修改UI和Ability；提供的解析器未改。新增代码尚未编译、测试或在设备上验证。"
+          },
+          {
+            "id": "real-tests",
+            "status": "not_executed",
+            "finding": "31次完整工具调用中，没有新增功能或解析器测试执行记录。"
+          },
+          {
+            "id": "build-deploy",
+            "status": "baseline_only",
+            "finding": "只完成了修改前原始工程的真实构建、安装、启动和UI观察；该HAP不能证明后续新代码可交付。"
+          },
+          {
+            "id": "final-artifact",
+            "status": "partial",
+            "finding": "2,495字节JSON明确 partial=true，只记录基线进展，没有冒充新增功能已验证。"
+          }
+        ],
+        "strengths": [
+          {
+            "id": "environment-baseline",
+            "status": "observed",
+            "finding": "自行发现现有SDK、查询持久化API，并完成原始工程构建部署与UI摸底。"
+          },
+          {
+            "id": "separate-state-design",
+            "status": "source_only",
+            "finding": "从源码可观察到草稿与上次结果分开保存的设计，运行正确性未测。"
+          }
+        ],
+        "limitations": [
+          {
+            "id": "unexecuted-feature",
+            "status": "incomplete",
+            "finding": "未到达新代码编译、测试、实际输入或重启验证；请求链路中断，不能据此外推能力不足。"
+          },
+          {
+            "id": "invalid-tool-target",
+            "status": "observed",
+            "finding": "一次占位路径编辑因ENOENT失败，没有应用所拟内容；随后编辑了实际文件。不据此猜测不当行为。"
+          }
+        ],
+        "evidenceCommitment": "d91721c8c4fb1664c66753bf1c91c2ddb8959d1f84cd0a6f65a9358a6971c343",
+        "faultBoundaries": [
+          {
+            "layer": "native_model_request",
+            "observed": "pi_assistant_error with502 send failure",
+            "rootCause": "provider/gateway/network location not established",
+            "studentAbilityFailureEstablished": false
+          },
+          {
+            "layer": "publication",
+            "observed": "Original operation Completed; immutable checkpoint and ReadyLease converge",
+            "meaning": "Publication closed by readback without retry or request replay"
+          }
+        ],
+        "processMetrics": {
+          "participantDurationMs": 417291,
+          "nativeRuntimeStatus": "failed",
+          "nativeEventCount": 11728,
+          "toolCalls": 31,
+          "returnedWithoutError": 29,
+          "returnedWithError": 2,
+          "missingOrConflictingResults": 0,
+          "nativeUsageFields": {
+            "input": 20369,
+            "output": 17279,
+            "cacheRead": 226624,
+            "cacheWrite": 0,
+            "reasoning": 11009,
+            "totalTokens": 264272
+          },
+          "billingCost": null,
+          "globalUsefulCallRate": null,
+          "meaning": "Tool flags are not command success or usefulness. totalTokens includes cacheRead; reasoning is part of output. Not a billing statement.",
+          "qualifiedFactCommitment": "8746607fb4b1a5d4c451ad2a13abf8aed3da099e9e0ba6f31064d76eec2026d1"
+        }
+      }
+    ],
+    "selection": "Both planned same-condition attempts retained; pending and failures not removed. Old Harness run and historical31 remain separate.",
+    "wholeTaskPassRate": null,
+    "statisticalStabilityClaim": false,
+    "meaning": "Frozen declarations and evaluator-reviewed observations; pending publication is not task success. n=2 checks procedural repeatability, not statistical stability.",
+    "portableValidation": {
+      "archiveBytes": 751631,
+      "baseBundleBytes": 7094,
+      "pointPatchBytes": {
+        "seed": 4772,
+        "A2": 31893,
+        "B2": 22320
+      },
+      "caseSHA256": "6ece4d7d2018b7ca7ef722fd82ab1eadcd18681e27f3f9f8c2193c0310985215",
+      "archiveSHA256": "dff7a902b1cec96e8b883676d3f3e08aad672e38d4e2e45feb2283c723a1f938",
+      "points": 3,
+      "fileSHA256ChecksEachHost": 62,
+      "hostSystems": [
+        "Linux",
+        "macOS"
+      ],
+      "gitBasePlusPatchesBytes": 66079,
+      "scope": "selected code/evidence semantic restore only; not SDK, device, agent context or whole physical Capsule",
+      "privateEvidenceArchivePublished": false
+    }
+  },
+  "modelCampaign": {
+    "schema": "agentlab.public-model-campaign.v1",
+    "protocol": {
+      "models": [
+        "glm-5.3-flash",
+        "deepseek-v4.1-flash",
+        "MiniMax-M3.1-Flash"
+      ],
+      "agent": "Pi1.4.0",
+      "thinking": "high",
+      "nativeBudgetMs": 1800000,
+      "taskSHA256": "2bf7a835aec7cdc6b5f191037fcac1d55310c2f2d3644b77cd3f28e312c7aa55",
+      "initialStateRevision": "5ea3100ed825b5b82ca22073a70f4351cea85c1d",
+      "oracleSHA256": "77cebf73315fa202d54bafedf526af48e9ef1235a53b243cf24ae063c56eca0c",
+      "gatewaySHA256": "58954b2aac9dc39de838460bdd3bb93f6b16774de6135277e63c37ce5b1dd547",
+      "runnerSHA256": "18f205f1d0773f3414a7179cf0126b5e0720c093ff0600d275cfbe6cfe7b056e"
+    },
+    "attempts": [
+      {
+        "model": "deepseek-v4.1-flash",
+        "status": "passed",
+        "wholeTaskPassed": true,
+        "teacherSolutionHelpEvents": 0,
+        "canonicalPublished": true,
+        "processMetrics": {
+          "participantDurationMs": 759195,
+          "nativeRuntimeStatus": "completed",
+          "nativeEventCount": 22264,
+          "toolCalls": 65,
+          "returnedWithoutError": 64,
+          "returnedWithError": 1,
+          "qualifiedNativeUsageFields": {
+            "input": 561138,
+            "output": 35600,
+            "cacheRead": 1590528,
+            "cacheWrite": 0,
+            "reasoning": 14100,
+            "totalTokens": 2187266
+          },
+          "usageQuality": "native_fields_missing_remain_null",
+          "billingCost": null,
+          "globalUsefulCallRate": null,
+          "qualifiedFactCommitment": "ab3bb43a8f02add489bdd4e56550151962985be026ad8f50fb112f0e3590155a"
+        },
+        "findings": [
+          "独立实现自由输入与持久化；教师复核覆盖输入校验、错误后恢复、草稿与已评估结果分离、两次进程重启和六个原有按钮。",
+          "复用题目提供的解析器，未把它计作学生新实现。自行修正了安装路径与弃用 API 的使用，没有教师解题提示。",
+          "约12.7分钟完成。65次原生工具调用中的未标错，不等于每条底层命令成功；首次安装曾输出失败而退出码为0。",
+          "系统／教师以原始发布事实、源码字节比对、真实编译部署和独立设备复核评定整题通过，学生自测不是最终评分。",
+          "原生Token合计包含缓存读取，不等于新生成Token；费用没有核定。",
+          "可迁移包还原后的20个源码文件，在现有离线工具链再次编译成功（约7.1秒，HAP 49,485字节），并完成教师侧18项独立设备检查：输入、错误恢复、草稿与结果分离、两次真实进程重启、六个旧按钮均通过。",
+          "本次是教师对还原后代码的功能复验，没有新增模型执行或学生成绩；不是整机／SDK／设备状态迁移。新HAP有独立摘要，不声称与原HAP逐字节相同。"
+        ],
+        "evidenceCommitment": "6ee7193c51da7e7149723e38acf5e22166408d4a5f820a3117c41ae49f21ba52",
+        "studentCapabilityFailureEstablished": null,
+        "harnessFailureEstablished": null,
+        "portableValidation": {
+          "archiveBytes": 662270,
+          "baseBundleBytes": 7094,
+          "pointPatchBytes": {
+            "seed": 4772,
+            "DS1": 139783
+          },
+          "caseSHA256": "815610f11649e4fbb25330f7e80096b6f4690a3eae22f9a702adbb9cdd8414a4",
+          "archiveSHA256": "050b0fcb5a39175fa581a5ba07597c6c29ac894d980f254d7de2c5ce0934d93d",
+          "points": 2,
+          "fileSHA256ChecksEachHost": 41,
+          "gitBasePlusPatchesBytes": 151649,
+          "hostSystems": [
+            "Linux",
+            "macOS"
+          ],
+          "scope": "selected code and explicit evidence only; not SDK, cache, device, Agent context or physical Capsule",
+          "newStudentOrDeviceEffects": 0,
+          "privateArchivePublished": false
+        }
+      },
+      {
+        "model": "MiniMax-M3.1-Flash",
+        "status": "incomplete",
+        "wholeTaskPassed": false,
+        "teacherSolutionHelpEvents": 0,
+        "canonicalPublished": true,
+        "processMetrics": {
+          "participantDurationMs": 50644,
+          "nativeRuntimeStatus": "completed",
+          "nativeEventCount": 425,
+          "toolCalls": 16,
+          "returnedWithoutError": 14,
+          "returnedWithError": 2,
+          "qualifiedNativeUsageFields": null,
+          "usageQuality": "all_zero_or_missing_unqualified",
+          "billingCost": null,
+          "globalUsefulCallRate": null,
+          "qualifiedFactCommitment": "3f56df62ea648f564ab25b26e54e4feacc6ddc31c71f6f6993c3371a7603c4af"
+        },
+        "findings": [
+          "约51秒后正常结束，16次工具调用；只观察到环境检查与原始工程编译，未提交功能修改，要求的交付文件为空。",
+          "未耗尽30分钟预算，没有教师停止或解题提示。末尾为空响应，模型输出与适配链路的原因尚未闭合，不直接归为学生能力失败。",
+          "有工具参数拼接异常，随后部分调用恢复。原生用量全零且推理字段缺失，因此Token和费用均未资格化。"
+        ],
+        "evidenceCommitment": "12dbb99f81483a06f712820b0fec1e9bb7c5f565208814792c3949681af3823e",
+        "studentCapabilityFailureEstablished": false,
+        "harnessFailureEstablished": false
+      },
+      {
+        "model": "glm-5.3-flash",
+        "status": "incomplete",
+        "wholeTaskPassed": false,
+        "teacherSolutionHelpEvents": 0,
+        "canonicalPublished": true,
+        "processMetrics": {
+          "participantDurationMs": 839829,
+          "nativeRuntimeStatus": "failed",
+          "nativeEventCount": 24724,
+          "toolCalls": 30,
+          "returnedWithoutError": 29,
+          "returnedWithError": 1,
+          "qualifiedNativeUsageFields": {
+            "input": 23445,
+            "output": 27980,
+            "cacheRead": 362944,
+            "cacheWrite": 0,
+            "reasoning": null,
+            "totalTokens": 414369
+          },
+          "usageQuality": "native_fields_missing_remain_null",
+          "billingCost": null,
+          "globalUsefulCallRate": null,
+          "qualifiedFactCommitment": "a99f69c8bafb1c493bc66103fb89d007a5278554077b65b5193476b380f16fbe"
+        },
+        "findings": [
+          "原操作、检查点与完整轨迹已正式发布。原生执行约14分钟后因输出流缺少finish_reason中断，没有耗尽30分钟预算，也没有教师或控制器中止。",
+          "30次工具调用主要用于环境与SDK文档检查，以及原始工程编译部署；18个种子源码均未修改，要求的交付文件为空，新增功能未交付。",
+          "本次任务判为交付未完成；模型／网关／适配器根因尚未定位，不能泛化为模型能力失败。部分工具语义失败与外层返回状态分开记录。",
+          "原生输入、输出和缓存用量按完整原操作披露，推理计数字段缺失则保持未知，不补零或估算账单。"
+        ],
+        "evidenceCommitment": "6b72cb45a122a16c6d56e3fdb796d8b49f61cc656d2726ee20b7a8b55ea66258",
+        "studentCapabilityFailureEstablished": false,
+        "harnessFailureEstablished": false
+      }
+    ],
+    "plannedAttempts": 3,
+    "finishedReviews": 3,
+    "wholeTaskPassRate": null,
+    "statisticalStabilityClaim": false,
+    "modelRankingClaim": false,
+    "configurationTrials": [
+      {
+        "kind": "invalid_assessment_configuration",
+        "reason": "thinking_off_harness_configuration",
+        "studentCapabilityScore": null,
+        "operatorInterventions": 1,
+        "retained": true,
+        "excludedFromMatchedCampaign": true
+      }
+    ],
+    "meaning": "One task, one attempt per model. Pending/incomplete attempts retained. Teacher review is independent; hashes bind bytes, not semantic truth. Native thinking high does not establish equal upstream effort. Historical populations remain separate."
+  }
+}

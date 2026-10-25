@@ -1,0 +1,396 @@
+{
+  "schema": "agentlab.process-audit.v1",
+  "evidenceReportCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+  "selection": "purposefully selected existing review, not random or complete",
+  "identifiedCalls": 373,
+  "reviewedCalls": 8,
+  "unreviewedCalls": 365,
+  "globalUsefulCallRate": null,
+  "rows": [
+    {
+      "id": "A01",
+      "run": 13,
+      "kind": "preparation",
+      "finding": "写出35项测试输入；该轮原生180.548秒超时，尚未交付可运行测试，不能把设计完成算作执行完成。",
+      "reportedIsError": false,
+      "requestSHA256": "7ef976087dfb96b0eff10f83966871af747a5843c33f5d1f968ef4ddb3569b8f",
+      "resultSHA256": "311465e37b24cfd19598da95ae43bc2fdf6e2822062b8e431d60e513888cb5a5",
+      "recoveryOf": null,
+      "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+    },
+    {
+      "id": "A02",
+      "run": 14,
+      "kind": "validation_progress",
+      "finding": "规划帮助后的实际测试命令输出SUMMARY: passed=35 total=35 / EXIT=0；原UI计划仍有selector契约问题，整任务未通过。",
+      "reportedIsError": false,
+      "requestSHA256": "d88c9cc8b0076c1060f691974ec834dbe2cb5c416f1d9ff8dcfb0e32838c83cb",
+      "resultSHA256": "90b4a36ddaa315c222d3f356e570708e8f4653c550328e0f156b2af3f00a32cc",
+      "recoveryOf": null,
+      "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+    },
+    {
+      "id": "A03",
+      "run": 30,
+      "kind": "informative_failure",
+      "finding": "外层isError=false，实际命令返回Invalid parameters及keyEvent用法；暴露命令约束，不能算业务操作成功。",
+      "reportedIsError": false,
+      "requestSHA256": "a2e5e12950dcfba946bddb105f391617f86242a8d634f819523e19b3936e8839",
+      "resultSHA256": "a0aff39b2acff12d5fb965b8930d2899b956a475cb6840675094d9b1d696bda2",
+      "recoveryOf": null,
+      "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+    },
+    {
+      "id": "A04",
+      "run": 30,
+      "kind": "state_recovery",
+      "finding": "学生改用数字删除键，先确认free-input清空，再输入TU,+02FR；恢复来自学生后续操作，没有本轮在线解法帮助。",
+      "reportedIsError": false,
+      "requestSHA256": "502862e5d9fabab36463bca6cb029f7eb67c53241c4aeaabc6c947109e59c93b",
+      "resultSHA256": "c3d7145fa5b8d2a66b223e7fdec1dfdc74a503af125bdaad208c788cfacd0a89",
+      "recoveryOf": "A03",
+      "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+    },
+    {
+      "id": "A05",
+      "run": 30,
+      "kind": "validation_progress",
+      "finding": "重启后新进程9710仍分别显示草稿TU,+02FR和先前求值Input:+03,-2 / Result:[3,-2]，形成持久化行为证据。",
+      "reportedIsError": false,
+      "requestSHA256": "c0a63b28b2ed0057b75e02159a0ead09bfa26cf46aaee0c0b57f01dceb8e1590",
+      "resultSHA256": "a960d00e7e97c443327f7673a186d0654e1bd57d23223a7f135e45851c0667a4",
+      "recoveryOf": null,
+      "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+    },
+    {
+      "id": "A06",
+      "run": 30,
+      "kind": "repeated_check_no_new_requirement",
+      "finding": "再次点击整数求值并得到相同结果；在剩余原示例按钮要求上未增加覆盖。不能由此断言学生毫无收益或给出浪费时间总量。",
+      "reportedIsError": false,
+      "requestSHA256": "11badffafd608c39bbfb95fbe4348c230af02e82e5bef79d5c62bf5052625c0e",
+      "resultSHA256": "5eb1d62f6f24f312c701e4e111cab02d81aa4a961923c008aae1e5b771507f76",
+      "recoveryOf": null,
+      "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+    },
+    {
+      "id": "A07",
+      "run": 31,
+      "kind": "goal_action",
+      "finding": "在收尾范围说明后，学生按当前控件bounds点击原MO,-1FR示例；继承全部既有上下文，不是整题独立新做。",
+      "reportedIsError": false,
+      "requestSHA256": "cf2d99bfe2dd162d93585a7c4c700ce00aafa7347223eb7d5d3c2b487033fd47",
+      "resultSHA256": "d793ee71c953dde15a761b3f3562652054c89c58b520239b3a90c88e3e51b884",
+      "recoveryOf": null,
+      "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+    },
+    {
+      "id": "A08",
+      "run": 31,
+      "kind": "validation_progress",
+      "finding": "原生结果显示Input:MO,-1FR及匹配的星期解析结果，系统独立核验剩余示例检查。",
+      "reportedIsError": false,
+      "requestSHA256": "242a2d00aa0b8c263d21ca6f14f5800e1cdea311996c6cf72588a4c480413b6f",
+      "resultSHA256": "cf2f572c958f909def0f7f68ba85a47f5157b52fb62a48d0cd7382066248c8e1",
+      "recoveryOf": null,
+      "authority": "evaluator_reviewed_interpretation_not_hash_proven_truth"
+    }
+  ],
+  "kindCounts": {
+    "preparation": 1,
+    "validation_progress": 3,
+    "informative_failure": 1,
+    "state_recovery": 1,
+    "repeated_check_no_new_requirement": 1,
+    "goal_action": 1
+  },
+  "judgments": [
+    {
+      "run": 1,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "independent_qualified",
+      "recordedFailureKind": null,
+      "studentCapabilityFailureEstablished": null,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 2,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "independent_qualified",
+      "recordedFailureKind": null,
+      "studentCapabilityFailureEstablished": null,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 3,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": null,
+      "studentCapabilityFailureEstablished": null,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 4,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": null,
+      "studentCapabilityFailureEstablished": null,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 5,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": null,
+      "studentCapabilityFailureEstablished": null,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 6,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": null,
+      "studentCapabilityFailureEstablished": null,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 7,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": null,
+      "studentCapabilityFailureEstablished": null,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 8,
+      "nativeStatus": "timeout",
+      "historicalStageOutcome": "failed",
+      "recordedFailureKind": null,
+      "studentCapabilityFailureEstablished": null,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 9,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "assisted_qualified",
+      "recordedFailureKind": null,
+      "studentCapabilityFailureEstablished": null,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 10,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "independent_qualified",
+      "recordedFailureKind": null,
+      "studentCapabilityFailureEstablished": null,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 11,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "failed",
+      "recordedFailureKind": null,
+      "studentCapabilityFailureEstablished": null,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 12,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "assisted_qualified",
+      "recordedFailureKind": null,
+      "studentCapabilityFailureEstablished": null,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 13,
+      "nativeStatus": "timeout",
+      "historicalStageOutcome": "failed",
+      "recordedFailureKind": "explicit_runtime_timeout",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 14,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": "no_classified_failure",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 15,
+      "nativeStatus": "failed",
+      "historicalStageOutcome": "failed",
+      "recordedFailureKind": "unresolved_failure",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": "上游502且未产生工具调用；保留原阶段标签，该轮未测得工具执行能力。"
+    },
+    {
+      "run": 16,
+      "nativeStatus": "timeout",
+      "historicalStageOutcome": "failed",
+      "recordedFailureKind": "explicit_runtime_timeout",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 17,
+      "nativeStatus": "timeout",
+      "historicalStageOutcome": "failed",
+      "recordedFailureKind": "explicit_runtime_timeout",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 18,
+      "nativeStatus": "timeout",
+      "historicalStageOutcome": "failed",
+      "recordedFailureKind": "explicit_runtime_timeout",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 19,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "assisted_qualified",
+      "recordedFailureKind": "no_classified_failure",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 20,
+      "nativeStatus": "timeout",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": "explicit_runtime_timeout",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 21,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": "no_classified_failure",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 22,
+      "nativeStatus": "failed",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": "model_stream_incomplete",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": "模型流不完整；provider／gateway／client具体归因未闭合。"
+    },
+    {
+      "run": 23,
+      "nativeStatus": "timeout",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": "explicit_runtime_timeout",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 24,
+      "nativeStatus": "timeout",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": "explicit_runtime_timeout",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 25,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "independent_qualified",
+      "recordedFailureKind": "no_classified_failure",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 26,
+      "nativeStatus": "timeout",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": "explicit_runtime_timeout",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 27,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": "no_classified_failure",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 28,
+      "nativeStatus": "failed",
+      "historicalStageOutcome": "completed_ungraded",
+      "recordedFailureKind": "unresolved_failure",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": "上游502且未产生工具调用；保留原阶段标签，该轮未测得工具执行能力。"
+    },
+    {
+      "run": 29,
+      "nativeStatus": "timeout",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": "explicit_runtime_timeout",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 30,
+      "nativeStatus": "timeout",
+      "historicalStageOutcome": "partial",
+      "recordedFailureKind": "explicit_runtime_timeout",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    },
+    {
+      "run": 31,
+      "nativeStatus": "completed",
+      "historicalStageOutcome": "assisted_qualified",
+      "recordedFailureKind": "no_classified_failure",
+      "studentCapabilityFailureEstablished": false,
+      "wholeTaskIndependentVerdict": null,
+      "reviewAnnotation": null
+    }
+  ],
+  "integrity": {
+    "oracleIsolation": "not_audited",
+    "testLeakage": "not_audited",
+    "deadlinePolicyCompliance": "not_audited",
+    "misconductVerdict": null,
+    "meaning": "未审计不代表违规或已通过；探索期教师帮助是披露的评测条件。"
+  },
+  "adjustedPassRate": null
+}
