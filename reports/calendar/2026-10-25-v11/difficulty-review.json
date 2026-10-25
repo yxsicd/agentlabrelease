@@ -1,0 +1,170 @@
+{
+  "schema": "agentlab.difficulty-review.v1",
+  "version": "calendar-review-2026-10-25-v1",
+  "evidenceReportCommitment": "d22ef6e015878d457b22b21f50f9cccf47a8ab63b3f9569aaa482917af79c094",
+  "author": "evaluation_system_with_teacher_review",
+  "scope": "对规范报告31条历史执行的证据性审阅；不是新冻结判分Oracle，不修改原生事实或旧成绩。",
+  "denominator": "七个本次审阅能力条目，不是七道试题；状态为范围内观察，不计算学生通过率。",
+  "rows": [
+    {
+      "id": "test-delivery",
+      "title": "把测试设计接成真实运行闭环",
+      "state": "assisted_progress",
+      "exposure": "reached",
+      "runs": [
+        13,
+        14
+      ],
+      "facts": "第13轮设计35项输入，未交付可运行测试；规划提示后的第14轮实际运行35/35，UI接口计划仍未通过。",
+      "strength": "能构造有效测试输入，并使用已有材料接通执行。",
+      "barrier": "设计到最小可运行交付的收敛。",
+      "hypothesis": "可能需要更强的交付优先级规划；只能解释当前任务。",
+      "alternatives": [
+        "后轮追加执行预算",
+        "继承前轮已有输入与上下文"
+      ],
+      "helpEvents": [
+        "H04"
+      ],
+      "confidence": "case_observation"
+    },
+    {
+      "id": "interface-fidelity",
+      "title": "按契约表达接口并保留原始输入",
+      "state": "assisted_progress",
+      "exposure": "reached",
+      "runs": [
+        11,
+        12,
+        16,
+        17,
+        19
+      ],
+      "facts": "早期输入保真失败；教师定位方法后恢复。随后已找到ID却放错字段，字段契约提示后selector改正；最终交付又获得规划帮助。",
+      "strength": "能根据明确接口反馈修正字段，能进行程序化原数据提取。",
+      "barrier": "从读到正确资料，到按接收方契约正确表达与交付。",
+      "hypothesis": "存在接口映射和最终交付的局部困难，不等于业务推理失败。",
+      "alternatives": [
+        "接收方契约曾有歧义",
+        "预算与上下文在续跑中变化"
+      ],
+      "helpEvents": [
+        "H03",
+        "H05",
+        "H06"
+      ],
+      "confidence": "case_observation"
+    },
+    {
+      "id": "tool-recovery",
+      "title": "遇到工具错误后寻找可行替代路径",
+      "state": "local_autonomy",
+      "exposure": "reached",
+      "runs": [
+        22,
+        30
+      ],
+      "facts": "第22轮缺awk后找到cut继续；第30轮MOVE_END参数错误后自行采用数字删除键并恢复后续操作。",
+      "strength": "观察到局部自主诊断、替代工具和输入状态恢复。",
+      "barrier": "外层成功可能掩盖内部参数错误，需检查实际结果。",
+      "hypothesis": "局部恢复能力已有事实支持；不能由此推出全任务自治。",
+      "alternatives": [
+        "继承已有设备配置与辅助上下文",
+        "第22轮还伴随输出流／Harness故障"
+      ],
+      "helpEvents": [],
+      "confidence": "case_observation"
+    },
+    {
+      "id": "coarse-performance",
+      "title": "把真实性能采样转成可核验交付物",
+      "state": "local_autonomy",
+      "exposure": "reached",
+      "runs": [
+        22,
+        23,
+        24,
+        25
+      ],
+      "facts": "前轮已有采样但未完成报告；帮助后仍保留抄录错误与超时。第25轮无新增帮助，完成业务UI、4CPU/3PSS粗测及2JSON交付。",
+      "strength": "能自主采样、计算并交付可核验粗测证据。",
+      "barrier": "原始采集、计算、保存交付物之间的长程衔接。",
+      "hypothesis": "第25轮阶段闭合成立；不把额外预算／继承材料的收益归因于单一提示。",
+      "alternatives": [
+        "历史教师帮助仍属于继承背景",
+        "粗测不代表精准性能或优化收益验证"
+      ],
+      "helpEvents": [
+        "H07"
+      ],
+      "confidence": "case_observation"
+    },
+    {
+      "id": "free-input-end-to-end",
+      "title": "自由输入从实现到完整独立验收",
+      "state": "unfinished",
+      "exposure": "reached",
+      "runs": [
+        26,
+        27
+      ],
+      "facts": "第26轮自主完成代码、首次编译、部署和整数正例，600.849秒预算终止时输入替换、动态视口与交付未闭合；帮助后的第27轮取得5项UI与两份JSON，仍有原始错误。",
+      "strength": "代码实现、编译部署和部分真实验证已有自主行为证据。",
+      "barrier": "把剩余交互验证、错误恢复和最终交付收敛为完整独立结果。",
+      "hypothesis": "收尾规划可能是困难点，但时间预算与界面状态同样可能解释中断。",
+      "alternatives": [
+        "预算终止",
+        "键盘改变视口且文本发生追加",
+        "后轮继承代码并获得具体反馈"
+      ],
+      "helpEvents": [
+        "H08"
+      ],
+      "confidence": "hypothesis"
+    },
+    {
+      "id": "restart-state",
+      "title": "重启恢复与剩余UI覆盖",
+      "state": "assisted_progress",
+      "exposure": "reached",
+      "runs": [
+        29,
+        30,
+        31
+      ],
+      "facts": "恢复材料试验伴随Harness混杂；恢复旧源码并限定验证后第30轮完成6/7，剩余旧示例由第31轮补齐。跨辅助续跑累计7/7成立。",
+      "strength": "能检查重启后状态，并自行选择、定位及核验剩余示例。",
+      "barrier": "剩余目标覆盖与整题收尾，原生超时及过时摘要保留。",
+      "hypothesis": "重复已验证目标、遗漏剩余按钮提示覆盖规划问题；不是普遍长程能力结论。",
+      "alternatives": [
+        "Harness恢复了旧源码",
+        "后续任务范围更窄且继承已验证状态"
+      ],
+      "helpEvents": [
+        "H09",
+        "H10",
+        "H11"
+      ],
+      "confidence": "case_observation"
+    },
+    {
+      "id": "performance-improvement",
+      "title": "本次扩展的性能优化效果验收",
+      "state": "not_assessed",
+      "exposure": "not_assessed_in_this_extension",
+      "runs": [],
+      "facts": "当前性能维度明确记录本次扩展没有新增性能测量或优化验收；已有粗测不构成优化效果证明。",
+      "strength": "当前不作能力判断。",
+      "barrier": "缺冻结负载、基线与优化后独立对照。",
+      "hypothesis": "没有测量证据，不能推断学生不会优化。",
+      "alternatives": [
+        "当前任务切片没有提供相应对照实验"
+      ],
+      "helpEvents": [],
+      "confidence": "not_assessed",
+      "dimensionEvidence": "performance"
+    }
+  ],
+  "selectionPolicy": "本次只审阅当前规范报告已纳入的31条历史执行；不把旧未知请求推定为失败或成功。",
+  "helpSummaryPolicy": "帮助摘要是公开复述，原文与真实投递证据保留在私有侧；H编号为报告内编号，不是原操作ID。"
+}
