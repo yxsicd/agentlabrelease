@@ -347,6 +347,28 @@ Preserve intermediate code, compiler output, artifact identity and verified UI
 states when final task files are empty. Treat the missing final delivery as one
 barrier, while distinguishing successful implementation/build/deployment from
 unexecuted business checks. Time to first edit is observable preparation, not by
-itself proof of wasted thinking. Freeze a narrowly attributable continuation only
-after the original operation is resolved; help can cross a barrier to expose the
-next one without replacing the earlier outcome.
+itself proof of wasted thinking. Freeze a dependent continuation only after the original operation is resolved;
+help can cross a barrier to expose the next one without replacing the earlier
+outcome.
+
+An unknown operation blocks its dependent effects, not automatically every
+Attempt of the same task. If the existing contract and actual Owner permissions
+allow it, a separately qualified older parent may supply an immutable snapshot
+for ONE new formal Fork. Verify that parent's own Ready/committed checkpoint,
+exact snapshot, child lineage and independent child Ready before execution.
+Keep the unknown branch isolated: no patch/runtime replay, invented completion,
+mutable-HEAD substitution, changes to its Lease or use of a rejected permission.
+A new Attempt is not recovery of the unknown operation; retain both outcomes and
+its different starting point. If any new Fork result is uncertain, read that
+exact original result rather than creating another replacement.
+
+When an isolated continuation receives preserved student source as input, bind
+the transferred paths and byte hashes to the original evidence. Disclose the
+restoration material separately from newly authored implementation and teacher
+hints; copying supplied source earns no new independent implementation credit.
+Record exact hint acceptance, recipient/context, source/material provenance and
+later observed use. Keep weights adjustable. A successful Fork or prompt receipt
+proves neither improved student performance nor completed application acceptance;
+that benefit still requires independent behavioral checks. Record submission to
+prompt acceptance separately from native execution time so preparation/transport
+wait is not mislabeled as student thinking.
