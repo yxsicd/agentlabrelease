@@ -27,3 +27,7 @@ action -> displayed result, and compare actual process identity across restart.
 A correct parser output from an offline reproduction does not establish a real
 UI click or restored draft. Follow the separately pinned Release method for
 teacher help and system-owned evaluation.
+
+For actual UI command failures or stale summaries, use
+[tool feedback and evidence delivery](references/tool-feedback.md). These scoped
+lessons are maintained on this same Git history and may be revised by evidence.
