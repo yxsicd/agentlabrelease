@@ -3,6 +3,16 @@
   "reports": [
     {
       "id": "calendar",
+      "version": "2026-10-25-v4",
+      "title": "Calendar过程收益与判定分层报告v4",
+      "url": "calendar/2026-10-25-v4/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false,
+      "reportType": "assisted_exploration",
+      "evidenceCutoff": "2026-10-25"
+    },
+    {
+      "id": "calendar",
       "version": "2026-10-25-v3",
       "title": "Calendar Agent难点与比较协议报告v3",
       "url": "calendar/2026-10-25-v3/",
@@ -30,5 +40,5 @@
       "independentWholeTaskPass": false
     }
   ],
-  "latest": "calendar/2026-10-25-v3/"
+  "latest": "calendar/2026-10-25-v4/"
 }
