@@ -106,6 +106,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('action', choices=['sync', 'verify'])
     p.add_argument('--binding', required=True, type=Path)
+    p.add_argument('--expected-root', required=True, help='independently admitted knowledge root from the catalog/bootstrap receipt')
     p.add_argument('--from', dest='origin', required=True, choices=['target', 'hub'])
     p.add_argument('--receipt', required=True, type=Path)
     p.add_argument('--create-destination', action='store_true')
@@ -120,6 +121,8 @@ def main():
         os.replace(tmp, a.receipt)
     save()
     try:
+        if not re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', a.expected_root):
+            raise ValueError('expected root must be a full Git commit')
         b = binding(json.loads(a.binding.read_text()), a.allow_local)
         src = b[a.origin]
         dst = b['hub' if a.origin == 'target' else 'target']
@@ -132,6 +135,9 @@ def main():
                 raise ValueError('source branch absent')
             fetch(repo, src, head)
             inv = inventory(repo, head, b)
+            if inv['rootCommit'] != a.expected_root:
+                raise ValueError('knowledge root differs from independent catalog/bootstrap admission')
+            state['expectedRoot'] = a.expected_root
             previous = remote_head(dst)
             state.update(sourceCommit=head, destinationBefore=previous, inventory=inv)
             if previous:

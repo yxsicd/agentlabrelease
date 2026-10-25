@@ -18,7 +18,9 @@ agentlabrelease repository; do not create another aggregation repository.
   separately from receiving a target branch.
 - The admitted `knowledge.json` is a small binding, not a capability grant.
   Fetch it from a separately pinned catalog commit, verify identity and use that
-  trusted local file for synchronization. Never admit a branch's self-declaration
+  trusted local file for synchronization. Pin the independently admitted knowledge
+  root separately with `--expected-root`; keeping it outside knowledge.json avoids
+  a self-referential root-commit hash. Never admit a branch's self-declaration
   as proof of the intended target or of upstream write permission.
 
 For this Git profile, Skills, scripts and public case definitions are authored
@@ -69,15 +71,15 @@ Obtain the admitted binding from the pinned catalog, then use NEW receipt paths:
 
 ```bash
 python3 skills/agentlab-skill-methodology/scripts/knowledge-branch.py sync \
-  --binding /operator/admitted-calendar.json --from target \
+  --binding /operator/admitted-calendar.json --expected-root KNOWLEDGE_ROOT_SHA --from target \
   --create-destination --receipt /operator/target-to-hub.json
 
 python3 skills/agentlab-skill-methodology/scripts/knowledge-branch.py sync \
-  --binding /operator/admitted-calendar.json --from hub \
+  --binding /operator/admitted-calendar.json --expected-root KNOWLEDGE_ROOT_SHA --from hub \
   --receipt /operator/hub-to-target.json
 
 python3 skills/agentlab-skill-methodology/scripts/knowledge-branch.py verify \
-  --binding /operator/admitted-calendar.json --from target \
+  --binding /operator/admitted-calendar.json --expected-root KNOWLEDGE_ROOT_SHA --from target \
   --receipt /operator/exact-readback.json
 ```
 
