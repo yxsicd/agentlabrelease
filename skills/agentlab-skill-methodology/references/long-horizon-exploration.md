@@ -482,3 +482,7 @@ failures and help attribution. Raw traces and portable task archives remain priv
 Use [Agent evaluation report contracts](agent-evaluation-report.md) to separate
 protocol/configuration, task versus stage outcomes, cost coverage, reliability,
 assistance and run-linked evidence. Never turn dependent exploration into ranking.
+
+Use [difficulty evidence and comparable runs](difficulty-and-run-protocol.md)
+for reached/handled/assisted/unmeasured reviews, help-recipient coverage and
+run-input metadata. Review counts are not task scores; readiness is not permission.
