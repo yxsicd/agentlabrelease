@@ -135,6 +135,7 @@ def frozen_main():
 def model_campaign(public, intake):
  """Project an explicitly frozen one-attempt-per-model campaign, not a ranker."""
  require(intake.get('schema')=='agentlab.model-campaign-intake.v1','model campaign intake required')
+ require(bool(re.fullmatch(r'\d{4}-\d{2}-\d{2}-v\d+',intake['publicVersion'])),'valid public version required')
  p=intake['protocol']; models=p['models']; require(isinstance(models,list) and len(models)==len(set(models))>0,'unique planned models required')
  for k in ['taskSHA256','oracleSHA256','gatewaySHA256','runnerSHA256']:
   require(bool(re.fullmatch('[0-9a-f]{64}',p[k])),'invalid protocol commitment')
@@ -191,6 +192,9 @@ def render_model_campaign(data,page):
  findings=''.join('<h3>'+e(r['model'])+'</h3><ul>'+''.join('<li>'+e(v)+'</li>' for v in r['findings'])+'</ul>' for r in c['attempts'] if r['findings'])
  section='<section id="model-campaign"><div class="report-kicker">MATCHED THREE-MODEL CAMPAIGN</div><h2>同一任务的三模型执行与独立评测</h2><p>同一干净工程起点、任务文本和 Pi 运行时；原生思考设置与预算已按本队列冻结。每个模型仅一次，不作模型排名或统计稳定性结论。high 是实际 Agent 设置，不保证上游思考强度相等。旧队列与历史探索保留在下方。另有配置无效试跑时，其失败记录单列保留，不混入本队列，也不算学生能力失败。</p><div class="scroll"><table><thead><tr><th>模型</th><th>系统／教师结论</th><th>解题帮助</th><th>学生时长（分钟）</th><th>工具调用</th><th>原生 Token 合计</th></tr></thead><tbody>'+''.join(rows)+'</tbody></table></div><p>模型运行完成、事实发布和完整任务通过分别判断。全零／缺失用量不视为免费；工具未标错不代表命令成功。费用与整体有益调用率未知。学生自测不是自己给自己评分；教师验收不计作学生动作。</p>'+findings+'<p><a href="model-campaign.json" download>下载三模型评测事实</a></p></section>'
  require('<section id="frozen-cohort">' in page,'existing frozen report anchor required')
+ passed=[r['model'] for r in c['attempts'] if r['wholeTaskPassed'] is True]; summary=('新队列整题验收通过：'+', '.join(passed)+'；帮助情况与其余模型状态见本轮表格。') if passed else '新队列状态见本轮表格；尚无已核定的整题通过。'
+ page=page.replace('局部自主纠错已有证据；完整任务的独立完成尚未证明。',e(summary)).replace('最新阶段配置卡','历史GLM双轮配置卡').replace('本轮A2/B2冻结整题；不覆盖历史31轮的混合配置。','历史A2/B2冻结整题配置；新三模型队列另列。')
+ page=page.replace('版本 2026-10-25-v6','版本 '+e(data['version'])).replace('href="../2026-10-25-v5/">上一报告版本','href="../2026-10-25-v7/">上一报告版本')
  return page.replace('<section id="frozen-cohort">',section+'<section id="frozen-cohort">',1).replace('<p class="links">','<p class="links"><a href="#model-campaign">三模型评测</a>',1).replace('整题独立完成结论仍未建立。','历史31轮的整题独立完成结论仍未建立；新队列另列。').replace('综合评测报告 v6','综合评测报告 '+data['version'].rsplit('-',1)[-1]+'').replace('agent-report-v6','agent-report-'+data['version'].rsplit('-',1)[-1]+'')
 
 
