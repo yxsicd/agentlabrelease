@@ -1,0 +1,20 @@
+{
+  "schema": "agentlab.knowledge-catalog.v1",
+  "hubRepository": "https://github.com/yxsicd/agentlabrelease.git",
+  "profile": "Git authored public target knowledge; AL retains structured live execution facts",
+  "targets": [
+    {
+      "targetId": "openharmony-applications-calendar",
+      "bindingPath": "bindings/openharmony-applications-calendar.json",
+      "knowledgeCommit": "8f917011ea36cc62eda0d782bba1a30b9c8118d4",
+      "knowledgeRootCommit": "5d33403ccdfd2f52641a2701b0836ce0c7d5840d",
+      "methodRevision": "f8e16f823e5695a5e04b0e4a1e3bfd20fa6efca0",
+      "methodPath": "skills/agentlab-skill-methodology/references/git-knowledge-branches.md",
+      "entrypoint": "AGENTS.md",
+      "publicCaseCount": 1,
+      "runnableFromKnowledgeBranchAlone": false,
+      "knowledgeTreeBytes": 22508,
+      "knowledgeFiles": 10
+    }
+  ]
+}
