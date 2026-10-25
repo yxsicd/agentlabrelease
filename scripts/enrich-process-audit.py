@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Offline, allowlisted process evidence projection. Never regrade or dispatch."""
-import argparse,collections,hashlib,html,importlib.util,json,re,shutil
+import argparse,collections,hashlib,html,importlib.util,json,re,shutil,sys
 from pathlib import Path
 LABELS={'preparation':'准备','validation_progress':'验证推进','informative_failure':'提供约束信息的失败','state_recovery':'状态恢复','repeated_check_no_new_requirement':'重复检查，未增加需求覆盖','goal_action':'目标操作'}
 def require(ok,msg):
@@ -39,7 +39,67 @@ def render(data,page):
  page=page.replace('href="../2026-10-25-v2/">上一报告版本','href="../2026-10-25-v3/">上一报告版本')
  return page.replace('<section id="difficulty"',process+judgment+'<section id="difficulty"',1).replace('<p class="links">','<p class="links"><a href="#process">调用收益证据</a><a href="#judgment">判定与完整性</a>',1)
 def main():
+ if "--frozen-reviews" in sys.argv:return frozen_main()
  p=argparse.ArgumentParser();p.add_argument('--private-report',type=Path,required=True);p.add_argument('--public-v3',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--scanner',type=Path,required=True);args=p.parse_args();require(not args.output.exists(),'immutable output exists')
  data=project(json.loads(args.private_report.read_text()),json.loads((args.public_v3/'evaluation.json').read_text()));page=render(data,(args.public_v3/'index.html').read_text());spec=importlib.util.spec_from_file_location('scanner',args.scanner);s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s);s.scan_public(data);s.scan_public(page)
  shutil.copytree(args.public_v3,args.output);(args.output/'evaluation.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n');(args.output/'index.html').write_text(page);(args.output/'process-audit.json').write_text(json.dumps(data['processAudit'],ensure_ascii=False,indent=2)+'\n');print(json.dumps({'reviewedCalls':len(data['processAudit']['rows']),'judgments':len(data['processAudit']['judgments']),'globalUsefulCallRate':None}))
+
+def frozen_cohort(public,intake):
+ require(public['schema']=='agentlab.public-evaluation.v4','separate frozen intake requires v4 baseline')
+ require(intake.get('schema')=='agentlab.frozen-review-intake.v1','unsupported frozen intake')
+ protocol={k:intake['protocol'][k] for k in ['taskSHA256','initialStateRevision','agent','model','thinking','nativeBudgetMs','gatewaySHA256','oracleSHA256']};task=protocol['taskSHA256'];require(bool(re.fullmatch('[0-9a-f]{64}',task)),'task hash required')
+ require(type(protocol['nativeBudgetMs']) is int and protocol['nativeBudgetMs']>0,'positive native budget required')
+ labels=set();out=[]
+ for row in intake['attempts']:
+  label=row['label'];require(label in ['A2','B2'] and label not in labels,'unique frozen attempt label required');labels.add(label)
+  freeze=row['freeze'];native=row['nativeAcceptance'];config=native['configurationObserved'];start=row['qualifiedStart']
+  require(start['forkCommit']==protocol['initialStateRevision'] and start['priorContextFiles']==[],'initial state or inherited context mismatch')
+  require(freeze['gatewaySHA256']==protocol['gatewaySHA256'],'gateway environment mismatch')
+  require(native['freshParticipantContext'] is True,'fresh context not qualified')
+  require(freeze['taskSHA256']==native['taskSHA256']==task,'frozen task mismatch')
+  require(freeze['nativeBudgetMs']==protocol['nativeBudgetMs'],'budget mismatch')
+  require(any(c.get('modelId')==protocol['model'] for c in config),'observed model mismatch')
+  require(any(c.get('thinkingLevel')==protocol['thinking'] for c in config),'observed thinking mismatch')
+  require(type(native['newHelpEvents']) is int and native['newHelpEvents']>=0,'help count required')
+  review=row.get('review');record={'label':label,'status':row['status'],'newTeacherHelpEvents':native['newHelpEvents'],'wholeTaskIndependentVerdict':None,'canonicalPublished':False,'functionalChecks':[],'deliveryChecks':[],'strengths':[],'limitations':[],'evidenceCommitment':hashlib.sha256(json.dumps(row,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()}
+  if review:
+   require(review.get('schema')=='agentlab.independent-frozen-task-review.v1' and review.get('producer')=='teacher_evaluator','independent reviewer required')
+   require(review['taskSHA256']==task,'review task mismatch')
+   require(review['originalOperationId']==native['recipient']['operationId'] and review['sessionId']==native['recipient']['sessionId'] and review['requestDigest']==native['recipient']['requestDigest'],'original operation review binding mismatch')
+   require(review['teacherSolutionHelpEvents']==native['newHelpEvents'],'help audit mismatch')
+   # A claimed pass is not imported as authority. Canonical readback qualification
+   # and full completion review are separate downstream acceptance steps.
+   require(review.get('wholeTaskPassed') is not True,'whole-pass promotion requires separately qualified original publication')
+   require(type(review['canonicalPublished']) is bool,'publication declaration must be boolean')
+   record.update(canonicalPublished=review['canonicalPublished'],wholeTaskIndependentVerdict=review['wholeTaskVerdict'])
+   record['faultBoundaries']=[{k:v for k,v in f.items() if k in ['layer','observed','rootCause','meaning','studentAbilityFailureEstablished']} for f in review.get('faultBoundaries',[])]
+   for key in ['functionalChecks','deliveryChecks','strengths','limitations']:
+    for c in review.get(key,[]):
+     record[key].append({k:c[k] for k in ['id','status','finding']})
+  out.append(record)
+ require(labels=={'A2','B2'},'retain both attempts, including pending or failed')
+ result=json.loads(json.dumps(public));result.update(schema='agentlab.public-evaluation.v5',version='2026-10-25-v5');result['agentReport']['analysisRevision']='agent-report-v5'
+ result['frozenCohort']={'schema':'agentlab.public-frozen-cohort.v1','protocol':protocol,'attempts':out,'selection':'Both planned same-condition attempts retained; pending and failures not removed. Old Harness run and historical31 remain separate.','wholeTaskPassRate':None,'statisticalStabilityClaim':False,'meaning':'Frozen declarations and evaluator-reviewed observations; pending publication is not task success. n=2 checks procedural repeatability, not statistical stability.'}
+ result['provenance']['publicProjectionPolicy']='allowlist-v5-separate-frozen-cohort'
+ return result
+
+def render_frozen(data,page):
+ e=lambda x:html.escape(str(x));a=data['frozenCohort'];rows=[]
+ for r in a['attempts']:
+  rows.append('<tr><td>'+e(r['label'])+'</td><td>'+e(r['status'])+'</td><td>'+e(r['newTeacherHelpEvents'])+'</td><td>'+e(r['wholeTaskIndependentVerdict'] or '尚未评审')+'</td></tr>')
+ detail=[]
+ for r in a['attempts']:
+  for key,title in [('functionalChecks','功能核对'),('deliveryChecks','交付核对'),('strengths','观察到的长处'),('limitations','限制与未闭合项')]:
+   if r[key]:detail.append('<h3>'+e(r['label'])+' · '+title+'</h3><ul>'+''.join('<li><strong>'+e(c['id'])+' · '+e(c['status'])+'</strong>：'+e(c['finding'])+'</li>' for c in r[key])+'</ul>')
+ section='<section id="frozen-cohort"><div class="report-kicker">FROZEN WHOLE-TASK REPEAT</div><h2>同一整题的冻结重复：与历史探索分开</h2><p>同一起点与任务，'+e(a['protocol']['agent'])+' / '+e(a['protocol']['model'])+' / thinking '+e(a['protocol']['thinking'])+' / '+e(a['protocol']['nativeBudgetMs']//1000)+'秒安全上限。两轮用于检查流程可复现性，不代表统计稳定性。无整题通过率。</p><div class="scroll"><table><thead><tr><th>执行</th><th>当前状态</th><th>本轮教师解题帮助</th><th>独立判定</th></tr></thead><tbody>'+''.join(rows)+'</tbody></table></div><p>实际行为、学生交付声明、运行终态和正式发布分别判断；未发布不等于未执行，也不能判为通过。解析器测试通过不冒充新增持久化单元测试覆盖率。</p>'+''.join(detail)+'<p><a href="frozen-cohort.json" download>下载冻结重复与审核事实</a></p></section>'
+ page=page.replace('2026-10-25-v4','2026-10-25-v5').replace('探索性评测报告 v4','探索性评测报告 v5').replace('agent-report-v4','agent-report-v5')
+ page=page.replace('href="../2026-10-25-v3/">上一报告版本','href="../2026-10-25-v4/">上一报告版本')
+ require('<section id="process">' in page,'existing report insertion anchor missing')
+ return page.replace('<section id="process">',section+'<section id="process">',1).replace('<p class="links">','<p class="links"><a href="#frozen-cohort">冻结整题重复</a>',1)
+
+def frozen_main():
+ p=argparse.ArgumentParser();p.add_argument('--frozen-reviews',type=Path,required=True);p.add_argument('--public-v4',type=Path,required=True);p.add_argument('--scanner',type=Path,required=True);p.add_argument('--output',type=Path,required=True);args=p.parse_args();require(not args.output.exists(),'immutable output exists')
+ data=frozen_cohort(json.loads((args.public_v4/'evaluation.json').read_text()),json.loads(args.frozen_reviews.read_text()));page=render_frozen(data,(args.public_v4/'index.html').read_text());spec=importlib.util.spec_from_file_location('scanner',args.scanner);scanner=importlib.util.module_from_spec(spec);spec.loader.exec_module(scanner);scanner.scan_public(data);scanner.scan_public(page)
+ shutil.copytree(args.public_v4,args.output);(args.output/'evaluation.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n');(args.output/'index.html').write_text(page);(args.output/'frozen-cohort.json').write_text(json.dumps(data['frozenCohort'],ensure_ascii=False,indent=2)+'\n');print(json.dumps({'historicalOperations':len(data['operations']),'separateFrozenAttempts':len(data['frozenCohort']['attempts']),'wholeTaskPassRate':None}))
+
 if __name__=='__main__': main()
