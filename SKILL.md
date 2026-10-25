@@ -42,6 +42,15 @@ maintaining AL implementation. Follow [long-horizon exploration and learning](sk
 when help is needed to discover subsequent barriers. Target-specific knowledge
 stays in its instance Skill cut; general methods are maintained here.
 
+
+For target-specific Git knowledge branches, read
+[Git target knowledge and aggregation](skills/agentlab-skill-methodology/references/git-knowledge-branches.md).
+The user-selected hub is agentlabrelease: `knowledge/catalog` indexes bindings,
+`knowledge/targets/<targetId>` receives each target's independent `al-knowledge`
+history. This profile authors reusable target content in Git; AL retains live
+execution facts and imports pinned guidance without dual editing. Business
+branches remain unchanged. Private evaluator data never enters these public refs.
+
 Use the [registry](skills/registry.json) for progressive method selection. There
 is one current consumer contract, not a compatibility matrix of old installers.
 Historical releases remain immutable evidence, not current installation recipes.

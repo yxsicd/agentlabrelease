@@ -18,9 +18,12 @@ blocking capability under its separate authority, then returns to the case.
   system, deriving seeds, exploring barriers, validating and revising conclusions:
   the owning method Skills in this release repository.
 - Target-specific architecture, contracts, verification methods, difficulty
-  hypotheses and task-generation guidance: instance Skills in knowledge TableGit
-  `maintainer_skills`, bound to object/source/method/fact identities. The table
-  name does not restrict the actor role. Preserve the project's code separately.
+  hypotheses and task-generation guidance: the selected target content authority.
+  The [Git branch profile](git-knowledge-branches.md) stores these in independent
+  target knowledge history and the Release aggregation branches. Existing
+  TableGit-authored targets use `maintainer_skills`. Bind source/method/fact
+  identities, import Git guidance at pinned cuts, and avoid two writable copies.
+  Preserve the project's code separately.
 - Program facts, runnable cases/oracles and execution observations: the existing
   structured knowledge/operational tables and evidence assets. A Skill references
   them; it does not replace their typed content with narrative.

@@ -14,7 +14,16 @@ components or consume fixed snapshots and return evidence for the next cut.
 Here `maintenance` means maintaining evaluation methods, target-project knowledge
 and task seeds while USING AgentLab. It does not mean changing AgentLab platform
 implementation. Reusable usage methods belong in this release Skill library;
-target-instance Skills and observations follow the methodology's TableGit cuts.
+target-instance Skills and observations follow the methodology's selected authority profile.
+
+For target-specific Git knowledge branches, read
+[Git target knowledge and aggregation](skills/agentlab-skill-methodology/references/git-knowledge-branches.md).
+The user-selected hub is agentlabrelease: `knowledge/catalog` indexes bindings,
+`knowledge/targets/<targetId>` receives each target's independent `al-knowledge`
+history. This profile authors reusable target content in Git; AL retains live
+execution facts and imports pinned guidance without dual editing. Business
+branches remain unchanged. Private evaluator data never enters these public refs.
+
 Use the existing experiment-learning promotion path instead of creating another
 knowledge store or treating a platform-maintainer handoff as consumer guidance.
 
