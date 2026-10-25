@@ -430,3 +430,24 @@ qualified cohort without erasing its inherited assistance or earlier failures.
 Report revisions must identify their evidence cutoff, coverage gaps, configuration
 labels versus verified profiles, and unmeasured performance/billing. Final grades
 are produced independently by the evaluation system/teacher, not the student.
+
+
+### Bind action reviews and help comparisons to original bytes
+
+A reviewed action carries its original operation/call ID, hashes of the exact
+canonical JSON request and result, and an independently maintained interpretation.
+Validate the complete qualified original proof, unique ordered start/result pair
+and byte hashes before consuming the judgment. Link a recovery to the earlier
+failure in the same operation. Keep raw payload and internal reasoning outside
+the derived report. These checks prove provenance, not the truth of a reviewer's
+semantic label; admitted evaluator context remains independently required.
+
+For before/after assistance analysis, pin the accepted help event, actual recipient
+operation and evidence actions on both sides. Require disclosed confounders such
+as additional budget, inherited artifacts and changed task scope. Display design,
+execution, delivery and newly exposed barriers separately. Do not turn observed
+improvement into a single-cause claim, erase prior failure, or count assistance
+as independent completion. Capability observations/hypotheses must name their
+supporting actions and plausible alternative explanations. Selected critical
+calls do not support a population-wide utility rate. Put current findings and
+help-to-next-barrier analysis before collapsed historical operation tables.
