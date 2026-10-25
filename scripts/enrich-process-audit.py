@@ -10,7 +10,7 @@ def project(private,public):
  require(public['provenance']['privateReportSHA256']==digest,'private evidence mismatch')
  require(public['schema']=='agentlab.public-evaluation.v3','v3 required')
  ops=private['cases'][0]['operations'];require(len(ops)==len(public['operations'])==31,'population changed')
- lookup={o['operationId']:i for i,o in enumerate(ops,1)};actions=private['cases'][0]['reviewedLearning']['actions'];ids={a['id']:f'A{i:02}' for i,a in enumerate(actions,1)};rows=[]
+ lookup={o['operationId']:i for i,o in enumerate(ops,1)};actions=private['cases'][0]['reviewedLearning']['actions'];require(private['cases'][0]['reviewedLearning'].get('reviewedCalls')==len(actions)==8 and private['cases'][0]['reviewedLearning'].get('identifiedCalls')==373,'reviewed selection changed');ids={a['id']:f'A{i:02}' for i,a in enumerate(actions,1)};rows=[]
  for a in actions:
   require(a['operationId'] in lookup and a['kind'] in LABELS,'unbound action')
   require(all(re.fullmatch('[0-9a-f]{64}',a[k]) for k in ['requestSHA256','resultSHA256']),'invalid commitment')
