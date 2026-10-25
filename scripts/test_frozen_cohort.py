@@ -28,4 +28,13 @@ class FrozenBoundaries(unittest.TestCase):
   i=copy.deepcopy(I);i['attempts']=i['attempts'][:1];self.assertRaises(ValueError,m.frozen_cohort,P,i)
  def test_page_escapes_review(self):
   i=copy.deepcopy(I);i['attempts'][0]['review']=copy.deepcopy(review);i['attempts'][0]['review']['functionalChecks'][0]['finding']='<script>alert(1)</script>';page=m.render_frozen(m.frozen_cohort(P,i),'<p class="links"></p><section id="process"></section>');self.assertNotIn('<script>',page);self.assertIn('&lt;script&gt;',page)
+ def metric_input(self):
+  i=copy.deepcopy(I);r=i['attempts'][0];r['review']={**review,'canonicalPublished':True,'publishedCheckpoint':'cp'};r['freeze']['requestId']='request';r['publishedMetrics']={'publishedOriginalQualified':True,'originalOperation':{'operationId':'private-operation','sessionId':'private-session','requestId':'request','checkpoint':'cp','traceExpected':2,'traceVerified':2,'durationMs':100,'runtimeStatus':'failed'},'maintainedReaderProof':{'kind':'owning_runtime_fact','records':2,'proofSHA256':'d'*64,'toolActivity':{'unknownResultCalls':0,'orphanTerminalCalls':0,'malformedEvents':0,'conflictingCalls':0,'toolCallCount':1,'returnedWithoutError':1,'returnedWithError':0}},'nativeUsageFieldTotals':{'input':3,'output':5,'reasoning':2,'cacheRead':10,'cacheWrite':0,'totalTokens':18}};return i
+ def test_metrics_are_not_rates_or_billing(self):
+  out=m.frozen_cohort(P,self.metric_input());r=out['frozenCohort']['attempts'][0]['processMetrics'];self.assertEqual(r['nativeUsageFields']['totalTokens'],18);self.assertEqual(r['nativeUsageFields']['reasoning'],2);self.assertIsNone(r['billingCost']);self.assertIsNone(r['globalUsefulCallRate']);self.assertNotIn('private-operation',json.dumps(out))
+ def test_metric_wrong_binding_and_unpublished_refused(self):
+  i=self.metric_input();i['attempts'][0]['publishedMetrics']['originalOperation']['checkpoint']='other';self.assertRaises(ValueError,m.frozen_cohort,P,i)
+  i=self.metric_input();i['attempts'][0]['review']['canonicalPublished']=False;self.assertRaises(ValueError,m.frozen_cohort,P,i)
+ def test_metric_incomplete_trace_refused(self):
+  i=self.metric_input();i['attempts'][0]['publishedMetrics']['maintainedReaderProof']['toolActivity']['unknownResultCalls']=1;self.assertRaises(ValueError,m.frozen_cohort,P,i)
 unittest.main()

@@ -42,3 +42,8 @@ portable baseline.
 
 Never place API keys, Gateway credentials, Agent home directories, or captured
 session data in this release repository.
+
+For frozen assessment report metrics and small cross-machine retained cases, follow
+[portable frozen cases](skills/agentlab-skill-methodology/references/portable-frozen-cases.md)
+and its linked existing scripts. Keep these usage methods in this release library;
+platform maintenance guidance must point here rather than duplicate the methods.

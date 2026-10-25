@@ -107,3 +107,5 @@ archived-reference and older-run regression coverage.
 ### Process review and frozen repeats
 
 Use [process evidence and adjudication](../agentlab-skill-methodology/references/process-evidence-adjudication.md) for the maintained offline report path. Keep frozen whole-task repeats separate from exploratory stages, retain failures/pending records, and preserve original-operation bindings. Tool return flags, real command outcomes, requirement progress, student claims and independent judgment are distinct facts. Do not infer new-feature coverage from supplied-code regressions or whole-task success from WAL/runtime/transport status.
+
+For cross-machine retained cases, follow [portable frozen cases](../agentlab-skill-methodology/references/portable-frozen-cases.md) and the existing mechanical helpers. Keep source/evidence restore and student runtime correctness separate.

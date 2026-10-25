@@ -75,23 +75,51 @@ def frozen_cohort(public,intake):
    record['faultBoundaries']=[{k:v for k,v in f.items() if k in ['layer','observed','rootCause','meaning','studentAbilityFailureEstablished']} for f in review.get('faultBoundaries',[])]
    for key in ['functionalChecks','deliveryChecks','strengths','limitations']:
     for c in review.get(key,[]):
-     record[key].append({k:c[k] for k in ['id','status','finding']})
+     record[key].append({**{k:c[k] for k in ['id','status']},'finding':c.get('publicFinding',c['finding'])})
+  metrics=row.get('publishedMetrics')
+  if metrics:
+   require(review and review['canonicalPublished'] is True and metrics.get('publishedOriginalQualified') is True,'metrics require qualified original publication')
+   original=metrics['originalOperation'];recipient=native['recipient'];proof=metrics['maintainedReaderProof'];tools=proof['toolActivity']
+   require(original['operationId']==recipient['operationId'] and original['sessionId']==recipient['sessionId'] and original['requestId']==freeze['requestId'],'metric original-operation mismatch')
+   require(original['checkpoint']==review['publishedCheckpoint'],'metric checkpoint mismatch')
+   require(proof['kind']=='owning_runtime_fact' and proof['records']==original['traceExpected']==original['traceVerified'],'metric trace mismatch')
+   require(all(tools[k]==0 for k in ['unknownResultCalls','orphanTerminalCalls','malformedEvents','conflictingCalls']),'incomplete trace cannot supply complete metrics')
+   usage={k:metrics['nativeUsageFieldTotals'][k] for k in ['input','output','cacheRead','cacheWrite','reasoning','totalTokens']}
+   require(all(type(v) is int and v>=0 for v in usage.values()),'invalid usage fields')
+   record['processMetrics']={'participantDurationMs':original['durationMs'],'nativeRuntimeStatus':original['runtimeStatus'],'nativeEventCount':proof['records'],'toolCalls':tools['toolCallCount'],'returnedWithoutError':tools['returnedWithoutError'],'returnedWithError':tools['returnedWithError'],'missingOrConflictingResults':0,'nativeUsageFields':usage,'billingCost':None,'globalUsefulCallRate':None,'meaning':'Tool flags are not command success or usefulness. totalTokens includes cacheRead; reasoning is part of output. Not a billing statement.','qualifiedFactCommitment':proof['proofSHA256']}
   out.append(record)
  require(labels=={'A2','B2'},'retain both attempts, including pending or failed')
  result=json.loads(json.dumps(public));result.update(schema='agentlab.public-evaluation.v5',version='2026-10-25-v5');result['agentReport']['analysisRevision']='agent-report-v5'
  result['frozenCohort']={'schema':'agentlab.public-frozen-cohort.v1','protocol':protocol,'attempts':out,'selection':'Both planned same-condition attempts retained; pending and failures not removed. Old Harness run and historical31 remain separate.','wholeTaskPassRate':None,'statisticalStabilityClaim':False,'meaning':'Frozen declarations and evaluator-reviewed observations; pending publication is not task success. n=2 checks procedural repeatability, not statistical stability.'}
+ portable=intake.get('portableValidation')
+ if portable:
+  package=portable['package'];cross=portable['crossHost'];require(package['caseSHA256']==cross['caseSHA256'] and package['archiveSHA256']==cross['archiveSHA256'] and cross['sameArchiveUsedBothHosts'] is True,'portable archive mismatch')
+  require(len(cross['results'])==3 and all(r['sameAsLinux'] is True and r['actorDispatches']==0 for r in cross['results']),'cross-host selected restore incomplete')
+  require(sum(r['filesSHA256Matched'] for r in cross['results'])==cross['totalFileSHA256ChecksEachHost'],'portable count mismatch')
+  result['frozenCohort']['portableValidation']={k:package[k] for k in ['archiveBytes','baseBundleBytes','pointPatchBytes','caseSHA256','archiveSHA256']}
+  result['frozenCohort']['portableValidation'].update(points=3,fileSHA256ChecksEachHost=cross['totalFileSHA256ChecksEachHost'],hostSystems=['Linux','macOS'],gitBasePlusPatchesBytes=package['baseBundleBytes']+sum(package['pointPatchBytes'].values()),scope='selected code/evidence semantic restore only; not SDK, device, agent context or whole physical Capsule',privateEvidenceArchivePublished=False)
  result['provenance']['publicProjectionPolicy']='allowlist-v5-separate-frozen-cohort'
  return result
 
 def render_frozen(data,page):
  e=lambda x:html.escape(str(x));a=data['frozenCohort'];rows=[]
+ labels={'published_failed':'已发布／运行中断','running':'执行中','partial_delivery_runtime_fault':'部分交付／请求故障中断','incomplete_runtime_fault':'实现未完成／请求故障中断','not_executed':'未执行','observed':'已观察到','baseline_only':'仅原始工程','source_only':'仅源码观察','partial':'部分证据','incomplete':'未闭合','behavior_observed_process_identity_incomplete':'行为已观察／进程身份记录不足'}
+ label=lambda v:labels.get(v,v)
  for r in a['attempts']:
-  rows.append('<tr><td>'+e(r['label'])+'</td><td>'+e(r['status'])+'</td><td>'+e(r['newTeacherHelpEvents'])+'</td><td>'+e(r['wholeTaskIndependentVerdict'] or '尚未评审')+'</td></tr>')
+  rows.append('<tr><td>'+e(r['label'])+'</td><td>'+e(label(r['status']))+'</td><td>'+e(r['newTeacherHelpEvents'])+'</td><td>'+e(label(r['wholeTaskIndependentVerdict'] or '尚未评审'))+'</td></tr>')
  detail=[]
  for r in a['attempts']:
   for key,title in [('functionalChecks','功能核对'),('deliveryChecks','交付核对'),('strengths','观察到的长处'),('limitations','限制与未闭合项')]:
-   if r[key]:detail.append('<h3>'+e(r['label'])+' · '+title+'</h3><ul>'+''.join('<li><strong>'+e(c['id'])+' · '+e(c['status'])+'</strong>：'+e(c['finding'])+'</li>' for c in r[key])+'</ul>')
- section='<section id="frozen-cohort"><div class="report-kicker">FROZEN WHOLE-TASK REPEAT</div><h2>同一整题的冻结重复：与历史探索分开</h2><p>同一起点与任务，'+e(a['protocol']['agent'])+' / '+e(a['protocol']['model'])+' / thinking '+e(a['protocol']['thinking'])+' / '+e(a['protocol']['nativeBudgetMs']//1000)+'秒安全上限。两轮用于检查流程可复现性，不代表统计稳定性。无整题通过率。</p><div class="scroll"><table><thead><tr><th>执行</th><th>当前状态</th><th>本轮教师解题帮助</th><th>独立判定</th></tr></thead><tbody>'+''.join(rows)+'</tbody></table></div><p>实际行为、学生交付声明、运行终态和正式发布分别判断；未发布不等于未执行，也不能判为通过。解析器测试通过不冒充新增持久化单元测试覆盖率。</p>'+''.join(detail)+'<p><a href="frozen-cohort.json" download>下载冻结重复与审核事实</a></p></section>'
+   if r[key]:detail.append('<h3>'+e(r['label'])+' · '+title+'</h3><ul>'+''.join('<li><strong>'+e(c['id'])+' · '+e(label(c['status']))+'</strong>：'+e(c['finding'])+'</li>' for c in r[key])+'</ul>')
+ metrics_rows=[]
+ for r in a['attempts']:
+  m=r.get('processMetrics')
+  if m:
+   u=m['nativeUsageFields'];metrics_rows.append('<tr><td>'+e(r['label'])+'</td><td>'+e(round(m['participantDurationMs']/60000,2))+' 分钟</td><td>'+e(m['toolCalls'])+'</td><td>'+e(m['returnedWithoutError'])+' / '+e(m['returnedWithError'])+'</td><td>'+e(u['input'])+'</td><td>'+e(u['output'])+'</td><td>'+e(u['reasoning'])+'</td><td>'+e(u['cacheRead'])+'</td><td>'+e(u['totalTokens'])+'</td></tr>')
+ metrics_html='<h3>正式原操作的过程指标</h3><div class="scroll"><table><thead><tr><th>执行</th><th>学生运行时间</th><th>工具调用</th><th>未标错 / 标错</th><th>输入 Token</th><th>输出 Token</th><th>其中推理</th><th>缓存读取</th><th>原生合计</th></tr></thead><tbody>'+''.join(metrics_rows)+'</tbody></table></div><p>工具未标错不代表命令成功或对目标有益；不计算整体有益调用率。原生合计含缓存读取，推理 Token 是输出的一部分，不能再次相加。费用未知。运行时间与发布等待时间不同；两轮均在30分钟上限前因502结束，不能归因为超时。</p>' if metrics_rows else ''
+ portable=a.get('portableValidation');portable_html=''
+ if portable:portable_html='<h3>可迁移用例与空间</h3><p>同一私有归档在 Linux 和 macOS 还原三个点，每端 '+e(portable['fileSHA256ChecksEachHost'])+' 项文件哈希核对一致。完整私有包 '+e(portable['archiveBytes'])+' 字节；基础 Git '+e(portable['baseBundleBytes'])+' 字节，基础加三个差异补丁 '+e(portable['gitBasePlusPatchesBytes'])+' 字节。基础是本任务18文件的最小提取工程，并非整个生产仓库。</p><p>包包含原始事实、冻结条件、私有判据和教师审核；原始轨迹和归档不公开，也不放入学生工作区。已验证选定源码与证据的语义还原，不包含 SDK、缓存、学生上下文、设备状态或整个物理 Capsule。</p>'
+ section='<section id="frozen-cohort"><div class="report-kicker">FROZEN WHOLE-TASK REPEAT</div><h2>同一整题的冻结重复：与历史探索分开</h2><p>同一起点与任务，'+e(a['protocol']['agent'])+' / '+e(a['protocol']['model'])+' / thinking '+e(a['protocol']['thinking'])+' / '+e(a['protocol']['nativeBudgetMs']//1000)+'秒安全上限。high 指 Agent 原生设置记录，推理已产生；最终上游强度未逐请求独立审计，厂商权重版本未公开。两轮用于检查流程可复现性，不代表统计稳定性。无整题通过率。</p><div class="scroll"><table><thead><tr><th>执行</th><th>当前状态</th><th>本轮教师解题帮助</th><th>独立判定</th></tr></thead><tbody>'+''.join(rows)+'</tbody></table></div><p>实际行为、学生交付声明、运行终态和正式发布分别判断；未发布不等于未执行，也不能判为通过。解析器测试通过不冒充新增持久化单元测试覆盖率。</p>'+metrics_html+portable_html+''.join(detail)+'<p><a href="frozen-cohort.json" download>下载冻结重复与审核事实</a></p></section>'
  page=page.replace('2026-10-25-v4','2026-10-25-v5').replace('探索性评测报告 v4','探索性评测报告 v5').replace('agent-report-v4','agent-report-v5')
  page=page.replace('href="../2026-10-25-v3/">上一报告版本','href="../2026-10-25-v4/">上一报告版本')
  require('<section id="process">' in page,'existing report insertion anchor missing')
