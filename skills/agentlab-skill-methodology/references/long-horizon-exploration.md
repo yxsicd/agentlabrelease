@@ -112,6 +112,15 @@ simultaneous changes in time, environment, task scope or help confound causal
 attribution. Harness/provider/Oracle faults stay distinct from student deficits;
 absence of private reasoning is not evidence of a particular thought process.
 
+When extending an existing report, bind the current capability assessment to the
+actual current attempt and an exact SHA-pinned evidence cut. Retain superseded
+dimension findings as history. A new findings paragraph does not update old
+capability rows automatically, and a previous verified operation must not stand
+in for the latest attempt while its publication is pending. Controller projections
+are independently reviewed judgments; a role string or valid shape does not
+authenticate their author or prove semantic truth. Student tests and final system
+grades remain separate even when both contain pass/fail labels.
+
 Reports must present observed strengths, observed weaknesses, assistance
 requirements and cause hypotheses WITH supporting/counterevidence and limits,
 not just a pass rate. One run supports a context-bound observation; promote a
