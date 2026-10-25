@@ -486,3 +486,5 @@ assistance and run-linked evidence. Never turn dependent exploration into rankin
 Use [difficulty evidence and comparable runs](difficulty-and-run-protocol.md)
 for reached/handled/assisted/unmeasured reviews, help-recipient coverage and
 run-input metadata. Review counts are not task scores; readiness is not permission.
+
+For process benefit, budget-conditioned failures and integrity unknowns, use [process evidence and adjudication](process-evidence-adjudication.md) and the offline `scripts/enrich-process-audit.py` projection; do not let tool return flags become grades.
