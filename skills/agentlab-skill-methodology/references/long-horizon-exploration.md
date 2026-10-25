@@ -451,3 +451,26 @@ as independent completion. Capability observations/hypotheses must name their
 supporting actions and plausible alternative explanations. Selected critical
 calls do not support a population-wide utility rate. Put current findings and
 help-to-next-barrier analysis before collapsed historical operation tables.
+
+
+### Reproduce the current retained point across hosts
+
+Select current source/evidence from the original published operation at its
+immutable artifact-readback revision; keep that revision distinct from the
+workspace checkpoint. A leftover build artifact is not proof of the latest
+source or deployed binary: exclude stale binaries/caches and retain the discrepancy.
+Reuse the existing shared Git baseline and patch helper, preserving older points.
+Account for code-patch, baseline, private evidence and regenerated report sizes
+separately; evidence may dominate even when the code patch is small.
+
+A portable operator package can retain the consumed report-input dependency
+closure outside the restored participant workspace. Require an external trusted
+case digest, selected-file hashes, original Fork/operation bindings and exact
+original result checks. Restore and regrade the SAME archive on another host,
+then compare structured judgments and generated report bytes. A changed restored
+source must reject rather than silently reproduce an old verdict. Analytical
+regrade can omit old image previews to use Git/Python standard library only;
+retain that rendering choice and the original visuals separately. Explicitly
+separate this selected-code/evidence replay from a fresh participant, SDK,
+whole-Capsule, compilation or physical-device rerun. Legacy index qualification
+metadata does not imply every historical row has been reaudited.
