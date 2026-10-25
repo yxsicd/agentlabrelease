@@ -89,7 +89,7 @@ def frozen_cohort(public,intake):
    record['processMetrics']={'participantDurationMs':original['durationMs'],'nativeRuntimeStatus':original['runtimeStatus'],'nativeEventCount':proof['records'],'toolCalls':tools['toolCallCount'],'returnedWithoutError':tools['returnedWithoutError'],'returnedWithError':tools['returnedWithError'],'missingOrConflictingResults':0,'nativeUsageFields':usage,'billingCost':None,'globalUsefulCallRate':None,'meaning':'Tool flags are not command success or usefulness. totalTokens includes cacheRead; reasoning is part of output. Not a billing statement.','qualifiedFactCommitment':proof['proofSHA256']}
   out.append(record)
  require(labels=={'A2','B2'},'retain both attempts, including pending or failed')
- result=json.loads(json.dumps(public));result.update(schema='agentlab.public-evaluation.v5',version='2026-10-25-v5');result['agentReport']['analysisRevision']='agent-report-v5'
+ result=json.loads(json.dumps(public));result.update(schema='agentlab.public-evaluation.v5',version='2026-10-25-v6');result['agentReport']['analysisRevision']='agent-report-v6'
  result['frozenCohort']={'schema':'agentlab.public-frozen-cohort.v1','protocol':protocol,'attempts':out,'selection':'Both planned same-condition attempts retained; pending and failures not removed. Old Harness run and historical31 remain separate.','wholeTaskPassRate':None,'statisticalStabilityClaim':False,'meaning':'Frozen declarations and evaluator-reviewed observations; pending publication is not task success. n=2 checks procedural repeatability, not statistical stability.'}
  portable=intake.get('portableValidation')
  if portable:
@@ -120,9 +120,10 @@ def render_frozen(data,page):
  portable=a.get('portableValidation');portable_html=''
  if portable:portable_html='<h3>可迁移用例与空间</h3><p>同一私有归档在 Linux 和 macOS 还原三个点，每端 '+e(portable['fileSHA256ChecksEachHost'])+' 项文件哈希核对一致。完整私有包 '+e(portable['archiveBytes'])+' 字节；基础 Git '+e(portable['baseBundleBytes'])+' 字节，基础加三个差异补丁 '+e(portable['gitBasePlusPatchesBytes'])+' 字节。基础是本任务18文件的最小提取工程，并非整个生产仓库。</p><p>包包含原始事实、冻结条件、私有判据和教师审核；原始轨迹和归档不公开，也不放入学生工作区。已验证选定源码与证据的语义还原，不包含 SDK、缓存、学生上下文、设备状态或整个物理 Capsule。</p>'
  section='<section id="frozen-cohort"><div class="report-kicker">FROZEN WHOLE-TASK REPEAT</div><h2>同一整题的冻结重复：与历史探索分开</h2><p>同一起点与任务，'+e(a['protocol']['agent'])+' / '+e(a['protocol']['model'])+' / thinking '+e(a['protocol']['thinking'])+' / '+e(a['protocol']['nativeBudgetMs']//1000)+'秒安全上限。high 指 Agent 原生设置记录，推理已产生；最终上游强度未逐请求独立审计，厂商权重版本未公开。两轮用于检查流程可复现性，不代表统计稳定性。无整题通过率。</p><div class="scroll"><table><thead><tr><th>执行</th><th>当前状态</th><th>本轮教师解题帮助</th><th>独立判定</th></tr></thead><tbody>'+''.join(rows)+'</tbody></table></div><p>实际行为、学生交付声明、运行终态和正式发布分别判断；未发布不等于未执行，也不能判为通过。解析器测试通过不冒充新增持久化单元测试覆盖率。</p>'+metrics_html+portable_html+''.join(detail)+'<p><a href="frozen-cohort.json" download>下载冻结重复与审核事实</a></p></section>'
- page=page.replace('2026-10-25-v4','2026-10-25-v5').replace('探索性评测报告 v4','探索性评测报告 v5').replace('agent-report-v4','agent-report-v5')
- page=page.replace('href="../2026-10-25-v3/">上一报告版本','href="../2026-10-25-v4/">上一报告版本')
+ page=page.replace('2026-10-25-v4','2026-10-25-v6').replace('探索性评测报告 v4','综合评测报告 v6').replace('agent-report-v4','agent-report-v6')
+ page=page.replace('href="../2026-10-25-v3/">上一报告版本','href="../2026-10-25-v5/">上一报告版本')
  require('<section id="process">' in page,'existing report insertion anchor missing')
+ for old,new in {'缺同协议独立重复；这里不是0%，也不是4/31。pass@k、pass^k、稳定性和置信区间暂不估计。': '历史31轮不组成独立重复；新增A2/B2已单列，两轮请求故障中断，不估计任务通过率、pass@k或统计稳定性。', '无合格同协议独立重复队列；不是0%，不可用4/31替代': '历史31轮不进入可比队列；A2/B2单列，不用阶段合格数替代能力通过率。', '没有同配置、同起点、无额外帮助的整题独立重复，不能估计整题通过率、pass@k/pass^k或置信区间。': 'A2/B2已完成同条件整题执行并正式发布；两次均在请求链路502时中断，不据此估计一般能力通过率或统计稳定性。', '最新自由输入与收尾阶段，不覆盖全部历史轮次': '本轮A2/B2冻结整题；不覆盖历史31轮的混合配置。', '历史混合；续跑继承产物与帮助上下文，不是统一预算组': '本轮同一干净起点、30分钟安全上限、无新增解题帮助；历史配置另列。', '本公开视图未核定完整OS、SDK、模拟器和工具版本': '本轮记录SDK 6.1.1（构建125）、Hvigor 6.24.4、构建Node 18.20.1；整机和模拟器完整版本未独立核定。', '冻结后可在同一任务上建立独立重复；不需要先扩到更多任务。': '本轮A2/B2已在独立冻结队列披露；历史缺口不倒填，不需要扩到更多任务。'}.items():page=page.replace(old,new)
  return page.replace('<section id="process">',section+'<section id="process">',1).replace('<p class="links">','<p class="links"><a href="#frozen-cohort">冻结整题重复</a>',1)
 
 def frozen_main():

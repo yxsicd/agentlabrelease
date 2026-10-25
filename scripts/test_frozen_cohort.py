@@ -37,4 +37,8 @@ class FrozenBoundaries(unittest.TestCase):
   i=self.metric_input();i['attempts'][0]['review']['canonicalPublished']=False;self.assertRaises(ValueError,m.frozen_cohort,P,i)
  def test_metric_incomplete_trace_refused(self):
   i=self.metric_input();i['attempts'][0]['publishedMetrics']['maintainedReaderProof']['toolActivity']['unknownResultCalls']=1;self.assertRaises(ValueError,m.frozen_cohort,P,i)
+ def test_current_summary_scope_and_public_version(self):
+  page='<section id="process"></section><p>没有同配置、同起点、无额外帮助的整题独立重复，不能估计整题通过率、pass@k/pass^k或置信区间。</p><p>本公开视图未核定完整OS、SDK、模拟器和工具版本</p>'
+  out=m.render_frozen(m.frozen_cohort(P,I),page);self.assertNotIn('没有同配置',out);self.assertIn('A2/B2已完成',out);self.assertIn('构建125',out)
+  spec=importlib.util.spec_from_file_location('scan',str(Path(__file__).with_name('export-public-evaluation.py')));scan=importlib.util.module_from_spec(spec);spec.loader.exec_module(scan);scan.scan_public(out)
 unittest.main()
