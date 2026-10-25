@@ -1,0 +1,34 @@
+{
+  "schema": "agentlab.public-capture-guidance.v1",
+  "caseId": "calendar-restart-persistence",
+  "studentArtifacts": {
+    "verification": [
+      "incremental observed/unexecuted checks",
+      "intended input and actual visible input",
+      "actual action and displayed result",
+      "before/after own-app process identity",
+      "unexecuted checks and original errors"
+    ],
+    "rawEvidence": [
+      "original outputs or explicitly labeled excerpts",
+      "hierarchy file identities",
+      "actual commands and observed values"
+    ]
+  },
+  "harnessOwnedFacts": [
+    "actual participant/model/API/runtime versions",
+    "effective thinking policy and budgets",
+    "operation/session/request/source/knowledge identities",
+    "tool requests/results and native termination",
+    "teacher intervention content/type/recipient/time"
+  ],
+  "controllerOwnedAssessment": [
+    "independent check verdicts from original trajectory",
+    "functional progress separate from delivery completeness",
+    "tool-wrapper status separate from semantic success and useful progress",
+    "inherited source/help disclosed; assistance weights separately versioned"
+  ],
+  "studentFinalSelfScoreRequired": false,
+  "privateJudgeInKnowledgeBranch": false,
+  "runtimeEnforcedByThisFile": false
+}

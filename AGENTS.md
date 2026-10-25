@@ -15,3 +15,7 @@ sample, authenticate a runtime Owner, or authorize app/device operations. Load
 these documents as declared maintenance context outside the business checkout.
 For an assessed student provide only its frozen public task/inputs; private judges
 and historical teacher context are not automatically part of its context.
+
+For evidence responsibilities read
+[capture guidance](cases/calendar-restart/capture-contract.json): student task
+artifacts, Harness-captured facts and controller grades have different owners.
