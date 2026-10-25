@@ -474,3 +474,7 @@ retain that rendering choice and the original visuals separately. Explicitly
 separate this selected-code/evidence replay from a fresh participant, SDK,
 whole-Capsule, compilation or physical-device rerun. Legacy index qualification
 metadata does not imply every historical row has been reaudited.
+
+For public delivery, use [public report publication](public-report-publishing.md).
+Export reviewed allowlisted summaries; preserve independent assessment, original
+failures and help attribution. Raw traces and portable task archives remain private.
