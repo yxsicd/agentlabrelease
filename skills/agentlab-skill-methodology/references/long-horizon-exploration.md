@@ -372,3 +372,19 @@ proves neither improved student performance nor completed application acceptance
 that benefit still requires independent behavioral checks. Record submission to
 prompt acceptance separately from native execution time so preparation/transport
 wait is not mislabeled as student thinking.
+
+
+## Restore material mechanically before participant budget
+
+Do not make a participant regenerate long opaque encodings to recover supplied
+source. Materialize retained bytes through an already advertised, independently
+authorized workspace/file operation before assessment, verify every path/hash,
+and freeze the resulting manifest and Ready execution revision. An encoding in
+an operator-generated transport is different from asking the model to copy it.
+Keep this Harness preparation separate from new student implementation and help.
+For exact file-only writable mounts, creating/renaming a sibling temporary file
+is outside scope: use the authorized exact files and verify completion; do not
+widen directory permission to hide a failed operation. Read the original durable
+operation status after uncertainty, never repeat a write based on transport exit
+or a successful HTTP envelope. A completed checkpoint can retain a FAILED command;
+check command status, actual bytes and Ready independently before the next turn.
