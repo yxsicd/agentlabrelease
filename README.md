@@ -19,3 +19,10 @@ is validated and contains presentation preferences only. Report-internal links
 route through the outer shell; chapter changes do not reload the report iframe.
 Mobile drawers are mutually exclusive and dismiss with backdrop or Escape.
 Version CSS/JS URLs when updating the shell to avoid mixed cached asset versions.
+
+Agent report v2 (same evidence cutoff, no new executions) separates task-level
+completion from stage/runtime outcomes, discloses latest Agent/thinking config,
+provides metric definitions and resource-usage coverage, and links ability claims
+to numbered evidence rows. Filters affect the execution ledger only; campaign
+summary metrics remain fixed. Reliability, total cost and global useful-call rate
+remain null without adequate evidence. Preserve v1; current portal selects v2.

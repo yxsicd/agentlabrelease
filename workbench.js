@@ -6,8 +6,8 @@
   const loading = document.getElementById("loading");
   const backdrop = document.getElementById("drawer-backdrop");
   const mobile = matchMedia("(max-width:760px)");
-  const labels = {overview:"总体概览",report:"完整评测报告",capabilities:"能力与难点",help:"教师帮助归因",history:"执行轨迹摘要",portability:"跨机迁移复核"};
-  const base = new URL("reports/calendar/2026-10-25/", location.href);
+  const labels = {protocol:"评测协议与配置",results:"阶段结果与口径",cost:"耗时与Token证据",attribution:"学生／Harness归因",gaps:"正式评测剩余差距",overview:"总体概览",report:"完整评测报告",capabilities:"能力与难点",help:"教师帮助归因",history:"执行轨迹摘要",portability:"跨机迁移复核"};
+  const base = new URL("reports/calendar/2026-10-25-v2/", location.href);
   const storageKey = "agentlab.public-workbench.v1";
   const defaults = {view:"overview",left:true,right:true,bottom:true,leftSize:224,rightSize:278,bottomSize:166};
   let state = {...defaults};
@@ -121,9 +121,15 @@
       });
       doc.querySelectorAll("a[href]").forEach(link => {
         const url = new URL(link.getAttribute("href"), base);
-        if (url.origin !== base.origin || url.pathname.endsWith(".json")) {
+        if (url.origin !== base.origin || url.pathname.endsWith(".json") || (url.pathname !== base.pathname && url.pathname.includes("/reports/"))) {
           link.target = "_blank"; link.rel = "noopener";
         }
+      });
+      doc.addEventListener("click", event => {
+        const link=event.target.closest('a[href^="#run-"]');
+        if (!link) return;
+        const reset=doc.getElementById("reset-runs");
+        if (reset) reset.click();
       });
       loaded = true;
       setBusy(false);
