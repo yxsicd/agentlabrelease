@@ -26,3 +26,11 @@ provides metric definitions and resource-usage coverage, and links ability claim
 to numbered evidence rows. Filters affect the execution ledger only; campaign
 summary metrics remain fixed. Reliability, total cost and global useful-call rate
 remain null without adequate evidence. Preserve v1; current portal selects v2.
+
+Report v3 retains v1/v2 and the SAME 31-run evidence cutoff. It adds a versioned
+seven-item difficulty review, eleven help/context event summaries with exact
+recipient-link coverage, normalized run JSONL and a draft independent-comparison
+input checklist. Review states are scoped observations, never new task scores.
+Missing model IDs remain null. Readiness is reporting metadata only, not evidence
+authentication or runtime permission. Historical dependent runs stay exploration
+records even when some local actions were autonomous.

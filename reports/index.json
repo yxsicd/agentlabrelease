@@ -3,6 +3,16 @@
   "reports": [
     {
       "id": "calendar",
+      "version": "2026-10-25-v3",
+      "title": "Calendar Agent难点与比较协议报告v3",
+      "url": "calendar/2026-10-25-v3/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false,
+      "reportType": "assisted_exploration",
+      "evidenceCutoff": "2026-10-25"
+    },
+    {
+      "id": "calendar",
       "version": "2026-10-25-v2",
       "title": "Calendar Agent评测报告v2",
       "url": "calendar/2026-10-25-v2/",
@@ -20,5 +30,5 @@
       "independentWholeTaskPass": false
     }
   ],
-  "latest": "calendar/2026-10-25-v2/"
+  "latest": "calendar/2026-10-25-v3/"
 }
