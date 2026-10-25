@@ -17,3 +17,14 @@ python3 scripts/restore_retained_case.py --package PRIVATE_CASE_DIRECTORY \
 Never self-read an untrusted case digest as its own authorization. Preserve partial output after rejection; inspect it before any new generation. Verify the SAME archive on both machines, matching target Git trees and actual selected-file hashes. Report archive bytes, shared base, patch bytes and evidence separately. This is selected-code/evidence semantic restoration, not whole Capsule, SDK/device state, fresh-agent execution or a new functional pass.
 
 Use the existing `enrich-process-audit.py --frozen-reviews ...` report mode after independent original-operation qualification. It validates metric operation/session/request/checkpoint binding and complete trace results, retains native cache/input/output/reasoning fields without double counting, and never turns tool flags into global useful-call rate or billing. Publish only allowlisted projections; raw native traces, private oracles and portable private archives never enter public Pages. Native high is an Agent setting; disclose any unaudited upstream effort and unexposed vendor weight revision.
+
+
+For a qualified model-campaign poststate, pass `portableValidation` on that
+attempt to the existing `--model-campaign` projector. It checks the original
+operation/session/request digest/checkpoint binding, the same archive and case
+commitments on both hosts, every declared point/tree/file count, and controller
+isolation. Keep original executable modes as well as file bytes: copying source
+with text-only writes can silently break executable test entrypoints. Preserve
+raw structured student/teacher evidence in compressed private controller assets,
+not in the clean seed. Report shared-base bytes, patch bytes, archive bytes and
+restore scope separately. A poststate restore is not another student pass.
