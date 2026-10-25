@@ -1,0 +1,309 @@
+{
+  "schema": "agentlab.public-frozen-cohort.v1",
+  "protocol": {
+    "taskSHA256": "99d7af9d555e43a94bb867260fdabaa3a59c0ef7a4118250e4913e40ae832bf2",
+    "initialStateRevision": "5ea3100ed825b5b82ca22073a70f4351cea85c1d",
+    "agent": "Pi1.4.0",
+    "model": "glm-5.3-flash",
+    "thinking": "high",
+    "nativeBudgetMs": 1800000,
+    "gatewaySHA256": "8785abe5aecadc7e3ef74ef5e27311b2f053e25d1284d0bf52a31c4011b4fe70",
+    "oracleSHA256": "77cebf73315fa202d54bafedf526af48e9ef1235a53b243cf24ae063c56eca0c"
+  },
+  "attempts": [
+    {
+      "label": "A2",
+      "status": "published_failed",
+      "newTeacherHelpEvents": 0,
+      "wholeTaskIndependentVerdict": "partial_delivery_runtime_fault",
+      "canonicalPublished": true,
+      "functionalChecks": [
+        {
+          "id": "int-valid",
+          "status": "observed",
+          "finding": "实际输入 +03,-2 并按整数求值，得到 [3,-2]。"
+        },
+        {
+          "id": "int-invalid",
+          "status": "observed",
+          "finding": "实际输入 1,0,2，验证列表整体拒绝为 []。"
+        },
+        {
+          "id": "weekday-invalid",
+          "status": "observed",
+          "finding": "实际输入 MO,0TU,WE，验证整体拒绝为 []。"
+        },
+        {
+          "id": "weekday-valid",
+          "status": "observed",
+          "finding": "实际输入 TU,+02FR，得到周二无序数、周五序数2的结果。"
+        },
+        {
+          "id": "recovery",
+          "status": "observed",
+          "finding": "先观察无效输入失败，再修正为 +03,-2，验证恢复为正确结果。"
+        },
+        {
+          "id": "draft-restart",
+          "status": "behavior_observed_process_identity_incomplete",
+          "finding": "未求值的星期草稿在强停重启后，与上次整数输入和结果分开保留；有停止成功和空 pidof，但缺少重启前后数字进程身份。"
+        },
+        {
+          "id": "evaluated-restart",
+          "status": "behavior_observed_process_identity_incomplete",
+          "finding": "恢复的星期草稿求值后，第二次强停重启保留最新结果；缺少数字进程身份对照。"
+        },
+        {
+          "id": "legacy-button",
+          "status": "observed",
+          "finding": "新增流程之后，六个原按钮全部实际点击，结果符合原解析器。"
+        }
+      ],
+      "deliveryChecks": [
+        {
+          "id": "parser-preserved",
+          "status": "observed",
+          "finding": "提供的解析器哈希未变，不将既有业务逻辑记为学生新实现。"
+        },
+        {
+          "id": "real-tests",
+          "status": "observed",
+          "finding": "先43/44通过，学生定位自己对 1MO 的错误预期并修正，最终45/45且退出码0。这些测试覆盖提供的解析器，不是新增持久化的单元测试覆盖率。"
+        },
+        {
+          "id": "build-deploy",
+          "status": "observed",
+          "finding": "最终源码真实离线构建成功，HAP 55,398字节；实际更新安装与启动，并重新安装观察空初态。完整功能流程在最终重建前完成，相关源码与原调用字节匹配。"
+        },
+        {
+          "id": "final-artifact",
+          "status": "incomplete",
+          "finding": "证据JSON仍为3,573字节的 in-progress 基线记录；早期“后续完整流程”和签名描述当时未获支持。依据真实轨迹审核，不以该声明自证。"
+        }
+      ],
+      "strengths": [
+        {
+          "id": "offline-environment-recovery",
+          "status": "observed",
+          "finding": "自行定位已有离线编译工具、修复ES模块加载，并查询SDK持久化API，没有新装依赖。"
+        },
+        {
+          "id": "test-oracle-debugging",
+          "status": "observed",
+          "finding": "发现并修正自己的测试预期错误，未修改提供的解析器迎合测试。"
+        },
+        {
+          "id": "end-to-end-validation",
+          "status": "observed",
+          "finding": "自行串起输入、求值、UI层级观察、强停重启和旧按钮验证。"
+        }
+      ],
+      "limitations": [
+        {
+          "id": "evidence-completion",
+          "status": "observed",
+          "finding": "最终证据文件未收尾，且有未获支持的早期声明；502中断使最终交付能力判断存在混杂。"
+        },
+        {
+          "id": "test-scope",
+          "status": "observed",
+          "finding": "45项通过仅能说明解析器回归，不能冒充新增持久化单元测试覆盖。"
+        },
+        {
+          "id": "restart-proof",
+          "status": "incomplete",
+          "finding": "缺少冻结判据要求的数字进程身份对照；教师未代补学生证据。"
+        }
+      ],
+      "evidenceCommitment": "f82f07b0b68c79ad4e8d043c0173d53fb016f55f213daf1bd4e51eae913092d1",
+      "faultBoundaries": [
+        {
+          "layer": "native_model_request",
+          "observed": "assistant502 send failure to configured upstream",
+          "rootCause": "not established; provider/gateway/network boundary",
+          "studentAbilityFailureEstablished": false
+        },
+        {
+          "layer": "publication",
+          "observed": "Original operation Completed; immutable checkpoint and ReadyLease converge",
+          "meaning": "Earlier unknown and metric guard refusal retained; no request replay"
+        }
+      ],
+      "processMetrics": {
+        "participantDurationMs": 1489332,
+        "nativeRuntimeStatus": "failed",
+        "nativeEventCount": 34555,
+        "toolCalls": 68,
+        "returnedWithoutError": 67,
+        "returnedWithError": 1,
+        "missingOrConflictingResults": 0,
+        "nativeUsageFields": {
+          "input": 37040,
+          "output": 50292,
+          "cacheRead": 988416,
+          "cacheWrite": 0,
+          "reasoning": 32471,
+          "totalTokens": 1075748
+        },
+        "billingCost": null,
+        "globalUsefulCallRate": null,
+        "meaning": "Tool flags are not command success or usefulness. totalTokens includes cacheRead; reasoning is part of output. Not a billing statement.",
+        "qualifiedFactCommitment": "80c32da3f2d8b2864c901f3f0fd3510b385065c7119610e507ee101b7735b34e"
+      }
+    },
+    {
+      "label": "B2",
+      "status": "published_failed",
+      "newTeacherHelpEvents": 0,
+      "wholeTaskIndependentVerdict": "incomplete_runtime_fault",
+      "canonicalPublished": true,
+      "functionalChecks": [
+        {
+          "id": "int-valid",
+          "status": "not_executed",
+          "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+        },
+        {
+          "id": "int-invalid",
+          "status": "not_executed",
+          "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+        },
+        {
+          "id": "weekday-invalid",
+          "status": "not_executed",
+          "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+        },
+        {
+          "id": "weekday-valid",
+          "status": "not_executed",
+          "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+        },
+        {
+          "id": "recovery",
+          "status": "not_executed",
+          "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+        },
+        {
+          "id": "draft-restart",
+          "status": "not_executed",
+          "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+        },
+        {
+          "id": "evaluated-restart",
+          "status": "not_executed",
+          "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+        },
+        {
+          "id": "legacy-button",
+          "status": "not_executed",
+          "finding": "在502中断前尚未执行这项新增功能检查；原始工程UI不替代该验证。"
+        }
+      ],
+      "deliveryChecks": [
+        {
+          "id": "code-changes",
+          "status": "observed",
+          "finding": "新增持久化代码，修改UI和Ability；提供的解析器未改。新增代码尚未编译、测试或在设备上验证。"
+        },
+        {
+          "id": "real-tests",
+          "status": "not_executed",
+          "finding": "31次完整工具调用中，没有新增功能或解析器测试执行记录。"
+        },
+        {
+          "id": "build-deploy",
+          "status": "baseline_only",
+          "finding": "只完成了修改前原始工程的真实构建、安装、启动和UI观察；该HAP不能证明后续新代码可交付。"
+        },
+        {
+          "id": "final-artifact",
+          "status": "partial",
+          "finding": "2,495字节JSON明确 partial=true，只记录基线进展，没有冒充新增功能已验证。"
+        }
+      ],
+      "strengths": [
+        {
+          "id": "environment-baseline",
+          "status": "observed",
+          "finding": "自行发现现有SDK、查询持久化API，并完成原始工程构建部署与UI摸底。"
+        },
+        {
+          "id": "separate-state-design",
+          "status": "source_only",
+          "finding": "从源码可观察到草稿与上次结果分开保存的设计，运行正确性未测。"
+        }
+      ],
+      "limitations": [
+        {
+          "id": "unexecuted-feature",
+          "status": "incomplete",
+          "finding": "未到达新代码编译、测试、实际输入或重启验证；请求链路中断，不能据此外推能力不足。"
+        },
+        {
+          "id": "invalid-tool-target",
+          "status": "observed",
+          "finding": "一次占位路径编辑因ENOENT失败，没有应用所拟内容；随后编辑了实际文件。不据此猜测不当行为。"
+        }
+      ],
+      "evidenceCommitment": "d91721c8c4fb1664c66753bf1c91c2ddb8959d1f84cd0a6f65a9358a6971c343",
+      "faultBoundaries": [
+        {
+          "layer": "native_model_request",
+          "observed": "pi_assistant_error with502 send failure",
+          "rootCause": "provider/gateway/network location not established",
+          "studentAbilityFailureEstablished": false
+        },
+        {
+          "layer": "publication",
+          "observed": "Original operation Completed; immutable checkpoint and ReadyLease converge",
+          "meaning": "Publication closed by readback without retry or request replay"
+        }
+      ],
+      "processMetrics": {
+        "participantDurationMs": 417291,
+        "nativeRuntimeStatus": "failed",
+        "nativeEventCount": 11728,
+        "toolCalls": 31,
+        "returnedWithoutError": 29,
+        "returnedWithError": 2,
+        "missingOrConflictingResults": 0,
+        "nativeUsageFields": {
+          "input": 20369,
+          "output": 17279,
+          "cacheRead": 226624,
+          "cacheWrite": 0,
+          "reasoning": 11009,
+          "totalTokens": 264272
+        },
+        "billingCost": null,
+        "globalUsefulCallRate": null,
+        "meaning": "Tool flags are not command success or usefulness. totalTokens includes cacheRead; reasoning is part of output. Not a billing statement.",
+        "qualifiedFactCommitment": "8746607fb4b1a5d4c451ad2a13abf8aed3da099e9e0ba6f31064d76eec2026d1"
+      }
+    }
+  ],
+  "selection": "Both planned same-condition attempts retained; pending and failures not removed. Old Harness run and historical31 remain separate.",
+  "wholeTaskPassRate": null,
+  "statisticalStabilityClaim": false,
+  "meaning": "Frozen declarations and evaluator-reviewed observations; pending publication is not task success. n=2 checks procedural repeatability, not statistical stability.",
+  "portableValidation": {
+    "archiveBytes": 751631,
+    "baseBundleBytes": 7094,
+    "pointPatchBytes": {
+      "seed": 4772,
+      "A2": 31893,
+      "B2": 22320
+    },
+    "caseSHA256": "6ece4d7d2018b7ca7ef722fd82ab1eadcd18681e27f3f9f8c2193c0310985215",
+    "archiveSHA256": "dff7a902b1cec96e8b883676d3f3e08aad672e38d4e2e45feb2283c723a1f938",
+    "points": 3,
+    "fileSHA256ChecksEachHost": 62,
+    "hostSystems": [
+      "Linux",
+      "macOS"
+    ],
+    "gitBasePlusPatchesBytes": 66079,
+    "scope": "selected code/evidence semantic restore only; not SDK, device, agent context or whole physical Capsule",
+    "privateEvidenceArchivePublished": false
+  }
+}
