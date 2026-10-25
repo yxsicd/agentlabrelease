@@ -39,6 +39,7 @@ def render(data,page):
  page=page.replace('href="../2026-10-25-v2/">上一报告版本','href="../2026-10-25-v3/">上一报告版本')
  return page.replace('<section id="difficulty"',process+judgment+'<section id="difficulty"',1).replace('<p class="links">','<p class="links"><a href="#process">调用收益证据</a><a href="#judgment">判定与完整性</a>',1)
 def main():
+ if "--model-campaign" in sys.argv:return model_main()
  if "--frozen-reviews" in sys.argv:return frozen_main()
  p=argparse.ArgumentParser();p.add_argument('--private-report',type=Path,required=True);p.add_argument('--public-v3',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--scanner',type=Path,required=True);args=p.parse_args();require(not args.output.exists(),'immutable output exists')
  data=project(json.loads(args.private_report.read_text()),json.loads((args.public_v3/'evaluation.json').read_text()));page=render(data,(args.public_v3/'index.html').read_text());spec=importlib.util.spec_from_file_location('scanner',args.scanner);s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s);s.scan_public(data);s.scan_public(page)
@@ -130,5 +131,72 @@ def frozen_main():
  p=argparse.ArgumentParser();p.add_argument('--frozen-reviews',type=Path,required=True);p.add_argument('--public-v4',type=Path,required=True);p.add_argument('--scanner',type=Path,required=True);p.add_argument('--output',type=Path,required=True);args=p.parse_args();require(not args.output.exists(),'immutable output exists')
  data=frozen_cohort(json.loads((args.public_v4/'evaluation.json').read_text()),json.loads(args.frozen_reviews.read_text()));page=render_frozen(data,(args.public_v4/'index.html').read_text());spec=importlib.util.spec_from_file_location('scanner',args.scanner);scanner=importlib.util.module_from_spec(spec);spec.loader.exec_module(scanner);scanner.scan_public(data);scanner.scan_public(page)
  shutil.copytree(args.public_v4,args.output);(args.output/'evaluation.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n');(args.output/'index.html').write_text(page);(args.output/'frozen-cohort.json').write_text(json.dumps(data['frozenCohort'],ensure_ascii=False,indent=2)+'\n');print(json.dumps({'historicalOperations':len(data['operations']),'separateFrozenAttempts':len(data['frozenCohort']['attempts']),'wholeTaskPassRate':None}))
+
+def model_campaign(public, intake):
+ """Project an explicitly frozen one-attempt-per-model campaign, not a ranker."""
+ require(intake.get('schema')=='agentlab.model-campaign-intake.v1','model campaign intake required')
+ p=intake['protocol']; models=p['models']; require(isinstance(models,list) and len(models)==len(set(models))>0,'unique planned models required')
+ for k in ['taskSHA256','oracleSHA256','gatewaySHA256','runnerSHA256']:
+  require(bool(re.fullmatch('[0-9a-f]{64}',p[k])),'invalid protocol commitment')
+ require(type(p['nativeBudgetMs']) is int and p['nativeBudgetMs']>0 and p['thinking']!='off','enabled thinking and positive budget required')
+ raw=intake['oracleRawUTF8']; require(hashlib.sha256(raw.encode()).hexdigest()==p['oracleSHA256'],'frozen oracle mismatch'); oracle=json.loads(raw)
+ expected={('functional',v['id']) for v in oracle['functionalChecks']}|{('delivery',v) for v in oracle['deliveryChecks']}|{('context',v) for v in oracle['independenceConditions']}
+ require(all(any(c==kind for c,_ in expected) for kind in ['functional','delivery','context']),'incomplete frozen oracle')
+ attempts=[]; seen=set(); operations=set()
+ for row in intake['attempts']:
+  model=row['model']; require(model in models and model not in seen,'retain one attempt per planned model'); seen.add(model)
+  f=row['freeze']; n=row['nativeAcceptance']; start=row['qualifiedStart']; recipient=n['recipient']; op=recipient['operationId']
+  require(op not in operations,'original operation reused'); operations.add(op)
+  require(start['forkCommit']==p['initialStateRevision'] and start['priorContextFiles']==[] and n['freshParticipantContext'] is True,'fresh same-seed context required')
+  require(start['sessionId']==f['sessionId']==recipient['sessionId'] and start['workspaceRevision']==f['baseRef']==recipient['baseRef'],'qualified source and original recipient mismatch')
+  require(f['taskSHA256']==n['taskSHA256']==p['taskSHA256'] and f['nativeBudgetMs']==p['nativeBudgetMs'] and f['gatewaySHA256']==p['gatewaySHA256'],'frozen environment mismatch')
+  cfg=n['configurationObserved']; changes=[v['modelId'] for v in cfg if 'modelId' in v]; thinking=[v['thinkingLevel'] for v in cfg if 'thinkingLevel' in v]
+  require(changes and all(v==model for v in changes) and thinking and all(v==p['thinking'] for v in thinking),'actual model/thinking drift')
+  budget=row['actualRuntimeBinding']['boundValues']; require(budget['--llm-model-id']==model and int(budget['--timeout-ms'])==p['nativeBudgetMs'] and budget['--session-id']==recipient['sessionId'],'actual runner binding mismatch')
+  require(row['actualRunnerSHA256']==p['runnerSHA256'],'actual runner mismatch')
+  helps=n['newHelpEvents'];require(type(helps) is int and helps>=0,'help count required')
+  record={'model':model,'status':'running','wholeTaskPassed':None,'teacherSolutionHelpEvents':helps,'canonicalPublished':False,'processMetrics':None,'findings':row.get('publicFindings',[]),'evidenceCommitment':hashlib.sha256(json.dumps(row,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()}
+  review=row.get('review'); metrics=row.get('publishedMetrics')
+  if review:
+   require(review.get('schema')=='agentlab.independent-frozen-task-review.v1' and review.get('producer')=='teacher_evaluator','independent teacher review required')
+   require(review['operationId']==op and review['sessionId']==recipient['sessionId'] and review['requestDigest']==recipient['requestDigest'] and review['taskSHA256']==p['taskSHA256'],'review original binding mismatch')
+   require(review['teacherSolutionHelpEvents']==helps,'assistance audit mismatch')
+   record['canonicalPublished']=review['canonicalPublicationQualified'] is True
+   require(type(review['wholeTaskPassed']) is bool,'completed review verdict required')
+   if review['wholeTaskPassed']:
+    require(metrics and record['canonicalPublished'] and review['oracleSHA256']==p['oracleSHA256'],'whole pass requires published original and frozen oracle')
+    criteria=review['criteria'];require(len(criteria)==len(expected) and {(v['category'],v['id']) for v in criteria}==expected,'all frozen criteria required')
+    require(all(v.get('passed') is True and v.get('proofRefs') and all(re.fullmatch('[0-9a-f]{64}',r.get('sha256','')) for r in v['proofRefs']) for v in criteria),'every criterion requires independent proof')
+   record.update(status=('passed_assisted' if helps else 'passed') if review['wholeTaskPassed'] else 'incomplete',wholeTaskPassed=review['wholeTaskPassed'],studentCapabilityFailureEstablished=review.get('studentCapabilityFailureEstablished'),harnessFailureEstablished=review.get('harnessFailureEstablished'))
+  if metrics:
+   require(review and record['canonicalPublished'] and metrics.get('publishedOriginalQualified') is True,'metrics require qualified original publication')
+   original=metrics['originalOperation']; proof=metrics['maintainedReaderProof'];t=proof['toolActivity']
+   require(original['operationId']==op and original['sessionId']==recipient['sessionId'] and original['requestId']==f['requestId'] and original['modelId']==model and original['checkpoint']==review['publishedCheckpoint'],'metrics original/model/checkpoint mismatch')
+   require(proof['kind']=='owning_runtime_fact' and proof['records']==original['traceExpected']==original['traceVerified'],'incomplete original fact')
+   require(all(t[k]==0 for k in ['unknownResultCalls','orphanTerminalCalls','malformedEvents','conflictingCalls']),'incomplete tool trace')
+   u=metrics['nativeUsageFieldTotals']; require(all(v is None or type(v) is int and v>=0 for v in u.values()),'invalid usage fields')
+   fields=['input','output','cacheRead','cacheWrite','reasoning','totalTokens']; require(all(k in u for k in fields),'usage declarations missing')
+   allzero=all(u[k] in [0,None] for k in fields); qualified=None if allzero else {k:u[k] for k in fields}
+   record['processMetrics']={'participantDurationMs':original['durationMs'],'nativeRuntimeStatus':original['runtimeStatus'],'nativeEventCount':proof['records'],'toolCalls':t['toolCallCount'],'returnedWithoutError':t['returnedWithoutError'],'returnedWithError':t['returnedWithError'],'qualifiedNativeUsageFields':qualified,'usageQuality':'all_zero_or_missing_unqualified' if allzero else 'native_fields_missing_remain_null','billingCost':None,'globalUsefulCallRate':None,'qualifiedFactCommitment':proof['proofSHA256']}
+  attempts.append(record)
+ require(seen==set(models),'retain every planned model including unfinished runs')
+ result=json.loads(json.dumps(public));result.update(schema='agentlab.public-evaluation.v6',version=intake['publicVersion']);result['modelCampaign']={'schema':'agentlab.public-model-campaign.v1','protocol':{k:p[k] for k in ['models','agent','thinking','nativeBudgetMs','taskSHA256','initialStateRevision','oracleSHA256','gatewaySHA256','runnerSHA256']},'attempts':attempts,'plannedAttempts':len(models),'finishedReviews':sum(r['wholeTaskPassed'] is not None for r in attempts),'wholeTaskPassRate':None,'statisticalStabilityClaim':False,'modelRankingClaim':False,'configurationTrials':[{k:r[k] for k in ['kind','reason','studentCapabilityScore','operatorInterventions','retained','excludedFromMatchedCampaign']} for r in intake.get('configurationTrials',[])],'meaning':'One task, one attempt per model. Pending/incomplete attempts retained. Teacher review is independent; hashes bind bytes, not semantic truth. Native thinking high does not establish equal upstream effort. Historical populations remain separate.'};return result
+
+
+def render_model_campaign(data,page):
+ e=lambda x:html.escape(str(x));c=data['modelCampaign']; labels={'running':'执行中，尚未评分','passed':'独立整题验收通过','passed_assisted':'验收通过（有解题帮助）','incomplete':'交付未完成；原因分层记录'};rows=[]
+ for r in c['attempts']:
+  m=r['processMetrics']; u=m['qualifiedNativeUsageFields'] if m else None
+  rows.append('<tr><td>'+e(r['model'])+'</td><td>'+e(labels[r['status']])+'</td><td>'+str(r['teacherSolutionHelpEvents'])+'</td><td>'+e(round(m['participantDurationMs']/60000,2) if m else '待定')+'</td><td>'+e(m['toolCalls'] if m else '待定')+'</td><td>'+e(u['totalTokens'] if u and u['totalTokens'] is not None else '未知／未资格化')+'</td></tr>')
+ findings=''.join('<h3>'+e(r['model'])+'</h3><ul>'+''.join('<li>'+e(v)+'</li>' for v in r['findings'])+'</ul>' for r in c['attempts'] if r['findings'])
+ section='<section id="model-campaign"><div class="report-kicker">MATCHED THREE-MODEL CAMPAIGN</div><h2>同一任务的三模型执行与独立评测</h2><p>同一干净工程起点、任务文本和 Pi 运行时；原生思考设置与预算已按本队列冻结。每个模型仅一次，不作模型排名或统计稳定性结论。high 是实际 Agent 设置，不保证上游思考强度相等。旧队列与历史探索保留在下方。另有配置无效试跑时，其失败记录单列保留，不混入本队列，也不算学生能力失败。</p><div class="scroll"><table><thead><tr><th>模型</th><th>系统／教师结论</th><th>解题帮助</th><th>学生时长（分钟）</th><th>工具调用</th><th>原生 Token 合计</th></tr></thead><tbody>'+''.join(rows)+'</tbody></table></div><p>模型运行完成、事实发布和完整任务通过分别判断。全零／缺失用量不视为免费；工具未标错不代表命令成功。费用与整体有益调用率未知。学生自测不是自己给自己评分；教师验收不计作学生动作。</p>'+findings+'<p><a href="model-campaign.json" download>下载三模型评测事实</a></p></section>'
+ require('<section id="frozen-cohort">' in page,'existing frozen report anchor required')
+ return page.replace('<section id="frozen-cohort">',section+'<section id="frozen-cohort">',1).replace('<p class="links">','<p class="links"><a href="#model-campaign">三模型评测</a>',1).replace('整题独立完成结论仍未建立。','历史31轮的整题独立完成结论仍未建立；新队列另列。').replace('综合评测报告 v6','综合评测报告 '+data['version'].rsplit('-',1)[-1]+'').replace('agent-report-v6','agent-report-'+data['version'].rsplit('-',1)[-1]+'')
+
+
+def model_main():
+ p=argparse.ArgumentParser();p.add_argument('--model-campaign',type=Path,required=True);p.add_argument('--public-baseline',type=Path,required=True);p.add_argument('--scanner',type=Path,required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args();require(not a.output.exists(),'immutable output exists')
+ data=model_campaign(json.loads((a.public_baseline/'evaluation.json').read_text()),json.loads(a.model_campaign.read_text()));page=render_model_campaign(data,(a.public_baseline/'index.html').read_text());spec=importlib.util.spec_from_file_location('scanner',a.scanner);s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s);s.scan_public(data);s.scan_public(page)
+ shutil.copytree(a.public_baseline,a.output);(a.output/'evaluation.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n');(a.output/'index.html').write_text(page);(a.output/'model-campaign.json').write_text(json.dumps(data['modelCampaign'],ensure_ascii=False,indent=2)+'\n');print(json.dumps({'planned':data['modelCampaign']['plannedAttempts'],'reviewed':data['modelCampaign']['finishedReviews'],'wholeTaskPassRate':None}))
 
 if __name__=='__main__': main()
