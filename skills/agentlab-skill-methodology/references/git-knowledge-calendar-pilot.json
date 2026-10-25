@@ -1,0 +1,81 @@
+{
+  "schema": "agentlab.git-knowledge-pilot.v1",
+  "observedAt": "2026-10-25T05:01:24.744157+00:00",
+  "targetId": "openharmony-applications-calendar",
+  "target": {
+    "repository": "https://github.com/yxsicd/applications_calendar.git",
+    "branch": "al-knowledge"
+  },
+  "hub": {
+    "repository": "https://github.com/yxsicd/agentlabrelease.git",
+    "branch": "knowledge/targets/openharmony-applications-calendar"
+  },
+  "sourceBindings": [
+    {
+      "repository": "https://github.com/openharmony/applications_calendar.git",
+      "revision": "a44b0ad503f69e50943520a0ea569c9cfcb09a57"
+    }
+  ],
+  "knowledgeRootCommit": "5d33403ccdfd2f52641a2701b0836ce0c7d5840d",
+  "knowledgeCommit": "8f917011ea36cc62eda0d782bba1a30b9c8118d4",
+  "catalogCommit": "d1367eebfa1102535ffe675f45aeaef1aa25f3da",
+  "methodRevisionAtCatalog": "f8e16f823e5695a5e04b0e4a1e3bfd20fa6efca0",
+  "roundTrip": [
+    {
+      "direction": "target-to-hub",
+      "commit": "5d33403ccdfd2f52641a2701b0836ce0c7d5840d"
+    },
+    {
+      "direction": "hub-improvement-to-target",
+      "commit": "96c81780992deb7143bb0c3f5ac6f1380b72f683"
+    },
+    {
+      "direction": "target-improvement-to-hub",
+      "commit": "8f917011ea36cc62eda0d782bba1a30b9c8118d4"
+    }
+  ],
+  "independentRootParentCount": 0,
+  "sharesSourceCodeAncestry": false,
+  "targetMasterBefore": "a44b0ad503f69e50943520a0ea569c9cfcb09a57",
+  "targetMasterAfter": "a44b0ad503f69e50943520a0ea569c9cfcb09a57",
+  "releaseMainBefore": "41d2dd6aaa1d8ef2cf79e406a8d4163b67150f2c",
+  "releaseMainAfter": "41d2dd6aaa1d8ef2cf79e406a8d4163b67150f2c",
+  "knowledgeFiles": 10,
+  "knowledgeTreeBytes": 22508,
+  "crossHostExactReadback": [
+    "hwlinux",
+    "macOS"
+  ],
+  "consumerEntrypointLinksRead": [
+    {
+      "path": "skills/calendar-maintainer/SKILL.md",
+      "bytes": 1910,
+      "sha256": "0c1acc5833d775f13474e61c78a85ed0b7a234a980551c545a85d05f653b1bf1"
+    },
+    {
+      "path": "cases/calendar-restart/task.md",
+      "bytes": 1801,
+      "sha256": "0289bbaebcaa5b91e639345bc28e0a6cefc31bfab7357bd2a27e01d579e000cd"
+    },
+    {
+      "path": "cases/calendar-restart/case.json",
+      "bytes": 1090,
+      "sha256": "ebf54d90d1090eccab79934979667470e7ef9337cbf077f37d291dfede10cbe6"
+    },
+    {
+      "path": "cases/calendar-restart/capture-contract.json",
+      "bytes": 1288,
+      "sha256": "b571a6a6409db9c09cea504b1ea2c4b55ce5818dfa5cc192d6a6c723c9538183"
+    }
+  ],
+  "helperControlsPassed": 5,
+  "runtimeOrStudentDispatched": false,
+  "automaticContextInjectionQualified": false,
+  "caseRunnableFromKnowledgeBranchAlone": false,
+  "privateSessionOrJudgePayloadPublished": false,
+  "limitations": [
+    "Public task requires separately admitted sample workspace/toolchain/device inputs",
+    "Git receipt and full-byte equality are not a student/Harmony verdict",
+    "Method updates require normal Release PR review; knowledge refs already published"
+  ]
+}

@@ -116,3 +116,14 @@ Its public restart-verification case is the existing extracted ArkUI sample,
 not full Calendar acceptance. The pilot proves root separation, real bidirectional
 Git transfer, retained commit IDs/bytes and unchanged business master. It does
 not prove automatic next-run context consumption or multi-target generalization.
+
+Real publication/readback evidence: [Calendar pilot](git-knowledge-calendar-pilot.json).
+The hub catalog is [knowledge/catalog](https://github.com/yxsicd/agentlabrelease/tree/knowledge/catalog).
+Its pinned pilot cut is `d1367eebfa1102535ffe675f45aeaef1aa25f3da`;
+target and hub both pin `8f917011ea36cc62eda0d782bba1a30b9c8118d4`,
+root `5d33403ccdfd2f52641a2701b0836ce0c7d5840d`.
+The three real legs preserve commits; full bytes were independently read on
+hwlinux and macOS. The final knowledge tree is22508bytes/10files, no code clone.
+Both the target's business master and Release main retain their original SHAs.
+Five helper controls include an actual rejecting remote hook and wrong-root
+rejection. The branches are live; method changes remain subject to normal PR review.
