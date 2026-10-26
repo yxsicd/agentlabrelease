@@ -1,0 +1,159 @@
+{
+  "schema": "agentlab.public-model-campaign.v1",
+  "protocol": {
+    "models": [
+      "glm-5.3-flash",
+      "deepseek-v4.1-flash",
+      "MiniMax-M3.1-Flash"
+    ],
+    "agent": "Pi1.4.0",
+    "thinking": "high",
+    "nativeBudgetMs": 1800000,
+    "taskSHA256": "2bf7a835aec7cdc6b5f191037fcac1d55310c2f2d3644b77cd3f28e312c7aa55",
+    "initialStateRevision": "5ea3100ed825b5b82ca22073a70f4351cea85c1d",
+    "oracleSHA256": "77cebf73315fa202d54bafedf526af48e9ef1235a53b243cf24ae063c56eca0c",
+    "gatewaySHA256": "58954b2aac9dc39de838460bdd3bb93f6b16774de6135277e63c37ce5b1dd547",
+    "runnerSHA256": "18f205f1d0773f3414a7179cf0126b5e0720c093ff0600d275cfbe6cfe7b056e"
+  },
+  "attempts": [
+    {
+      "model": "deepseek-v4.1-flash",
+      "status": "passed",
+      "wholeTaskPassed": true,
+      "teacherSolutionHelpEvents": 0,
+      "canonicalPublished": true,
+      "processMetrics": {
+        "participantDurationMs": 759195,
+        "nativeRuntimeStatus": "completed",
+        "nativeEventCount": 22264,
+        "toolCalls": 65,
+        "returnedWithoutError": 64,
+        "returnedWithError": 1,
+        "qualifiedNativeUsageFields": {
+          "input": 561138,
+          "output": 35600,
+          "cacheRead": 1590528,
+          "cacheWrite": 0,
+          "reasoning": 14100,
+          "totalTokens": 2187266
+        },
+        "usageQuality": "native_fields_missing_remain_null",
+        "billingCost": null,
+        "globalUsefulCallRate": null,
+        "qualifiedFactCommitment": "ab3bb43a8f02add489bdd4e56550151962985be026ad8f50fb112f0e3590155a"
+      },
+      "findings": [
+        "独立实现自由输入与持久化；教师复核覆盖输入校验、错误后恢复、草稿与已评估结果分离、两次进程重启和六个原有按钮。",
+        "复用题目提供的解析器，未把它计作学生新实现。自行修正了安装路径与弃用 API 的使用，没有教师解题提示。",
+        "约12.7分钟完成。65次原生工具调用中的未标错，不等于每条底层命令成功；首次安装曾输出失败而退出码为0。",
+        "系统／教师以原始发布事实、源码字节比对、真实编译部署和独立设备复核评定整题通过，学生自测不是最终评分。",
+        "原生Token合计包含缓存读取，不等于新生成Token；费用没有核定。",
+        "可迁移包还原后的20个源码文件，在现有离线工具链再次编译成功（约7.1秒，HAP 49,485字节），并完成教师侧18项独立设备检查：输入、错误恢复、草稿与结果分离、两次真实进程重启、六个旧按钮均通过。",
+        "本次是教师对还原后代码的功能复验，没有新增模型执行或学生成绩；不是整机／SDK／设备状态迁移。新HAP有独立摘要，不声称与原HAP逐字节相同。"
+      ],
+      "evidenceCommitment": "6ee7193c51da7e7149723e38acf5e22166408d4a5f820a3117c41ae49f21ba52",
+      "studentCapabilityFailureEstablished": null,
+      "harnessFailureEstablished": null,
+      "portableValidation": {
+        "archiveBytes": 662270,
+        "baseBundleBytes": 7094,
+        "pointPatchBytes": {
+          "seed": 4772,
+          "DS1": 139783
+        },
+        "caseSHA256": "815610f11649e4fbb25330f7e80096b6f4690a3eae22f9a702adbb9cdd8414a4",
+        "archiveSHA256": "050b0fcb5a39175fa581a5ba07597c6c29ac894d980f254d7de2c5ce0934d93d",
+        "points": 2,
+        "fileSHA256ChecksEachHost": 41,
+        "gitBasePlusPatchesBytes": 151649,
+        "hostSystems": [
+          "Linux",
+          "macOS"
+        ],
+        "scope": "selected code and explicit evidence only; not SDK, cache, device, Agent context or physical Capsule",
+        "newStudentOrDeviceEffects": 0,
+        "privateArchivePublished": false
+      }
+    },
+    {
+      "model": "MiniMax-M3.1-Flash",
+      "status": "incomplete",
+      "wholeTaskPassed": false,
+      "teacherSolutionHelpEvents": 0,
+      "canonicalPublished": true,
+      "processMetrics": {
+        "participantDurationMs": 50644,
+        "nativeRuntimeStatus": "completed",
+        "nativeEventCount": 425,
+        "toolCalls": 16,
+        "returnedWithoutError": 14,
+        "returnedWithError": 2,
+        "qualifiedNativeUsageFields": null,
+        "usageQuality": "all_zero_or_missing_unqualified",
+        "billingCost": null,
+        "globalUsefulCallRate": null,
+        "qualifiedFactCommitment": "3f56df62ea648f564ab25b26e54e4feacc6ddc31c71f6f6993c3371a7603c4af"
+      },
+      "findings": [
+        "约51秒后正常结束，16次工具调用；只观察到环境检查与原始工程编译，未提交功能修改，要求的交付文件为空。",
+        "未耗尽30分钟预算，没有教师停止或解题提示。末尾为空响应，模型输出与适配链路的原因尚未闭合，不直接归为学生能力失败。",
+        "有工具参数拼接异常，随后部分调用恢复。原生用量全零且推理字段缺失，因此Token和费用均未资格化。"
+      ],
+      "evidenceCommitment": "12dbb99f81483a06f712820b0fec1e9bb7c5f565208814792c3949681af3823e",
+      "studentCapabilityFailureEstablished": false,
+      "harnessFailureEstablished": false
+    },
+    {
+      "model": "glm-5.3-flash",
+      "status": "incomplete",
+      "wholeTaskPassed": false,
+      "teacherSolutionHelpEvents": 0,
+      "canonicalPublished": true,
+      "processMetrics": {
+        "participantDurationMs": 839829,
+        "nativeRuntimeStatus": "failed",
+        "nativeEventCount": 24724,
+        "toolCalls": 30,
+        "returnedWithoutError": 29,
+        "returnedWithError": 1,
+        "qualifiedNativeUsageFields": {
+          "input": 23445,
+          "output": 27980,
+          "cacheRead": 362944,
+          "cacheWrite": 0,
+          "reasoning": null,
+          "totalTokens": 414369
+        },
+        "usageQuality": "native_fields_missing_remain_null",
+        "billingCost": null,
+        "globalUsefulCallRate": null,
+        "qualifiedFactCommitment": "a99f69c8bafb1c493bc66103fb89d007a5278554077b65b5193476b380f16fbe"
+      },
+      "findings": [
+        "原操作、检查点与完整轨迹已正式发布。原生执行约14分钟后因输出流缺少finish_reason中断，没有耗尽30分钟预算，也没有教师或控制器中止。",
+        "30次工具调用主要用于环境与SDK文档检查，以及原始工程编译部署；18个种子源码均未修改，要求的交付文件为空，新增功能未交付。",
+        "本次任务判为交付未完成；模型／网关／适配器根因尚未定位，不能泛化为模型能力失败。部分工具语义失败与外层返回状态分开记录。",
+        "原生输入、输出和缓存用量按完整原操作披露，推理计数字段缺失则保持未知，不补零或估算账单。"
+      ],
+      "evidenceCommitment": "6b72cb45a122a16c6d56e3fdb796d8b49f61cc656d2726ee20b7a8b55ea66258",
+      "studentCapabilityFailureEstablished": false,
+      "harnessFailureEstablished": false
+    }
+  ],
+  "plannedAttempts": 3,
+  "finishedReviews": 3,
+  "wholeTaskPassRate": null,
+  "statisticalStabilityClaim": false,
+  "modelRankingClaim": false,
+  "configurationTrials": [
+    {
+      "kind": "invalid_assessment_configuration",
+      "reason": "thinking_off_harness_configuration",
+      "studentCapabilityScore": null,
+      "operatorInterventions": 1,
+      "retained": true,
+      "excludedFromMatchedCampaign": true
+    }
+  ],
+  "meaning": "One task, one attempt per model. Pending/incomplete attempts retained. Teacher review is independent; hashes bind bytes, not semantic truth. Native thinking high does not establish equal upstream effort. Historical populations remain separate."
+}

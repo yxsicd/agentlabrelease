@@ -1,0 +1,48 @@
+{
+  "schema": "agentlab.agent-substitution-observation.v1",
+  "agent": "Codex CLI 0.164.0",
+  "model": "MiniMax-M3.1-Flash",
+  "nativeEffort": "high",
+  "sameBusinessTask": true,
+  "promptParticipantParagraphChanged": true,
+  "nativeBudgetSeconds": 1800,
+  "solutionHints": 0,
+  "formalGrade": null,
+  "completion": "not_delivered_at_last_observed_cut",
+  "terminal": "platform_finalization_error_unqualified",
+  "lastObservation": "2026-10-26T04:02:49Z",
+  "toolCallsObserved": 85,
+  "toolResultsObserved": 85,
+  "mainFeatureSourceChangedAtCut": false,
+  "studentEvidenceBytesAtCut": 0,
+  "baselineBuildInstallLaunchUIReadObserved": true,
+  "nonCoreIconChangeObserved": true,
+  "fullTerminalTraceSealed": false,
+  "fullToolDetailCoverage": "partial live observations; terminal export missing",
+  "harnessRepairsBeforeThisFreshAttempt": [
+    "API base URL normalization",
+    "parallel Responses tool-call grouping"
+  ],
+  "lastObservedNativeUsage": {
+    "inputTokens": 1559893,
+    "cachedInputTokensIncludedInInput": 1505007,
+    "outputTokens": 169309,
+    "reasoningTokensIncludedInOutput": 159572,
+    "totalTokens": 1729202,
+    "completeFinalUsage": false,
+    "billingCost": null
+  },
+  "capabilityClaims": {
+    "environmentAndDeviceBaseline": "observed",
+    "featureImplementation": "not observed",
+    "businessValidation": "not reached",
+    "explorationConvergence": "prolonged research without required feature delivery; n=1",
+    "generalModelRanking": null
+  },
+  "qualificationLimits": [
+    "Different Agent and required Harness repairs; not a matched Pi-only comparison.",
+    "Captured outer and inner runner generations differ; no matching-generation qualification.",
+    "Final structured result and new published workspace checkpoint were not established.",
+    "Do not treat terminal platform failure as student inability; do not turn incomplete delivery into a pass."
+  ]
+}
