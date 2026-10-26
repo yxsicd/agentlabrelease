@@ -24,6 +24,9 @@ counts in a separately versioned score, while exact facts/help remain immutable.
 The final hosted task need not expose exploration stages. Use the reference for
 evidence-grounded strengths, weaknesses and cause hypotheses.
 
+Use [controlled Agent substitution](references/agent-substitution.md) when replacing
+the assessed Code Agent while preserving the task/model comparison.
+
 Every stage has two layers, independent from maintenance/operations roles:
 
 | Stage | Method Skill | Target instance Skill |
