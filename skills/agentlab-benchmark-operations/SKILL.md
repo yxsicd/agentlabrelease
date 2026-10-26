@@ -9,9 +9,19 @@ metadata:
 
 # Benchmark operations
 
+Use [long-horizon exploration and diagnosis](../agentlab-skill-methodology/references/long-horizon-exploration.md)
+for assisted exploratory assessment as well as frozen hosted evaluation. Count
+help delivered to this student, including during case construction, under the
+versioned assistance policy; do not transfer prior students' help penalties to a
+new run. Report evidence-backed strengths/weaknesses, assistance dependence and
+cause hypotheses separately from final correctness. Final tasks need not reveal
+or enforce the exploration's internal A/B/C checkpoints.
+
 Consume a fixed Release composition, Skill-library version and three-table snapshot receipt. Import the snapshot into the evaluation repository using [the existing import command](../../examples/knowledge-seed/README.md). Record imported/source cuts and table digests before starting a campaign. Do not regenerate tasks or reinterpret their grading contract during an active assessment.
 
 Use [AgentLab Harness Developer](../agentlab-harness-developer/SKILL.md) for actual Session, Turn, checkpoint, Fork, execution and capture operations. Follow the [public demos](../../examples/README.md) and their capability receipts. Strong supervisors, scripted supervisors and assessed Agents are different roles; supervisor control is recorded evidence, not participant authority.
+
+For a new campaign without an explicit model selection, read [default-models.json](default-models.json): assess GLM 5.3 Flash, DeepSeek V4.1 Flash and MiniMax M3.1 Flash. Keep thinking enabled and freeze each effective effort setting; model inclusion is not runtime availability. Verify the exact target-instance route before dispatch, record an unavailable model as not run, and never substitute another model or rewrite a completed frozen cohort.
 
 Pin the participant implementation, adapter, model, environment and task. Keep Agent runtime dependencies outside the project Workspace. The Harness captures controlled LLM/MCP/tools and workspace outcomes independently; retain complete raw test evidence and failures without redaction or subject-supplied capture claims.
 
@@ -95,3 +105,9 @@ write. Repeating the same campaign preserves archived cut references and
 subsequent evidence-linked maintainer findings; replaying older campaigns keeps
 the newer latest summary. The shared guidance builder has first-write, same-run,
 archived-reference and older-run regression coverage.
+
+### Process review and frozen repeats
+
+Use [process evidence and adjudication](../agentlab-skill-methodology/references/process-evidence-adjudication.md) for the maintained offline report path. Keep frozen whole-task repeats separate from exploratory stages, retain failures/pending records, and preserve original-operation bindings. Tool return flags, real command outcomes, requirement progress, student claims and independent judgment are distinct facts. Do not infer new-feature coverage from supplied-code regressions or whole-task success from WAL/runtime/transport status.
+
+For cross-machine retained cases, follow [portable frozen cases](../agentlab-skill-methodology/references/portable-frozen-cases.md) and the existing mechanical helpers. Keep source/evidence restore and student runtime correctness separate.

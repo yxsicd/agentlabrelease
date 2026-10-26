@@ -14,6 +14,14 @@ SKILL URL and separately configured authorization from the operator. For
 installation or historical removal, use [deployment](../agentlab-deployment/SKILL.md).
 Do not assume a hostname, port, private repository, host filesystem or framework.
 
+## Exploration versus fixed assessment
+
+When constructing a longer case, use [long-horizon exploration](../agentlab-skill-methodology/references/long-horizon-exploration.md)
+to record minimal help, subsequent barriers and exact checkpoint lineage. In a
+fixed assessment consume the frozen inputs and permitted assistance policy.
+Case exploration, assessed performance and knowledge promotion are different
+claims; this operations Skill never grants platform-maintainer access.
+
 ## Discover before acting
 
 Fetch the instance SKILL without credentials and follow its explicit
@@ -173,8 +181,11 @@ Use [the registry](../registry.json) to load methods only for the active stage:
 
 Fix method/source/knowledge cuts and budgets before a round. Record task, Session,
 Attempt, Agent/adapter/model, environment, interventions, tool/provider evidence,
-checker verdict, revisions and next action. Instance Skills and facts are
-TableGit business data; GitHub exports are fixed snapshots, not a second live DB.
+checker verdict, revisions and next action. Structured execution facts are TableGit business data. Instance Skill content
+uses its declared authority profile: TableGit or the user-selected
+[Git knowledge branch profile](../agentlab-skill-methodology/references/git-knowledge-branches.md).
+Git-authored guidance is imported at an explicit commit, not edited independently
+in two places. Legacy TableGit exports remain fixed snapshots.
 Do not edit exported snapshots to manufacture a passing return.
 
 ## Continuation and acceptance

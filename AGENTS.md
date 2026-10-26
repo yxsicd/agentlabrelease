@@ -11,6 +11,21 @@ Use `skills/agentlab-skill-methodology/SKILL.md` for method/instance layers.
 Select maintenance versus operations via `skills/registry.json`. Maintenance
 Skills own benchmark methods and seed publication; operations deploy public
 components or consume fixed snapshots and return evidence for the next cut.
+Here `maintenance` means maintaining evaluation methods, target-project knowledge
+and task seeds while USING AgentLab. It does not mean changing AgentLab platform
+implementation. Reusable usage methods belong in this release Skill library;
+target-instance Skills and observations follow the methodology's selected authority profile.
+
+For target-specific Git knowledge branches, read
+[Git target knowledge and aggregation](skills/agentlab-skill-methodology/references/git-knowledge-branches.md).
+The user-selected hub is agentlabrelease: `knowledge/catalog` indexes bindings,
+`knowledge/targets/<targetId>` receives each target's independent `al-knowledge`
+history. This profile authors reusable target content in Git; AL retains live
+execution facts and imports pinned guidance without dual editing. Business
+branches remain unchanged. Private evaluator data never enters these public refs.
+
+Use the existing experiment-learning promotion path instead of creating another
+knowledge store or treating a platform-maintainer handoff as consumer guidance.
 
 Read `skills/agentlab-harness-developer/SKILL.md` completely before designing or
 running an Agent evaluation. Treat manifests and receipts as authority; never
@@ -27,3 +42,8 @@ portable baseline.
 
 Never place API keys, Gateway credentials, Agent home directories, or captured
 session data in this release repository.
+
+For frozen assessment report metrics and small cross-machine retained cases, follow
+[portable frozen cases](skills/agentlab-skill-methodology/references/portable-frozen-cases.md)
+and its linked existing scripts. Keep these usage methods in this release library;
+platform maintenance guidance must point here rather than duplicate the methods.
