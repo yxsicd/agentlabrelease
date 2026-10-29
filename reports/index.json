@@ -2,6 +2,16 @@
   "schema": "agentlab.public-reports.v1",
   "reports": [
     {
+      "id": "calendar-token-accounting",
+      "version": "2026-10-29",
+      "title": "Calendar Token 与费用公开摘要",
+      "url": "calendar/2026-10-29-token-accounting/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false,
+      "reportType": "assisted_exploration",
+      "evidenceCutoff": "2026-10-29"
+    },
+    {
       "id": "calendar",
       "version": "2026-10-25-v4",
       "title": "Calendar过程收益与判定分层报告v4",
