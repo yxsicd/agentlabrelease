@@ -183,6 +183,10 @@ Read [evaluation model](references/evaluation-model.md) before a comparison,
 [checkpoint/Fork](references/checkpoint-and-fork.md) before restoration, and
 [observability](references/observability-and-sql.md) before trace analysis.
 Keep actual LLM/MCP/workspace evidence separate from Mock/protocol fixtures.
+For evaluation screenshots, use the compact AVIF sequence and frame index in
+[visual evidence](../../docs/visual-evidence.md); encoding is Harness-owned.
+Record whether the student, teacher or Harness captured and interpreted each
+image; screenshot capture and visual diagnosis can be student assessment tasks.
 Functional, performance, power and thermal claims require their own declared
 measurement and environment evidence; emulator success is not real-device power.
 
