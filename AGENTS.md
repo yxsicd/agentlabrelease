@@ -15,6 +15,8 @@ components or consume fixed snapshots and return evidence for the next cut.
 Read `skills/agentlab-harness-developer/SKILL.md` completely before designing or
 running an Agent evaluation. Treat manifests and receipts as authority; never
 infer a capability from a filename, running container, or unpinned `main`.
+Visual report evidence follows `docs/visual-evidence.md` and the benchmark
+operations Skill; encoding belongs to the Harness, not the participant.
 
 ```text
 Task Seed -> Session -> Turn/Event -> Checkpoint Cut -> Fork Attempt -> Analysis

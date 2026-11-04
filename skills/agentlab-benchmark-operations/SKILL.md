@@ -19,6 +19,17 @@ Run frozen acceptance checks. Report task/build outcomes, turn counts, timing an
 
 Store operational observations/results in the installed Harness tables and Workspace state in SessionFS. Return evidence-linked findings to maintenance for the next seed/knowledge version; do not rewrite the frozen assessed case or update Release seed files from the running assessment.
 
+### Compact visual evidence
+
+For evaluation reports, batch related screenshots into the AVIF sequence and
+frame index using [the visual evidence tool and packaging instructions](../../docs/visual-evidence.md).
+The Harness or evaluator runs it, not the assessed participant. Verify the index
+and each frame before attaching the preview; record missing codec or encoding
+failure as a Harness issue. The preview is lossy and must not replace exact
+evidence needed for independent validation, or change images already shown to
+the participant. Adjust resolution when text must be readable. Keep structured
+facts and intervention attribution separate from the visual preview.
+
 Produce target-instance guidance for this stage as TableGit Skill rows,
 separate from the structured facts/tasks/results. Follow
 [the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
