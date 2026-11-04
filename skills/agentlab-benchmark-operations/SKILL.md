@@ -29,6 +29,10 @@ failure as a Harness issue. The preview is lossy and must not replace exact
 evidence needed for independent validation, or change images already shown to
 the participant. Adjust resolution when text must be readable. Keep structured
 facts and intervention attribution separate from the visual preview.
+Student screenshot capture, viewing, visual diagnosis and subsequent repair are
+assessable actions; attribute their calls and observations to the actual actor.
+Teacher assistance counts against the attempt; a Harness or teacher screenshot
+does not establish student device or vision capability.
 
 Produce target-instance guidance for this stage as TableGit Skill rows,
 separate from the structured facts/tasks/results. Follow

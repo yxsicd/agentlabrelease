@@ -5,6 +5,21 @@ evaluation report. This is a Harness/evaluator operation, not a student action
 or teacher help. Keep the recorded participant input and structured evidence
 intact; a lossy thumbnail is a derived view and is not an exact original.
 
+Capturing a screenshot, opening it, interpreting the UI and using that
+observation to repair the application can themselves be assessed student
+actions. Record the actual actor, tool call, result and resulting observation;
+host or teacher screenshots are separate evidence and do not prove student
+vision or device operation. If a teacher helps the student take or interpret a
+screenshot, record the intervention against that attempt. Do not manufacture a
+student action merely because the Harness captured a visual preview.
+
+The Harness performs archival encoding after recording the screenshot and its
+identity, independently of participant tool behavior. Do not silently alter
+the bytes or visual quality the participant receives: if an evaluation
+deliberately transforms model input, freeze the policy consistently across
+participants and record the actual delivered representation. Preview loss,
+codec errors and storage failures are Harness outcomes, not student failures.
+
 Each manifest frame must contain `stepId`, `caseId`, `operationId`,
 `observationRef`, a relative `path` and the source `sha256`; `capturedAt` is
 optional. Paths are relative to the manifest, and images must have the same
