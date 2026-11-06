@@ -82,6 +82,9 @@ gateway does not by itself prove delivery to the ultimate model provider. If a
 later audit corrects a finding that prompted teacher help, retain and count the
 actual help, record its cause, and reassess the independent result against the
 original frozen criteria rather than silently rewriting history.
+Use the [image evidence reconciler](../../examples/benchmark-report/image_evidence.py)
+for captured `view_image` responses and subsequent request outputs; its
+intermediate-gateway result does not establish provider delivery or comprehension.
 
 ### Actual staged navigation assessment
 
