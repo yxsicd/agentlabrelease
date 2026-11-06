@@ -711,6 +711,19 @@ class Participant:
                 code = process.poll()
                 if code is not None:
                     break
+                if getattr(self, 'token_budget', None) is not None:
+                    decision_path = self.evidence / 'token-budget-decision.json'
+                    if decision_path.is_file():
+                        try:
+                            decision = json.loads(decision_path.read_text())
+                        except (OSError, ValueError):
+                            decision = {}
+                        reason = decision.get('reason') if isinstance(decision, dict) else None
+                        if reason in ('budget_exhausted', 'usage_unknown'):
+                            lifecycle['tokenBudgetStop'] = reason
+                            terminate(process)
+                            lifecycle['exitCode'] = process.returncode
+                            raise RuntimeError(f'{label}: participant stopped after {reason}; partial events retained')
                 if time.monotonic() >= deadline:
                     lifecycle['timedOut'] = True
                     terminate(process)

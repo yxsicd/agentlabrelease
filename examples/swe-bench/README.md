@@ -15,7 +15,9 @@ participant exit status. A time or step limit is not evidence of a model defect.
 at the operator Gateway between model requests. It serializes budgeted requests,
 counts cached input and reasoning output only within their parent totals, and
 stops further requests if prior usage is missing or incomplete. The final request
-can exceed the limit; this is not a strict token cap. The default is no token
+can exceed the limit; this is not a strict token cap. The participant watchdog
+also stops client-side retry once the gateway records a budget denial or unknown
+usage. The default is no token
 budget, and the summary records whether the option was enabled. Budget-denial
 evidence distinguishes an exhausted balance from unknown usage. The Agent MCP
 budget-query interface is not provided by this runner.

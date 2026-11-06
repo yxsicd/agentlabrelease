@@ -1,6 +1,9 @@
 import importlib.util
 import json
+import os
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -112,6 +115,23 @@ class SweBudgetProfileTest(unittest.TestCase):
             lifecycle=json.loads((evidence/'swe-lifecycle.json').read_text())
             self.assertEqual(lifecycle['completedToolCalls'], 3)
             self.assertEqual(lifecycle['toolErrors'], 2)
+
+    def test_budget_denial_stops_retrying_participant(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); evidence=root/'evidence';evidence.mkdir()
+            participant=module.Participant.__new__(module.Participant)
+            participant.evidence=evidence;participant.implementation='mini-swe-agent';participant.token_budget=10
+            decision=evidence/'token-budget-decision.json'
+            script=('import json,time; from pathlib import Path; '
+                    f'Path({str(decision)!r}).write_text(json.dumps({{"reason":"budget_exhausted"}})); '
+                    'time.sleep(30)')
+            lifecycle={};started=time.monotonic()
+            with self.assertRaisesRegex(RuntimeError,'stopped after budget_exhausted'):
+                participant._run_turn([sys.executable,'-c',script],root,{'PATH':os.environ['PATH']},
+                                      'budget',lifecycle,timeout_seconds=10)
+            self.assertLess(time.monotonic()-started,5)
+            self.assertEqual(lifecycle['tokenBudgetStop'],'budget_exhausted')
+            self.assertIsNotNone(lifecycle['exitCode'])
 
 
 if __name__ == '__main__':
