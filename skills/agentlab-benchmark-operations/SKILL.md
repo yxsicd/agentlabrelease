@@ -52,6 +52,20 @@ An outer shell exit code can conceal an inner failing command; inspect retained
 output for relevant diagnostics before interpreting tool success as progress.
 Separate a pre-dispatch Agent setup timeout from student reasoning and scoring.
 
+### Mature benchmark to Harmony transfer
+
+Use a pinned mature task to test the evaluation process before transferring it
+to a Harmony task. Record repeated reference results and a separate no-solution
+negative control; neither is a participant attempt or a model score. Preserve
+per-trial identities and state precisely which task and image identities were
+observed. Use the comparison in `examples/benchmark-report/harmony_alignment.py`
+to keep historical Harmony observations separate from fresh instance readiness.
+System-operated device checks are system evidence, not student device actions;
+record teacher assistance without inferring that every hint was consumed or
+caused an outcome. Resolve the exact previous operation before any recovery,
+and only then freeze a new attempt with independent build, device and verdict
+evidence. Do not transfer success rates between unlike datasets or environments.
+
 ### Actual staged navigation assessment
 
 Use [the subject experiment](../../examples/knowledge-seed/subject/README.md).
