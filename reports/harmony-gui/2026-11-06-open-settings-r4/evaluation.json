@@ -2,7 +2,7 @@
   "schema": "agentlab.harmony_gui_assessment.v2",
   "case": "open-settings-and-verify",
   "attempt": "independent-new-persistent-r4",
-  "whole_task_verdict": "requires_adjudication",
+  "whole_task_verdict": "not_formally_scored",
   "teacher_hints": 0,
   "foreground_verification": "observed",
   "independent_visible_settings_page": "pass",
@@ -42,7 +42,23 @@
     "capture_boundary": "request forwarded to llmdev; upstream provider receipt not established",
     "prior_no_view_image_finding": "incorrect",
     "provider_delivery": "unverified",
-    "whole_task_score": "requires adjudication under frozen criteria",
+    "whole_task_score": "not_assigned_no_separate_frozen_scoring_rubric",
     "teacher_assistance_remains_counted": true
+  },
+  "independent_reassessment": {
+    "schema": "agentlab.harmony_gui_reassessment.v1",
+    "task_text": "在已连接的 HarmonyOS 模拟器上打开设置应用，并验证设置页面确实打开。完成后简述你观察到的结果。",
+    "task_text_status": "observed from original launcher; no separate frozen scoring rubric located",
+    "student_independent_open": "supported",
+    "student_foreground_verification": "supported by ability stack",
+    "system_independent_page_check": "pass",
+    "student_image_tool_call": "observed",
+    "image_forwarded_to_intermediate_gateway": "observed",
+    "ultimate_provider_image_receipt": "unverified",
+    "visual_details_accuracy": "Bluetooth and cellular not visible in recovered image; false detail is a separate quality observation",
+    "functional_objective_observed": "pass",
+    "formal_whole_task_score": "not_assigned_no_separate_frozen_scoring_rubric",
+    "teacher_help_after_independent": "one; initiated after evaluator error; do not apply retroactively to independent objective",
+    "generalization": "one easy calibration case only"
   }
 }

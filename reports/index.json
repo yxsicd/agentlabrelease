@@ -10,7 +10,8 @@
       "independentWholeTaskPass": null,
       "reportType": "assisted_continuation",
       "evidenceCutoff": "2026-11-06",
-      "verdictStatus": "reassessment_required"
+      "verdictStatus": "formal_rubric_not_found",
+      "independentFunctionalObjectiveObserved": true
     },
     {
       "id": "harmony-gui-open-settings-r4",
@@ -21,7 +22,8 @@
       "independentWholeTaskPass": null,
       "reportType": "independent_attempt",
       "evidenceCutoff": "2026-11-06",
-      "verdictStatus": "reassessment_required"
+      "verdictStatus": "formal_rubric_not_found",
+      "independentFunctionalObjectiveObserved": true
     },
     {
       "id": "harmony-gui-open-settings",
