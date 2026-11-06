@@ -48,6 +48,10 @@ class TerminalReportTest(unittest.TestCase):
             self.assertEqual(result['execution']['originalLifecycleToolErrors'],1)
             self.assertTrue(result['execution']['observedCommands']['inspectedReflog'])
             self.assertTrue(result['execution']['observedCommands']['mergeConflictOutputObserved'])
+            self.assertEqual(result['traceObservations']['events'][0]['line'],1)
+            self.assertEqual(result['traceObservations']['events'][1]['line'],2)
+            self.assertIn('merge_conflict_output',result['traceObservations']['events'][1]['observations'])
+            self.assertEqual(result['traceObservations']['events'][2]['observations'],['submission_signal'])
             self.assertIn('0001.response',[p.name for p,_ in result['_sources']])
             self.assertIn('0001.status.json',[p.name for p,_ in result['_sources']])
 
@@ -58,6 +62,15 @@ class TerminalReportTest(unittest.TestCase):
             usage=importlib.util.module_from_spec(spec);spec.loader.exec_module(usage)
             (a/'evidence/usage-observation.json').write_text(json.dumps(usage.summarize(a/'evidence/gateway')))
             result=report.build(a,t,r);self.assertEqual(result['qualification'],'unscored');self.assertIsNone(result['resolved'])
+
+    def test_trace_lines_count_blank_records_and_keep_unicode_in_payload(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a,t,r=self.fixture(Path(tmp));p=a/'evidence/terminal-task-events.jsonl'
+            events=p.read_text().split('\n')
+            event=json.loads(events[1]);event['result']['output']+='\u2028still same record'
+            p.write_text(events[0]+'\n\n'+json.dumps(event,ensure_ascii=False)+'\n'+events[2]+'\n')
+            observations=report.build(a,t,r)['traceObservations']['events']
+            self.assertEqual([x['line'] for x in observations],[1,3,4])
 
     def test_reference_mismatch_or_changed_evidence_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
