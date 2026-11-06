@@ -77,8 +77,10 @@ class Participant:
         self.max_output_tokens = max_output_tokens
         if api not in ('openai-completions', 'openai-responses'):
             raise ValueError('unsupported participant API')
-        if api == 'openai-responses' and (implementation != 'pi' or thinking_type is not None):
-            raise ValueError('Responses requires Pi and native reasoning policy, not thinking.type')
+        if api == 'openai-responses' and (implementation not in ('pi', 'capture-only') or thinking_type is not None):
+            raise ValueError('Responses requires Pi or capture-only and native reasoning policy, not thinking.type')
+        if implementation == 'capture-only' and (api != 'openai-responses' or token_budget is None):
+            raise ValueError('capture-only requires Responses and a per-attempt token budget')
         self.api = api
         self.api_path = '/v1/responses' if api == 'openai-responses' else '/v1/chat/completions'
         if response_format not in (None, 'json_object'):
@@ -117,6 +119,7 @@ class Participant:
         self.gateway_timeout_seconds = gateway_timeout_seconds
         self.key = os.environ['AGENTLAB_LM_GATEWAY_KEY']
         self.runtime_isolated = bool(os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'))
+        self.client_auth_required = self.runtime_isolated or implementation == 'capture-only'
         self.supervisor = None
         if self.runtime_isolated:
             config_path = Path(os.environ['AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'])
@@ -132,12 +135,12 @@ class Participant:
                 self.supervisor = expected
         self.local_proxy_token = (
             secrets.token_urlsafe(32)
-            if self.runtime_isolated
+            if self.client_auth_required
             else 'agentlab-local-test-credential'
         )
         self.requests = 0
         self.lock = threading.Lock()
-        state.mkdir()
+        state.mkdir(mode=0o700)
         if self.supervisor:
             for name, value in [('delegate.json', self.supervisor['delegateSettings']),
                                 ('settings.json', self.supervisor['parentSettings'])]:
@@ -161,7 +164,7 @@ class Participant:
 
             def locally_authorized(self):
                 return (
-                    not owner.runtime_isolated
+                    not owner.client_auth_required
                     or self.headers.get('Authorization')
                     == 'Bearer ' + owner.local_proxy_token
                 )
@@ -180,7 +183,7 @@ class Participant:
                 if not self.locally_authorized():
                     self.send_error(401, 'Invalid participant proxy credential')
                     return
-                if owner.runtime_isolated and self.path != owner.api_path:
+                if owner.client_auth_required and self.path != owner.api_path:
                     self.send_error(404, 'Participant proxy path is not allowed')
                     return
                 # Serialize only budgeted exchanges: otherwise simultaneous
@@ -450,10 +453,15 @@ class Participant:
             'compat': {'supportsDeveloperRole': False, 'supportsReasoningEffort': False},
             'models': [{'id': model, 'reasoning': False, 'input': ['text'],
                         'contextWindow': 128000, 'maxTokens': self.max_output_tokens or 8192}]}}}
-        (state / 'models.json').write_text(json.dumps(models, indent=2) + '\n')
+        if implementation == 'capture-only':
+            capture_config = {'baseUrl': model_base_url, 'api': self.api,
+                              'apiKey': self.local_proxy_token, 'reasoningPolicy': 'unchanged'}
+            (state / 'capture-config.json').write_text(json.dumps(capture_config, indent=2) + '\n')
+        else:
+            (state / 'models.json').write_text(json.dumps(models, indent=2) + '\n')
         (evidence / 'participant.json').write_text(json.dumps({
-            'implementation': implementation, 'packageName': PI_PACKAGE if implementation=='pi' else 'mini-swe-agent',
-            'packageVersion': PI_VERSION if implementation=='pi' else '2.4.6', 'model': model,
+            'implementation': implementation, 'packageName': PI_PACKAGE if implementation=='pi' else ('mini-swe-agent' if implementation=='mini-swe-agent' else None),
+            'packageVersion': PI_VERSION if implementation=='pi' else ('2.4.6' if implementation=='mini-swe-agent' else None), 'model': model,
             'gateway': gateway, 'providerRoute': route,
             'reasoningEffort': self.reasoning_effort, 'piThinkingMode': 'off' if implementation == 'pi' else None,
             'providerThinkingType': self.thinking_type,
@@ -475,6 +483,8 @@ class Participant:
              tool_call_limit=None, transport_retry_limit=1,
              require_completed_tool_call=True,
              _transport_retry=0, container_workdir=None):
+        if self.implementation == 'capture-only':
+            raise RuntimeError('capture-only does not dispatch a participant')
         if not isinstance(transport_retry_limit, int) or not 0 <= transport_retry_limit <= 1:
             raise ValueError('transport_retry_limit must be zero or one')
         self.active_reasoning_effort = reasoning_effort if reasoning_effort is not None else self.reasoning_effort
