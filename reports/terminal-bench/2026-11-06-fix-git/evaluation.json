@@ -1,0 +1,74 @@
+{
+  "schema": "agentlab.public_terminal_bench_projection.v1",
+  "date": "2026-11-06",
+  "benchmark": "terminal-bench-2",
+  "task": "fix-git",
+  "taskCommit": "2fd12b88aafdd04a52c298e3940bcb189f9766d6",
+  "taskChecksum": "020f98d84ec6fd1565f699cc3195250882da952f4e6566c4561a615ad120c9de",
+  "taskImageId": "sha256:61e431c00c58df652287aadce5457634d9f9330cfdd153ebdf2802df0d540119",
+  "assessmentAuthority": "operator-generated from independent Harbor verifier and retained Gateway and participant evidence",
+  "controlObservations": {
+    "oraclePasses": 5,
+    "oracleRuns": 5,
+    "nopReward": 0.0
+  },
+  "attempts": [
+    {
+      "model": "glm-5.3-flash",
+      "agent": "mini-swe-agent",
+      "agentVersion": "2.4.6",
+      "reasoning": "provider default",
+      "teacherHelpOperatorDeclared": 0,
+      "officialReward": 1.0,
+      "verifierTests": {
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      "submitted": true,
+      "durationMs": 55775,
+      "toolCalls": 10,
+      "outerToolErrors": 0,
+      "inputTokens": 24492,
+      "outputTokens": 1831,
+      "cachedInputTokens": 19520,
+      "reasoningOutputTokens": 758,
+      "upstreamExchanges": 8,
+      "privateAssessmentSha256": "e2331c742c8d4c24c9d675e4e909119a727b057ff1c3864ca8d6dab1c8cf9a97"
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "agent": "mini-swe-agent",
+      "agentVersion": "2.4.6",
+      "reasoning": "provider default",
+      "teacherHelpOperatorDeclared": 0,
+      "officialReward": 1.0,
+      "verifierTests": {
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      "submitted": true,
+      "durationMs": 44661,
+      "toolCalls": 11,
+      "outerToolErrors": 0,
+      "inputTokens": 59256,
+      "outputTokens": 2792,
+      "cachedInputTokens": 24320,
+      "reasoningOutputTokens": 1298,
+      "upstreamExchanges": 11,
+      "privateAssessmentSha256": "6ed155852553a0eea583e1d7a08d5c7180273f1872c14c283afe5470b6d44a8a"
+    }
+  ],
+  "limitations": [
+    "One attempt per model; not a model ranking or stability estimate.",
+    "Adapters differ across attempts; do not interpret duration as controlled performance comparison.",
+    "Teacher help count is operator declared.",
+    "Cached input is included in input; reasoning output is included in output.",
+    "Raw private evidence is not published; digests alone do not establish provenance.",
+    "These Harbor attempts do not qualify native AgentLab Session/Fork or budget MCP.",
+    "Reasoning uses provider defaults; realized thinking configuration is not independently established."
+  ]
+}

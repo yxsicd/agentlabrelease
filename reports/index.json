@@ -2,6 +2,16 @@
   "schema": "agentlab.public-reports.v1",
   "reports": [
     {
+      "id": "terminal-bench-fix-git",
+      "version": "2026-11-06",
+      "title": "Terminal-Bench fix-git 双模型评测摘要",
+      "url": "terminal-bench/2026-11-06-fix-git/",
+      "caseCount": 1,
+      "independentWholeTaskPass": true,
+      "reportType": "independent_attempts",
+      "evidenceCutoff": "2026-11-06"
+    },
+    {
       "id": "calendar-token-accounting",
       "version": "2026-10-29",
       "title": "Calendar Token 与费用公开摘要",
