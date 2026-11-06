@@ -1,0 +1,38 @@
+{
+  "schema": "agentlab.harmony_gui_assessment.v2",
+  "case": "open-settings-and-verify",
+  "attempt": "independent-new-persistent-r4",
+  "whole_task_verdict": "partial_verification_scope",
+  "teacher_hints": 0,
+  "foreground_verification": "observed",
+  "independent_visible_settings_page": "pass",
+  "screenshot_created_and_transferred": true,
+  "screenshot_retained": false,
+  "ocr_result": "not_installed",
+  "student_claimed_visual_content": "unsupported",
+  "session_persisted_thread_count": 1,
+  "actual_resume_tested": false,
+  "sessionfs_fork_verified": false,
+  "duration_seconds": 100.71,
+  "model": "glm-5.3-flash",
+  "agent": "codex-cli 0.166.0",
+  "exchanges": 18,
+  "usage": {
+    "input": 223400,
+    "output": 2798,
+    "cached_input": 200064,
+    "reasoning_output": 900
+  },
+  "cached_input_in_input": true,
+  "reasoning_output_in_output": true,
+  "initial_layout_sha256": "7512d5ccf1f34723bc7c3b765bb78fcdf705c2ac112c071f427b6a693ad51f3d",
+  "final_layout_sha256": "9653457099067389cc0edbc4a10c05361297be7816b619fce9bd82703ecabc1e",
+  "trace_sha256": "54e0d0322b4fc2ea3db160539c8e124ce582bbbe8550144be61d1606ce86f9d3",
+  "limitations": [
+    "one simple sample",
+    "independent UI check is not student visual observation",
+    "screenshot was deleted by participant before independent collection",
+    "normal process exit does not establish resume",
+    "not an official benchmark or Harmony development task"
+  ]
+}

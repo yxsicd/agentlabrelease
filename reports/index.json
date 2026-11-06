@@ -2,6 +2,16 @@
   "schema": "agentlab.public-reports.v1",
   "reports": [
     {
+      "id": "harmony-gui-open-settings-r4",
+      "version": "2026-11-06",
+      "title": "Harmony 设置页：持久会话新尝试",
+      "url": "harmony-gui/2026-11-06-open-settings-r4/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false,
+      "reportType": "independent_attempt",
+      "evidenceCutoff": "2026-11-06"
+    },
+    {
       "id": "harmony-gui-open-settings",
       "version": "2026-11-06",
       "title": "Harmony GUI 打开设置与验证",
