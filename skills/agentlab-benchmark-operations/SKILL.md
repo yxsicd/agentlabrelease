@@ -66,6 +66,14 @@ caused an outcome. Resolve the exact previous operation before any recovery,
 and only then freeze a new attempt with independent build, device and verdict
 evidence. Do not transfer success rates between unlike datasets or environments.
 
+For device tasks that require the participant to verify an outcome, report the
+independent final-state check and the participant's verification separately.
+An intention to inspect or capture a screen is not evidence of that action; use
+the retained tool event and result. If verification is required by the frozen
+task and is not evidenced, do not mark the whole task passed solely because the
+independent final state is correct. Preserve any incomplete observation or
+Harness failure rather than converting it into a participant failure.
+
 ### Actual staged navigation assessment
 
 Use [the subject experiment](../../examples/knowledge-seed/subject/README.md).

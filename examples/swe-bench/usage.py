@@ -82,4 +82,7 @@ def summarize(capture):
     return dict(schema='agentlab.swe_usage_observation.v1', exchanges=len(records),
                 inputOutputComplete=complete, totalsObserved=totals, fieldCoverage=coverage,
                 records=records, cachedInputIncludedInInput=True,
-                reasoningOutputIncludedInOutput=True, tokenBudgetEnforced=False)
+                # Captured provider usage alone cannot establish whether a
+                # separate launcher enforced a budget. Its caller may supply
+                # that fact from its own execution context.
+                reasoningOutputIncludedInOutput=True, tokenBudgetEnforced=None)

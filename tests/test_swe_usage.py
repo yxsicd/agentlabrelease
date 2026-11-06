@@ -32,7 +32,7 @@ class SweUsageTest(unittest.TestCase):
             self.assertEqual(result['fieldCoverage']['input'], 2)
             self.assertEqual(result['fieldCoverage']['cached_input'], 1)
             self.assertTrue(result['cachedInputIncludedInInput'])
-            self.assertFalse(result['tokenBudgetEnforced'])
+            self.assertIsNone(result['tokenBudgetEnforced'])
 
     def test_partial_exchange_and_unknown_not_zero(self):
         with tempfile.TemporaryDirectory() as tmp:
