@@ -54,5 +54,13 @@
     "infrastructure_lease_seconds": 1800,
     "cause": "undetermined",
     "gateway_response_sha256": "83dd8f66349373c3ea6f0f75e992f5036a5f0b2e41e3af0ca0212efb5aeb425b"
+  },
+  "continuation_audit": {
+    "launch_mode": "codex exec --ephemeral",
+    "task_codex_persisted_thread_count": 0,
+    "original_container": "absent",
+    "native_session_resume": "not established",
+    "sessionfs_checkpoint_fork": "not established",
+    "new_invocation_is_original_continuation": false
   }
 }
