@@ -8,11 +8,11 @@
   "teacher_help_count": 1,
   "teacher_help": "设备已重启，当前画面可能不同。上次 OCR 返回未安装。请核对此前视觉结论是否有证据，并自行完成验证、如实报告。",
   "independent_task_initial_result_preserved": true,
-  "student_corrected_prior_unsupported_claim": true,
+  "student_corrected_prior_unsupported_claim": "student acknowledged missing persistent screenshot; resized model-input copy later recovered",
   "foreground_verified_by_student": true,
   "new_screenshot_retained": true,
-  "new_screenshot_visually_examined_by_student": "not_observed",
-  "student_new_visual_details": "unsupported; Bluetooth and cellular not visible in retained screenshot",
+  "new_screenshot_visually_examined_by_student": "view_image_call_and_image_input_observed",
+  "student_new_visual_details": "Bluetooth and cellular not visible in retained image; provider receipt unverified",
   "operator_image_inspection": "settings page and WLAN visible; Bluetooth and cellular not visible",
   "independent_layout": "pass",
   "harness_model_metadata_warning": true,
@@ -45,5 +45,16 @@
     "teacher intervention does not convert the independent result to pass",
     "AVIF is a derived preview; original remains",
     "provider raw output not available for original attempt"
-  ]
+  ],
+  "vision_evidence_correction": {
+    "view_image_call_observed": true,
+    "first_request_with_image": "0004",
+    "delivered_image_sha256": "39a1f64f987a91c2dbdee3eb2e2b2c7713deb48ac50b060f3b961cb784327b55",
+    "capture_boundary": "request forwarded to llmdev; upstream provider receipt not established",
+    "prior_no_view_image_finding": "incorrect",
+    "provider_delivery": "unverified",
+    "whole_task_score": "requires adjudication under frozen criteria",
+    "teacher_assistance_remains_counted": true
+  },
+  "teacher_hint_context": "teacher intervention followed an incorrect earlier audit; still counted"
 }

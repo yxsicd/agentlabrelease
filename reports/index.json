@@ -7,9 +7,10 @@
       "title": "Harmony 设置页：一次教师提示后续跑",
       "url": "harmony-gui/2026-11-06-open-settings-r4-h01/",
       "caseCount": 1,
-      "independentWholeTaskPass": false,
+      "independentWholeTaskPass": null,
       "reportType": "assisted_continuation",
-      "evidenceCutoff": "2026-11-06"
+      "evidenceCutoff": "2026-11-06",
+      "verdictStatus": "reassessment_required"
     },
     {
       "id": "harmony-gui-open-settings-r4",
@@ -17,9 +18,10 @@
       "title": "Harmony 设置页：持久会话新尝试",
       "url": "harmony-gui/2026-11-06-open-settings-r4/",
       "caseCount": 1,
-      "independentWholeTaskPass": false,
+      "independentWholeTaskPass": null,
       "reportType": "independent_attempt",
-      "evidenceCutoff": "2026-11-06"
+      "evidenceCutoff": "2026-11-06",
+      "verdictStatus": "reassessment_required"
     },
     {
       "id": "harmony-gui-open-settings",

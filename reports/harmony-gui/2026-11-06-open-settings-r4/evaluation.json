@@ -2,16 +2,16 @@
   "schema": "agentlab.harmony_gui_assessment.v2",
   "case": "open-settings-and-verify",
   "attempt": "independent-new-persistent-r4",
-  "whole_task_verdict": "partial_verification_scope",
+  "whole_task_verdict": "requires_adjudication",
   "teacher_hints": 0,
   "foreground_verification": "observed",
   "independent_visible_settings_page": "pass",
   "screenshot_created_and_transferred": true,
-  "screenshot_retained": false,
+  "screenshot_retained": "original_deleted_delivered_resized_copy_recovered",
   "ocr_result": "not_installed",
-  "student_claimed_visual_content": "unsupported",
+  "student_claimed_visual_content": "view_image and image input observed; Bluetooth and cellular not visible in recovered image",
   "session_persisted_thread_count": 1,
-  "actual_resume_tested": false,
+  "actual_resume_tested": true,
   "sessionfs_fork_verified": false,
   "duration_seconds": 100.71,
   "model": "glm-5.3-flash",
@@ -34,5 +34,15 @@
     "screenshot was deleted by participant before independent collection",
     "normal process exit does not establish resume",
     "not an official benchmark or Harmony development task"
-  ]
+  ],
+  "vision_evidence_correction": {
+    "view_image_call_observed": true,
+    "first_request_with_image": "0016",
+    "delivered_image_sha256": "2a2ce49cb68947e7881db7fec44f2e918c90bae81e7d633f3c4a8c0c9b2a77cf",
+    "capture_boundary": "request forwarded to llmdev; upstream provider receipt not established",
+    "prior_no_view_image_finding": "incorrect",
+    "provider_delivery": "unverified",
+    "whole_task_score": "requires adjudication under frozen criteria",
+    "teacher_assistance_remains_counted": true
+  }
 }
