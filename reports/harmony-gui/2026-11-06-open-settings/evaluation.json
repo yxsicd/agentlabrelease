@@ -39,5 +39,20 @@
   "budget_receipts_count": 6,
   "budget_final_used": 77342,
   "budget_exhaustion_tested": false,
-  "budget_summary_note": "generic summarizer default false; request receipts and candidate source establish configured boundary checks; this attempt did not exercise exhaustion"
+  "budget_summary_note": "generic summarizer default false; request receipts and candidate source establish configured boundary checks; this attempt did not exercise exhaustion",
+  "terminal_response_analysis": {
+    "gateway_response_status": "completed",
+    "gateway_output_types": [
+      "message"
+    ],
+    "tool_calls": 0,
+    "agent_terminal_event": "turn.completed",
+    "process_exit": 0,
+    "budget_used": 77342,
+    "budget_limit": 500000,
+    "elapsed_seconds": 55.11,
+    "infrastructure_lease_seconds": 1800,
+    "cause": "undetermined",
+    "gateway_response_sha256": "83dd8f66349373c3ea6f0f75e992f5036a5f0b2e41e3af0ca0212efb5aeb425b"
+  }
 }
