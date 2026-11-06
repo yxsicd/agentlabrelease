@@ -59,12 +59,34 @@ def build(attempt, trial, reference):
             sources.append((path,hashlib.sha256(path.read_bytes()).hexdigest()))
     raw=(attempt/'evidence/terminal-task-events.jsonl').read_bytes()
     sources.append((attempt/'evidence/terminal-task-events.jsonl',hashlib.sha256(raw).hexdigest()))
-    events=[json.loads(line) for line in raw.split(b'\n') if line.strip()]
+    indexed_events=[(number,json.loads(line)) for number,line in enumerate(raw.split(b'\n'),1) if line.strip()]
+    events=[event for _,event in indexed_events]
     calls=[e for e in events if e.get('type')=='tool_execution_end']
     errors=[e for e in calls if (e.get('exceptionClass') not in (None,'Submitted') or
              ((e.get('result') or {}).get('returncode') not in (None,0)))]
     commands=[str((e.get('action') or {}).get('command','')) for e in calls]
     merge_calls=[e for e in calls if 'git merge' in str((e.get('action') or {}).get('command',''))]
+    # These are searchable observations, not judgments about intent or ability.
+    # Line numbers refer to the retained LF-delimited event file, including blanks.
+    trace=[]
+    for line,event in indexed_events:
+        if event.get('type')!='tool_execution_end':
+            continue
+        command=str((event.get('action') or {}).get('command',''))
+        output=str((event.get('result') or {}).get('output',''))
+        observations=[]
+        for needle,label in (('git reflog','reflog_command'),('git fsck','fsck_command'),
+                             ('git merge','merge_command'),('git commit','commit_command')):
+            if needle in command:
+                observations.append(label)
+        if 'git merge' in command and 'CONFLICT' in output:
+            observations.append('merge_conflict_output')
+        if event.get('exceptionClass')=='Submitted':
+            observations.append('submission_signal')
+        if observations:
+            trace.append({'line':line,'observations':observations,
+                          'outerReturnCode':(event.get('result') or {}).get('returncode'),
+                          'exceptionClass':event.get('exceptionClass')})
     reference_pass=ref.get('oracle',{}).get('exceptions')==0
     reward=((student.get('verifier_result') or {}).get('rewards') or {}).get('reward')
     summary=(tests.get('results') or {}).get('summary') or {}
@@ -101,6 +123,8 @@ def build(attempt, trial, reference):
                'attemptedMerge':any('git merge' in x for x in commands),
                'mergeConflictOutputObserved':any('CONFLICT' in str((e.get('result') or {}).get('output','')) for e in merge_calls),
                'attemptedCommit':any('git commit' in x for x in commands)}},
+        'traceObservations':{'source':'terminal-task-events.jsonl','lineNumbering':'one-based LF records',
+            'events':trace,'interpretation':'String matches and outer return codes are observations; inspect the referenced raw output before judging progress.'},
         'usage':{k:usage.get(k) for k in ('exchanges','inputOutputComplete','totalsObserved','fieldCoverage',
                   'cachedInputIncludedInInput','reasoningOutputIncludedInOutput')},
         'limitations':['One easy task and one attempt do not establish a model ranking or general weakness.',
@@ -120,7 +144,7 @@ def main():
     (out/'assessment.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     rows=[('评测资格',result['qualification']),('任务结果',result['resolved']),('验证器测试',result['verifierTests']),
           ('参考解',result['referenceReward']),('学生与帮助',result['participant']),('过程',result['execution']),
-          ('Token 用量',result['usage']),('限制',result['limitations'])]
+          ('轨迹证据定位',result['traceObservations']),('Token 用量',result['usage']),('限制',result['limitations'])]
     sections=''.join('<section><h2>'+html.escape(k)+'</h2><pre>'+html.escape(json.dumps(v,ensure_ascii=False,indent=2))+'</pre></section>' for k,v in rows)
     links=''.join('<li><a href="'+html.escape(x['path'],quote=True)+'">'+html.escape(x['path'])+'</a> <code>'+x['sha256']+'</code></li>' for x in result['evidence'])
     (out/'evaluation.html').write_text('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
