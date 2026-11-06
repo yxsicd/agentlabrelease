@@ -1,0 +1,76 @@
+{
+  "schema": "agentlab.calculator_student_assessment.v1",
+  "case": "calculator-division-zero-and-decimal",
+  "model": "glm-5.3-flash",
+  "agent": "codex-cli 0.166.0",
+  "reasoning": "provider default; not disabled",
+  "teacherHelpCount": 0,
+  "budgetLimit": 1000000,
+  "budgetBoundary": "between_requests",
+  "budgetDecision": "budget_exhausted",
+  "budgetUsed": 1003531,
+  "budgetOvershoot": 3531,
+  "budgetMcpAvailable": false,
+  "usage": {
+    "input": 996880,
+    "output": 6651,
+    "cached_input": 945152,
+    "reasoning_output": 760
+  },
+  "usageExchanges": 37,
+  "usageComplete": true,
+  "cachedInputIncludedInInput": true,
+  "reasoningIncludedInOutput": true,
+  "studentDurationSeconds": 232.85,
+  "studentExit": 1,
+  "studentTerminal": "turn.failed; gateway budget decision exhausted",
+  "independentSourceChecks": {
+    "passed": 5,
+    "total": 6,
+    "failToPass": {
+      "passed": 1,
+      "total": 2
+    },
+    "passToPass": {
+      "passed": 4,
+      "total": 4
+    }
+  },
+  "independentDevice": {
+    "stepsMatched": 9,
+    "stepsObserved": 10,
+    "repeatedDecimal": "pass",
+    "divideByZero": "fail_expected_Error_observed_0",
+    "scope": "operator actions after student termination",
+    "exactInstalledHapIdentity": "not independently confirmed"
+  },
+  "studentBuild": {
+    "status": "succeeded",
+    "artifactSha256": "2e99b86d92765effeb698c1bf41422050401386416b0c689a09bfe44808bfd36",
+    "reportedInstall": "success",
+    "visibleVersionUpdated": false
+  },
+  "studentVerification": "attempted but script failed before completion",
+  "shellCommands": {
+    "total": 31,
+    "exitZero": 28,
+    "nonzero": 3,
+    "exitCodeIsNotSemanticSuccess": true
+  },
+  "imageViewCallsToIntermediateGateway": 3,
+  "modelMetadataFallbackWarning": true,
+  "fullTaskVerdict": "not_completed",
+  "referenceOperator": "source 6/6; device 11/11",
+  "formalSessionFork": "not_verified",
+  "traceSha256": "3fe92fca501b08f70de8b75808b3b7dcb31f295a579c0bf38c0627234e641c35",
+  "previewFrames": 3,
+  "previewBytes": 25731,
+  "previewLossy": true,
+  "limitations": [
+    "one student sample; no model ranking",
+    "reference and system checks are not student actions",
+    "student device install reported success but byte identity not independently proven",
+    "provider delivery and cost not established",
+    "native session persisted; no SessionFS fork claim"
+  ]
+}

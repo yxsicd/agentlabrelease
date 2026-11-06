@@ -2,6 +2,16 @@
   "schema": "agentlab.public-reports.v1",
   "reports": [
     {
+      "id": "calculator-combined-20261107",
+      "version": "2026-11-07",
+      "title": "鸿蒙计算器：双难点独立尝试",
+      "url": "calculator/2026-11-07-combined/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false,
+      "reportType": "independent_attempt",
+      "evidenceCutoff": "2026-11-07"
+    },
+    {
       "id": "harmony-gui-open-settings-r4-h01",
       "version": "2026-11-06",
       "title": "Harmony 设置页：一次教师提示后续跑",
