@@ -74,6 +74,16 @@ class TerminalReportTest(unittest.TestCase):
             result=report.build(a,t,r)
             self.assertEqual(result['qualification'],'unscored');self.assertIsNone(result['resolved'])
 
+    def test_positive_reward_with_skipped_or_unaccounted_tests_is_unscored(self):
+        for summary in ({'tests':2,'passed':1,'failed':0,'skipped':1},
+                        {'tests':2,'passed':1,'failed':0},
+                        {'tests':2,'passed':2,'failed':0,'skipped':1}):
+            with self.subTest(summary=summary), tempfile.TemporaryDirectory() as tmp:
+                a,t,r=self.fixture(Path(tmp))
+                (t/'verifier/ctrf.json').write_text(json.dumps({'results':{'summary':summary}}))
+                result=report.build(a,t,r)
+                self.assertEqual(result['qualification'],'unscored');self.assertIsNone(result['resolved'])
+
     def test_forged_usage_observation_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             a,t,r=self.fixture(Path(tmp))
