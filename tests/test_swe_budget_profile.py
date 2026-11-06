@@ -108,14 +108,15 @@ class SweBudgetProfileTest(unittest.TestCase):
             def run(command, project, env, label, lifecycle, **options):
                 events = [{'type':'tool_execution_end','result':{'returncode':1}},
                           {'type':'tool_execution_end','result':{'returncode':0}},
-                          {'type':'tool_execution_end','exceptionClass':'TimeoutError'}]
+                          {'type':'tool_execution_end','exceptionClass':'TimeoutError'},
+                          {'type':'tool_execution_end','exceptionClass':'Submitted'}]
                 (evidence / f'{label}-events.jsonl').write_text(''.join(json.dumps(e)+'\n' for e in events))
                 return {}
             participant._run_turn = run
             with patch.dict('os.environ', {}, clear=True):
                 participant.turn('swe', root, prompt='task', transport_retry_limit=0)
             lifecycle=json.loads((evidence/'swe-lifecycle.json').read_text())
-            self.assertEqual(lifecycle['completedToolCalls'], 3)
+            self.assertEqual(lifecycle['completedToolCalls'], 4)
             self.assertEqual(lifecycle['toolErrors'], 2)
 
     def test_budget_denial_stops_retrying_participant(self):

@@ -12,6 +12,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  terminal-harbor-adapter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Test the pinned Harbor adapter contract
+        run: |
+          python3 -m venv "$RUNNER_TEMP/terminal-harbor"
+          "$RUNNER_TEMP/terminal-harbor/bin/pip" install 'harbor==0.25.0'
+          "$RUNNER_TEMP/terminal-harbor/bin/python" -m unittest discover -s tests -p 'test_terminal_harbor_agent.py'
+          "$RUNNER_TEMP/terminal-harbor/bin/python" -m unittest discover -s tests -p 'test_terminal_bench_report.py'
   public-consumer-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 5

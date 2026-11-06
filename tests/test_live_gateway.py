@@ -154,7 +154,7 @@ class GatewayCaptureTests(unittest.TestCase):
     def test_mini_runtime_receives_explicit_builder_budgets(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,
                 {'AGENTLAB_LM_GATEWAY_KEY':'synthetic-key'}), \
-                patch.object(MODULE.subprocess,'run',return_value=subprocess.CompletedProcess([],0,b'',b'')):
+                patch.object(MODULE.subprocess,'run',return_value=subprocess.CompletedProcess([],0,b'',b'')) as probe:
             root=Path(tmp);evidence=root/'evidence';evidence.mkdir();captured={}
             participant=MODULE.Participant(evidence,root/'state',sys.executable,
                 'http://127.0.0.1:1','test-model',implementation='mini-swe-agent')
@@ -171,6 +171,8 @@ class GatewayCaptureTests(unittest.TestCase):
             self.assertEqual(command[-1],'fixture prompt')
             self.assertEqual(captured['options']['timeout_seconds'],780)
             self.assertEqual(captured['lifecycle']['supervisorTimeoutSeconds'],780)
+            self.assertEqual(probe.call_args.kwargs['env']['HOME'],str(root))
+            self.assertNotIn('AGENTLAB_LM_GATEWAY_KEY',probe.call_args.kwargs['env'])
 
     def test_native_banner_is_retained_without_vetoing_completed_tools(self):
         with tempfile.TemporaryDirectory() as tmp,patch.dict(os.environ,

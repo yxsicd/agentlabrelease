@@ -101,7 +101,8 @@ class Participant:
                 'from minisweagent.models.litellm_model import LitellmModel; '
                 'print(json.dumps(dict(prefix=sys.prefix,version=minisweagent.__version__)))'],
                 capture_output=True,timeout=60,
-                env={k:os.environ[k] for k in ('PATH','LANG','LC_ALL','TMPDIR') if k in os.environ})
+                env={**{k:os.environ[k] for k in ('PATH','LANG','LC_ALL','TMPDIR') if k in os.environ},
+                     'HOME':str(state.parent)})
             (evidence/'runtime-probe-stdout.log').write_bytes(probe.stdout)
             (evidence/'runtime-probe-stderr.log').write_bytes(probe.stderr)
             (evidence/'runtime-probe.json').write_text(json.dumps(dict(implementation=implementation,
@@ -454,7 +455,7 @@ class Participant:
             'implementation': implementation, 'packageName': PI_PACKAGE if implementation=='pi' else 'mini-swe-agent',
             'packageVersion': PI_VERSION if implementation=='pi' else '2.4.6', 'model': model,
             'gateway': gateway, 'providerRoute': route,
-            'reasoningEffort': self.reasoning_effort, 'piThinkingMode': 'off',
+            'reasoningEffort': self.reasoning_effort, 'piThinkingMode': 'off' if implementation == 'pi' else None,
             'providerThinkingType': self.thinking_type,
             'providerResponseFormat': self.response_format,
             'providerApi': self.api,
@@ -628,7 +629,7 @@ class Participant:
                     if event.get('type') == 'tool_execution_end':
                         completed_tools += 1
                         result = event.get('result')
-                        if (event.get('exceptionClass') or
+                        if ((event.get('exceptionClass') and event.get('exceptionClass') != 'Submitted') or
                                 (isinstance(result, dict) and
                                  (result.get('isError') or
                                   (type(result.get('returncode')) is int and result['returncode'] != 0) or

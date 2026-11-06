@@ -46,6 +46,11 @@ expose it, or treat raw tool success as proof of useful progress.
 For aggregate reports, verify retained evidence digests and regenerate each
 assessment and linked view before counting it. Reject inconsistent or duplicate
 results. A self-consistent digest does not authenticate the evidence producer.
+When a participant framework raises a normal submission signal as an
+exception, retain the raw event but do not count it as a failed tool call.
+An outer shell exit code can conceal an inner failing command; inspect retained
+output for relevant diagnostics before interpreting tool success as progress.
+Separate a pre-dispatch Agent setup timeout from student reasoning and scoring.
 
 ### Actual staged navigation assessment
 
