@@ -49,8 +49,14 @@ def build(attempt, trial, reference):
         raise ValueError('reference, task, image or source identity mismatch')
     spec=importlib.util.spec_from_file_location('agentlab_terminal_usage',Path(__file__).resolve().parents[1]/'swe-bench/usage.py')
     usage_module=importlib.util.module_from_spec(spec);spec.loader.exec_module(usage_module)
-    if usage != usage_module.summarize(attempt/'evidence/gateway'):
+    gateway=attempt/'evidence/gateway'
+    if usage != usage_module.summarize(gateway):
         raise ValueError('usage observation differs from retained Gateway exchanges')
+    for pattern in ('*.status.json','*.request.json','*.response'):
+        for path in sorted(gateway.glob(pattern)):
+            if not path.resolve(strict=True).is_relative_to(gateway.resolve()):
+                raise ValueError('Gateway evidence escapes its root')
+            sources.append((path,hashlib.sha256(path.read_bytes()).hexdigest()))
     raw=(attempt/'evidence/terminal-task-events.jsonl').read_bytes()
     sources.append((attempt/'evidence/terminal-task-events.jsonl',hashlib.sha256(raw).hexdigest()))
     events=[json.loads(line) for line in raw.split(b'\n') if line.strip()]

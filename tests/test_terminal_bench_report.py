@@ -48,6 +48,8 @@ class TerminalReportTest(unittest.TestCase):
             self.assertEqual(result['execution']['originalLifecycleToolErrors'],1)
             self.assertTrue(result['execution']['observedCommands']['inspectedReflog'])
             self.assertTrue(result['execution']['observedCommands']['mergeConflictOutputObserved'])
+            self.assertIn('0001.response',[p.name for p,_ in result['_sources']])
+            self.assertIn('0001.status.json',[p.name for p,_ in result['_sources']])
 
     def test_incomplete_capture_does_not_score(self):
         with tempfile.TemporaryDirectory() as tmp:
