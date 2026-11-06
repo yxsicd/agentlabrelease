@@ -203,17 +203,44 @@ fn freezes_blocked_unseen_agent_execution_contract_without_promoting_case() {
         fs::read(&historical_path).unwrap(),
         "the Alpha.13 contract must stay immutable when advancing workflows change"
     );
-    for key in [
-        "exactPatchPublicationWorkflow",
-        "publishedRevisionReexecutionWorkflow",
-        "trustedCaseFreezeWorkflow",
+    for (key, path) in [
+        (
+            "assessedCampaign",
+            ".github/workflows/multi-repo-assessed-campaign.yml",
+        ),
+        (
+            "participantExperimentDispatch",
+            "crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs",
+        ),
+        (
+            "participantExperimentDispatchSchema",
+            "schemas/participant-experiment-dispatch.schema.json",
+        ),
+        (
+            "exactPatchPublicationWorkflow",
+            ".github/workflows/purchase-data-exact-patch-publication.yml",
+        ),
+        (
+            "publishedRevisionReexecutionWorkflow",
+            ".github/workflows/purchase-data-published-revision-reexecution.yml",
+        ),
+        (
+            "trustedCaseFreezeWorkflow",
+            ".github/workflows/purchase-data-trusted-case-freeze.yml",
+        ),
     ] {
+        assert_eq!(current["implementationBindings"][key]["path"], path);
+        let expected = format!(
+            "{:x}",
+            Sha256::digest(fs::read(repository().join(path)).unwrap())
+        );
+        assert_eq!(current["implementationBindings"][key]["sha256"], expected);
         historical["implementationBindings"][key]["sha256"] =
             current["implementationBindings"][key]["sha256"].clone();
     }
     assert_eq!(
         current, historical,
-        "current contract may differ from Alpha.13 only at the three fail-closed workflow bindings"
+        "current contract may differ from Alpha.13 only at the six verified implementation bindings"
     );
     fs::remove_dir_all(temp).unwrap();
 }
