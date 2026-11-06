@@ -1,0 +1,39 @@
+{
+  "schema": "agentlab.harmony_gui_adjudication.v1",
+  "task": "open-settings-and-verify",
+  "assessment_authority": "independent_operator",
+  "whole_task_verdict": "not_demonstrated",
+  "device_open_independently_verified": true,
+  "student_verification": "not_demonstrated",
+  "student_screenshot": "not_observed",
+  "teacher_hints": 0,
+  "prior_attempts": [
+    "harness_sandbox_unavailable_unscored",
+    "stdout_panic_unscored"
+  ],
+  "model": "glm-5.3-flash",
+  "agent": "codex-cli 0.166.0",
+  "reasoning": "provider_default_not_explicitly_disabled",
+  "elapsed_seconds": 55.11,
+  "usage": {
+    "input": 76349,
+    "output": 993,
+    "cached_input": 59520,
+    "reasoning_output": 221
+  },
+  "usage_exchanges": 6,
+  "cached_input_in_input": true,
+  "reasoning_output_in_output": true,
+  "budget_requested": 500000,
+  "budget_enforced_observation": false,
+  "trace_sha256": "45f7e2444369313e4f0fe4aa6afa997b796d168bd9b03c2a169def1cf485deee",
+  "oracle_final_sha256": "03dc4f4645786effa02d2ac464950a39e331f4d62483f8bae4f87950733550f2",
+  "limitations": [
+    "one simple UI case",
+    "no build or deployment",
+    "no native session or fork qualification",
+    "no model ranking",
+    "capture-only source candidate not released"
+  ],
+  "independent_evidence": "operator-observed; no signature claim"
+}

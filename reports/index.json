@@ -2,6 +2,16 @@
   "schema": "agentlab.public-reports.v1",
   "reports": [
     {
+      "id": "harmony-gui-open-settings",
+      "version": "2026-11-06",
+      "title": "Harmony GUI 打开设置与验证",
+      "url": "harmony-gui/2026-11-06-open-settings/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false,
+      "reportType": "independent_attempt",
+      "evidenceCutoff": "2026-11-06"
+    },
+    {
       "id": "terminal-bench-fix-git",
       "version": "2026-11-06",
       "title": "Terminal-Bench fix-git 双模型评测摘要",
