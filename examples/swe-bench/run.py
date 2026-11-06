@@ -15,11 +15,18 @@ from swebench.harness.test_spec.test_spec import make_test_spec
 def main():
     p=argparse.ArgumentParser();p.add_argument('--root',type=Path,required=True)
     p.add_argument('--agent-python',type=Path,required=True);p.add_argument('--instance',required=True)
-    p.add_argument('--gateway',required=True);p.add_argument('--model',default='glm-5.3-flash');a=p.parse_args()
+    p.add_argument('--gateway',required=True);p.add_argument('--model',default='glm-5.3-flash')
+    p.add_argument('--step-limit',type=int,default=0,help='Model call limit; 0 disables it')
+    p.add_argument('--wall-time-limit-seconds',type=int,default=1800,help='Agent wall-clock fallback')
+    a=p.parse_args()
+    if not 0 <= a.step_limit <= 10000 or not 60 <= a.wall_time_limit_seconds <= 86400:
+        p.error('step limit must be 0..10000 and wall time must be 60..86400 seconds')
     a.root=a.root.resolve();a.root.mkdir(parents=True,exist_ok=False)
     evidence=a.root/'evidence';evidence.mkdir()
     summary=dict(schema='agentlab.swe_acceptance.v1',instanceId=a.instance,agent='mini-swe-agent',
-                 harnessHealthy=False,agentResolved=False,status='running')
+                 harnessHealthy=False,agentResolved=False,status='running',
+                 budget=dict(stepLimit=a.step_limit,wallTimeLimitSeconds=a.wall_time_limit_seconds,
+                             transportRetryLimit=0,tokenBudgetEnforced=False))
     def command(label,args,**kwargs):
         (evidence/(label+'-command.json')).write_text(json.dumps(args,indent=2)+'\n')
         with (evidence/(label+'-stdout.log')).open('wb') as out,(evidence/(label+'-stderr.log')).open('wb') as err:
@@ -44,7 +51,9 @@ def main():
         spec=importlib.util.spec_from_file_location('participant',module_path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
         participant=m.Participant(evidence,a.root/'participant-state',a.agent_python,a.gateway,a.model,implementation='mini-swe-agent')
         # Keep partial Agent failure and still evaluate the actual patch independently.
-        try: participant.turn('swe-task',a.root,prompt=row['problem_statement'],container=container)
+        try: participant.turn('swe-task',a.root,prompt=row['problem_statement'],container=container,
+                              step_limit=a.step_limit,wall_time_limit_seconds=a.wall_time_limit_seconds,
+                              transport_retry_limit=0)
         except Exception as error: summary['participantError']=str(error)
         observed_commands=[]
         def git(args,allow_diff=False):

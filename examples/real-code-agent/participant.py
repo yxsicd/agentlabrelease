@@ -525,8 +525,8 @@ class Participant:
                 raise ValueError('tool_call_limit must be a positive integer')
             lifecycle.update(maxToolCalls=tool_call_limit, toolCallBudgetExceeded=False)
         if self.implementation == 'mini-swe-agent':
-            lifecycle.update(stepLimit=step_limit or 30,
-                             wallTimeLimitSeconds=wall_time_limit_seconds or 360)
+            lifecycle.update(stepLimit=30 if step_limit is None else step_limit,
+                             wallTimeLimitSeconds=360 if wall_time_limit_seconds is None else wall_time_limit_seconds)
         started = time.monotonic()
         turn_error = None
         turn_result = None
@@ -563,6 +563,7 @@ class Participant:
                              durationMs=round((time.monotonic()-started)*1000))
             events_path = self.evidence / f'{label}-events.jsonl'
             completed_tools = tool_errors = parse_errors = 0
+            participant_exit = None
             if events_path.is_file():
                 for line in events_path.read_bytes().splitlines():
                     if not line.strip():
@@ -576,8 +577,11 @@ class Participant:
                         completed_tools += 1
                         if event.get('result', {}).get('isError'):
                             tool_errors += 1
+                    elif event.get('type') == 'participant_exit' and isinstance(event.get('result'), dict):
+                        participant_exit = event['result'].get('exit_status')
             lifecycle.update(completedToolCalls=completed_tools,
-                             toolErrors=tool_errors,nativeParseErrors=parse_errors)
+                             toolErrors=tool_errors,nativeParseErrors=parse_errors,
+                             participantExitStatus=participant_exit)
             source = project / 'entry/src/main/ets/pages/Index.ets'
             lifecycle['sourcePresent'] = source.is_file()
             if source.is_file():

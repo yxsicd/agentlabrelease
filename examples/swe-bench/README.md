@@ -1,5 +1,14 @@
 # Curated official SWE seeds
 
+The SWE runner defaults to no model-call step limit and a 1,800-second Agent
+wall-clock fallback. Operators may pass `--step-limit` (0 disables it) and
+`--wall-time-limit-seconds`. The supervisor watchdog gets an extra 60 seconds.
+Each run records these settings, the no-replay transport policy and the native
+participant exit status. A time or step limit is not evidence of a model defect.
+This entrypoint does **not** enforce a per-attempt token budget yet; its summary
+explicitly records `tokenBudgetEnforced: false`. Do not report it as a token-
+budgeted assessment or infer missing usage as zero.
+
 These seeds exercise the imported SWE-bench methodology; they are not the
 design ceiling for generated AgentLab cases. The rationale, advantages, gaps
 and adopted generalized repair/preservation qualification matrix are recorded
