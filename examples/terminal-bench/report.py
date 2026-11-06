@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import html
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -23,19 +24,33 @@ def build(attempt, trial, reference):
     student=read(trial/'result.json')
     tests=read(trial/'verifier/ctrf.json')
     ref=read(reference/'reference-qualification.json')
+    reference_trials=[]
     for name,digest in ref['evidence'].items():
         path=(reference/name).resolve(strict=True)
         if not path.is_relative_to(reference.resolve()):
             raise ValueError('reference evidence escapes its root')
         if hashlib.sha256(path.read_bytes()).hexdigest()!=digest:
             raise ValueError('reference evidence digest mismatch')
+        if name.endswith('/result.json'):
+            reference_trials.append(read(path))
+    if len(reference_trials)!=1:
+        raise ValueError('reference trial evidence is missing or ambiguous')
+    reference_trial=reference_trials[0]
     if (ref.get('qualification')!='reference_passed_once' or ref.get('oracle',{}).get('verifierReward')!=1.0
+        or reference_trial.get('id')!=ref.get('oracle',{}).get('trialId')
+        or reference_trial.get('exception_info') is not None or reference_trial.get('agent_info',{}).get('name')!='oracle'
+        or ((reference_trial.get('verifier_result') or {}).get('rewards') or {}).get('reward')!=1.0
+        or reference_trial.get('task_checksum')!=ref.get('taskChecksum')
         or ref.get('taskChecksum')!=student.get('task_checksum') or ref.get('image',{}).get('id')!=binding.get('imageId')
         or ref.get('sourceCommit')!=intent.get('taskCommit') or ref.get('benchmark')!=intent.get('benchmark')
         or ref.get('task')!=intent.get('task') or (student.get('task_name') or '').split('/')[-1]!=ref.get('task')
         or captured_participant.get('model')!=intent.get('model')
         or (student.get('agent_info',{}).get('model_info') or {}).get('name')!=intent.get('model')):
         raise ValueError('reference, task, image or source identity mismatch')
+    spec=importlib.util.spec_from_file_location('agentlab_terminal_usage',Path(__file__).resolve().parents[1]/'swe-bench/usage.py')
+    usage_module=importlib.util.module_from_spec(spec);spec.loader.exec_module(usage_module)
+    if usage != usage_module.summarize(attempt/'evidence/gateway'):
+        raise ValueError('usage observation differs from retained Gateway exchanges')
     raw=(attempt/'evidence/terminal-task-events.jsonl').read_bytes()
     sources.append((attempt/'evidence/terminal-task-events.jsonl',hashlib.sha256(raw).hexdigest()))
     events=[json.loads(line) for line in raw.split(b'\n') if line.strip()]

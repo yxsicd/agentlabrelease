@@ -18,7 +18,11 @@ class TerminalReportTest(unittest.TestCase):
         put(attempt/'intent.json',{'benchmark':'terminal-bench-2','task':'fix-git','taskCommit':'abc','model':'fixture','teacherHelp':0})
         put(attempt/'participant-outcome.json',{'error':None})
         put(attempt/'container-binding.json',{'imageId':'sha256:image'})
-        put(attempt/'evidence/usage-observation.json',{'inputOutputComplete':True})
+        put(attempt/'evidence/gateway/0001.status.json',{'outcome':'completed','upstreamEof':True,'status':200})
+        put(attempt/'evidence/gateway/0001.response',{'usage':{'prompt_tokens':4,'completion_tokens':2}})
+        spec=importlib.util.spec_from_file_location('usage_fixture',ROOT/'examples/swe-bench/usage.py')
+        usage=importlib.util.module_from_spec(spec);spec.loader.exec_module(usage)
+        put(attempt/'evidence/usage-observation.json',usage.summarize(attempt/'evidence/gateway'))
         put(attempt/'evidence/participant.json',{'model':'fixture'})
         put(attempt/'evidence/terminal-task-lifecycle.json',{'participantExitStatus':'Submitted','toolErrors':1})
         events=[{'type':'tool_execution_end','result':{'returncode':0},'action':{'command':'git reflog'}},
@@ -29,8 +33,11 @@ class TerminalReportTest(unittest.TestCase):
         put(trial/'verifier/ctrf.json',{'results':{'summary':{'tests':2,'passed':2,'failed':0,'skipped':0}}})
         put(reference/'result.json',{'result':'reference'})
         digest=hashlib.sha256((reference/'result.json').read_bytes()).hexdigest()
-        put(reference/'reference-qualification.json',{'benchmark':'terminal-bench-2','task':'fix-git','qualification':'reference_passed_once','oracle':{'verifierReward':1.0,'exceptions':0},
-            'taskChecksum':'taskhash','image':{'id':'sha256:image'},'sourceCommit':'abc','evidence':{'result.json':digest}})
+        put(reference/'oracle/result.json',{'id':'ref-id','agent_info':{'name':'oracle'},'exception_info':None,
+            'task_checksum':'taskhash','verifier_result':{'rewards':{'reward':1.0}}})
+        trial_digest=hashlib.sha256((reference/'oracle/result.json').read_bytes()).hexdigest()
+        put(reference/'reference-qualification.json',{'benchmark':'terminal-bench-2','task':'fix-git','qualification':'reference_passed_once','oracle':{'verifierReward':1.0,'exceptions':0,'trialId':'ref-id'},
+            'taskChecksum':'taskhash','image':{'id':'sha256:image'},'sourceCommit':'abc','evidence':{'result.json':digest,'oracle/result.json':trial_digest}})
         return attempt,trial,reference
 
     def test_submission_is_success_not_tool_error(self):
@@ -44,7 +51,10 @@ class TerminalReportTest(unittest.TestCase):
 
     def test_incomplete_capture_does_not_score(self):
         with tempfile.TemporaryDirectory() as tmp:
-            a,t,r=self.fixture(Path(tmp));(a/'evidence/usage-observation.json').write_text('{"inputOutputComplete":false}')
+            a,t,r=self.fixture(Path(tmp));(a/'evidence/gateway/0001.status.json').write_text('{"outcome":"error"}')
+            spec=importlib.util.spec_from_file_location('usage_fixture',ROOT/'examples/swe-bench/usage.py')
+            usage=importlib.util.module_from_spec(spec);spec.loader.exec_module(usage)
+            (a/'evidence/usage-observation.json').write_text(json.dumps(usage.summarize(a/'evidence/gateway')))
             result=report.build(a,t,r);self.assertEqual(result['qualification'],'unscored');self.assertIsNone(result['resolved'])
 
     def test_reference_mismatch_or_changed_evidence_fails_closed(self):
@@ -61,6 +71,21 @@ class TerminalReportTest(unittest.TestCase):
             (t/'verifier/ctrf.json').write_text('{"results":{"summary":{"tests":2,"passed":1,"failed":1}}}')
             result=report.build(a,t,r)
             self.assertEqual(result['qualification'],'unscored');self.assertIsNone(result['resolved'])
+
+    def test_forged_usage_observation_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a,t,r=self.fixture(Path(tmp))
+            (a/'evidence/usage-observation.json').write_text('{"inputOutputComplete":true}')
+            with self.assertRaisesRegex(ValueError,'usage observation differs'):report.build(a,t,r)
+
+    def test_reference_summary_cannot_override_failed_raw_oracle(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a,t,r=self.fixture(Path(tmp));p=r/'oracle/result.json';data=json.loads(p.read_text())
+            data['verifier_result']['rewards']['reward']=0.0;p.write_text(json.dumps(data))
+            q=r/'reference-qualification.json';receipt=json.loads(q.read_text())
+            receipt['evidence']['oracle/result.json']=hashlib.sha256(p.read_bytes()).hexdigest()
+            q.write_text(json.dumps(receipt))
+            with self.assertRaisesRegex(ValueError,'identity mismatch'):report.build(a,t,r)
 
 
 if __name__=='__main__': unittest.main()
