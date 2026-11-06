@@ -25,7 +25,6 @@
   "cached_input_in_input": true,
   "reasoning_output_in_output": true,
   "budget_requested": 500000,
-  "budget_enforced_observation": false,
   "trace_sha256": "45f7e2444369313e4f0fe4aa6afa997b796d168bd9b03c2a169def1cf485deee",
   "oracle_final_sha256": "03dc4f4645786effa02d2ac464950a39e331f4d62483f8bae4f87950733550f2",
   "limitations": [
@@ -35,5 +34,10 @@
     "no model ranking",
     "capture-only source candidate not released"
   ],
-  "independent_evidence": "operator-observed; no signature claim"
+  "independent_evidence": "operator-observed; no signature claim",
+  "budget_boundary": "between_requests",
+  "budget_receipts_count": 6,
+  "budget_final_used": 77342,
+  "budget_exhaustion_tested": false,
+  "budget_summary_note": "generic summarizer default false; request receipts and candidate source establish configured boundary checks; this attempt did not exercise exhaustion"
 }
