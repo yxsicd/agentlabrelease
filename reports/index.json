@@ -2,6 +2,16 @@
   "schema": "agentlab.public-reports.v1",
   "reports": [
     {
+      "id": "harmony-gui-open-settings-r4-h01",
+      "version": "2026-11-06",
+      "title": "Harmony 设置页：一次教师提示后续跑",
+      "url": "harmony-gui/2026-11-06-open-settings-r4-h01/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false,
+      "reportType": "assisted_continuation",
+      "evidenceCutoff": "2026-11-06"
+    },
+    {
       "id": "harmony-gui-open-settings-r4",
       "version": "2026-11-06",
       "title": "Harmony 设置页：持久会话新尝试",

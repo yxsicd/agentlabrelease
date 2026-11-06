@@ -1,0 +1,49 @@
+{
+  "schema": "agentlab.harmony_gui_assisted_continuation.v1",
+  "case": "open-settings-and-verify",
+  "same_native_session": true,
+  "same_device_runtime_state": false,
+  "device_rebooted": true,
+  "sessionfs_fork_verified": false,
+  "teacher_help_count": 1,
+  "teacher_help": "设备已重启，当前画面可能不同。上次 OCR 返回未安装。请核对此前视觉结论是否有证据，并自行完成验证、如实报告。",
+  "independent_task_initial_result_preserved": true,
+  "student_corrected_prior_unsupported_claim": true,
+  "foreground_verified_by_student": true,
+  "new_screenshot_retained": true,
+  "new_screenshot_visually_examined_by_student": "not_observed",
+  "student_new_visual_details": "unsupported; Bluetooth and cellular not visible in retained screenshot",
+  "operator_image_inspection": "settings page and WLAN visible; Bluetooth and cellular not visible",
+  "independent_layout": "pass",
+  "harness_model_metadata_warning": true,
+  "teacher_continuation_usage": {
+    "input": 77088,
+    "output": 922,
+    "cached_input": 75840,
+    "reasoning_output": 326
+  },
+  "teacher_continuation_exchanges": 5,
+  "aggregate_usage": {
+    "input": 300488,
+    "output": 3720,
+    "cached_input": 275904,
+    "reasoning_output": 1226
+  },
+  "aggregate_used": 304208,
+  "budget_limit": 500000,
+  "remaining_at_boundary": 195792,
+  "last_request_may_overshoot": true,
+  "trace_sha256": "b922270b4d62a5ac2e2bdc930f9bb729100401642eb3bc362ae146d8ba418e63",
+  "screenshot_sha256": "392259b71992f2aaed0accbcd385aa13b24c8bada44f13bedad36d21bad470f3",
+  "original_jpeg_bytes": 173749,
+  "preview_avif_bytes": 12945,
+  "preview_width": 512,
+  "preview_derived_only": true,
+  "preview_verified": true,
+  "limitations": [
+    "one task and one model",
+    "teacher intervention does not convert the independent result to pass",
+    "AVIF is a derived preview; original remains",
+    "provider raw output not available for original attempt"
+  ]
+}
