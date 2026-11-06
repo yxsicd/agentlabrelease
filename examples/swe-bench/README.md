@@ -5,9 +5,14 @@ wall-clock fallback. Operators may pass `--step-limit` (0 disables it) and
 `--wall-time-limit-seconds`. The supervisor watchdog gets an extra 60 seconds.
 Each run records these settings, the no-replay transport policy and the native
 participant exit status. A time or step limit is not evidence of a model defect.
-This entrypoint does **not** enforce a per-attempt token budget yet; its summary
-explicitly records `tokenBudgetEnforced: false`. Do not report it as a token-
-budgeted assessment or infer missing usage as zero.
+`--token-budget` optionally enforces an attempt-local input-plus-output budget
+at the operator Gateway between model requests. It serializes budgeted requests,
+counts cached input and reasoning output only within their parent totals, and
+stops further requests if prior usage is missing or incomplete. The final request
+can exceed the limit; this is not a strict token cap. The default is no token
+budget, and the summary records whether the option was enabled. Budget-denial
+evidence distinguishes an exhausted balance from unknown usage. The Agent MCP
+budget-query interface is not provided by this runner.
 `usage-observation.json` summarizes the captured response usage per exchange,
 with field coverage and incomplete exchanges. Cached input is a subset of input,
 and reasoning output is a subset of output; do not add these subsets again.

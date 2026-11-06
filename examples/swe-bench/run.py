@@ -19,15 +19,20 @@ def main():
     p.add_argument('--gateway',required=True);p.add_argument('--model',default='glm-5.3-flash')
     p.add_argument('--step-limit',type=int,default=0,help='Model call limit; 0 disables it')
     p.add_argument('--wall-time-limit-seconds',type=int,default=1800,help='Agent wall-clock fallback')
+    p.add_argument('--token-budget',type=int,help='Per-attempt input plus output token limit, checked between requests')
     a=p.parse_args()
     if not 0 <= a.step_limit <= 10000 or not 60 <= a.wall_time_limit_seconds <= 86400:
         p.error('step limit must be 0..10000 and wall time must be 60..86400 seconds')
+    if a.token_budget is not None and a.token_budget <= 0:
+        p.error('token budget must be positive')
     a.root=a.root.resolve();a.root.mkdir(parents=True,exist_ok=False)
     evidence=a.root/'evidence';evidence.mkdir()
     summary=dict(schema='agentlab.swe_acceptance.v1',instanceId=a.instance,agent='mini-swe-agent',
                  harnessHealthy=False,agentResolved=False,status='running',
                  budget=dict(stepLimit=a.step_limit,wallTimeLimitSeconds=a.wall_time_limit_seconds,
-                             transportRetryLimit=0,tokenBudgetEnforced=False))
+                             transportRetryLimit=0,tokenBudget=a.token_budget,
+                             tokenBudgetEnforced=a.token_budget is not None,
+                             tokenBudgetBoundary='between_requests' if a.token_budget else None))
     def command(label,args,**kwargs):
         (evidence/(label+'-command.json')).write_text(json.dumps(args,indent=2)+'\n')
         with (evidence/(label+'-stdout.log')).open('wb') as out,(evidence/(label+'-stderr.log')).open('wb') as err:
@@ -50,7 +55,8 @@ def main():
         (evidence/'workspace-baseline.json').write_text(json.dumps(dict(taskBaseCommit=row['base_commit'],executionBaseCommit=actual,taskBaseAncestorVerified=True,image=image,imageId=image_identity['Id'],repoDigests=image_identity.get('RepoDigests',[])),indent=2)+'\n')
         module_path=Path(__file__).parents[1]/'real-code-agent/participant.py'
         spec=importlib.util.spec_from_file_location('participant',module_path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
-        participant=m.Participant(evidence,a.root/'participant-state',a.agent_python,a.gateway,a.model,implementation='mini-swe-agent')
+        participant=m.Participant(evidence,a.root/'participant-state',a.agent_python,a.gateway,a.model,
+                                  implementation='mini-swe-agent',token_budget=a.token_budget)
         # Keep partial Agent failure and still evaluate the actual patch independently.
         try: participant.turn('swe-task',a.root,prompt=row['problem_statement'],container=container,
                               step_limit=a.step_limit,wall_time_limit_seconds=a.wall_time_limit_seconds,
@@ -91,8 +97,12 @@ def main():
     finally:
         if participant: participant.close()
         usage = summarize_usage(evidence/'gateway')
+        usage['tokenBudgetEnforced'] = a.token_budget is not None and participant is not None and usage['exchanges'] > 0
         (evidence/'usage-observation.json').write_text(json.dumps(usage,indent=2)+'\n')
         summary['usageObservation'] = 'usage-observation.json'
+        budget_decision = evidence/'token-budget-decision.json'
+        if budget_decision.is_file():
+            summary['budgetDecision'] = json.loads(budget_decision.read_text())
         subprocess.run(['docker','rm','-f',container],capture_output=True)
         (evidence/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
 

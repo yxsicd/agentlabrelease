@@ -59,7 +59,18 @@ class Participant:
 
     def __init__(self, evidence, state, binary, gateway, model, route='glm', implementation='pi', reasoning_effort=None,
                  gateway_timeout_seconds=180, thinking_type=None, response_format=None,
-                 api='openai-completions', max_output_tokens=None):
+                 api='openai-completions', max_output_tokens=None, token_budget=None):
+        if token_budget is not None and (type(token_budget) is not int or token_budget <= 0):
+            raise ValueError('token_budget must be a positive integer')
+        self.token_budget = token_budget
+        self.token_budget_lock = threading.Lock()
+        self.token_budget_used = 0
+        self.token_budget_unknown = False
+        if token_budget is not None:
+            usage_path = Path(__file__).resolve().parents[1] / 'swe-bench/usage.py'
+            usage_spec = importlib.util.spec_from_file_location('agentlab_swe_usage', usage_path)
+            self.token_usage = importlib.util.module_from_spec(usage_spec)
+            usage_spec.loader.exec_module(self.token_usage)
         if max_output_tokens is not None and (type(max_output_tokens) is not int
                 or max_output_tokens not in (8192, 16384)):
             raise ValueError('max_output_tokens must be omitted, 8192 or 16384')
@@ -171,6 +182,19 @@ class Participant:
                 if owner.runtime_isolated and self.path != owner.api_path:
                     self.send_error(404, 'Participant proxy path is not allowed')
                     return
+                # Serialize only budgeted exchanges: otherwise simultaneous
+                # calls can all pass the same pre-request balance check.
+                with owner.token_budget_lock if owner.token_budget is not None else contextlib.nullcontext():
+                    self.budgeted_post()
+
+            def budgeted_post(self):
+                if owner.token_budget is not None and (owner.token_budget_unknown or owner.token_budget_used >= owner.token_budget):
+                    (evidence / 'token-budget-decision.json').write_text(json.dumps(dict(
+                        limit=owner.token_budget, used=owner.token_budget_used,
+                        reason='usage_unknown' if owner.token_budget_unknown else 'budget_exhausted',
+                        boundary='between_requests'), indent=2)+'\n')
+                    self.send_error(429, 'Attempt token usage unknown' if owner.token_budget_unknown else 'Attempt token budget exhausted')
+                    return
                 with owner.lock:
                     owner.requests += 1
                     number = owner.requests
@@ -193,6 +217,17 @@ class Participant:
                 finally:
                     receipt.update(endedAt=datetime.now(timezone.utc).isoformat(),
                                    durationMs=round((time.monotonic()-started)*1000))
+                    if owner.token_budget is not None:
+                        usage = owner.token_usage._read_usage(stem.with_suffix('.response'))
+                        complete = (receipt['outcome'] == 'completed' and receipt['upstreamEof'] is True
+                                    and type(receipt['status']) is int and 200 <= receipt['status'] < 300)
+                        if not complete or not usage or usage['input'] is None or usage['output'] is None:
+                            owner.token_budget_unknown = True
+                        else:
+                            owner.token_budget_used += usage['input'] + usage['output']
+                        receipt['attemptBudget'] = dict(limit=owner.token_budget, used=owner.token_budget_used,
+                                                        usageUnknown=owner.token_budget_unknown,
+                                                        boundary='between_requests')
                     stem.with_suffix('.status.json').write_text(json.dumps(receipt, indent=2)+'\n')
 
             def forward(self, stem, receipt):
