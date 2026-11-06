@@ -37,8 +37,12 @@ design ceiling for generated AgentLab cases. The rationale, advantages, gaps
 and adopted generalized repair/preservation qualification matrix are recorded
 in [the SWE-bench strategy comparison](../../docs/swe-bench-strategy-comparison.md).
 
-Run `swe-campaign.yml` for one seed or all four. The catalog binds full official
-SWE-bench Lite records by canonical SHA and base commit. `seeds.py` retains the
+Run `swe-campaign.yml` for one seed, including the pinned Verified SymPy case;
+`all` retains its original meaning of the four curated Lite cases. Its
+`token_budget` input defaults to 500,000 input-plus-output tokens per attempt;
+the request-boundary overshoot described above still applies. A capture-only
+replay does not dispatch a participant or consume that budget. The catalogs bind full official
+SWE-bench records by canonical SHA and base commit. `seeds.py` retains the
 complete original task, reference patch, test patch and FAIL_TO_PASS/PASS_TO_PASS.
 Only the issue statement enters the subject task. The mini-SWE-agent Python
 runtime is outside `/testbed`; the project executes in the official instance
