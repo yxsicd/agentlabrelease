@@ -20,6 +20,7 @@ def main():
     p.add_argument('--step-limit',type=int,default=0,help='Model call limit; 0 disables it')
     p.add_argument('--wall-time-limit-seconds',type=int,default=1800,help='Agent wall-clock fallback')
     p.add_argument('--token-budget',type=int,help='Per-attempt input plus output token limit, checked between requests')
+    p.add_argument('--catalog',type=Path,default=Path(__file__).with_name('catalog.json'))
     a=p.parse_args()
     if not 0 <= a.step_limit <= 10000 or not 60 <= a.wall_time_limit_seconds <= 86400:
         p.error('step limit must be 0..10000 and wall time must be 60..86400 seconds')
@@ -41,8 +42,12 @@ def main():
     container='al-swe-'+os.environ.get('GITHUB_RUN_ID','local')
     participant=None
     try:
-        catalog=json.loads(Path(__file__).with_name('catalog.json').read_text())
+        catalog=json.loads(a.catalog.read_text())
         row=fetch(catalog,[a.instance],evidence/'seeds')[a.instance]
+        evaluation_dataset = catalog['dataset']
+        if catalog.get('frozenDatasetForEvaluation') is True:
+            evaluation_dataset = str((evidence/'seeds'/'evaluation-dataset.json').resolve())
+            Path(evaluation_dataset).write_text(json.dumps([row])+'\n')
         image=make_test_spec(row,namespace='swebench').instance_image_key
         command('image-pull',['docker','pull',image])
         command('subject-start',['docker','run','-d','--name',container,'--entrypoint','sleep',image,'infinity'])
@@ -79,7 +84,7 @@ def main():
             predictions=evidence/(kind+'-predictions.jsonl')
             predictions.write_text(json.dumps(dict(instance_id=a.instance,model_name_or_path='agentlab-'+kind,model_patch=value))+'\n')
             command(kind+'-evaluation',[sys.executable,'-m','swebench.harness.run_evaluation',
-                    '--dataset_name',catalog['dataset'],'--instance_ids',a.instance,
+                    '--dataset_name',evaluation_dataset,'--instance_ids',a.instance,
                     '--predictions_path',str(predictions),'--max_workers','1','--run_id',kind,'--timeout','600'],cwd=evidence)
             reports=list((evidence/'logs/run_evaluation'/kind).rglob('report.json'))
             if not reports and kind=='agent' and not value.strip():

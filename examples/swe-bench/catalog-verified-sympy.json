@@ -1,0 +1,16 @@
+{
+  "schema": "agentlab.swe_seed_catalog.v1",
+  "dataset": "princeton-nlp/SWE-bench_Verified",
+  "split": "test",
+  "offsets": [400],
+  "frozenDatasetForEvaluation": true,
+  "cases": [
+    {
+      "instanceId": "sympy__sympy-20590",
+      "repo": "sympy/sympy",
+      "baseCommit": "cffd4e0f86fefd4802349a9f9b19ed70934ea354",
+      "version": "1.7",
+      "sourceRecordSha256": "70cf87771f1205a02c6b276d0ed1467fa28386c97263b572b86ead34f63b0dca"
+    }
+  ]
+}

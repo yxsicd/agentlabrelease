@@ -17,7 +17,7 @@ def fetch(catalog, selected, output):
     if set(expected)!=set(selected): raise ValueError('unknown seed')
     output.mkdir(parents=True,exist_ok=True)
     found={}
-    for offset in [0,100,200]:
+    for offset in catalog.get('offsets', [0,100,200]):
         query=urllib.parse.urlencode(dict(dataset=catalog['dataset'],config='default',split=catalog['split'],offset=offset,length=100))
         url='https://datasets-server.huggingface.co/rows?'+query
         raw=urllib.request.urlopen(url,timeout=60).read()

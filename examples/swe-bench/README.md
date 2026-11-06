@@ -1,5 +1,11 @@
 # Curated official SWE seeds
 
+The optional `--catalog examples/swe-bench/catalog-verified-sympy.json`
+selects the separately pinned Verified `sympy__sympy-20590` case; without it,
+the original Lite catalog and offsets are unchanged. The selected record and
+base commit are validated before a participant is dispatched. Its independent
+evaluator reads the exact frozen single-row dataset, avoiding dataset drift.
+
 The SWE runner defaults to no model-call step limit and a 1,800-second Agent
 wall-clock fallback. Operators may pass `--step-limit` (0 disables it) and
 `--wall-time-limit-seconds`. The supervisor watchdog gets an extra 60 seconds.
