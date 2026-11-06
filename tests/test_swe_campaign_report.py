@@ -14,9 +14,10 @@ fixtures = importlib.util.module_from_spec(spec); spec.loader.exec_module(fixtur
 class CampaignTest(unittest.TestCase):
     def assessment(self, root, reference, model='model'):
         fixtures.SweReportTest().make_evidence(root, reference=reference)
+        (root / 'participant.json').write_text(json.dumps({'model': model}))
         value = fixtures.reporter.build(root)
-        value['participant']['model'] = model
         out = root / 'report'; out.mkdir()
+        (out / 'evaluation.html').write_text(fixtures.reporter.render(value))
         path = out / 'assessment.json'; path.write_text(json.dumps(value))
         return path
 
@@ -45,6 +46,33 @@ class CampaignTest(unittest.TestCase):
                 campaign.build([path, path])
             (root / 'summary.json').write_text('{}')
             with self.assertRaisesRegex(ValueError, 'changed'):
+                campaign.build([path])
+
+    def test_tampered_verdict_or_model_is_rejected_even_if_evidence_is_unchanged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); path = self.assessment(root, True)
+            original = json.loads(path.read_text())
+            for field in ('resolved', 'model'):
+                value = json.loads(json.dumps(original))
+                if field == 'resolved': value['resolved'] = False
+                else: value['participant']['model'] = 'different-model'
+                path.write_text(json.dumps(value))
+                with self.assertRaisesRegex(ValueError, 'does not match'):
+                    campaign.build([path])
+
+    def test_reformatted_copy_cannot_be_counted_twice(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); path = self.assessment(root, True)
+            duplicate = path.with_name('copy.json')
+            duplicate.write_text(json.dumps(json.loads(path.read_text()), indent=4, sort_keys=True))
+            with self.assertRaisesRegex(ValueError, 'duplicate'):
+                campaign.build([path, duplicate])
+
+    def test_tampered_html_is_not_linked_from_campaign(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); path = self.assessment(root, True)
+            (path.parent / 'evaluation.html').write_text('tampered')
+            with self.assertRaisesRegex(ValueError, 'HTML does not match'):
                 campaign.build([path])
 
 

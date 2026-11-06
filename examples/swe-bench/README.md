@@ -67,12 +67,17 @@ python3 examples/swe-bench/report.py --evidence /path/to/evidence \
 
 To compare retained assessments without re-running participants, pass each
 assessment to `campaign_report.py --assessment /path/to/assessment.json` and
-select a fresh `--output` directory. It verifies the source evidence digests,
-rejects duplicate assessment bytes, and groups separately by benchmark,
+select a fresh `--output` directory. It verifies source evidence digests,
+reconstructs the assessment and HTML from those sources, rejects inconsistent
+results and semantically duplicated assessments, and groups separately by benchmark,
 participant, model, reasoning setting and budget. Its attempt-level resolved
 rate excludes Harness failures and unscored attempts; it is not a leaderboard
 or a representative estimate from a small sample. Keep the linked evidence
-directories alongside the aggregate when moving it.
+directories alongside the aggregate when moving it. These checks establish
+internal consistency, not an authenticated signature of evidence origin. The
+current `report.py` must match the version that generated each assessment;
+after a report format or interpretation change, regenerate explicitly from
+retained evidence rather than silently mixing interpretations.
 
 This public tier records full operator-owned source evidence in TableGit and
 proves cold reconstruction. It does not claim formal SessionFS snapshots of the

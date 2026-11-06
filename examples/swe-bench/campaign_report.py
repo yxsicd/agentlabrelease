@@ -3,10 +3,19 @@
 import argparse
 import hashlib
 import html
+import importlib.util
 import json
 import os
 from collections import defaultdict
 from pathlib import Path
+
+_spec = importlib.util.spec_from_file_location('agentlab_swe_report', Path(__file__).with_name('report.py'))
+_report = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_report)
+
+
+def canonical(value):
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'), allow_nan=False)
 
 
 def build(paths):
@@ -16,12 +25,13 @@ def build(paths):
         source = Path(source).resolve(strict=True)
         raw = source.read_bytes()
         digest = hashlib.sha256(raw).hexdigest()
-        if digest in seen:
-            raise ValueError('duplicate assessment bytes')
-        seen.add(digest)
         row = json.loads(raw)
         if row.get('schema') != 'agentlab.swe_report.v1':
             raise ValueError('unsupported assessment schema')
+        identity = hashlib.sha256(canonical(row).encode('utf-8')).hexdigest()
+        if identity in seen:
+            raise ValueError('duplicate assessment')
+        seen.add(identity)
         qualification, resolved = row.get('qualification'), row.get('resolved')
         if qualification not in ('qualified', 'harness_failure', 'unknown'):
             raise ValueError('invalid qualification')
@@ -35,6 +45,12 @@ def build(paths):
             path = (evidence_root / entry['path']).resolve(strict=True)
             if not path.is_relative_to(evidence_root) or hashlib.sha256(path.read_bytes()).hexdigest() != entry['sha256']:
                 raise ValueError('assessment evidence missing or changed')
+        expected = _report.build(evidence_root)
+        if canonical(row) != canonical(expected):
+            raise ValueError('assessment does not match its source evidence')
+        page = source.parent / 'evaluation.html'
+        if not page.is_file() or page.read_text() != _report.render(expected):
+            raise ValueError('assessment HTML does not match its source evidence')
         participant = row.get('participant') or {}
         execution = row.get('execution') or {}
         key = json.dumps({'benchmark': row.get('benchmark'), 'agent': participant.get('agent'),
