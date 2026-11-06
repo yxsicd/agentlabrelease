@@ -527,6 +527,19 @@ class Participant:
         # Only the operator-side proxy has the external credential.
         env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ}
         env.update(HOME=str(self.state.parent), PI_CODING_AGENT_DIR=str(self.state))
+        if self.implementation == 'mini-swe-agent' and container and not runtime_config:
+            # The participant HOME is intentionally isolated, so Docker's
+            # operator-selected context is not present there. Resolve it before
+            # dispatch and pass only the local socket endpoint to the launcher;
+            # never expose Docker credentials or mount the socket in the task.
+            probe = subprocess.run(
+                ['docker', 'context', 'inspect', '--format', '{{.Endpoints.docker.Host}}'],
+                capture_output=True, text=True, timeout=10, check=False,
+            )
+            endpoint = probe.stdout.strip()
+            if probe.returncode or not endpoint.startswith('unix:///') or '\n' in endpoint:
+                raise RuntimeError('Harness could not resolve a local Docker context before dispatch')
+            env['DOCKER_HOST'] = endpoint
         if runtime_config:
             env.update(
                 AGENTLAB_PARTICIPANT_RUNTIME_CONFIG=runtime_config,
@@ -610,7 +623,12 @@ class Participant:
                         continue
                     if event.get('type') == 'tool_execution_end':
                         completed_tools += 1
-                        if event.get('result', {}).get('isError'):
+                        result = event.get('result')
+                        if (event.get('exceptionClass') or
+                                (isinstance(result, dict) and
+                                 (result.get('isError') or
+                                  (type(result.get('returncode')) is int and result['returncode'] != 0) or
+                                  bool(result.get('exception_info'))))):
                             tool_errors += 1
                     elif event.get('type') == 'participant_exit' and isinstance(event.get('result'), dict):
                         participant_exit = event['result'].get('exit_status')

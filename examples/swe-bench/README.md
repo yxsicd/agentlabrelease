@@ -16,6 +16,13 @@ budget-query interface is not provided by this runner.
 `usage-observation.json` summarizes the captured response usage per exchange,
 with field coverage and incomplete exchanges. Cached input is a subset of input,
 and reasoning output is a subset of output; do not add these subsets again.
+For a local mini-SWE-agent using an official task container, the operator
+launcher resolves the selected local Docker socket before the model starts and
+passes only that endpoint to the isolated participant process. It does not
+mount the Docker socket into the task container or copy Docker credentials.
+An unavailable or non-local Docker context fails before model dispatch. Tool
+errors in the lifecycle include nonzero command exits and explicit exceptions;
+they remain distinct from the independent task verdict.
 
 These seeds exercise the imported SWE-bench methodology; they are not the
 design ceiling for generated AgentLab cases. The rationale, advantages, gaps
