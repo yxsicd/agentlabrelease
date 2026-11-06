@@ -9,6 +9,13 @@ control is not a student attempt. The historical Calendar score remains pending
 when its original record says pending; a system-operated device check is not a
 student success.
 
+`python3 examples/benchmark-report/image_evidence.py CAPTURE_DIR` reconciles
+captured `view_image` calls against later image-bearing function outputs using
+call IDs. It checks exact image hashes and an HTTP status at the intermediate
+gateway boundary, without emitting image bytes or file paths. Missing evidence
+remains unknown: the result does not establish provider delivery, visual
+comprehension, a score, or signed provenance. Keep the input captures private.
+
 The alignment command needs the same SWE assessments and Terminal paths as
 `compose.py`, plus `--harmony-supplement`, `--harmony-marker`,
 `--harmony-device-summary`, `--harmony-device-evidence`, and a fresh `--output`.
