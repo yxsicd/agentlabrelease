@@ -43,6 +43,9 @@ the actual workspace patch even if the participant did not submit normally.
 Report a passing patch and normal autonomous submission as separate facts.
 Do not infer that an Agent queried a budget MCP tool when its adapter did not
 expose it, or treat raw tool success as proof of useful progress.
+For aggregate reports, verify retained evidence digests and regenerate each
+assessment and linked view before counting it. Reject inconsistent or duplicate
+results. A self-consistent digest does not authenticate the evidence producer.
 
 ### Actual staged navigation assessment
 
