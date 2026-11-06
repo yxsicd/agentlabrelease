@@ -94,6 +94,14 @@ bounded operations are `wait-text`, `tap`, `swipe`, `key`, `sleep`,
 bundle before installation so state from a prior case cannot silently satisfy
 the Oracle.
 
+For an application-scoped observation of a retained layout, run
+`python3 examples/harmony-emulator/check_layout_owner.py --layout PATH --bundle BUNDLE --id NODE_ID --text TEXT`.
+It matches the exact node id and text under the nearest declared bundle owner
+and emits the input SHA-256 and match count. An explicit foreign or invalid
+owner blocks inheritance. This is a separate observation, not yet integrated
+into `run-case` or a complete independent evaluator; preserve negative controls
+and verify the source of the layout separately.
+
 Every HDC subprocess is itself bounded with GNU `timeout`. Connection and UI
 readiness use wall-clock deadlines, and successful installation is accepted
 only when HDC emits `install bundle successfully`. This prevents an HDC call
