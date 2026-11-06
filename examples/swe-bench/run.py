@@ -9,6 +9,7 @@ import subprocess
 import sys
 from seeds import fetch
 from workspace_patch import capture_patch
+from usage import summarize as summarize_usage
 from swebench.harness.test_spec.test_spec import make_test_spec
 
 
@@ -89,6 +90,9 @@ def main():
         summary.update(status='harness_failure',error=str(error));raise
     finally:
         if participant: participant.close()
+        usage = summarize_usage(evidence/'gateway')
+        (evidence/'usage-observation.json').write_text(json.dumps(usage,indent=2)+'\n')
+        summary['usageObservation'] = 'usage-observation.json'
         subprocess.run(['docker','rm','-f',container],capture_output=True)
         (evidence/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
 

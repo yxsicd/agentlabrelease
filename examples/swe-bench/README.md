@@ -8,6 +8,9 @@ participant exit status. A time or step limit is not evidence of a model defect.
 This entrypoint does **not** enforce a per-attempt token budget yet; its summary
 explicitly records `tokenBudgetEnforced: false`. Do not report it as a token-
 budgeted assessment or infer missing usage as zero.
+`usage-observation.json` summarizes the captured response usage per exchange,
+with field coverage and incomplete exchanges. Cached input is a subset of input,
+and reasoning output is a subset of output; do not add these subsets again.
 
 These seeds exercise the imported SWE-bench methodology; they are not the
 design ceiling for generated AgentLab cases. The rationale, advantages, gaps
