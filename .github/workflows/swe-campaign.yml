@@ -109,6 +109,15 @@ jobs:
             --root "$AGENTLAB_CI_ROOT/real-agent" --agent-python "$RUNNER_TEMP/mini-runtime/bin/python" \
             --instance "$INSTANCE" --gateway "$AGENTLAB_LM_GATEWAY_URL" \
             --catalog "$catalog" --token-budget "$TOKEN_BUDGET"
+      - name: Generate system-owned independent assessment
+        if: always() && inputs.capture_run_id == ''
+        run: |
+          evidence="$AGENTLAB_CI_ROOT/real-agent/evidence"
+          if [[ -f "$evidence/summary.json" ]]; then
+            python3 examples/swe-bench/report.py --evidence "$evidence" --output "$evidence/report"
+          else
+            echo 'No operator summary exists; no assessment was generated.'
+          fi
       - name: Persist full evidence to TableGit and prove cold reconstruction
         if: always() && steps.install.outcome == 'success'
         env:

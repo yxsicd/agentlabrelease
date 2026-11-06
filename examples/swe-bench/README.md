@@ -52,6 +52,19 @@ separately tests the official reference patch. Reference failure means the
 benchmark/Harness is not qualified. A healthy benchmark with an unresolved Agent
 is a valid measured result; the Action can pass while `agentResolved=false`.
 
+The workflow generates `evidence/report/evaluation.html` and `assessment.json`
+from operator-owned receipts and the two official evaluator reports. A passing
+patch and a normal Agent submission are separate observations; an absent or
+failing reference leaves the student result unscored. Missing assistance or
+usage is unknown, not zero. Evidence links carry SHA-256 digests. To regenerate
+the report without redispatching a model, select a new direct child of the
+preserved evidence directory:
+
+```sh
+python3 examples/swe-bench/report.py --evidence /path/to/evidence \
+  --output /path/to/evidence/report-copy
+```
+
 This public tier records full operator-owned source evidence in TableGit and
 proves cold reconstruction. It does not claim formal SessionFS snapshots of the
 SWE container or normalized full-whitebox coverage. SessionFS Workspace/Fork
