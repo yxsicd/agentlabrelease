@@ -77,6 +77,14 @@ class CaptureOnlyTest(unittest.TestCase):
                 module.Participant(Path(tmp), Path(tmp) / 'state', '/bin/true', 'http://127.0.0.1:1',
                                    'model', implementation='capture-only', api='openai-responses')
 
+    def test_rejects_container_runtime_configuration(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {
+            'AGENTLAB_LM_GATEWAY_KEY': 'fixture', 'AGENTLAB_PARTICIPANT_RUNTIME_CONFIG': '/unrelated'
+        }, clear=True):
+            with self.assertRaisesRegex(ValueError, 'loopback transport'):
+                module.Participant(Path(tmp), Path(tmp) / 'state', '/bin/true', 'http://127.0.0.1:1',
+                    'model', implementation='capture-only', api='openai-responses', token_budget=10)
+
     def test_responses_stream_records_nested_usage(self):
         class Upstream(http.server.BaseHTTPRequestHandler):
             def log_message(self, *args): pass

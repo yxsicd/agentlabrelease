@@ -119,6 +119,8 @@ class Participant:
         self.gateway_timeout_seconds = gateway_timeout_seconds
         self.key = os.environ['AGENTLAB_LM_GATEWAY_KEY']
         self.runtime_isolated = bool(os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'))
+        if implementation == 'capture-only' and self.runtime_isolated:
+            raise ValueError('capture-only requires its own loopback transport, not a participant runtime config')
         self.client_auth_required = self.runtime_isolated or implementation == 'capture-only'
         self.supervisor = None
         if self.runtime_isolated:
