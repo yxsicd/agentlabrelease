@@ -473,7 +473,7 @@ class Participant:
              reasoning_effort=None, step_limit=None, wall_time_limit_seconds=None,
              tool_call_limit=None, transport_retry_limit=1,
              require_completed_tool_call=True,
-             _transport_retry=0):
+             _transport_retry=0, container_workdir=None):
         if not isinstance(transport_retry_limit, int) or not 0 <= transport_retry_limit <= 1:
             raise ValueError('transport_retry_limit must be zero or one')
         self.active_reasoning_effort = reasoning_effort if reasoning_effort is not None else self.reasoning_effort
@@ -515,6 +515,10 @@ class Participant:
                        '--model', self.model, '--trajectory',
                        str(self.evidence / f'{label}-mini-trajectory.json')]
             if container: command += ['--container',container]
+            if container_workdir is not None:
+                if not container or not container_workdir.startswith('/') or '\x00' in container_workdir:
+                    raise ValueError('container_workdir requires a container and an absolute path')
+                command += ['--container-workdir', container_workdir]
             if step_limit is not None: command += ['--step-limit',str(step_limit)]
             if wall_time_limit_seconds is not None:
                 command += ['--wall-time-limit-seconds',str(wall_time_limit_seconds)]
@@ -661,6 +665,7 @@ class Participant:
                                  tool_call_limit=tool_call_limit,
                                  transport_retry_limit=transport_retry_limit,
                                  require_completed_tool_call=require_completed_tool_call,
+                                 container_workdir=container_workdir,
                                  _transport_retry=1)
             raise turn_error
         source = project / 'entry/src/main/ets/pages/Index.ets'

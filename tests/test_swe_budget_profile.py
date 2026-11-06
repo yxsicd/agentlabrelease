@@ -76,8 +76,10 @@ class SweBudgetProfileTest(unittest.TestCase):
             participant._run_turn = run
             with patch.dict('os.environ', {'PATH': '/usr/bin', 'SECRET_FIXTURE': 'must-not-forward'}, clear=True), \
                  patch.object(module.subprocess, 'run', return_value=SimpleNamespace(returncode=0, stdout='unix:///tmp/docker.sock\n')):
-                participant.turn('swe', root, prompt='task', container='fixture', transport_retry_limit=0)
+                participant.turn('swe', root, prompt='task', container='fixture',
+                                 container_workdir='/app/personal-site', transport_retry_limit=0)
             self.assertEqual(observed['env']['DOCKER_HOST'], 'unix:///tmp/docker.sock')
+            self.assertEqual(observed['command'][observed['command'].index('--container-workdir') + 1], '/app/personal-site')
             self.assertNotIn('SECRET_FIXTURE', observed['env'])
             self.assertNotIn('DOCKER_CONTEXT', observed['env'])
 
