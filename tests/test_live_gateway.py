@@ -29,6 +29,10 @@ class GatewayCaptureTests(unittest.TestCase):
     def test_container_launcher_gets_docker_control_but_not_gateway_key(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            (root / 'runtime.json').write_text(json.dumps({
+                'schema': 'agentlab.participant_docker_runtime.v1',
+                'executor': 'docker',
+            }))
             with patch.dict(
             os.environ,
             {

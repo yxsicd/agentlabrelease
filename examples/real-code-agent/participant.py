@@ -59,7 +59,18 @@ class Participant:
 
     def __init__(self, evidence, state, binary, gateway, model, route='glm', implementation='pi', reasoning_effort=None,
                  gateway_timeout_seconds=180, thinking_type=None, response_format=None,
-                 api='openai-completions', max_output_tokens=None):
+                 api='openai-completions', max_output_tokens=None, token_budget=None):
+        if token_budget is not None and (type(token_budget) is not int or token_budget <= 0):
+            raise ValueError('token_budget must be a positive integer')
+        self.token_budget = token_budget
+        self.token_budget_lock = threading.Lock()
+        self.token_budget_used = 0
+        self.token_budget_unknown = False
+        if token_budget is not None:
+            usage_path = Path(__file__).resolve().parents[1] / 'swe-bench/usage.py'
+            usage_spec = importlib.util.spec_from_file_location('agentlab_swe_usage', usage_path)
+            self.token_usage = importlib.util.module_from_spec(usage_spec)
+            usage_spec.loader.exec_module(self.token_usage)
         if max_output_tokens is not None and (type(max_output_tokens) is not int
                 or max_output_tokens not in (8192, 16384)):
             raise ValueError('max_output_tokens must be omitted, 8192 or 16384')
@@ -171,6 +182,19 @@ class Participant:
                 if owner.runtime_isolated and self.path != owner.api_path:
                     self.send_error(404, 'Participant proxy path is not allowed')
                     return
+                # Serialize only budgeted exchanges: otherwise simultaneous
+                # calls can all pass the same pre-request balance check.
+                with owner.token_budget_lock if owner.token_budget is not None else contextlib.nullcontext():
+                    self.budgeted_post()
+
+            def budgeted_post(self):
+                if owner.token_budget is not None and (owner.token_budget_unknown or owner.token_budget_used >= owner.token_budget):
+                    (evidence / 'token-budget-decision.json').write_text(json.dumps(dict(
+                        limit=owner.token_budget, used=owner.token_budget_used,
+                        reason='usage_unknown' if owner.token_budget_unknown else 'budget_exhausted',
+                        boundary='between_requests'), indent=2)+'\n')
+                    self.send_error(429, 'Attempt token usage unknown' if owner.token_budget_unknown else 'Attempt token budget exhausted')
+                    return
                 with owner.lock:
                     owner.requests += 1
                     number = owner.requests
@@ -193,6 +217,17 @@ class Participant:
                 finally:
                     receipt.update(endedAt=datetime.now(timezone.utc).isoformat(),
                                    durationMs=round((time.monotonic()-started)*1000))
+                    if owner.token_budget is not None:
+                        usage = owner.token_usage._read_usage(stem.with_suffix('.response'))
+                        complete = (receipt['outcome'] == 'completed' and receipt['upstreamEof'] is True
+                                    and type(receipt['status']) is int and 200 <= receipt['status'] < 300)
+                        if not complete or not usage or usage['input'] is None or usage['output'] is None:
+                            owner.token_budget_unknown = True
+                        else:
+                            owner.token_budget_used += usage['input'] + usage['output']
+                        receipt['attemptBudget'] = dict(limit=owner.token_budget, used=owner.token_budget_used,
+                                                        usageUnknown=owner.token_budget_unknown,
+                                                        boundary='between_requests')
                     stem.with_suffix('.status.json').write_text(json.dumps(receipt, indent=2)+'\n')
 
             def forward(self, stem, receipt):
@@ -492,6 +527,19 @@ class Participant:
         # Only the operator-side proxy has the external credential.
         env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ}
         env.update(HOME=str(self.state.parent), PI_CODING_AGENT_DIR=str(self.state))
+        if self.implementation == 'mini-swe-agent' and container and not runtime_config:
+            # The participant HOME is intentionally isolated, so Docker's
+            # operator-selected context is not present there. Resolve it before
+            # dispatch and pass only the local socket endpoint to the launcher;
+            # never expose Docker credentials or mount the socket in the task.
+            probe = subprocess.run(
+                ['docker', 'context', 'inspect', '--format', '{{.Endpoints.docker.Host}}'],
+                capture_output=True, text=True, timeout=10, check=False,
+            )
+            endpoint = probe.stdout.strip()
+            if probe.returncode or not endpoint.startswith('unix:///') or '\n' in endpoint:
+                raise RuntimeError('Harness could not resolve a local Docker context before dispatch')
+            env['DOCKER_HOST'] = endpoint
         if runtime_config:
             env.update(
                 AGENTLAB_PARTICIPANT_RUNTIME_CONFIG=runtime_config,
@@ -525,8 +573,8 @@ class Participant:
                 raise ValueError('tool_call_limit must be a positive integer')
             lifecycle.update(maxToolCalls=tool_call_limit, toolCallBudgetExceeded=False)
         if self.implementation == 'mini-swe-agent':
-            lifecycle.update(stepLimit=step_limit or 30,
-                             wallTimeLimitSeconds=wall_time_limit_seconds or 360)
+            lifecycle.update(stepLimit=30 if step_limit is None else step_limit,
+                             wallTimeLimitSeconds=360 if wall_time_limit_seconds is None else wall_time_limit_seconds)
         started = time.monotonic()
         turn_error = None
         turn_result = None
@@ -563,6 +611,7 @@ class Participant:
                              durationMs=round((time.monotonic()-started)*1000))
             events_path = self.evidence / f'{label}-events.jsonl'
             completed_tools = tool_errors = parse_errors = 0
+            participant_exit = None
             if events_path.is_file():
                 for line in events_path.read_bytes().splitlines():
                     if not line.strip():
@@ -574,10 +623,18 @@ class Participant:
                         continue
                     if event.get('type') == 'tool_execution_end':
                         completed_tools += 1
-                        if event.get('result', {}).get('isError'):
+                        result = event.get('result')
+                        if (event.get('exceptionClass') or
+                                (isinstance(result, dict) and
+                                 (result.get('isError') or
+                                  (type(result.get('returncode')) is int and result['returncode'] != 0) or
+                                  bool(result.get('exception_info'))))):
                             tool_errors += 1
+                    elif event.get('type') == 'participant_exit' and isinstance(event.get('result'), dict):
+                        participant_exit = event['result'].get('exit_status')
             lifecycle.update(completedToolCalls=completed_tools,
-                             toolErrors=tool_errors,nativeParseErrors=parse_errors)
+                             toolErrors=tool_errors,nativeParseErrors=parse_errors,
+                             participantExitStatus=participant_exit)
             source = project / 'entry/src/main/ets/pages/Index.ets'
             lifecycle['sourcePresent'] = source.is_file()
             if source.is_file():
@@ -654,6 +711,19 @@ class Participant:
                 code = process.poll()
                 if code is not None:
                     break
+                if getattr(self, 'token_budget', None) is not None:
+                    decision_path = self.evidence / 'token-budget-decision.json'
+                    if decision_path.is_file():
+                        try:
+                            decision = json.loads(decision_path.read_text())
+                        except (OSError, ValueError):
+                            decision = {}
+                        reason = decision.get('reason') if isinstance(decision, dict) else None
+                        if reason in ('budget_exhausted', 'usage_unknown'):
+                            lifecycle['tokenBudgetStop'] = reason
+                            terminate(process)
+                            lifecycle['exitCode'] = process.returncode
+                            raise RuntimeError(f'{label}: participant stopped after {reason}; partial events retained')
                 if time.monotonic() >= deadline:
                     lifecycle['timedOut'] = True
                     terminate(process)

@@ -31,7 +31,7 @@ print(json.dumps({'type':'message_end','message':{'role':'assistant','stopReason
         evidence=root/f'evidence-{index}';evidence.mkdir();state=root/f'state-{index}';state.mkdir()
         p=module.Participant.__new__(module.Participant)
         p.state=state;p.evidence=evidence;p.binary=str(binary);p.model='fixture'
-        p.implementation='pi';p.reasoning_effort=None;p.server=SimpleNamespace(server_port=12345)
+        p.implementation='pi';p.reasoning_effort=None;p.supervisor=None;p.server=SimpleNamespace(server_port=12345)
         result=p.turn('turn',workspace,prompt=prompt,require_completed_tool_call=False,transport_retry_limit=0)
         raw=prompt.encode();expected=hashlib.sha256(raw).hexdigest()
         assert result['content']==expected

@@ -52,9 +52,10 @@ def main():
     parser.add_argument('--model',required=True)
     parser.add_argument('--trajectory',type=Path,required=True)
     parser.add_argument('--container')
-    parser.add_argument('--step-limit',type=bounded_integer('step limit',1,50),default=30)
+    parser.add_argument('--step-limit',type=bounded_integer('step limit',0,10000),default=30,
+                        help='Maximum model calls; 0 disables this limit')
     parser.add_argument('--wall-time-limit-seconds',
-                        type=bounded_integer('wall time limit',60,1200),default=360)
+                        type=bounded_integer('wall time limit',60,86400),default=360)
     parser.add_argument('prompt')
     args=parser.parse_args()
     model=LitellmModel(model_name='openai/'+args.model,cost_tracking='ignore_errors',

@@ -8,9 +8,13 @@ on:
         default: ""
       instance:
         type: choice
-        description: Official SWE-bench Lite seed; all runs the curated set
-        options: [psf__requests-1963, django__django-10914, django__django-11099, sympy__sympy-11400, all]
+        description: Official seed; all runs the existing curated Lite set
+        options: [psf__requests-1963, django__django-10914, django__django-11099, sympy__sympy-11400, sympy__sympy-20590, all]
         default: psf__requests-1963
+      token_budget:
+        description: Per-attempt input plus output tokens; enforced between model requests
+        type: string
+        default: "500000"
 permissions:
   contents: read
   actions: read
@@ -28,9 +32,10 @@ jobs:
         run: |
           python3 - <<'PY'
           import json,os
-          ids=[r['instanceId'] for r in json.load(open('examples/swe-bench/catalog.json'))['cases']]
-          selected=ids if os.environ['INSTANCE']=='all' else [os.environ['INSTANCE']]
-          assert set(selected)<=set(ids)
+          lite=[r['instanceId'] for r in json.load(open('examples/swe-bench/catalog.json'))['cases']]
+          verified=[r['instanceId'] for r in json.load(open('examples/swe-bench/catalog-verified-sympy.json'))['cases']]
+          selected=lite if os.environ['INSTANCE']=='all' else [os.environ['INSTANCE']]
+          assert set(selected)<=set(lite+verified)
           with open(os.environ['GITHUB_OUTPUT'],'a') as out:out.write('cases='+json.dumps(selected)+'\n')
           PY
   evaluate:
@@ -93,10 +98,26 @@ jobs:
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
           INSTANCE: ${{ matrix.instance }}
+          TOKEN_BUDGET: ${{ inputs.token_budget }}
         run: |
+          case "$INSTANCE" in
+            sympy__sympy-20590) catalog=examples/swe-bench/catalog-verified-sympy.json ;;
+            *) catalog=examples/swe-bench/catalog.json ;;
+          esac
+          [[ "$TOKEN_BUDGET" =~ ^[1-9][0-9]*$ ]] || { echo 'token_budget must be a positive integer' >&2; exit 1; }
           "$RUNNER_TEMP/swe-runtime/bin/python" examples/swe-bench/run.py \
             --root "$AGENTLAB_CI_ROOT/real-agent" --agent-python "$RUNNER_TEMP/mini-runtime/bin/python" \
-            --instance "$INSTANCE" --gateway "$AGENTLAB_LM_GATEWAY_URL"
+            --instance "$INSTANCE" --gateway "$AGENTLAB_LM_GATEWAY_URL" \
+            --catalog "$catalog" --token-budget "$TOKEN_BUDGET"
+      - name: Generate system-owned independent assessment
+        if: always() && inputs.capture_run_id == ''
+        run: |
+          evidence="$AGENTLAB_CI_ROOT/real-agent/evidence"
+          if [[ -f "$evidence/summary.json" ]]; then
+            python3 examples/swe-bench/report.py --evidence "$evidence" --output "$evidence/report"
+          else
+            echo 'No operator summary exists; no assessment was generated.'
+          fi
       - name: Persist full evidence to TableGit and prove cold reconstruction
         if: always() && steps.install.outcome == 'success'
         env:

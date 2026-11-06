@@ -24,6 +24,26 @@ separate from the structured facts/tasks/results. Follow
 [the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
 method/source lineage and independent layer/role fields.
 
+### External benchmark execution and budget boundaries
+
+Before spending model budget, prove the participant's isolated launcher can
+reach its assigned task container and that the official reference patch passes
+the same independent evaluator. Inherited Docker CLI context may disappear
+when HOME is isolated; provision only the operator-resolved local endpoint,
+without mounting its socket or credentials into the task. Classify launch,
+network, TLS and evaluator failures separately from participant ability.
+Preserve the invalid attempt rather than converting it into a student failure.
+
+Record each attempt's fixed token budget, exact input/output usage, cache and
+reasoning subsets, incomplete-usage status and termination reason. Enforce at
+the available request boundary and disclose any last-request overshoot. After a
+confirmed budget denial, stop the participant's client-side retries; never
+replay an upstream request of unknown outcome. Preserve and independently grade
+the actual workspace patch even if the participant did not submit normally.
+Report a passing patch and normal autonomous submission as separate facts.
+Do not infer that an Agent queried a budget MCP tool when its adapter did not
+expose it, or treat raw tool success as proof of useful progress.
+
 ### Actual staged navigation assessment
 
 Use [the subject experiment](../../examples/knowledge-seed/subject/README.md).
