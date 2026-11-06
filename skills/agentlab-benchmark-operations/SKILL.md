@@ -74,6 +74,15 @@ task and is not evidenced, do not mark the whole task passed solely because the
 independent final state is correct. Preserve any incomplete observation or
 Harness failure rather than converting it into a participant failure.
 
+Do not infer that a participant did not inspect an image merely because its
+native event log lacks a separate image-tool item. Reconcile the captured model
+response's tool calls, the subsequent request's image inputs and their identities,
+and the independent screenshot or layout. A request forwarded to an intermediate
+gateway does not by itself prove delivery to the ultimate model provider. If a
+later audit corrects a finding that prompted teacher help, retain and count the
+actual help, record its cause, and reassess the independent result against the
+original frozen criteria rather than silently rewriting history.
+
 ### Actual staged navigation assessment
 
 Use [the subject experiment](../../examples/knowledge-seed/subject/README.md).
