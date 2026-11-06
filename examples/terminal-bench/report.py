@@ -72,7 +72,13 @@ def build(attempt, trial, reference):
     valid_counts=all(type(x) is int and x>=0 for x in (total,passed,failed))
     valid_counts=valid_counts and total>0 and passed+failed>0 and passed+failed<=total
     valid_reward=type(reward) in (int,float) and reward in (0.0,1.0)
-    consistent=valid_counts and valid_reward and (reward!=1.0 or (passed>0 and failed==0))
+    skipped=summary.get('skipped')
+    skipped_consistent=(skipped is None or (type(skipped) is int and skipped>=0
+                        and passed+failed+skipped==total)) if valid_counts else False
+    # A positive reward cannot establish a complete pass when the retained
+    # independent test summary leaves any test skipped or unaccounted for.
+    complete_pass=valid_counts and passed==total and failed==0 and skipped in (None,0)
+    consistent=valid_counts and skipped_consistent and valid_reward and (reward!=1.0 or complete_pass)
     qualified=(reference_pass and student.get('exception_info') is None and outcome.get('error') is None
                and usage.get('inputOutputComplete') is True and consistent)
     resolved=(reward==1.0) if qualified else None
