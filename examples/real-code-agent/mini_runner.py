@@ -30,12 +30,13 @@ def bounded_integer(name, minimum, maximum):
 
 class RecordedEnvironment(LocalEnvironment):
     container = None
+    container_workdir = '/testbed'
     def execute(self, action, **kwargs):
         emit({'type':'tool_execution_start','implementation':'mini-swe-agent','action':action})
         try:
             executed = action
             if self.container:
-                executed = dict(action,command=shlex.join(['docker','exec','-w','/testbed',self.container,'bash','-lc',action['command']]))
+                executed = dict(action,command=shlex.join(['docker','exec','-w',self.container_workdir,self.container,'bash','-lc',action['command']]))
                 emit({'type':'adapter_execution','actualAction':executed})
             result = super().execute(executed, **kwargs)
         except Exception as error:
@@ -52,6 +53,7 @@ def main():
     parser.add_argument('--model',required=True)
     parser.add_argument('--trajectory',type=Path,required=True)
     parser.add_argument('--container')
+    parser.add_argument('--container-workdir',default='/testbed')
     parser.add_argument('--step-limit',type=bounded_integer('step limit',0,10000),default=30,
                         help='Maximum model calls; 0 disables this limit')
     parser.add_argument('--wall-time-limit-seconds',
@@ -63,6 +65,7 @@ def main():
                                     'temperature':0,'max_tokens':8192,'timeout':180})
     env=RecordedEnvironment(cwd=str(Path.cwd()),timeout=60)
     env.container=args.container
+    env.container_workdir=args.container_workdir
     agent=DefaultAgent(model,env,
         system_template='You are a coding agent. Use the bash tool to inspect and edit the project. '
                         'After completing the task, use bash to run: '

@@ -101,7 +101,8 @@ class Participant:
                 'from minisweagent.models.litellm_model import LitellmModel; '
                 'print(json.dumps(dict(prefix=sys.prefix,version=minisweagent.__version__)))'],
                 capture_output=True,timeout=60,
-                env={k:os.environ[k] for k in ('PATH','LANG','LC_ALL','TMPDIR') if k in os.environ})
+                env={**{k:os.environ[k] for k in ('PATH','LANG','LC_ALL','TMPDIR') if k in os.environ},
+                     'HOME':str(state.parent)})
             (evidence/'runtime-probe-stdout.log').write_bytes(probe.stdout)
             (evidence/'runtime-probe-stderr.log').write_bytes(probe.stderr)
             (evidence/'runtime-probe.json').write_text(json.dumps(dict(implementation=implementation,
@@ -454,7 +455,7 @@ class Participant:
             'implementation': implementation, 'packageName': PI_PACKAGE if implementation=='pi' else 'mini-swe-agent',
             'packageVersion': PI_VERSION if implementation=='pi' else '2.4.6', 'model': model,
             'gateway': gateway, 'providerRoute': route,
-            'reasoningEffort': self.reasoning_effort, 'piThinkingMode': 'off',
+            'reasoningEffort': self.reasoning_effort, 'piThinkingMode': 'off' if implementation == 'pi' else None,
             'providerThinkingType': self.thinking_type,
             'providerResponseFormat': self.response_format,
             'providerApi': self.api,
@@ -473,7 +474,7 @@ class Participant:
              reasoning_effort=None, step_limit=None, wall_time_limit_seconds=None,
              tool_call_limit=None, transport_retry_limit=1,
              require_completed_tool_call=True,
-             _transport_retry=0):
+             _transport_retry=0, container_workdir=None):
         if not isinstance(transport_retry_limit, int) or not 0 <= transport_retry_limit <= 1:
             raise ValueError('transport_retry_limit must be zero or one')
         self.active_reasoning_effort = reasoning_effort if reasoning_effort is not None else self.reasoning_effort
@@ -515,6 +516,10 @@ class Participant:
                        '--model', self.model, '--trajectory',
                        str(self.evidence / f'{label}-mini-trajectory.json')]
             if container: command += ['--container',container]
+            if container_workdir is not None:
+                if not container or not container_workdir.startswith('/') or '\x00' in container_workdir:
+                    raise ValueError('container_workdir requires a container and an absolute path')
+                command += ['--container-workdir', container_workdir]
             if step_limit is not None: command += ['--step-limit',str(step_limit)]
             if wall_time_limit_seconds is not None:
                 command += ['--wall-time-limit-seconds',str(wall_time_limit_seconds)]
@@ -624,7 +629,7 @@ class Participant:
                     if event.get('type') == 'tool_execution_end':
                         completed_tools += 1
                         result = event.get('result')
-                        if (event.get('exceptionClass') or
+                        if ((event.get('exceptionClass') and event.get('exceptionClass') != 'Submitted') or
                                 (isinstance(result, dict) and
                                  (result.get('isError') or
                                   (type(result.get('returncode')) is int and result['returncode'] != 0) or
@@ -661,6 +666,7 @@ class Participant:
                                  tool_call_limit=tool_call_limit,
                                  transport_retry_limit=transport_retry_limit,
                                  require_completed_tool_call=require_completed_tool_call,
+                                 container_workdir=container_workdir,
                                  _transport_retry=1)
             raise turn_error
         source = project / 'entry/src/main/ets/pages/Index.ets'
