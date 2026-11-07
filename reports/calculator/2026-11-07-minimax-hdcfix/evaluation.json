@@ -92,5 +92,23 @@
     "The trace contains a model bridge BrokenPipe at termination; do not attribute it as student error without further evidence."
   ],
   "trace_sha256": "a74c88ebe2f9ef0c2c7091c776dad925c61e9fc97104f3dad3b10dd2081d3516",
-  "previous_comparison": "../2026-11-07-gdm/"
+  "previous_comparison": "../2026-11-07-gdm/",
+  "context_storage_measurement": {
+    "capture_audit": {
+      "expected_exchanges": 33,
+      "observed_exchanges": 33,
+      "local_inventory_complete": true,
+      "tablegit_readback_verified": false
+    },
+    "git_only": {
+      "snapshots": 33,
+      "input_bytes": 13084390,
+      "loose_object_bytes": 5767931,
+      "packed_object_bytes": 482196,
+      "all_historical_revisions_exact": true,
+      "scope": "isolated Git objects for original request snapshots only; excludes workspace, forwarded requests, responses, TableGit and production"
+    },
+    "tablegit_chunked": "not measured; existing source-observation collector also emits individual SSE event rows",
+    "candidate_selection": "not decided; compare same raw bytes, write/read latency, exact recovery, limits and disk after GC"
+  }
 }
