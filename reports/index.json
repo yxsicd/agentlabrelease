@@ -2,6 +2,16 @@
   "schema": "agentlab.public-reports.v1",
   "reports": [
     {
+      "id": "calculator-gdm-20261107",
+      "version": "2026-11-07",
+      "title": "鸿蒙计算器：G/D/M 同题独立尝试",
+      "url": "calculator/2026-11-07-gdm/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false,
+      "reportType": "independent_attempts",
+      "evidenceCutoff": "2026-11-07"
+    },
+    {
       "id": "calculator",
       "version": "2026-11-07-combined-h04",
       "title": "计算器两次教师帮助后的验证",

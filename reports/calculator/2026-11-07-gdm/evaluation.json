@@ -1,0 +1,75 @@
+{
+  "schema": "agentlab.calculator_gdm_comparison.v1",
+  "case": "calculator-division-zero-and-decimal",
+  "case_revision": "bad0fa3036154e52a69fb469a1d6fd4f408bf3ea",
+  "prompt_sha256": "775af62a0d47fc5352c80916eb3a6678921d1d442ec81e869ae598a56bae4a43",
+  "agent": "codex-cli 0.166.0",
+  "reasoning": "provider default; not explicitly disabled",
+  "token_budget": 1000000,
+  "budget_boundary": "between requests",
+  "teacher_help_each": 0,
+  "samples_per_model": 1,
+  "results": [
+    {
+      "model": "GLM-5.3-Flash",
+      "route": "glm",
+      "source_checks": "5/6",
+      "fail_to_pass": "1/2",
+      "whole_task": "not complete",
+      "usage": {
+        "input": 996880,
+        "output": 6651,
+        "cached_input": 945152,
+        "reasoning_output": 760
+      },
+      "total_input_output": 1003531,
+      "duration_seconds": 232.85,
+      "observation": "Modified code; build succeeded; independent device check had 9/10 matches; installed HAP byte identity not independently confirmed.",
+      "trace_sha256": "3fe92fca501b08f70de8b75808b3b7dcb31f295a579c0bf38c0627234e641c35"
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "route": "opencode-go",
+      "source_checks": "4/6",
+      "fail_to_pass": "0/2",
+      "whole_task": "not complete",
+      "usage": {
+        "input": 41248,
+        "output": 2138,
+        "cached_input": 15744,
+        "reasoning_output": 439
+      },
+      "total_input_output": 43386,
+      "duration_seconds": 35.373,
+      "observation": "Identified problems, no source change. Early terminal response observed; possible protocol attribution remains unresolved.",
+      "trace_sha256": "0dcedcbdec5e20190c66433f330c3f0845db13e62a5745bb579c010ad823f8d6"
+    },
+    {
+      "model": "MiniMax-M3.1-Flash",
+      "route": "minimax; isolated patched gateway",
+      "source_checks": "4/6",
+      "fail_to_pass": "0/2",
+      "whole_task": "not complete",
+      "usage": {
+        "input": 1007280,
+        "output": 13659,
+        "cached_input": 971776,
+        "reasoning_output": 8316
+      },
+      "total_input_output": 1020939,
+      "duration_seconds": 498.058,
+      "observation": "42 commands, 38 exit zero; no source modification. Repeated HDC connection loss and reconnect attempts; environment attribution is unresolved. Ended after budget was exceeded at request boundary with stream disconnected.",
+      "trace_sha256": "45bc985857b2e444d694ecb8b2f639d54f732a5cc236561e938ab3c4d7882dc0"
+    }
+  ],
+  "limitations": [
+    "One sample per model; no statistical ranking.",
+    "Source checks cover six specific cases, not complete task or full capability.",
+    "Runs used separate fresh workspaces and task-isolated devices; different model routes and execution time. Provider default thinking is not a controlled identical setting.",
+    "Cached input is included in input; reasoning output is included in output. Token totals are not a cost estimate.",
+    "MiniMax had two earlier pre-student gateway failures; they are Harness failures, excluded from student scoring.",
+    "The originally observed MiniMax HDC disconnection requires independent environment investigation; do not attribute it wholly to student or model.",
+    "DeepSeek early terminal response has not been proven to be intentional model stopping rather than integration behavior.",
+    "Formal SessionFS fork was not verified."
+  ]
+}
