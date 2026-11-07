@@ -15,7 +15,7 @@ class CompletionTest(unittest.TestCase):
             root = Path(tmp)
             assessment = root / 'real-agent/evidence/report/assessment.json'
             assessment.parent.mkdir(parents=True)
-            assessment.write_text('{}')
+            assessment.write_text(json.dumps({'schema': 'agentlab.swe_report.v1', 'task': 'task'}))
             result = module.make_status(root, 'failure', '123', 'task', False)
             self.assertEqual(result['studentAssessment'], 'available')
             self.assertEqual(result['captureRecovery'], 'failed')
@@ -24,10 +24,24 @@ class CompletionTest(unittest.TestCase):
             evidence.mkdir(parents=True)
             (evidence / 'summary.json').write_text(json.dumps({'ok': True, 'capture': {
                 'revision': 'abc', 'exactRows': True, 'exactPayloads': True, 'exactFiles': True}}))
-            result = module.make_status(root, 'success', '123', 'task', True)
+            result = module.make_status(root, 'success', '123', 'task', True,
+                                        run_attempt='2', source_run_id='99', subject_outcome='skipped')
             self.assertEqual(result['captureRecovery'], 'reported_exact')
             self.assertEqual(result['formalAttemptCapture'], 'not_qualified')
             self.assertTrue(result['captureReplay'])
+            self.assertEqual(result['sourceWorkflowRunId'], '99')
+            self.assertEqual(result['workflowRunAttempt'], '2')
+            self.assertEqual(result['subjectStep'], 'skipped')
+
+    def test_wrong_or_invalid_assessment_is_not_available(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            assessment = root / 'real-agent/evidence/report/assessment.json'
+            assessment.parent.mkdir(parents=True)
+            assessment.write_text(json.dumps({'schema': 'agentlab.swe_report.v1', 'task': 'another'}))
+            self.assertEqual(module.make_status(root, 'skipped', '1', 'task', False)['studentAssessment'], 'task_mismatch')
+            assessment.write_text('{')
+            self.assertEqual(module.make_status(root, 'skipped', '1', 'task', False)['studentAssessment'], 'invalid')
 
     def test_missing_or_ambiguous_receipt_is_unknown(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -44,6 +44,8 @@ class SweReportTest(unittest.TestCase):
             page = reporter.render(result)
             self.assertNotIn('<script>alert', page)
             self.assertIn('&lt;script&gt;', page)
+            linked = reporter.render(result, '../../../final-report/index.html')
+            self.assertIn('href="../../../final-report/index.html"', linked)
 
     def test_reference_failure_never_scores_student(self):
         with tempfile.TemporaryDirectory() as tmp:

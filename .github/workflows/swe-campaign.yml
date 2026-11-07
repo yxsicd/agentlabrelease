@@ -94,6 +94,7 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'],'a') as out:out.write('producer_revision='+prior['head_sha']+'\n')
           PY
       - name: Evaluate actual Agent patch and independent reference patch
+        id: subject
         if: inputs.capture_run_id == ''
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
@@ -110,11 +111,13 @@ jobs:
             --instance "$INSTANCE" --gateway "$AGENTLAB_LM_GATEWAY_URL" \
             --catalog "$catalog" --token-budget "$TOKEN_BUDGET"
       - name: Generate system-owned independent assessment
+        id: assessment
         if: always() && inputs.capture_run_id == ''
         run: |
           evidence="$AGENTLAB_CI_ROOT/real-agent/evidence"
           if [[ -f "$evidence/summary.json" ]]; then
-            python3 examples/swe-bench/report.py --evidence "$evidence" --output "$evidence/report"
+            python3 examples/swe-bench/report.py --evidence "$evidence" --output "$evidence/report" \
+              --completion-link ../../../final-report/index.html
           else
             echo 'No operator summary exists; no assessment was generated.'
           fi
@@ -139,13 +142,16 @@ jobs:
         if: always()
         env:
           PERSISTENCE_OUTCOME: ${{ steps.persistence.outcome }}
+          SUBJECT_OUTCOME: ${{ steps.subject.outcome }}
+          ASSESSMENT_OUTCOME: ${{ steps.assessment.outcome }}
           INSTANCE: ${{ matrix.instance }}
           CAPTURE_RUN_ID: ${{ inputs.capture_run_id }}
         run: |
           args=()
-          [[ -z "$CAPTURE_RUN_ID" ]] || args+=(--replay)
+          [[ -z "$CAPTURE_RUN_ID" ]] || args+=(--replay --source-run-id "$CAPTURE_RUN_ID")
           python3 examples/swe-bench/finalize.py --root "$AGENTLAB_CI_ROOT" \
-            --run-id "$GITHUB_RUN_ID" --task "$INSTANCE" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --task "$INSTANCE" \
+            --subject-outcome "${SUBJECT_OUTCOME:-unknown}" --assessment-outcome "${ASSESSMENT_OUTCOME:-unknown}" \
             --persistence-outcome "${PERSISTENCE_OUTCOME:-skipped}" "${args[@]}"
       - name: Preserve successes, unresolved Agents and Harness failures
         if: always()
