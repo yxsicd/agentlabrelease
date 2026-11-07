@@ -1,0 +1,66 @@
+{
+  "trace_sha256": "a74c88ebe2f9ef0c2c7091c776dad925c61e9fc97104f3dad3b10dd2081d3516",
+  "expected_commands": 46,
+  "annotations": {
+    "item_4": {
+      "command_sha256": "d70e7eb95da2a09131269f744ee4e1b50d7cef004c6bbf2ff770c5f9c3b21111",
+      "kind": "源码阅读",
+      "text": "读取计算器页面实现。"
+    },
+    "item_6": {
+      "command_sha256": "65075368d5d72e4a49ddc64ab0737d00f4302bafd5dde0bfd3f7efa0e1d4df25",
+      "kind": "源码阅读",
+      "text": "尝试读取 .ets 引擎文件；目录显示实际引擎文件为 .ts，命令退出 1。"
+    },
+    "item_8": {
+      "command_sha256": "b762205bf6ed3a9a3435cae4e4c4ccf22faa8cc2d05920e36d959c0eea443f28",
+      "kind": "源码阅读",
+      "text": "读取计算器引擎与页面代码。"
+    },
+    "item_12": {
+      "command_sha256": "9052ff76284b1add5aaeee1fa15688c9052cefc8c8ea1ef875e575723d432199",
+      "kind": "设备",
+      "text": "不带 -s 的 HDC 列表返回任务设备。"
+    },
+    "item_22": {
+      "command_sha256": "fea5d47809c9de76c0e3dd0c62b4185f1b9fe66221280861876c8fca19ec9582",
+      "kind": "编译",
+      "text": "构建工具报告原始工程构建成功并生成 HAP；不代表目标缺陷已修复。"
+    },
+    "item_50": {
+      "command_sha256": "9e536817992c31a7f27c6f614781a37419b1670239c916d4b5b74d990a1b6bd9",
+      "kind": "设备",
+      "text": "命令输出报告安装并启动应用成功。"
+    },
+    "item_52": {
+      "command_sha256": "b6b375dc6cc47d840bf9766e5df2369124bfaa1b8fd8f67ac4e6fdcc3621aef7",
+      "kind": "截图",
+      "text": "命令输出显示产生一张首页截图；不证明模型已识图。"
+    },
+    "item_53": {
+      "command_sha256": "8c0790e289f07086ea2765397d322f741be0b1684822090e07af84a793b88097",
+      "kind": "工具限制",
+      "text": "图像处理调用输出缺少 PIL 与 pip；该复合命令退出 0，不能仅据退出码判断成功。"
+    },
+    "item_55": {
+      "command_sha256": "1f8d752a851e2e6c6054047dd66d0f57e1fa267067603d9fb5e5194941b005be",
+      "kind": "工具限制",
+      "text": "检查显示 pip、ensurepip 和 file 不可用，命令退出 127。"
+    },
+    "item_60": {
+      "command_sha256": "87121acef8108d9e00297646170fc42994c4f75c264f12202eb95da3926bf027",
+      "kind": "界面",
+      "text": "设备返回首页布局并传回布局数据。"
+    },
+    "item_61": {
+      "command_sha256": "1512a99a4d0810ee9801decfc67f22a56290c8fd3688b601dcb3e40de6e5d2dd",
+      "kind": "界面",
+      "text": "解析布局并输出组件与坐标。"
+    },
+    "item_63": {
+      "command_sha256": "da8d09b69029a255779bb3dd17582086eb564bd140b6680a19109dc733963eb9",
+      "kind": "界面",
+      "text": "设备布局输出显示计算器按键；不代表完成缺陷验证。"
+    }
+  }
+}

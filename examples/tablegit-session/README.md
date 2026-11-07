@@ -57,6 +57,21 @@ Workspace snapshot. Selected external evidence/HAP files are retained; build
 Workspace/runtime directories are not selected. This is source capture coverage,
 not a claim that all normalized whitebox relations are complete.
 
+When the original capture has a separately retained trustworthy exchange
+count, add `--audit-gateway-exchanges N`. After the actual committed-revision
+Service readback and storage restart, it checks that the original and recovered
+gateway request, forwarded request, response and status files for each of the
+N exchanges have identical lengths and SHA-256 digests. It preserves a
+`gateway-byte-audit.json` receipt and refuses a mismatch. This opt-in check is
+in addition to existing exact-row and full-inventory recovery, and is not a
+pre-dispatch admission check or proof of complete provider-wire capture.
+Standalone `scripts/audit-llm-capture.py` is a private byte audit only: even
+matching local directories cannot prove their origin or TableGit authority.
+
+The current demo uses source observation and payload chunk rows. It does not
+qualify a single-record history layout. Compare alternative layouts using the
+same inputs and exact readback rather than assuming either is smaller or faster.
+
 The credential-free candidate-copy Action also ingests the actual portable Mock
 campaign evidence with `--capture-agent-kind mock`, so PR validation exercises
 real TableGit capture/recovery without an external LM credential. Only decisions

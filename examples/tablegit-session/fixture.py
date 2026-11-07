@@ -95,6 +95,8 @@ printf '{"session":"%s","ownerTemplate":"%s","sessionTemplate":"%s"}\\n' \
         docker(
             "run",
             "--rm",
+            "--network",
+            "none",
             "--mount",
             f"type=volume,src={volume},dst=/data",
             "--entrypoint",

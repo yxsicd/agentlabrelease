@@ -19,6 +19,39 @@ Run frozen acceptance checks. Report task/build outcomes, turn counts, timing an
 
 Store operational observations/results in the installed Harness tables and Workspace state in SessionFS. Return evidence-linked findings to maintenance for the next seed/knowledge version; do not rewrite the frozen assessed case or update Release seed files from the running assessment.
 
+### Formal capture admission and recovery
+
+Treat a local forwarding proxy or a JSON receipt as observation, not proof of
+durable capture. A formal evaluation requires the selected deployed Harness's
+real, Attempt-bound capture admission and live durable sink before provider
+dispatch. If that capability is missing, refuse formal admission; a permitted
+local run is diagnostic and its reports must say TableGit durability was not
+verified. Never count a capture failure as a student failure.
+
+Keep the original attempt immutable. After capture, verify the exact original
+exchange inventory and byte hashes against recovered payloads at the committed
+revision, using the existing owning TableGit Service and its receipt. The
+optional `--audit-gateway-exchanges N` on `examples/tablegit-session/run.py`
+adds an exchange-by-exchange byte check after its actual Service readback.
+`scripts/audit-llm-capture.py` can audit private local files, but a matching
+directory alone does not establish TableGit provenance or formal admission;
+`N` must come from an independently retained producer count. Preserve partial
+and unknown operations, reconcile their exact identities before any retry, and
+report original local capture separately from later persistence.
+
+Agents initiate and inspect assessments; routine capture, persistence,
+readback and completion reporting belong to the selected Harness workflow.
+The SWE CI workflow generates a separate system completion report after its
+persistence step, including failures and unknowns. Its fixture recovery result
+does not qualify deployed Attempt admission. A manual run that bypasses that
+workflow does not inherit its automation.
+
+Do not assume one physical storage layout wins: compare single-record Git
+history and the existing TableGit object/chunk path using the same captured
+bytes, with write/read latency, size, exact history recovery, and operational
+limits. `scripts/measure-git-context-history.py` measures only isolated Git;
+its output is not TableGit performance, production qualification, or authority.
+
 Produce target-instance guidance for this stage as TableGit Skill rows,
 separate from the structured facts/tasks/results. Follow
 [the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for

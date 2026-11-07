@@ -45,6 +45,11 @@ This is real participant/remote-inference/native-tool/Harmony compiler
 acceptance. It does not claim formal Harness TableGit persistence, SessionFS
 checkpoint/Fork parity, device installation or fixed-channel promotion. A model
 failure is retained and distinguished from installation/compiler failures.
+The local Harmony demo explicitly labels its summary `diagnostic` and its
+TableGit capture `not_verified`. `--evaluation-mode formal` is refused before
+workspace creation or model dispatch: use the deployed Harness's actual
+Attempt-bound durable admission for formal evaluation instead. Subsequent CI
+source-capture reconstruction is separate evidence, not retroactive admission.
 
 
 ## Real capture in TableGit
@@ -75,6 +80,14 @@ snapshots or normalized Sandbox/permission/causal/evaluator completeness.
 Native tool reports remain observed Participant data, not trusted side effects.
 Use MCPGit generic programming/analysis over the captured data; no analysis API
 is introduced by this demo.
+
+After the persistence step the workflow automatically writes
+`final-report/completion.json` and `index.html`. They distinguish the actual
+subject step and diagnostic scenario outcome from storage/recovery status,
+record workflow and capture-replay identities, and reconcile recovery receipts
+and the exported bundle. Missing or inconsistent evidence stays explicit.
+This system completion report is not an independent student grade and does not
+qualify formal Attempt-bound admission or device verification.
 
 The artifact also contains `tablegit-capture.bundle` and `bundle-recovery.json`.
 The collector exports the committed, service-resolved test repository before

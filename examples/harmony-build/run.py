@@ -21,7 +21,11 @@ def main():
     parser.add_argument('--model', default='glm-5.3-flash')
     parser.add_argument('--provider-route', default='glm')
     parser.add_argument('--scenario', choices=NAMES, default='hello')
+    parser.add_argument('--evaluation-mode', choices=['diagnostic', 'formal'], default='diagnostic',
+                        help='This local demo supports diagnostic runs only')
     args = parser.parse_args()
+    if args.evaluation_mode == 'formal':
+        parser.error('formal evaluation requires the deployed Harness Attempt-bound durable capture admission; this local demo has none')
     root = args.root.resolve()
     root.mkdir(parents=True, exist_ok=False)
     project = root / 'workspace/hello'
@@ -35,6 +39,7 @@ def main():
     sdk = next(c for c in lock['components'] if c['slot'] == 'harmony-cli')
     kit = next(c for c in lock['components'] if c['slot'] == 'harmony-build-kit')
     summary = {'schema': 'agentlab.harmony_build_demo.v1', 'ok': False,
+               'evaluationMode': 'diagnostic', 'tablegitCaptureQualification': 'not_verified',
                'scope': 'Real offline unsigned HAP compilation; no device or formal Harness qualification',
                'checks': {}, 'components': {'image': image, 'sdk': sdk, 'buildKit': kit},
                'builds': []}
