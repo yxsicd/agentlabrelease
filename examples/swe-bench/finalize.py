@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 def make_status(root, persistence_outcome, run_id, task, replay, *, run_attempt='1', source_run_id=None,
-                subject_outcome='unknown', assessment_outcome='unknown'):
+                subject_outcome='unknown', assessment_outcome='unknown', kind='swe'):
     root = Path(root)
     assessment = root / 'real-agent/evidence/report/assessment.json'
     summaries = list((root / 'real-tablegit').glob('evidence-*/summary.json'))
@@ -24,7 +24,7 @@ def make_status(root, persistence_outcome, run_id, task, replay, *, run_attempt=
                 assessment_status = 'available'
         except (OSError, ValueError):
             assessment_status = 'invalid'
-    result = {'schema': 'agentlab.swe_ci_completion.v1', 'workflowRunId': run_id,
+    result = {'schema': f'agentlab.{kind}_ci_completion.v1', 'workflowRunId': run_id,
               'workflowRunAttempt': run_attempt, 'sourceWorkflowRunId': source_run_id if replay else None,
               'task': task, 'captureReplay': replay,
               'subjectStep': subject_outcome, 'assessmentStep': assessment_outcome,
@@ -32,6 +32,23 @@ def make_status(root, persistence_outcome, run_id, task, replay, *, run_attempt=
               'persistenceStep': persistence_outcome,
               'captureRecovery': 'failed' if persistence_outcome == 'failure' else 'unknown',
               'formalAttemptCapture': 'not_qualified', 'captureRevision': None}
+    if kind == 'harmony':
+        result['studentAssessment'] = 'not_generated'
+        result['diagnosticSummary'] = 'unavailable'
+        try:
+            summary = json.loads((root / 'real-agent/evidence/summary.json').read_text())
+            scenario = json.loads((root / 'real-agent/evidence/scenario.json').read_text())
+            if (summary.get('schema') != 'agentlab.harmony_build_demo.v1'
+                    or scenario.get('schema') != 'agentlab.harmony_scenario.v1'):
+                result['diagnosticSummary'] = 'invalid'
+            elif scenario.get('scenario') != task:
+                result['diagnosticSummary'] = 'task_mismatch'
+            else:
+                result['diagnosticSummary'] = 'available'
+                result['diagnosticOutcome'] = summary.get('ok') if type(summary.get('ok')) is bool else None
+                result['evaluationMode'] = summary.get('evaluationMode')
+        except (OSError, ValueError, AttributeError):
+            pass
     if len(summaries) == 1:
         try:
             summary = json.loads(summaries[0].read_text())
@@ -80,6 +97,7 @@ def main():
                         choices=['success', 'failure', 'skipped', 'cancelled'])
     parser.add_argument('--run-id', required=True)
     parser.add_argument('--task', required=True)
+    parser.add_argument('--kind', choices=['swe', 'harmony'], default='swe')
     parser.add_argument('--replay', action='store_true')
     parser.add_argument('--source-run-id')
     parser.add_argument('--run-attempt', default='1')
@@ -88,7 +106,8 @@ def main():
     args = parser.parse_args()
     result = make_status(args.root, args.persistence_outcome, args.run_id, args.task, args.replay,
                          run_attempt=args.run_attempt, source_run_id=args.source_run_id,
-                         subject_outcome=args.subject_outcome, assessment_outcome=args.assessment_outcome)
+                         subject_outcome=args.subject_outcome, assessment_outcome=args.assessment_outcome,
+                         kind=args.kind)
     output = args.root / 'final-report'
     output.mkdir(parents=True, exist_ok=False)
     data = json.dumps(result, ensure_ascii=False, indent=2)

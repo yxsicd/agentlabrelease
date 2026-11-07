@@ -17,6 +17,25 @@ report_fixture_spec.loader.exec_module(report_fixture)
 
 
 class CompletionTest(unittest.TestCase):
+    def test_harmony_summary_is_diagnostic_and_bound_to_scenario(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            evidence = root / 'real-agent/evidence'
+            evidence.mkdir(parents=True)
+            (evidence / 'summary.json').write_text(json.dumps({
+                'schema': 'agentlab.harmony_build_demo.v1', 'ok': True, 'evaluationMode': 'diagnostic'}))
+            (evidence / 'scenario.json').write_text(json.dumps({
+                'schema': 'agentlab.harmony_scenario.v1', 'scenario': 'counter'}))
+            result = module.make_status(root, 'failure', '123', 'counter', False, kind='harmony')
+            self.assertEqual(result['diagnosticSummary'], 'available')
+            self.assertIs(result['diagnosticOutcome'], True)
+            self.assertEqual(result['studentAssessment'], 'not_generated')
+            self.assertEqual(result['captureRecovery'], 'failed')
+            self.assertEqual(result['formalAttemptCapture'], 'not_qualified')
+            result = module.make_status(root, 'skipped', '123', 'form', False, kind='harmony')
+            self.assertEqual(result['diagnosticSummary'], 'task_mismatch')
+            self.assertNotIn('diagnosticOutcome', result)
+
     def test_system_reports_link_and_preserve_student_result_after_storage_failure(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -179,6 +179,19 @@ jobs:
             --sdk-program "$RUNNER_TEMP/real-composition/session-sdk.json" \
             --root "$AGENTLAB_CI_ROOT/real-tablegit" \
             --capture-evidence "$AGENTLAB_CI_ROOT/real-agent/evidence"
+      - name: Generate system completion report
+        if: always()
+        env:
+          PERSISTENCE_OUTCOME: ${{ steps.persistence.outcome }}
+          SUBJECT_OUTCOME: ${{ steps.subject.outcome }}
+          CAPTURE_RUN_ID: ${{ inputs.capture_run_id }}
+        run: |
+          args=()
+          [[ -z "$CAPTURE_RUN_ID" ]] || args+=(--replay --source-run-id "$CAPTURE_RUN_ID")
+          python3 examples/swe-bench/finalize.py --kind harmony --root "$AGENTLAB_CI_ROOT" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --task "$AGENTLAB_SCENARIO" \
+            --subject-outcome "${SUBJECT_OUTCOME:-unknown}" \
+            --persistence-outcome "${PERSISTENCE_OUTCOME:-skipped}" "${args[@]}"
       - name: Record the actual frozen-plan real-Agent check
         if: always() && inputs.plan_run_id != ''
         env:
@@ -200,5 +213,6 @@ jobs:
             ${{ env.AGENTLAB_CI_ROOT }}/real-agent/evidence/
             ${{ env.AGENTLAB_CI_ROOT }}/runs/
             ${{ env.AGENTLAB_CI_ROOT }}/real-tablegit/evidence-*/
+            ${{ env.AGENTLAB_CI_ROOT }}/final-report/
             ${{ env.AGENTLAB_CI_ROOT }}/*.json
             ${{ env.AGENTLAB_CI_ROOT }}/*.log
