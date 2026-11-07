@@ -77,8 +77,8 @@ class Participant:
         self.max_output_tokens = max_output_tokens
         if api not in ('openai-completions', 'openai-responses'):
             raise ValueError('unsupported participant API')
-        if api == 'openai-responses' and (implementation != 'pi' or thinking_type is not None):
-            raise ValueError('Responses requires Pi and native reasoning policy, not thinking.type')
+        if api == 'openai-responses' and (implementation not in ('pi', 'capture-only') or thinking_type is not None):
+            raise ValueError('Responses requires Pi or capture-only and native reasoning policy, not thinking.type')
         self.api = api
         self.api_path = '/v1/responses' if api == 'openai-responses' else '/v1/chat/completions'
         if response_format not in (None, 'json_object'):
@@ -452,8 +452,8 @@ class Participant:
                         'contextWindow': 128000, 'maxTokens': self.max_output_tokens or 8192}]}}}
         (state / 'models.json').write_text(json.dumps(models, indent=2) + '\n')
         (evidence / 'participant.json').write_text(json.dumps({
-            'implementation': implementation, 'packageName': PI_PACKAGE if implementation=='pi' else 'mini-swe-agent',
-            'packageVersion': PI_VERSION if implementation=='pi' else '2.4.6', 'model': model,
+            'implementation': implementation, 'packageName': PI_PACKAGE if implementation=='pi' else ('mini-swe-agent' if implementation=='mini-swe-agent' else None),
+            'packageVersion': PI_VERSION if implementation=='pi' else ('2.4.6' if implementation=='mini-swe-agent' else None), 'model': model,
             'gateway': gateway, 'providerRoute': route,
             'reasoningEffort': self.reasoning_effort, 'piThinkingMode': 'off' if implementation == 'pi' else None,
             'providerThinkingType': self.thinking_type,
@@ -475,6 +475,8 @@ class Participant:
              tool_call_limit=None, transport_retry_limit=1,
              require_completed_tool_call=True,
              _transport_retry=0, container_workdir=None):
+        if self.implementation == 'capture-only':
+            raise RuntimeError('capture-only proxy does not launch a participant')
         if not isinstance(transport_retry_limit, int) or not 0 <= transport_retry_limit <= 1:
             raise ValueError('transport_retry_limit must be zero or one')
         self.active_reasoning_effort = reasoning_effort if reasoning_effort is not None else self.reasoning_effort
