@@ -31,3 +31,20 @@ files, but it is not evidence of a complete or byte-exact `/tmp` snapshot.
 Any such restoration must be recorded as Harness activity, with missing state
 and uncertainty disclosed to the student rather than counted as teacher help.
 No test result is implied by creating a mount.
+
+## Bounded same-host runtime option
+
+On the isolated hwlinux calculator fixture, a Docker `local` volume backed by
+`tmpfs` with `size=256m,mode=1777,nosuid,nodev` remained mounted by a dedicated
+anchor container while two successive unprivileged participant containers
+used it. The second container read a file made by the first, and `/proc/mounts`
+and `df` confirmed the mount flags and bound. The fixture containers and volume
+were removed after validation. This is an alternative to the disk-backed helper,
+not an implementation supplied by that helper.
+
+For a task using this approach the launcher must validate the exact volume
+options, the running anchor and its mount before dispatch, protect the volume
+from other sessions, and monitor anchor lifetime. When the final mount or host
+is lost, memory-backed contents can disappear; a resumed native Agent alone is
+not evidence they survived. This option does not implement durable checkpoints,
+crash recovery, cross-host portability, or restoration of already-lost scratch.
