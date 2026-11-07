@@ -26,6 +26,24 @@ SPEC.loader.exec_module(MODULE)
 
 
 class GatewayCaptureTests(unittest.TestCase):
+    def test_close_records_no_requests_and_partial_capture_without_student_failure(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,
+                {'AGENTLAB_LM_GATEWAY_KEY': 'synthetic-external-key'}):
+            root = Path(tmp)
+            for name, expected_count in [('empty', 0), ('partial', 1)]:
+                evidence = root / name
+                evidence.mkdir()
+                participant = MODULE.Participant(evidence, root / (name + '-state'),
+                                                 '/bin/true', 'http://127.0.0.1:1', 'test-model')
+                if expected_count:
+                    participant.requests = 1
+                    (evidence / 'gateway/0001.request.json').write_text('{}')
+                participant.close()
+                result = json.loads((evidence / 'gateway-capture-inventory.json').read_text())
+                self.assertEqual(result['producerObservedCount'], expected_count)
+                self.assertEqual(result['status'], 'incomplete' if expected_count else 'no_requests')
+                self.assertFalse(result['tablegitAuthorityVerified'])
+
     def test_container_launcher_gets_docker_control_but_not_gateway_key(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -335,6 +353,11 @@ class GatewayCaptureTests(unittest.TestCase):
                 self.assertTrue(receipt['upstreamEof'])
                 self.assertEqual(receipt['outcome'],'completed')
                 self.assertGreaterEqual(receipt['durationMs'],0)
+                inventory = json.loads((evidence / 'gateway-capture-inventory.json').read_text())
+                self.assertEqual(inventory['producerObservedCount'], 1)
+                self.assertEqual(inventory['status'], 'complete')
+                self.assertFalse(inventory['tablegitAuthorityVerified'])
+                self.assertFalse(inventory['audit']['recoveryCompared'])
                 for path in root.rglob('*'):
                     if path.is_file():
                         self.assertNotIn(b'synthetic-external-key', path.read_bytes())

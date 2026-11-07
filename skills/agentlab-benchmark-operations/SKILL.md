@@ -33,6 +33,9 @@ exchange inventory and byte hashes against recovered payloads at the committed
 revision, using the existing owning TableGit Service and its receipt. The
 optional `--audit-gateway-exchanges N` on `examples/tablegit-session/run.py`
 adds an exchange-by-exchange byte check after its actual Service readback.
+New Participant runs record a producer-count inventory on shutdown; the same
+TableGit example consumes a complete inventory automatically after recovery.
+Partial capture remains retained and separately marked as a Harness issue.
 `scripts/audit-llm-capture.py` can audit private local files, but a matching
 directory alone does not establish TableGit provenance or formal admission;
 `N` must come from an independently retained producer count. Preserve partial

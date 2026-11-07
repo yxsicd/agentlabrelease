@@ -241,12 +241,22 @@ def main():
             save(evidence/"capture-recovery.json", recovered)
             summary["capture"] = recovered
             summary["checks"]["real_capture_committed_and_recovered"] = recovered["exactFiles"]
-            if args.audit_gateway_exchanges is not None:
-                audit_path = REPO/'scripts/audit-llm-capture.py'
-                audit_spec = importlib.util.spec_from_file_location('agentlab_capture_audit', audit_path)
-                audit_module = importlib.util.module_from_spec(audit_spec)
-                audit_spec.loader.exec_module(audit_module)
-                audit = audit_module.audit(args.capture_evidence/'gateway', args.audit_gateway_exchanges,
+            audit_path = REPO/'scripts/audit-llm-capture.py'
+            audit_spec = importlib.util.spec_from_file_location('agentlab_capture_audit', audit_path)
+            audit_module = importlib.util.module_from_spec(audit_spec)
+            audit_spec.loader.exec_module(audit_module)
+            inventory_status, producer_count = audit_module.producer_inventory(
+                args.capture_evidence/'gateway-capture-inventory.json')
+            summary['gatewayProducerInventory'] = inventory_status
+            if inventory_status in ('invalid', 'incomplete'):
+                summary['checks']['gateway_producer_inventory_complete'] = False
+            audit_count = args.audit_gateway_exchanges
+            if producer_count is not None and producer_count > 0:
+                if audit_count is not None and audit_count != producer_count:
+                    raise RuntimeError('Gateway producer and requested exchange counts differ')
+                audit_count = producer_count
+            if audit_count is not None:
+                audit = audit_module.audit(args.capture_evidence/'gateway', audit_count,
                                             evidence/'recovered-capture/gateway')
                 save(evidence/'gateway-byte-audit.json', audit)
                 summary['checks']['gateway_exchange_bytes_recovered'] = audit['recoveryMatches']

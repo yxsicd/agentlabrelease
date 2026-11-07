@@ -789,3 +789,29 @@ class Participant:
         self.server.shutdown()
         self.server.server_close()
         self.thread.join(timeout=5)
+        # Inventory the operator-owned stream only after handlers have stopped.
+        # An inventory failure is a Harness evidence defect, not a student error.
+        result = {'schema': 'agentlab.gateway_capture_inventory.v1',
+                  'producerObservedCount': self.requests, 'status': 'unknown',
+                  'tablegitAuthorityVerified': False}
+        if self.requests == 0:
+            result['status'] = 'no_requests'
+        else:
+            try:
+                path = Path(__file__).resolve().parents[2] / 'scripts/audit-llm-capture.py'
+                spec = importlib.util.spec_from_file_location('agentlab_capture_audit', path)
+                audit = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(audit)
+                detail = audit.audit(self.evidence / 'gateway', self.requests)
+                result['status'] = 'complete' if detail['completeInventory'] else 'incomplete'
+                result['audit'] = detail
+            except Exception as error:
+                result['status'] = 'audit_error'
+                result['errorClass'] = type(error).__name__
+        try:
+            with (self.evidence / 'gateway-capture-inventory.json').open('x') as output:
+                json.dump(result, output, indent=2)
+                output.write('\n')
+        except OSError:
+            # Preserve the original assessment and any existing inventory.
+            pass
