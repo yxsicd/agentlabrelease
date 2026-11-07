@@ -2,6 +2,16 @@
   "schema": "agentlab.public-reports.v1",
   "reports": [
     {
+      "id": "calculator",
+      "version": "2026-11-07-combined-h02",
+      "title": "计算器同会话验证续跑",
+      "url": "calculator/2026-11-07-combined-h02/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false,
+      "reportType": "assisted_exploration",
+      "evidenceCutoff": "2026-11-07"
+    },
+    {
       "id": "calculator-combined-h01-20261107",
       "version": "2026-11-07",
       "title": "鸿蒙计算器：一次教师提示后续跑",

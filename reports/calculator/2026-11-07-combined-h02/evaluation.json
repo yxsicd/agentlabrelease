@@ -1,0 +1,64 @@
+{
+  "schema": "agentlab.calculator_continuation_assessment.v1",
+  "case": "calculator-division-zero-and-decimal",
+  "sameNativeSession": true,
+  "sessionfsForkVerified": false,
+  "priorIndependentSourceTests": {
+    "passed": 5,
+    "total": 6
+  },
+  "priorAssistedSourceTests": {
+    "passed": 6,
+    "total": 6
+  },
+  "priorAssistedSystemDeviceSteps": {
+    "passed": 11,
+    "total": 11
+  },
+  "totalTeacherHints": 1,
+  "newTeacherHints": 0,
+  "environmentChanges": [
+    "device rebooted",
+    "previous temporary directory lost",
+    "new bounded anchored tmpfs"
+  ],
+  "studentObservations": [
+    "Created a new device layout reader",
+    "First invocation failed on an extra argument",
+    "Adjusted the invocation and read device layout",
+    "Started a multi-step device verification without a completed command record"
+  ],
+  "verificationCommand": "unknown: started but no completion event",
+  "savedDeviceLayoutArtifacts": 10,
+  "savedScratchArchiveBytes": 32544,
+  "savedScratchArchiveSha256": "ba6922fe2fee86b52656a2dd8d8d65122e0e94692aeebecaf26bf2b1970c2720",
+  "fullStudentTaskVerdict": "not_completed",
+  "studentFinalMessage": false,
+  "currentBudget": {
+    "limit": 500000,
+    "used": 504862,
+    "reason": "budget_exhausted",
+    "boundary": "between_requests"
+  },
+  "currentUsage": {
+    "input": 501731,
+    "output": 3131,
+    "cached_input": 444480,
+    "reasoning_output": 1208
+  },
+  "totalUsage": {
+    "input": 2012738,
+    "output": 12948,
+    "cached_input": 1851200,
+    "reasoning_output": 2387
+  },
+  "traceSha256": "d3cc81ec7741d21b112cdb2052b5db7d578f054dac6188ccdc2f0033d15f9b36",
+  "budgetMcpAvailable": false,
+  "terminalError": "generic stream disconnected; budget gate recorded budget_exhausted",
+  "limitations": [
+    "Partial device files do not prove verification success or failure",
+    "Model ranking requires comparable repeated runs",
+    "SessionFS fork and cross-host recovery are not verified",
+    "tmpfs requires the anchor and is not a crash-safe snapshot"
+  ]
+}
