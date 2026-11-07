@@ -2,6 +2,16 @@
   "schema": "agentlab.public-reports.v1",
   "reports": [
     {
+      "id": "calculator-minimax-hdcfix-20261107",
+      "version": "2026-11-07",
+      "title": "鸿蒙计算器：修复环境后 MiniMax 独立尝试",
+      "url": "calculator/2026-11-07-minimax-hdcfix/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false,
+      "reportType": "independent_attempt",
+      "evidenceCutoff": "2026-11-07"
+    },
+    {
       "id": "calculator-gdm-20261107",
       "version": "2026-11-07",
       "title": "鸿蒙计算器：G/D/M 同题独立尝试",

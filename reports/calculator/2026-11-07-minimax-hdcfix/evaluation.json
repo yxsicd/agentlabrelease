@@ -1,0 +1,96 @@
+{
+  "schema": "agentlab.calculator_hdcfix_attempt.v1",
+  "case": "calculator-division-zero-and-decimal",
+  "source_revision": "bad0fa3036154e52a69fb469a1d6fd4f408bf3ea",
+  "prompt_sha256": "775af62a0d47fc5352c80916eb3a6678921d1d442ec81e869ae598a56bae4a43",
+  "agent": "codex-cli 0.166.0",
+  "model": "MiniMax-M3.1-Flash",
+  "thinking": "provider default; not disabled",
+  "teacher_hints": 0,
+  "budget": 1000000,
+  "budget_boundary": "between requests",
+  "usage": {
+    "input": 939060,
+    "output": 62976,
+    "cached_input": 902144,
+    "reasoning_output": 58062
+  },
+  "usage_exchanges": 33,
+  "usage_complete": true,
+  "cached_input_included_in_input": true,
+  "reasoning_included_in_output": true,
+  "duration_seconds": 480.319,
+  "source_checks": {
+    "schema": "agentlab.calculator_fork_calibration.v1",
+    "checks": [
+      {
+        "name": "divide_by_zero",
+        "expected": "Error",
+        "actual": "0",
+        "passed": false
+      },
+      {
+        "name": "recover_after_error",
+        "expected": "5",
+        "actual": "5",
+        "passed": true
+      },
+      {
+        "name": "repeated_decimal",
+        "expected": "1.23",
+        "actual": "1.2.3",
+        "passed": false
+      },
+      {
+        "name": "decimal_addition",
+        "expected": "1.5",
+        "actual": "1.5",
+        "passed": true
+      },
+      {
+        "name": "integer_addition",
+        "expected": "3",
+        "actual": "3",
+        "passed": true
+      },
+      {
+        "name": "clear",
+        "expected": "0",
+        "actual": "0",
+        "passed": true
+      }
+    ],
+    "allPassed": false
+  },
+  "source_modified": false,
+  "commands": {
+    "total": 46,
+    "exit_zero": 44,
+    "exit_one": 1,
+    "exit_127": 1
+  },
+  "observed": [
+    "Task preflight saw the target using the default HDC command.",
+    "Student built the original source; build tool reported success and produced a HAP.",
+    "Student installed and launched the baseline application; device commands reported success.",
+    "Student captured a screenshot and extracted the home screen layout.",
+    "Student did not modify the target source before termination."
+  ],
+  "verdict": "not completed",
+  "termination": "33 successful model exchanges consumed 1,002,036 input plus output tokens at request boundary; agent reported stream disconnected and turn.failed.",
+  "environment": [
+    "Patched task-only HDC port and device bridge; one device connection remained during student run and the device port was reachable after termination.",
+    "Task-specific gateway ran on hwlinux after the macOS Docker image store returned I/O errors; the old M attempt remains environment-affected.",
+    "Operator manually verified isolated emulator restart with a persistent marker; no automatic restart was implemented."
+  ],
+  "limitations": [
+    "Single attempt; no statistical model ranking.",
+    "4/6 is unmodified baseline behavior, not four student fixes.",
+    "Build and device exploration did not establish final correctness.",
+    "No student teacher hint; no unsupported SessionFS Fork claim.",
+    "Token counts are not a price; cached input and reasoning output are subsets.",
+    "The trace contains a model bridge BrokenPipe at termination; do not attribute it as student error without further evidence."
+  ],
+  "trace_sha256": "a74c88ebe2f9ef0c2c7091c776dad925c61e9fc97104f3dad3b10dd2081d3516",
+  "previous_comparison": "../2026-11-07-gdm/"
+}
