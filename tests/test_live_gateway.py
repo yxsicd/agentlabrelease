@@ -26,6 +26,42 @@ SPEC.loader.exec_module(MODULE)
 
 
 class GatewayCaptureTests(unittest.TestCase):
+    def test_capture_only_responses_preserves_external_agent_and_accounts_usage(self):
+        requests = []
+        class Upstream(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *args): pass
+            def do_POST(self):
+                requests.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
+                payload = b'data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":2}}}\n\n'
+                self.send_response(200); self.end_headers(); self.wfile.write(payload)
+        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Upstream)
+        thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
+        try:
+            with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {'AGENTLAB_LM_GATEWAY_KEY':'fixture'}):
+                root = Path(tmp); evidence = root/'evidence'; evidence.mkdir()
+                p = MODULE.Participant(evidence, root/'state', '/bin/true',
+                    f'http://127.0.0.1:{server.server_port}', 'test-model', route='minimax',
+                    implementation='capture-only', api='openai-responses', token_budget=10)
+                try:
+                    with self.assertRaisesRegex(RuntimeError, 'does not launch'):
+                        p.turn('not-a-student', root)
+                    payload = {'model':'test-model', 'input':'hello', 'reasoning':{'effort':'high'}}
+                    req = urllib.request.Request(f'http://127.0.0.1:{p.server.server_port}/v1/responses',
+                                                 data=json.dumps(payload).encode())
+                    with urllib.request.urlopen(req, timeout=5) as response: response.read()
+                finally:
+                    p.close()
+                self.assertEqual(requests[0]['reasoning'], {'effort':'high'})
+                self.assertEqual(requests[0]['providerId'], 'minimax')
+                self.assertEqual(p.token_budget_used, 5)
+                binding = json.loads((evidence/'participant.json').read_text())
+                self.assertEqual(binding['implementation'], 'capture-only')
+                self.assertIsNone(binding['packageName'])
+                self.assertIsNone(binding['packageVersion'])
+                self.assertEqual(json.loads((evidence/'gateway-capture-inventory.json').read_text())['status'], 'complete')
+        finally:
+            server.shutdown(); server.server_close(); thread.join()
+
     def test_close_records_no_requests_and_partial_capture_without_student_failure(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,
                 {'AGENTLAB_LM_GATEWAY_KEY': 'synthetic-external-key'}):
