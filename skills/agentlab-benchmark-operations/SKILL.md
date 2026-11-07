@@ -74,6 +74,21 @@ task and is not evidenced, do not mark the whole task passed solely because the
 independent final state is correct. Preserve any incomplete observation or
 Harness failure rather than converting it into a participant failure.
 
+When a participant-created verification script reports unexpected device
+behavior, inspect both the retained device observations and the script's actual
+input construction before attributing the result to the application or device.
+For coordinate-based interactions, preserve the submitted arguments, parsing
+rules, resulting coordinates and layout observations when available; do not
+assume that a successful shell exit means the intended touch occurred. A failed
+call that narrows the cause can be useful progress, while a successful call may
+provide no valid test result. Keep observations, student hypotheses and
+independently confirmed causes separate. A targeted diagnostic hint is teacher
+assistance: retain its exact content and timing, count it against the assisted
+result, and preserve the earlier independent result. Do not silently promote a
+single trajectory to a general model ranking. If the student prints values,
+independently compare retained raw observations against the frozen expectations;
+reading those observations is not a separate device replay.
+
 Do not infer that a participant did not inspect an image merely because its
 native event log lacks a separate image-tool item. Reconcile the captured model
 response's tool calls, the subsequent request's image inputs and their identities,
