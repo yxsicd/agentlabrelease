@@ -21,6 +21,15 @@ build-kit. Pi's locked npm runtime is outside the project Workspace. A control
 process owns gateway forwarding and retains full request/response bodies;
 external authentication stays in that process, not Pi's environment or project.
 
+For an external Responses participant, `Participant(..., implementation='capture-only',
+api='openai-responses', token_budget=LIMIT)` starts only the loopback capture
+proxy; it never launches an Agent. Its private `capture-config.json` contains a
+fresh scoped proxy token rather than the upstream key. The proxy accepts only
+the Responses path and records usage at request boundaries, with no change to
+the caller's reasoning setting. The caller must separately establish its own
+isolated transport, native event capture and evaluator. Source/fixture checks
+do not qualify a real Codex run, model call, device or Session/Fork.
+
 Pi edits the real ArkTS page twice using native tools. The independent compiler
 builds each iteration and verifies actual HAP module, bytecode markers and
 artifact identity. The operator injects invalid syntax and confirms failure;
