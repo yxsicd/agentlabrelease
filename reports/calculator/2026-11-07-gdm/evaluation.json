@@ -71,5 +71,20 @@
     "The originally observed MiniMax HDC disconnection requires independent environment investigation; do not attribute it wholly to student or model.",
     "DeepSeek early terminal response has not been proven to be intentional model stopping rather than integration behavior.",
     "Formal SessionFS fork was not verified."
-  ]
+  ],
+  "diagnosis": {
+    "deepseek": {
+      "observed_student": "Read the calculator source and correctly identified both root causes; no code change.",
+      "observed_transport": "Three HTTP 200 Responses exchanges; the third completed with reasoning and assistant text but no function call; Codex recorded turn.completed.",
+      "attribution": "unresolved: the downstream evidence proves an early completed turn, not whether the provider chose to stop or the gateway omitted a continuation/tool call. Raw provider response was not preserved at that boundary."
+    },
+    "minimax": {
+      "observed_student": "42 completed command executions; 38 exit zero. Student inspected source, repeatedly tried HDC reconnection, and did not modify target source. Exit zero does not prove semantic success.",
+      "observed_environment": "Device target preflight succeeded. The task bridge recorded connection closure during the run and, at 09:51:02 and 09:51:14 local time, host target connection refused. The isolated emulator guest kernel log ended at 09:49:57, approximately 1,798 seconds after emulator boot; exact shutdown cause is not established.",
+      "attribution": "late device unavailability is a verified environmental observation. Earlier connection-loss cause remains unresolved. Device unavailability prevents an independent assessment of end-to-end device execution. Student troubleshooting choices remain observable but do not prove inability to complete in a stable environment."
+    },
+    "harness_confirmed": "The two earlier MiniMax requests failed at route/API integration before student execution; excluded from student outcome.",
+    "method": "Read original event, gateway and device evidence only; no student rerun.",
+    "checked": "2026-11-07"
+  }
 }
