@@ -1,0 +1,53 @@
+{
+  "schema": "agentlab.public_calculator_run.v1",
+  "model": "glm-5.3-flash",
+  "agent": "Codex CLI 0.166.0",
+  "teacher_hints": 0,
+  "student": {
+    "normal_completion": false,
+    "termination": "budget_exhausted",
+    "commands": 33,
+    "nonzero_commands": 6,
+    "code_changed": true,
+    "build": "succeeded_after_dependency_workaround",
+    "device_install_start": true,
+    "screenshot_captured": true,
+    "task_specific_ui_validation": "not_observed"
+  },
+  "independent": {
+    "source_checks_passed": 6,
+    "source_checks_total": 6,
+    "ui_steps_passed": 18,
+    "ui_steps_total": 18,
+    "actor": "system_after_student"
+  },
+  "usage": {
+    "input_tokens": 995906,
+    "cached_input_tokens": 957248,
+    "output_tokens": 7523,
+    "reasoning_output_tokens": 2177,
+    "limit": 1000000,
+    "observed_total": 1003429,
+    "enforcement": "between_requests"
+  },
+  "harness": {
+    "offline_dependencies": "missing_declared_hypium_and_hamock_seed; substituted packages not qualified",
+    "formal_live_attempt_capture": "not_qualified",
+    "isolated_tablegit_capture_recovery": "verified",
+    "isolated_gateway_exchanges_recovered": 41,
+    "prior_minimax": "upstream_404_before_student_commands"
+  },
+  "evidence": {
+    "portable_archive_bytes": 463962,
+    "portable_archive_sha256": "f223e9387e9125a1a1af02aed3df50088efce5969e3db1597b774cbdd796d933",
+    "archive_scope": "not_full_workspace_or_sessionfs_restore",
+    "screenshot": "one_jpeg_not_avif"
+  },
+  "limits": [
+    "single_task_single_run_no_model_ranking",
+    "student_did_not_complete_normally",
+    "system_ui_checks_are_not_student_checks",
+    "offline_test_dependencies_not_qualified",
+    "isolated_store_is_not_live_attempt_admission"
+  ]
+}
