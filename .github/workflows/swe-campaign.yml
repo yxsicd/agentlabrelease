@@ -119,6 +119,7 @@ jobs:
             echo 'No operator summary exists; no assessment was generated.'
           fi
       - name: Persist full evidence to TableGit and prove cold reconstruction
+        id: persistence
         if: always() && steps.install.outcome == 'success'
         env:
           AGENTLAB_CAPTURE_PRODUCER_REVISION: ${{ steps.replay.outputs.producer_revision }}
@@ -134,6 +135,18 @@ jobs:
           /usr/bin/python3 examples/tablegit-session/run.py --image "${runtime[0]}" --runtime-volume "${runtime[1]}" \
             --sdk-program release/candidates/40ecdf4b-linux-x64/session-sdk.json \
             --root "$AGENTLAB_CI_ROOT/real-tablegit" --capture-evidence "$AGENTLAB_CI_ROOT/real-agent/evidence"
+      - name: Generate system completion report
+        if: always()
+        env:
+          PERSISTENCE_OUTCOME: ${{ steps.persistence.outcome }}
+          INSTANCE: ${{ matrix.instance }}
+          CAPTURE_RUN_ID: ${{ inputs.capture_run_id }}
+        run: |
+          args=()
+          [[ -z "$CAPTURE_RUN_ID" ]] || args+=(--replay)
+          python3 examples/swe-bench/finalize.py --root "$AGENTLAB_CI_ROOT" \
+            --run-id "$GITHUB_RUN_ID" --task "$INSTANCE" \
+            --persistence-outcome "${PERSISTENCE_OUTCOME:-skipped}" "${args[@]}"
       - name: Preserve successes, unresolved Agents and Harness failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -142,5 +155,6 @@ jobs:
           path: |
             ${{ env.AGENTLAB_CI_ROOT }}/real-agent/evidence/
             ${{ env.AGENTLAB_CI_ROOT }}/real-tablegit/evidence-*/
+            ${{ env.AGENTLAB_CI_ROOT }}/final-report/
             ${{ env.AGENTLAB_CI_ROOT }}/*.json
             ${{ env.AGENTLAB_CI_ROOT }}/*.log

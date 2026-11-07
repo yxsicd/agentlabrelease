@@ -39,6 +39,13 @@ directory alone does not establish TableGit provenance or formal admission;
 and unknown operations, reconcile their exact identities before any retry, and
 report original local capture separately from later persistence.
 
+Agents initiate and inspect assessments; routine capture, persistence,
+readback and completion reporting belong to the selected Harness workflow.
+The SWE CI workflow generates a separate system completion report after its
+persistence step, including failures and unknowns. Its fixture recovery result
+does not qualify deployed Attempt admission. A manual run that bypasses that
+workflow does not inherit its automation.
+
 Do not assume one physical storage layout wins: compare single-record Git
 history and the existing TableGit object/chunk path using the same captured
 bytes, with write/read latency, size, exact history recovery, and operational
