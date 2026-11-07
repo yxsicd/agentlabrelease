@@ -3,6 +3,16 @@
   "reports": [
     {
       "id": "calculator",
+      "version": "2026-11-07-combined-h04",
+      "title": "计算器两次教师帮助后的验证",
+      "url": "calculator/2026-11-07-combined-h04/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false,
+      "reportType": "assisted_exploration",
+      "evidenceCutoff": "2026-11-07"
+    },
+    {
+      "id": "calculator",
       "version": "2026-11-07-combined-h02",
       "title": "计算器同会话验证续跑",
       "url": "calculator/2026-11-07-combined-h02/",

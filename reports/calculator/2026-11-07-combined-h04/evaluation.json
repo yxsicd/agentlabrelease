@@ -1,0 +1,86 @@
+{
+  "schema": "agentlab.calculator_assisted_verification.v1",
+  "case": "calculator-division-zero-and-decimal",
+  "sameNativeSession": true,
+  "formalSessionfsForkVerified": false,
+  "independentInitial": {
+    "sourcePassed": 5,
+    "sourceTotal": 6,
+    "wholeTaskCompleted": false,
+    "teacherHints": 0
+  },
+  "assistedResult": {
+    "teacherHints": 2,
+    "newHint": "H02: inspect whether coordinate argument format matches its parser; no code solution",
+    "sourceCheckPreviously": {
+      "passed": 6,
+      "total": 6
+    },
+    "studentBuild": "success in earlier assisted stage",
+    "studentInstall": "reported successful; exact installed HAP bytes not independently verified",
+    "studentVerification": "completed with final response",
+    "studentLayoutFilesIndependentlyRead": {
+      "matched": 8,
+      "total": 8,
+      "qualification": "readback of student-captured layouts, not an independent device replay"
+    },
+    "assistedWholeTask": "completed within declared checks; installed binary provenance qualified"
+  },
+  "priorDiagnostic": {
+    "allTenPreviousLayoutsShowedZero": true,
+    "suspectedCause": "script split coordinates on commas while calls passed separate numbers",
+    "studentExploration": "inspected device, tried alternative input and crash logs before H02; crash cause not established"
+  },
+  "observationVsAssertion": "student script printed values; evaluator separately checked saved layouts",
+  "h03": {
+    "usage": {
+      "input": 559382,
+      "output": 1851,
+      "cached_input": 545856,
+      "reasoning_output": 116
+    },
+    "budgetLimit": 500000,
+    "budgetDecision": "exhausted at request boundary",
+    "used": 561233
+  },
+  "h04": {
+    "usage": {
+      "input": 502268,
+      "output": 2966,
+      "cached_input": 499840,
+      "reasoning_output": 1337
+    },
+    "budgetLimit": 500000,
+    "used": 505234,
+    "termination": "student completed; no further budget gate request"
+  },
+  "cumulativeUsage": {
+    "input": 3074388,
+    "output": 17765,
+    "cached_input": 2896896,
+    "reasoning_output": 3840,
+    "total": 3092153
+  },
+  "screenshotPreview": {
+    "format": "animated AVIF",
+    "frames": 5,
+    "bytes": 27700,
+    "lossy": true,
+    "originalsRetained": true
+  },
+  "studentScratch": {
+    "archiveBytes": 246034,
+    "sha256": "35971abd72754f0299872b08831524eace95b163d59e3996c6f0292dbfc2ec9f",
+    "qualification": "same-host archive; recovery and cross-host portability unverified"
+  },
+  "studentTraceSha256": "746e26f95199f995459b493e61d250126c3ff4362496ff3b24c696cb685f71b7",
+  "limitations": [
+    "One task and one student; not a model ranking",
+    "Teacher help is part of assessed outcome; numerical penalties not defined",
+    "Prior independent and assisted outcomes are separate",
+    "Student captured snapshots independently checked by evaluator",
+    "Installed HAP exact bytes not independently proven",
+    "Formal SessionFS Fork and cross-host restoration not verified",
+    "Request-boundary budgets may exceed nominal limit"
+  ]
+}
