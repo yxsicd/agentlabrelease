@@ -58,7 +58,12 @@ Workspace/runtime directories are not selected. This is source capture coverage,
 not a claim that all normalized whitebox relations are complete.
 
 When the original capture has a separately retained trustworthy exchange
-count, add `--audit-gateway-exchanges N`. After the actual committed-revision
+count, add `--audit-gateway-exchanges N`. New operator-owned Participant runs
+automatically write `gateway-capture-inventory.json` on shutdown; when its
+producer count is complete, this example uses that count automatically. An
+incomplete or invalid inventory is a capture problem, not a student failure;
+older captures without this file remain supported and unqualified by this
+additional check. After the actual committed-revision
 Service readback and storage restart, it checks that the original and recovered
 gateway request, forwarded request, response and status files for each of the
 N exchanges have identical lengths and SHA-256 digests. It preserves a

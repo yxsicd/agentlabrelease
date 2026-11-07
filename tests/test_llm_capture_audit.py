@@ -10,6 +10,24 @@ spec.loader.exec_module(audit)
 
 
 class AuditTests(unittest.TestCase):
+    def test_producer_inventory_never_treats_incomplete_or_invalid_as_complete(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp)/'inventory.json'
+            self.assertEqual(audit.producer_inventory(p), ('missing', None))
+            item = {'schema':'agentlab.gateway_capture_inventory.v1', 'producerObservedCount':1,
+                    'status':'complete', 'audit':{'expectedCount':1, 'completeInventory':True}}
+            p.write_text(json.dumps(item))
+            self.assertEqual(audit.producer_inventory(p), ('complete', 1))
+            item['audit']['expectedCount'] = 2
+            p.write_text(json.dumps(item))
+            self.assertEqual(audit.producer_inventory(p), ('incomplete', None))
+            item['producerObservedCount'] = True
+            p.write_text(json.dumps(item))
+            self.assertEqual(audit.producer_inventory(p), ('invalid', None))
+            p.write_text(json.dumps({'schema':'agentlab.gateway_capture_inventory.v1',
+                                     'producerObservedCount':0, 'status':'no_requests'}))
+            self.assertEqual(audit.producer_inventory(p), ('no_requests', 0))
+
     def fixture(self, root):
         root.mkdir()
         (root/'0001.request.json').write_text('{"input":"原文"}')

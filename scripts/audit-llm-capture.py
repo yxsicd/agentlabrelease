@@ -11,6 +11,29 @@ PATTERN = re.compile(r'^(\d{4,})\.(request\.json|upstream-request\.json|response
 PARTS = frozenset(('request.json', 'upstream-request.json', 'response', 'status.json'))
 
 
+def producer_inventory(path):
+    """Select the producer's captured count without claiming authenticated provenance."""
+    path = Path(path)
+    if not path.exists():
+        return 'missing', None
+    try:
+        item = json.loads(path.read_text())
+        count = item.get('producerObservedCount')
+        if (item.get('schema') != 'agentlab.gateway_capture_inventory.v1'
+                or type(count) is not int or count < 0):
+            return 'invalid', None
+        if item.get('status') == 'no_requests' and count == 0:
+            return 'no_requests', 0
+        if (item.get('status') == 'complete' and count > 0
+                and isinstance(item.get('audit'), dict)
+                and item['audit'].get('expectedCount') == count
+                and item['audit'].get('completeInventory') is True):
+            return 'complete', count
+        return 'incomplete', None
+    except (OSError, ValueError, AttributeError):
+        return 'invalid', None
+
+
 def sha(path):
     h = hashlib.sha256()
     with path.open('rb') as stream:
