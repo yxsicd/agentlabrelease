@@ -91,5 +91,14 @@
     "negativeControl": "wrong divide-zero expectation rejected",
     "storage": "private task evidence; not a public attachment",
     "qualification": "independent re-evaluation of student-captured layouts, not device replay"
+  },
+  "reusableMethod": {
+    "releaseRepository": "yxsicd/agentlabrelease",
+    "mainCommit": "71fc347a326f37c89f99cf72649cfbc0d3e41839",
+    "skillPath": "skills/agentlab-benchmark-operations/SKILL.md",
+    "sha256": "bce5dfa3f4d92d1b5d0bcb718c6fdc59e77537e98694d1bfe8a259a40f4ae27e",
+    "mergePullRequest": 334,
+    "instanceKnowledgeImport": "not performed",
+    "nextRoundConsumption": "not verified"
   }
 }
