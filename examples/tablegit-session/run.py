@@ -29,12 +29,16 @@ def main():
                    help="immutable released Session SDK program lock")
     p.add_argument("--root", required=True, type=Path)
     p.add_argument("--capture-evidence", type=Path, help="Actual operator-captured evidence to persist and reconstruct")
+    p.add_argument("--audit-gateway-exchanges", type=int,
+                   help="After actual TableGit recovery compare this many captured gateway exchanges byte for byte")
     p.add_argument("--asset-model-export", type=Path, help="Synthetic analysis-oriented instance exchange to import and replay")
     p.add_argument("--experience-inputs", type=Path, help="Rust binary, calibration and clean reusable snapshot for the experience demo")
     p.add_argument("--experience-real-inputs", type=Path, help="Executed actual-method calibration and frozen reusable knowledge for a real source campaign")
     p.add_argument("--asset-instance-id", default='fixture')
     p.add_argument("--capture-agent-kind", default="pi", help="Observed participant implementation; not capture authority")
     args = p.parse_args()
+    if args.audit_gateway_exchanges is not None and (not args.capture_evidence or args.audit_gateway_exchanges < 1):
+        p.error('--audit-gateway-exchanges requires capture evidence and a positive count')
     if (args.experience_inputs or args.experience_real_inputs) and not args.asset_model_export:
         p.error('--experience-inputs requires --asset-model-export')
     root = args.root.resolve()
@@ -237,6 +241,17 @@ def main():
             save(evidence/"capture-recovery.json", recovered)
             summary["capture"] = recovered
             summary["checks"]["real_capture_committed_and_recovered"] = recovered["exactFiles"]
+            if args.audit_gateway_exchanges is not None:
+                audit_path = REPO/'scripts/audit-llm-capture.py'
+                audit_spec = importlib.util.spec_from_file_location('agentlab_capture_audit', audit_path)
+                audit_module = importlib.util.module_from_spec(audit_spec)
+                audit_spec.loader.exec_module(audit_module)
+                audit = audit_module.audit(args.capture_evidence/'gateway', args.audit_gateway_exchanges,
+                                            evidence/'recovered-capture/gateway')
+                save(evidence/'gateway-byte-audit.json', audit)
+                summary['checks']['gateway_exchange_bytes_recovered'] = audit['recoveryMatches']
+                if not audit['recoveryMatches']:
+                    raise RuntimeError('Gateway capture byte readback differs; preserve audit and recovery evidence')
         if knowledge_state:
             knowledge,package,cuts=knowledge_state
             result=knowledge.verify(service,first['binding']['repositoryId'],package,cuts)

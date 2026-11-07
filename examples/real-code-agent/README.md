@@ -45,6 +45,11 @@ This is real participant/remote-inference/native-tool/Harmony compiler
 acceptance. It does not claim formal Harness TableGit persistence, SessionFS
 checkpoint/Fork parity, device installation or fixed-channel promotion. A model
 failure is retained and distinguished from installation/compiler failures.
+The local Harmony demo explicitly labels its summary `diagnostic` and its
+TableGit capture `not_verified`. `--evaluation-mode formal` is refused before
+workspace creation or model dispatch: use the deployed Harness's actual
+Attempt-bound durable admission for formal evaluation instead. Subsequent CI
+source-capture reconstruction is separate evidence, not retroactive admission.
 
 
 ## Real capture in TableGit
