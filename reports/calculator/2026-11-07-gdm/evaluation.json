@@ -100,6 +100,26 @@
         "safety": "Keep exact same isolated device and workspace; preserve state and operator evidence before lifecycle action; classify interruptions as environment events, not teacher help.",
         "uncertainty": "Never replay an interrupted command with unknown side effects; independently read back state before deciding continuation. Any reset invalidating task state means a new separately identified attempt.",
         "validation": "Qualify readiness, HDC target persistence, bounded backoff and restart exhaustion separately before use in an assessment; compare with a no-restart negative control."
+      },
+      "task_isolated_repair": {
+        "status": "task-specific successor scripts prepared and individually exercised; not deployed to the generic production Harness",
+        "fixes": [
+          "Set OHOS_HDC_SERVER_PORT=18710 in participant entry; pass it through container preflight.",
+          "Use the successor task paths in preflight.",
+          "Remove fixed 240 second device-bridge connection deadline; model connection deadline unchanged."
+        ],
+        "verification": [
+          "HDC default-port isolated control: before failed to connect, after connected to the configured server.",
+          "Fake-clock bridge control: after 241 seconds idle original device handler closed; repaired device handler forwarded; model handler retained its deadline.",
+          "Fresh isolated Harmony emulator: device connected and five consecutive HDC shell commands succeeded through repaired bridge.",
+          "Stopped and cold-started the same isolated emulator; a marker written to its data partition before restart was read back after restart.",
+          "Test emulator and bridge stopped after verification."
+        ],
+        "limits": [
+          "Automatic health monitoring, bounded automatic restart and unknown-operation reconciliation are not implemented or validated.",
+          "The complete student successor preflight and a new model attempt have not been run.",
+          "The existing M attempt remains environment-affected and is not replaced or rescored."
+        ]
       }
     },
     "harness_confirmed": "The two earlier MiniMax requests failed at route/API integration before student execution; excluded from student outcome.",
