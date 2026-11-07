@@ -108,7 +108,17 @@
       "all_historical_revisions_exact": true,
       "scope": "isolated Git objects for original request snapshots only; excludes workspace, forwarded requests, responses, TableGit and production"
     },
-    "tablegit_chunked": "not measured; existing source-observation collector also emits individual SSE event rows",
-    "candidate_selection": "not decided; compare same raw bytes, write/read latency, exact recovery, limits and disk after GC"
+    "tablegit_chunked": {
+      "scope": "isolated operator-owned request-only replay; complete session history bundle, not formal live capture",
+      "input_files": 33,
+      "input_bytes": 13084390,
+      "rows": 1118,
+      "observations": 34,
+      "exact_files_after_service_restart": true,
+      "complete_session_history_bundle_bytes": 14447057,
+      "restored_revision": "c1855d5bcf0ee486bc9386e8a7e57def4d264ebb",
+      "formal_attempt_qualified": false
+    },
+    "candidate_selection": "not decided; different layouts and measurement units; latency, limits and production admission not measured"
   }
 }
