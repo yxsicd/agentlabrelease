@@ -82,5 +82,14 @@
     "Installed HAP exact bytes not independently proven",
     "Formal SessionFS Fork and cross-host restoration not verified",
     "Request-boundary budgets may exceed nominal limit"
-  ]
+  ],
+  "reproducibleLayoutEvidence": {
+    "archiveBytes": 3693,
+    "archiveSha256": "6ee944ac63a61e0230094b82e43661a42d67f1710fc6b6904dbe0cb665218d37",
+    "readbackPassed": 8,
+    "readbackTotal": 8,
+    "negativeControl": "wrong divide-zero expectation rejected",
+    "storage": "private task evidence; not a public attachment",
+    "qualification": "independent re-evaluation of student-captured layouts, not device replay"
+  }
 }
