@@ -194,6 +194,20 @@ guidance from a newer campaign. Prove unchanged repeat import at the committed c
 
 ### Participant dependency floor
 
+For an offline Harmony project with locked OHPM dependencies, prepare the
+fresh workspace before participant dispatch. Use the existing build kit's
+verified seed consumer with the project's actual manifest and lockfile; do not
+substitute placeholder packages. The bounded helper
+[`prepare-harmony-locked-deps.py`](../../scripts/prepare-harmony-locked-deps.py)
+binds a separately acquired seed to the fresh project's manifest hashes, then
+invokes the selected build kit's `deps --ohpm-seed` verifier. It requires a new
+seed output and refuses a workspace that already contains `oh_modules`.
+Retain the verifier result and run the baseline/reference build before model
+budget. A missing seed or failed integrity check is a Harness preparation
+failure, not student performance; retain it and do not dispatch. The helper is
+an operator preflight, not proof of deployment or automatic integration into a
+selected instance's Attempt workflow.
+
 An assessed Agent may fail normally; a missing standard project tool is an
 operator environment deficiency. Feedback's fresh branch recorded missing Git
 and a separate Agent-authored Git-index parser bounds error. Preserve both raw
