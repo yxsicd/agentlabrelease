@@ -81,7 +81,26 @@
     "minimax": {
       "observed_student": "42 completed command executions; 38 exit zero. Student inspected source, repeatedly tried HDC reconnection, and did not modify target source. Exit zero does not prove semantic success.",
       "observed_environment": "Device target preflight succeeded. The task bridge recorded connection closure during the run and, at 09:51:02 and 09:51:14 local time, host target connection refused. The isolated emulator guest kernel log ended at 09:49:57, approximately 1,798 seconds after emulator boot; exact shutdown cause is not established.",
-      "attribution": "late device unavailability is a verified environmental observation. Earlier connection-loss cause remains unresolved. Device unavailability prevents an independent assessment of end-to-end device execution. Student troubleshooting choices remain observable but do not prove inability to complete in a stable environment."
+      "attribution": "late device unavailability is a verified environmental observation. Earlier connection-loss cause remains unresolved. Device unavailability prevents an independent assessment of end-to-end device execution. Student troubleshooting choices remain observable but do not prove inability to complete in a stable environment.",
+      "confirmed_harness_findings": [
+        {
+          "finding": "HDC server port mismatch",
+          "evidence": "Entry script starts HDC server at 127.0.0.1:18710 but does not export OHOS_HDC_SERVER_PORT; HDC verbose help says default 8710. Student item_15 runs hdc list targets without -s and output includes Connect server failed.",
+          "independent_control": "Same HDC binary in separate network-isolated container, no emulator or participant: with only server at 18710, default list says Connect server failed; explicit -s 127.0.0.1:18710 or OHOS_HDC_SERVER_PORT=18710 returns [Empty]. All three return shell exit code 0, so compare output.",
+          "scope": "Confirmed harness defect; does not explain every disconnect or prove student outcome in a repaired environment."
+        },
+        {
+          "finding": "Device bridge absolute 240 second connection deadline",
+          "evidence": "Task bridge source sets deadline to monotonic()+240 on connection and never refreshes it after successful traffic.",
+          "scope": "Confirmed latent harness design issue; first observed connection lasted about 67.75 seconds, so this timeout cannot explain that first closure."
+        }
+      ],
+      "restart_strategy": {
+        "ordering": "Repair default HDC address and verify sustained availability first; restart only after independent health checks show device unavailable.",
+        "safety": "Keep exact same isolated device and workspace; preserve state and operator evidence before lifecycle action; classify interruptions as environment events, not teacher help.",
+        "uncertainty": "Never replay an interrupted command with unknown side effects; independently read back state before deciding continuation. Any reset invalidating task state means a new separately identified attempt.",
+        "validation": "Qualify readiness, HDC target persistence, bounded backoff and restart exhaustion separately before use in an assessment; compare with a no-restart negative control."
+      }
     },
     "harness_confirmed": "The two earlier MiniMax requests failed at route/API integration before student execution; excluded from student outcome.",
     "method": "Read original event, gateway and device evidence only; no student rerun.",
