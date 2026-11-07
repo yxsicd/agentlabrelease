@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import json
 import tempfile
 import unittest
@@ -22,8 +23,16 @@ class CompletionTest(unittest.TestCase):
             self.assertEqual(result['formalAttemptCapture'], 'not_qualified')
             evidence = root / 'real-tablegit/evidence-one'
             evidence.mkdir(parents=True)
-            (evidence / 'summary.json').write_text(json.dumps({'ok': True, 'capture': {
-                'revision': 'abc', 'exactRows': True, 'exactPayloads': True, 'exactFiles': True}}))
+            capture = {'revision': 'abc', 'exactRows': True, 'exactPayloads': True, 'exactFiles': True,
+                       'rowCount': 1, 'observationCount': 1, 'fileCount': 1, 'byteCount': 3}
+            (evidence / 'summary.json').write_text(json.dumps({'ok': True, 'capture': capture}))
+            (evidence / 'capture-recovery.json').write_text(json.dumps(capture))
+            (evidence / 'capture-commit-manifest.json').write_text(json.dumps({'captureRevision': 'abc'}))
+            (evidence / 'tablegit-capture.bundle').write_bytes(b'abc')
+            bundle = {'restoredHead': 'abc', 'expectedCaptureRevision': 'abc', 'exportRevision': 'abc',
+                      'historyExported': True, 'captureHistoryPresent': True, 'byteLength': 3,
+                      'sha256': hashlib.sha256(b'abc').hexdigest()}
+            (evidence / 'bundle-recovery.json').write_text(json.dumps(bundle))
             result = module.make_status(root, 'success', '123', 'task', True,
                                         run_attempt='2', source_run_id='99', subject_outcome='skipped')
             self.assertEqual(result['captureRecovery'], 'reported_exact')
@@ -32,6 +41,8 @@ class CompletionTest(unittest.TestCase):
             self.assertEqual(result['sourceWorkflowRunId'], '99')
             self.assertEqual(result['workflowRunAttempt'], '2')
             self.assertEqual(result['subjectStep'], 'skipped')
+            (evidence / 'tablegit-capture.bundle').write_bytes(b'bad')
+            self.assertEqual(module.make_status(root, 'success', '123', 'task', True)['captureRecovery'], 'inconsistent')
 
     def test_wrong_or_invalid_assessment_is_not_available(self):
         with tempfile.TemporaryDirectory() as tmp:

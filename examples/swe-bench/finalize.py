@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Summarize existing CI stages after persistence; never invoke or retry them."""
 import argparse
+import hashlib
 import html
 import json
 from pathlib import Path
@@ -35,13 +36,36 @@ def make_status(root, persistence_outcome, run_id, task, replay, *, run_attempt=
         try:
             summary = json.loads(summaries[0].read_text())
             capture = summary.get('capture') or {}
-            if (persistence_outcome == 'success' and summary.get('ok') is True
-                    and isinstance(capture.get('revision'), str) and capture['revision']
-                    and all(capture.get(k) is True for k in ('exactRows', 'exactPayloads', 'exactFiles'))):
-                result['captureRecovery'] = 'reported_exact'
-                result['captureRevision'] = capture.get('revision')
-            elif persistence_outcome == 'failure' or summary.get('ok') is False:
+            if persistence_outcome == 'failure' or summary.get('ok') is False:
                 result['captureRecovery'] = 'failed'
+            elif persistence_outcome == 'success' and summary.get('ok') is True:
+                directory = summaries[0].parent
+                recovery = json.loads((directory / 'capture-recovery.json').read_text())
+                manifest = json.loads((directory / 'capture-commit-manifest.json').read_text())
+                bundle_info = json.loads((directory / 'bundle-recovery.json').read_text())
+                bundle = directory / 'tablegit-capture.bundle'
+                revision = capture.get('revision')
+                flags = ('exactRows', 'exactPayloads', 'exactFiles')
+                counts = ('rowCount', 'observationCount', 'fileCount', 'byteCount')
+                matches = (isinstance(revision, str) and bool(revision)
+                           and revision == recovery.get('revision') == manifest.get('captureRevision')
+                           and all(capture.get(k) is True and recovery.get(k) is True for k in flags)
+                           and all(type(capture.get(k)) is int and capture[k] >= 0
+                                   and capture[k] == recovery.get(k) for k in counts)
+                           and all(bundle_info.get(k) == revision for k in
+                                   ('restoredHead', 'expectedCaptureRevision', 'exportRevision'))
+                           and bundle_info.get('historyExported') is True
+                           and bundle_info.get('captureHistoryPresent') is True
+                           and bundle.is_file() and bundle.stat().st_size == bundle_info.get('byteLength'))
+                if matches:
+                    digest = hashlib.sha256()
+                    with bundle.open('rb') as stream:
+                        for block in iter(lambda: stream.read(1024 * 1024), b''):
+                            digest.update(block)
+                    matches = digest.hexdigest() == bundle_info.get('sha256')
+                result['captureRecovery'] = 'reported_exact' if matches else 'inconsistent'
+                if matches:
+                    result['captureRevision'] = revision
         except (OSError, ValueError, AttributeError):
             pass
     elif persistence_outcome == 'failure':
