@@ -1,0 +1,77 @@
+{
+  "schema": "agentlab.calculator_assisted_assessment.v1",
+  "case": "calculator-division-zero-and-decimal",
+  "independent_result_preserved": true,
+  "sameNativeSession": true,
+  "deviceRebooted": true,
+  "sessionfsForkVerified": false,
+  "teacherHelpCount": 1,
+  "teacherHelpType": "observed failing behavior, no code solution",
+  "studentSourceTests": {
+    "passed": 6,
+    "total": 6,
+    "failToPass": {
+      "passed": 2,
+      "total": 2
+    },
+    "passToPass": {
+      "passed": 4,
+      "total": 4
+    },
+    "afterTeacherHelp": true
+  },
+  "independentDevice": {
+    "stepsPassed": 11,
+    "stepsTotal": 11,
+    "scope": "operator after assisted run",
+    "installedHapExactBytes": "not independently confirmed"
+  },
+  "studentBuild": {
+    "status": "succeeded",
+    "artifactSha256": "b5af4d28ebc9c13d5c5d7e37acc63fda3bd1d30b865e65850c34649b8ca7331c",
+    "durationMs": 9415,
+    "reportedInstall": "success",
+    "visibleVersionObserved": true
+  },
+  "studentOwnVerification": "attempted but failed; no completed verification",
+  "studentTerminal": "turn.failed; gateway recorded budget exhaustion",
+  "teacherContinuationBudget": 500000,
+  "teacherContinuationUsed": 517293,
+  "teacherContinuationOvershoot": 17293,
+  "teacherContinuationUsage": {
+    "input": 514127,
+    "output": 3166,
+    "cached_input": 461568,
+    "reasoning_output": 419
+  },
+  "teacherContinuationExchanges": 11,
+  "cumulativeUsage": {
+    "input": 1511007,
+    "output": 9817,
+    "cached_input": 1406720,
+    "reasoning_output": 1179
+  },
+  "cumulativeUsed": 1520824,
+  "cumulativeBudgetNominal": 1500000,
+  "cachedInputIncludedInInput": true,
+  "reasoningIncludedInOutput": true,
+  "studentDurationSeconds": 124.59,
+  "studentExit": 1,
+  "fullStudentTaskVerdict": "not_completed",
+  "assistedSystemValidation": "passed",
+  "budgetMcpAvailable": false,
+  "modelMetadataFallbackWarning": true,
+  "traceSha256": "6c3afb218924fd70fc631eb0fa41eedffe070d880c91f5c1a1a71e66b2730be3",
+  "previewFrames": 4,
+  "previewBytes": 27280,
+  "previewLossy": true,
+  "limitations": [
+    "one model and task; no ranking",
+    "teacher intervention cannot be credited as independent success",
+    "student did not complete own verification",
+    "operator device checks are not student actions",
+    "no formal SessionFS Fork qualification",
+    "request-boundary budget may overshoot",
+    "actual provider cost not established"
+  ]
+}
