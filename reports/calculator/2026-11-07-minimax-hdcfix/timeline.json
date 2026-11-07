@@ -1,0 +1,989 @@
+{
+  "schema": "agentlab.reviewed_timeline.v1",
+  "trace_sha256": "a74c88ebe2f9ef0c2c7091c776dad925c61e9fc97104f3dad3b10dd2081d3516",
+  "trace_record_count": 114,
+  "trace_access": "原始轨迹为私有证据；行号和哈希供授权核对，网页不公开原始命令与输出",
+  "ordering_limit": "命令仅有事件顺序、无时间戳；模型调用时间线独立，不能据此精确关联单条命令",
+  "commands": [
+    {
+      "ordinal": 1,
+      "event_id": "item_2",
+      "trace_line": 6,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "63be0a09f4696a61163eff6ad9ac0e418aef48eae70f10b3d2fd4c758490a67e",
+      "output_sha256": "a05267dbf031e3af8ca90446bd92a611eaa3ba1aced95cd5eec7c2b22e3e7efe",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 2,
+      "event_id": "item_3",
+      "trace_line": 8,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "c20a724ca960ffd1990d2e8a208a2b243e3973bbd1ebfb211891403162fab4ac",
+      "output_sha256": "24f072d46d803a1802726774c05bde117c9d387dfbda74c0cc2cedd6af6d0740",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 3,
+      "event_id": "item_4",
+      "trace_line": 11,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "d70e7eb95da2a09131269f744ee4e1b50d7cef004c6bbf2ff770c5f9c3b21111",
+      "output_sha256": "ffdacbe17f2fb3de38ea04dd30ece8f0fca57665b6fca5cf4ea1651acfe82d56",
+      "annotation": "读取计算器页面实现。",
+      "kind": "源码阅读"
+    },
+    {
+      "ordinal": 4,
+      "event_id": "item_5",
+      "trace_line": 12,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "5fdcaea14d7bf8a52b4863fbb7fcc0fb28f4945029c34fd119b7c8506a73a26c",
+      "output_sha256": "330455f55e01eda284150606b5d1a8dd8398cfe083f53b29659fb3543d1b9fc3",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 5,
+      "event_id": "item_6",
+      "trace_line": 14,
+      "exit_code": 1,
+      "status": "failed",
+      "command_sha256": "65075368d5d72e4a49ddc64ab0737d00f4302bafd5dde0bfd3f7efa0e1d4df25",
+      "output_sha256": "45478345a3da4b722db42c0b9b2482c05715d1594861bf16ec72d7947d564d28",
+      "annotation": "尝试读取 .ets 引擎文件；目录显示实际引擎文件为 .ts，命令退出 1。",
+      "kind": "源码阅读"
+    },
+    {
+      "ordinal": 6,
+      "event_id": "item_7",
+      "trace_line": 16,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "3979820f9d0d8283f7ed1468c6225658140231929ca17fc046753dc940007153",
+      "output_sha256": "8f3cc1e5c18d6bc9de6f7642d46f43c5ba266d2e9468d868f97c93d20b8b8463",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 7,
+      "event_id": "item_8",
+      "trace_line": 18,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "b762205bf6ed3a9a3435cae4e4c4ccf22faa8cc2d05920e36d959c0eea443f28",
+      "output_sha256": "ed9f850f896c27b580276690f3efe72db45fe1fa880bc3d53e100ea517ce2ce7",
+      "annotation": "读取计算器引擎与页面代码。",
+      "kind": "源码阅读"
+    },
+    {
+      "ordinal": 8,
+      "event_id": "item_10",
+      "trace_line": 21,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "c70f50ae99553945aa5954d0ad72212220900b6b107208fadb097de07cfa8ec6",
+      "output_sha256": "d28f356fe9b06a9ce426d3e90ced7ed35b950fc482656a138ce4282956d621eb",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 9,
+      "event_id": "item_11",
+      "trace_line": 23,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "fbd0d401d4db30d10076541f4e52de5f02b7cdb1297e17acdc23069efc2cb0de",
+      "output_sha256": "eb43f4a1850d26e2129ebebddb6b51e04f09bcb02215ec3a8b73cab264db598b",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 10,
+      "event_id": "item_12",
+      "trace_line": 25,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "9052ff76284b1add5aaeee1fa15688c9052cefc8c8ea1ef875e575723d432199",
+      "output_sha256": "0e42c13eef1155ad8b904faae0b45dc318e6bf42afacd402408f21e80330d657",
+      "annotation": "不带 -s 的 HDC 列表返回任务设备。",
+      "kind": "设备"
+    },
+    {
+      "ordinal": 11,
+      "event_id": "item_13",
+      "trace_line": 27,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "655da627f6ca0805870aca34ab50bb06d4afdd441b4460c5a5e43a2967c56c38",
+      "output_sha256": "c74cb255b1121e88de5b82743aef6d6bd39b02903f95adb14c1afa69ed821189",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 12,
+      "event_id": "item_15",
+      "trace_line": 31,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "c97b0c36ab363907887b838c52607032d2f08dd3f45820018887879b85f256a1",
+      "output_sha256": "d4c783c3e562bef088e37d93f518a0b09f01f7c3da7bdb0baf8b970173702c09",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 13,
+      "event_id": "item_16",
+      "trace_line": 32,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "33117342aa8164c1e7904a641910648caee05623e944730beccbe68a6a63e6bb",
+      "output_sha256": "ef9a6270a143ec1e98a2467bac3bcffc97988d69f26a8659ec28c5bd57986fdf",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 14,
+      "event_id": "item_17",
+      "trace_line": 34,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "eb667c28fc952223e46082126eb6902e5b90b042d84fbb050241f1c952a9bf50",
+      "output_sha256": "34a1788476c87678aa43fef8135ea57df1f943aae7da5267d9426455572807c7",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 15,
+      "event_id": "item_18",
+      "trace_line": 36,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "6bf2365be18f5e24637552608deee3579e9753fb8eeb1c07e6313023944ee314",
+      "output_sha256": "8aef4283c6dbed64c812c5de0279702144bee10b6dfcfb145c4e123e37af44cf",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 16,
+      "event_id": "item_19",
+      "trace_line": 38,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "4164ef85cf2419bb2b5b140d386a472c4657a76488b3085887ecb4fc8326975f",
+      "output_sha256": "7c45f2594433affa8ff7b9f5e2e12e3faeb978870111fc185d4a1a837f0ee164",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 17,
+      "event_id": "item_20",
+      "trace_line": 40,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "464fd6fc02f52890d6058c4e30fdf8eb2fb2505854f3726770470cf0babe65b1",
+      "output_sha256": "b2b45d9a9819fcd63cb742dd2ce085846192ca3d8837eb667f9f96eaaf42bd34",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 18,
+      "event_id": "item_22",
+      "trace_line": 43,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "fea5d47809c9de76c0e3dd0c62b4185f1b9fe66221280861876c8fca19ec9582",
+      "output_sha256": "50fc5de8ff893006cdad900f955bc1c586502fb6984e833d729ce11ce3c55dc8",
+      "annotation": "构建工具报告原始工程构建成功并生成 HAP；不代表目标缺陷已修复。",
+      "kind": "编译"
+    },
+    {
+      "ordinal": 19,
+      "event_id": "item_24",
+      "trace_line": 46,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "571ffce86555751731c1aef2384cb1243defa43c0f0600fbffc88ec206afe4a9",
+      "output_sha256": "dca2dca3d690fcb920140556371207c86339b99173bb43a5b3cc44ff55d8afcb",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 20,
+      "event_id": "item_25",
+      "trace_line": 48,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "be0f825408cafd00a7e839d06e0999a847aa348f7957b5c0049e225072309b1b",
+      "output_sha256": "4fb0d76910379cee7e58e4d623bd163b32ea362425d8ac3a8d46e69a181a4dc0",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 21,
+      "event_id": "item_27",
+      "trace_line": 51,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "4ab6dd5f2e1727ca584a75f10b92d703bc54ec362e28a14fdc07798e9a66da64",
+      "output_sha256": "bef45a29045cc4bb2b61f28408fad4189a13cc60353b2f93ee7da52bfa0a2142",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 22,
+      "event_id": "item_28",
+      "trace_line": 53,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "f50b6211771dd9a89f476a63ac33e7184678a42f4421b2dca5ef1a009d9f09d1",
+      "output_sha256": "ca50a73c2d094dd99b2bd6e3f48a9efed6045185f86a12953847c9fc4f62a4a6",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 23,
+      "event_id": "item_30",
+      "trace_line": 56,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "2cc12ca5ce7ca0c90157e124b7f6054506257601d5a5a446a196a7814efb7f58",
+      "output_sha256": "78d72f7f37d379089ad242213c31723bed0bd84b58cd9c5a033a7c57c920a7df",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 24,
+      "event_id": "item_31",
+      "trace_line": 58,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "7400ccafd5f5238d1fccdee844aec5d53fd4555619364ece69bad834c29cf78e",
+      "output_sha256": "fa1e39ad304cf083810827e48651be0011c5daefbe329e353bd23961fbacc0af",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 25,
+      "event_id": "item_33",
+      "trace_line": 61,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "35f3dd4c20cefa7032a0af029de38db9ff87176539ff4e0418d39f4c419702d7",
+      "output_sha256": "15cd0694ea6960a5581a2fd0015c07b2f820beeb0c4f102ca265075bbf438380",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 26,
+      "event_id": "item_34",
+      "trace_line": 63,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "d6953a78a567812c85a4d37f790306f44363102258c202f06356fb0eab2b3f8b",
+      "output_sha256": "dc8a3d57ebaae9df722207a337c830ebf930c64c02c638e73bb21c7e486c98af",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 27,
+      "event_id": "item_36",
+      "trace_line": 66,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "084e67ae31423a9435536964da894834a20a5373b6ea363f929614ce9d939aa7",
+      "output_sha256": "8312f293a88215fc0628020e971c174d62ea7146521f908787f4029515c028e1",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 28,
+      "event_id": "item_37",
+      "trace_line": 68,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "8766945417b55930ef8fdbf71ccf2aef456d6a4e2e6ddfe3c3fb21f3153eb621",
+      "output_sha256": "45fba2d7d094e412f008f7036205129734f9fc43bd96cf67a9dea1d3cea5011e",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 29,
+      "event_id": "item_39",
+      "trace_line": 71,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "63b6f093da51d8c5e14f3ca4f10024b39eecef4051d423e337ee4bc443b19be8",
+      "output_sha256": "d95bd0d693cf2a96373d170394292073d1e8d9ac7bce4ec2511707d8fa9d151d",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 30,
+      "event_id": "item_40",
+      "trace_line": 73,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "eb523c934950671181a2f8dc41a43180272cee31f097c819cbda08255edb5a4f",
+      "output_sha256": "c948863884647fe721492742a00365bb57a6761b099135fcf29c2f5eed5ab96c",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 31,
+      "event_id": "item_42",
+      "trace_line": 76,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "373f9cd8870350a0449b35ef771fb888cf53230ce6e936bc528238dc6c3e94aa",
+      "output_sha256": "ffece5187e43f95c4054826424c7a20d27e88177bcb2bba9adcab5fa34e1eef3",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 32,
+      "event_id": "item_43",
+      "trace_line": 78,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "87b0a7a29d619ec353a3b81e3cce4e6e84c10df1de72ea91d1dc137e77af5b57",
+      "output_sha256": "2570667f5b5508fde798a830319e44179036914a15ed167c20f88d37f55b9bd7",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 33,
+      "event_id": "item_45",
+      "trace_line": 81,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "2f762e20898c43793983615ebe7302533afad694cd13b8a64662cc1c157536bb",
+      "output_sha256": "0db6ec4e7bbc7830dff9b193df350e7a59c788f136f333f0c8fe17549197437d",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 34,
+      "event_id": "item_46",
+      "trace_line": 83,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "fa8f1559802556375353245ef966960eb242cc2fad5163bcc6e6fad252831256",
+      "output_sha256": "1e13549c4df0125973397ec0c16a1868cb1832059a1fb2d4732ad312f193efae",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 35,
+      "event_id": "item_48",
+      "trace_line": 86,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "bfa7a1cd4ba6196fdce1da97e5fcda645b7e73ce977b8d99dbfd6940d23afe24",
+      "output_sha256": "52c31bdbc04e877746ac3df6963afa347620639a9b44cae1995761911ebd69e7",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 36,
+      "event_id": "item_50",
+      "trace_line": 89,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "9e536817992c31a7f27c6f614781a37419b1670239c916d4b5b74d990a1b6bd9",
+      "output_sha256": "4921e1decad6f4dbd5059125b6500d8c7c945d949c5b0729b9833b48ebb42d43",
+      "annotation": "命令输出报告安装并启动应用成功。",
+      "kind": "设备"
+    },
+    {
+      "ordinal": 37,
+      "event_id": "item_52",
+      "trace_line": 92,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "b6b375dc6cc47d840bf9766e5df2369124bfaa1b8fd8f67ac4e6fdcc3621aef7",
+      "output_sha256": "d8f811f465e2c596236898f3d2290d4c52ee792726470ffabf150c2fc09a9959",
+      "annotation": "命令输出显示产生一张首页截图；不证明模型已识图。",
+      "kind": "截图"
+    },
+    {
+      "ordinal": 38,
+      "event_id": "item_53",
+      "trace_line": 94,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "8c0790e289f07086ea2765397d322f741be0b1684822090e07af84a793b88097",
+      "output_sha256": "25a8ba631450596f73c0c858fad980bb55e186c307d54970df538ed8603ab018",
+      "annotation": "图像处理调用输出缺少 PIL 与 pip；该复合命令退出 0，不能仅据退出码判断成功。",
+      "kind": "工具限制"
+    },
+    {
+      "ordinal": 39,
+      "event_id": "item_54",
+      "trace_line": 96,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "20d8786f47c9da51eb0319c2ba4dc8877307d7ab7135de109e1e13e953fbc5ad",
+      "output_sha256": "f87e19a53aeaa30025bcba7cc8265cca77788a0b75c1c1f395246674825c623f",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 40,
+      "event_id": "item_55",
+      "trace_line": 98,
+      "exit_code": 127,
+      "status": "failed",
+      "command_sha256": "1f8d752a851e2e6c6054047dd66d0f57e1fa267067603d9fb5e5194941b005be",
+      "output_sha256": "69c790ad6a63f09f231b43ffcf151d97a634aba82d77882f3fcb066a20a42c69",
+      "annotation": "检查显示 pip、ensurepip 和 file 不可用，命令退出 127。",
+      "kind": "工具限制"
+    },
+    {
+      "ordinal": 41,
+      "event_id": "item_56",
+      "trace_line": 100,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "26e68f7f85bafc67ecc8ec669b8f3aad4fa186eb61b736e7b707bc2542a1d5da",
+      "output_sha256": "aae12bb25c748f95f68eadd222bf0a3e5b62a471b2d2e302fd28bf1219f9edc1",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 42,
+      "event_id": "item_57",
+      "trace_line": 103,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "1896c7d19ff53e2f0e77114f8cf5535fd97fca758bcbc13a209741b794027ac6",
+      "output_sha256": "709e36fb48a6abae1e391b6e3cb6c20590162b873343eda6e6590d07eec2f6e7",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 43,
+      "event_id": "item_58",
+      "trace_line": 104,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "ccbb1fd21824d33c564ca117cd4cdc1dc823afbfe7c3d8fb8433090070eead51",
+      "output_sha256": "d397d9529b5876517985a777bd036314375368b6435f18f57a2e7ac9df2f11a7",
+      "annotation": "命令执行；未作逐条人工标注",
+      "kind": "未标注"
+    },
+    {
+      "ordinal": 44,
+      "event_id": "item_60",
+      "trace_line": 107,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "87121acef8108d9e00297646170fc42994c4f75c264f12202eb95da3926bf027",
+      "output_sha256": "b286a27af585377142c00ae1d87c458717d19c1892dec61ff4efb24008f01ccd",
+      "annotation": "设备返回首页布局并传回布局数据。",
+      "kind": "界面"
+    },
+    {
+      "ordinal": 45,
+      "event_id": "item_61",
+      "trace_line": 109,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "1512a99a4d0810ee9801decfc67f22a56290c8fd3688b601dcb3e40de6e5d2dd",
+      "output_sha256": "90bba0af94a84c44d8938166e9b4dee10ccdd6ca8ecb3103bc828d8eeed48404",
+      "annotation": "解析布局并输出组件与坐标。",
+      "kind": "界面"
+    },
+    {
+      "ordinal": 46,
+      "event_id": "item_63",
+      "trace_line": 112,
+      "exit_code": 0,
+      "status": "completed",
+      "command_sha256": "da8d09b69029a255779bb3dd17582086eb564bd140b6680a19109dc733963eb9",
+      "output_sha256": "f2b7c91e04d7d8a3f1e63d334f31195dff824ce64b6f2e5a4297f66ff544e6e2",
+      "annotation": "设备布局输出显示计算器按键；不代表完成缺陷验证。",
+      "kind": "界面"
+    }
+  ],
+  "model_calls": [
+    {
+      "exchange": "0001",
+      "offset_seconds": 0.0,
+      "duration_ms": 4283,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 10909,
+        "output": 128,
+        "cached_input": 3584,
+        "reasoning_output": 0
+      },
+      "budget_used": 11037
+    },
+    {
+      "exchange": "0002",
+      "offset_seconds": 4.389,
+      "duration_ms": 3162,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 12429,
+        "output": 112,
+        "cached_input": 10880,
+        "reasoning_output": 14
+      },
+      "budget_used": 23578
+    },
+    {
+      "exchange": "0003",
+      "offset_seconds": 7.613,
+      "duration_ms": 3393,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 16400,
+        "output": 150,
+        "cached_input": 12416,
+        "reasoning_output": 37
+      },
+      "budget_used": 40128
+    },
+    {
+      "exchange": "0004",
+      "offset_seconds": 12.152,
+      "duration_ms": 3449,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 16835,
+        "output": 93,
+        "cached_input": 16384,
+        "reasoning_output": 17
+      },
+      "budget_used": 57056
+    },
+    {
+      "exchange": "0005",
+      "offset_seconds": 15.668,
+      "duration_ms": 17779,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 17748,
+        "output": 2962,
+        "cached_input": 16768,
+        "reasoning_output": 2771
+      },
+      "budget_used": 77766
+    },
+    {
+      "exchange": "0006",
+      "offset_seconds": 33.524,
+      "duration_ms": 5529,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 19024,
+        "output": 270,
+        "cached_input": 17664,
+        "reasoning_output": 155
+      },
+      "budget_used": 97060
+    },
+    {
+      "exchange": "0007",
+      "offset_seconds": 39.186,
+      "duration_ms": 16177,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 19678,
+        "output": 2363,
+        "cached_input": 18944,
+        "reasoning_output": 2179
+      },
+      "budget_used": 119101
+    },
+    {
+      "exchange": "0008",
+      "offset_seconds": 55.432,
+      "duration_ms": 3908,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 20338,
+        "output": 201,
+        "cached_input": 19584,
+        "reasoning_output": 76
+      },
+      "budget_used": 139640
+    },
+    {
+      "exchange": "0009",
+      "offset_seconds": 59.402,
+      "duration_ms": 16918,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 22619,
+        "output": 2335,
+        "cached_input": 20224,
+        "reasoning_output": 2158
+      },
+      "budget_used": 164594
+    },
+    {
+      "exchange": "0010",
+      "offset_seconds": 76.386,
+      "duration_ms": 3151,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 23829,
+        "output": 315,
+        "cached_input": 22528,
+        "reasoning_output": 221
+      },
+      "budget_used": 188738
+    },
+    {
+      "exchange": "0011",
+      "offset_seconds": 92.893,
+      "duration_ms": 15468,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 25057,
+        "output": 2334,
+        "cached_input": 23808,
+        "reasoning_output": 2173
+      },
+      "budget_used": 216129
+    },
+    {
+      "exchange": "0012",
+      "offset_seconds": 108.62,
+      "duration_ms": 22286,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 26143,
+        "output": 3698,
+        "cached_input": 24960,
+        "reasoning_output": 3487
+      },
+      "budget_used": 245970
+    },
+    {
+      "exchange": "0013",
+      "offset_seconds": 131.167,
+      "duration_ms": 39419,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 27310,
+        "output": 6889,
+        "cached_input": 26112,
+        "reasoning_output": 6734
+      },
+      "budget_used": 280169
+    },
+    {
+      "exchange": "0014",
+      "offset_seconds": 170.683,
+      "duration_ms": 21941,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 28143,
+        "output": 3021,
+        "cached_input": 27264,
+        "reasoning_output": 2901
+      },
+      "budget_used": 311333
+    },
+    {
+      "exchange": "0015",
+      "offset_seconds": 192.7,
+      "duration_ms": 25926,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 29783,
+        "output": 4231,
+        "cached_input": 28032,
+        "reasoning_output": 3992
+      },
+      "budget_used": 345347
+    },
+    {
+      "exchange": "0016",
+      "offset_seconds": 218.842,
+      "duration_ms": 46953,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 30382,
+        "output": 7533,
+        "cached_input": 29696,
+        "reasoning_output": 7378
+      },
+      "budget_used": 383262
+    },
+    {
+      "exchange": "0017",
+      "offset_seconds": 266.36,
+      "duration_ms": 33158,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 31288,
+        "output": 5534,
+        "cached_input": 30336,
+        "reasoning_output": 5366
+      },
+      "budget_used": 420084
+    },
+    {
+      "exchange": "0018",
+      "offset_seconds": 299.651,
+      "duration_ms": 30810,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 31947,
+        "output": 4913,
+        "cached_input": 31232,
+        "reasoning_output": 4713
+      },
+      "budget_used": 456944
+    },
+    {
+      "exchange": "0019",
+      "offset_seconds": 330.558,
+      "duration_ms": 40886,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 33007,
+        "output": 7681,
+        "cached_input": 31872,
+        "reasoning_output": 7381
+      },
+      "budget_used": 497632
+    },
+    {
+      "exchange": "0020",
+      "offset_seconds": 371.507,
+      "duration_ms": 39435,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 33899,
+        "output": 5294,
+        "cached_input": 32896,
+        "reasoning_output": 5033
+      },
+      "budget_used": 536825
+    },
+    {
+      "exchange": "0021",
+      "offset_seconds": 412.415,
+      "duration_ms": 3306,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 34259,
+        "output": 318,
+        "cached_input": 33792,
+        "reasoning_output": 74
+      },
+      "budget_used": 571402
+    },
+    {
+      "exchange": "0022",
+      "offset_seconds": 416.091,
+      "duration_ms": 2414,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 34664,
+        "output": 32,
+        "cached_input": 34176,
+        "reasoning_output": 0
+      },
+      "budget_used": 606098
+    },
+    {
+      "exchange": "0023",
+      "offset_seconds": 418.836,
+      "duration_ms": 2815,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 34710,
+        "output": 91,
+        "cached_input": 34560,
+        "reasoning_output": 0
+      },
+      "budget_used": 640899
+    },
+    {
+      "exchange": "0024",
+      "offset_seconds": 421.743,
+      "duration_ms": 2613,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 34897,
+        "output": 75,
+        "cached_input": 34688,
+        "reasoning_output": 0
+      },
+      "budget_used": 675871
+    },
+    {
+      "exchange": "0025",
+      "offset_seconds": 424.432,
+      "duration_ms": 3704,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 35065,
+        "output": 200,
+        "cached_input": 34816,
+        "reasoning_output": 169
+      },
+      "budget_used": 711136
+    },
+    {
+      "exchange": "0026",
+      "offset_seconds": 428.187,
+      "duration_ms": 2902,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 35111,
+        "output": 106,
+        "cached_input": 34944,
+        "reasoning_output": 40
+      },
+      "budget_used": 746353
+    },
+    {
+      "exchange": "0027",
+      "offset_seconds": 431.211,
+      "duration_ms": 4710,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 35261,
+        "output": 377,
+        "cached_input": 35072,
+        "reasoning_output": 267
+      },
+      "budget_used": 781991
+    },
+    {
+      "exchange": "0028",
+      "offset_seconds": 446.104,
+      "duration_ms": 2908,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 35466,
+        "output": 68,
+        "cached_input": 35200,
+        "reasoning_output": 0
+      },
+      "budget_used": 817525
+    },
+    {
+      "exchange": "0029",
+      "offset_seconds": 449.034,
+      "duration_ms": 2748,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 35570,
+        "output": 68,
+        "cached_input": 35456,
+        "reasoning_output": 0
+      },
+      "budget_used": 853163
+    },
+    {
+      "exchange": "0030",
+      "offset_seconds": 451.808,
+      "duration_ms": 10219,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 35686,
+        "output": 970,
+        "cached_input": 35456,
+        "reasoning_output": 726
+      },
+      "budget_used": 889819
+    },
+    {
+      "exchange": "0031",
+      "offset_seconds": 462.363,
+      "duration_ms": 4376,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 36331,
+        "output": 159,
+        "cached_input": 35584,
+        "reasoning_output": 0
+      },
+      "budget_used": 926309
+    },
+    {
+      "exchange": "0032",
+      "offset_seconds": 467.603,
+      "duration_ms": 3412,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 36993,
+        "output": 230,
+        "cached_input": 36224,
+        "reasoning_output": 0
+      },
+      "budget_used": 963532
+    },
+    {
+      "exchange": "0033",
+      "offset_seconds": 471.109,
+      "duration_ms": 3093,
+      "http_status": 200,
+      "outcome": "completed",
+      "usage": {
+        "input": 38279,
+        "output": 225,
+        "cached_input": 36992,
+        "reasoning_output": 0
+      },
+      "budget_used": 1002036
+    }
+  ],
+  "usage_totals": {
+    "input": 939060,
+    "output": 62976,
+    "cached_input": 902144,
+    "reasoning_output": 58062
+  },
+  "usage_complete": true,
+  "cached_input_included_in_input": true,
+  "reasoning_output_included_in_output": true,
+  "review_method": "仅显示与原始命令哈希绑定的人工复核摘要；其余不作收益判断"
+}

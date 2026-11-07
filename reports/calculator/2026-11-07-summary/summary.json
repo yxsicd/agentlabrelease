@@ -1,0 +1,53 @@
+{
+  "schema": "agentlab.calculator_summary.v1",
+  "case_count": 1,
+  "attempt_count": 4,
+  "attempts": [
+    {
+      "model": "GLM-5.3-Flash",
+      "teacher_help_count": 0,
+      "source_checks": "5/6",
+      "target_fixes": "1/2",
+      "whole_task": "not complete",
+      "qualification": "observed",
+      "evidence": "../2026-11-07-gdm/evaluation.json"
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "teacher_help_count": 0,
+      "source_checks": "4/6",
+      "target_fixes": "0/2",
+      "whole_task": "not complete",
+      "qualification": "attribution_unresolved",
+      "evidence": "../2026-11-07-gdm/evaluation.json"
+    },
+    {
+      "model": "MiniMax-M3.1-Flash",
+      "teacher_help_count": 0,
+      "source_checks": "4/6",
+      "target_fixes": "0/2",
+      "whole_task": "not complete",
+      "qualification": "environment_affected",
+      "evidence": "../2026-11-07-gdm/evaluation.json"
+    },
+    {
+      "model": "MiniMax-M3.1-Flash",
+      "teacher_help_count": 0,
+      "source_checks": "4/6",
+      "target_fixes": "0/2",
+      "whole_task": "not completed",
+      "qualification": "post_repair_single_attempt",
+      "evidence": "../2026-11-07-minimax-hdcfix/evaluation.json"
+    }
+  ],
+  "assisted_same_session": {
+    "model": "GLM-5.3-Flash",
+    "teacher_help_count": 2,
+    "source_checks": "6/6",
+    "independent_score": false,
+    "student_verification": "completed within declared checks; installed bytes not independently verified",
+    "evidence": "../2026-11-07-combined-h04/evaluation.json"
+  },
+  "metrics_note": "Not a leaderboard: single attempts, differing routes and environment. Do not use failures with unresolved attribution as valid passing-rate denominators.",
+  "no_statistical_comparison": true
+}

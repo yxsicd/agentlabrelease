@@ -2,6 +2,16 @@
   "schema": "agentlab.public-reports.v1",
   "reports": [
     {
+      "id": "calculator-summary-20261107",
+      "version": "2026-11-07",
+      "title": "鸿蒙计算器：独立尝试与教师帮助综合视图",
+      "url": "calculator/2026-11-07-summary/",
+      "caseCount": 1,
+      "independentWholeTaskPass": false,
+      "reportType": "combined_observations",
+      "evidenceCutoff": "2026-11-07"
+    },
+    {
       "id": "calculator-minimax-hdcfix-20261107",
       "version": "2026-11-07",
       "title": "鸿蒙计算器：修复环境后 MiniMax 独立尝试",
