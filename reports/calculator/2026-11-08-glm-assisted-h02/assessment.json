@@ -1,0 +1,62 @@
+{
+  "schema": "agentlab.public-assessment.v1",
+  "task": "Harmony Calculator: division by zero and repeated decimal",
+  "model": "glm-5.3-flash",
+  "agent": "Codex CLI 0.166.0",
+  "stage": "same-task continuation after second teacher hint",
+  "studentOutcome": "incomplete",
+  "studentSelfVerification": "incomplete",
+  "helpCountCumulative": 2,
+  "helpThisStage": "验证时先确认当前页面和控件是否可点击，并检查每次点击后的页面变化，再自行完成模拟器验证与结果说明。",
+  "hintObservation": "present in original and forwarded gateway request; HTTP 200; provider receipt and causal effect unknown",
+  "studentEvidence": [
+    {
+      "event": "item_5",
+      "finding": "Inspected clickable ancestor of Calculator text."
+    },
+    {
+      "event": "item_7",
+      "finding": "Ran stepwise validation but assertion reported 0; later inspected captured layout containing Error."
+    },
+    {
+      "event": "item_13",
+      "finding": "Identified display-selector confusion with digit button."
+    },
+    {
+      "event": "item_16-21",
+      "finding": "Several verification script runs failed with inconsistent JSON filenames."
+    },
+    {
+      "event": "item_24",
+      "finding": "Device not found or connected; cause undetermined."
+    }
+  ],
+  "environmentBoundary": "Host-side emulator was connected after run; that does not establish student-side connection state at failure time.",
+  "previousSystemChecks": {
+    "stage": "after first hint, before second continuation",
+    "source": "6/6",
+    "ui": "18/18",
+    "authority": "independent system; not student self-validation"
+  },
+  "usage": {
+    "requests": 17,
+    "input": 1057141,
+    "cachedInput": 1039232,
+    "output": 12875,
+    "reasoningOutput": 4315,
+    "total": 1070016,
+    "budget": 1000000,
+    "budgetBoundary": "between requests",
+    "cachedIncludedInInput": true,
+    "reasoningIncludedInOutput": true
+  },
+  "exit": "student process exit 1; budget exhausted at request boundary",
+  "portability": "same-host Git baseline plus patch and copied native session; not a verified SessionFS Fork",
+  "evidence": {
+    "compactArchiveBytes": 316810,
+    "compactArchiveSha256": "ffb74d445f2ba08ea4ff3c7835c0b29eed6225987f8df4bbb9cc745682a4c0b1",
+    "contents": "source patch, selected UI layouts and event evidence; excludes full workspace, build outputs, SessionFS and credentials",
+    "h02TableGitImport": "not yet verified"
+  },
+  "scoring": "No numeric score assigned; assistance and facts preserved for later reweighting."
+}
