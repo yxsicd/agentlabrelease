@@ -1,0 +1,89 @@
+{
+  "schema": "agentlab.calculator_assisted_assessment.v1",
+  "task": "divide-zero-and-repeated-decimal",
+  "taskRevision": "bad0fa3036154e52a69fb469a1d6fd4f408bf3ea",
+  "participant": {
+    "agent": "Codex CLI 0.166.0",
+    "model": "glm-5.3-flash",
+    "reasoning": "provider default, not explicitly disabled"
+  },
+  "lineage": {
+    "parentAttempt": "2026-11-08 independent",
+    "nativeSessionIdMatches": true,
+    "workspaceRestore": "same-host Git baseline plus patch and selected outputs; 25 matching files",
+    "sessionfsForkVerified": false,
+    "deviceRestarted": true,
+    "temporaryScriptsCopied": 3
+  },
+  "teacherHelp": {
+    "count": 1,
+    "kind": "diagnostic_hint",
+    "text": "请复查除零后显示状态是否被后续状态重置覆盖；自行验证并修复，再完成构建和模拟器检查。",
+    "forwardedToIntermediate": true,
+    "providerReceipt": "unknown",
+    "independentResultPreserved": true
+  },
+  "student": {
+    "normalCompletion": false,
+    "termination": "budget_exhausted",
+    "commandsCompleted": 10,
+    "nonzeroCommands": 1,
+    "build": "succeeded",
+    "installation": "observed_success",
+    "selfUiVerification": "attempted but script did not complete; button not found",
+    "evidenceIds": {
+      "build": "item_6",
+      "install": "item_8",
+      "ui": "item_10",
+      "uiFailure": "item_16"
+    }
+  },
+  "independent": {
+    "sourceChecksPassed": 6,
+    "sourceChecksTotal": 6,
+    "uiChecksPassed": 18,
+    "uiChecksTotal": 18,
+    "actor": "system after assisted student stopped",
+    "candidateHapSha256": "690cf909f990ba0907efb4e3f7e47819a62125f36894a62a4a5b3f52a2d20aaf"
+  },
+  "comparison": {
+    "independentAttemptSource": "5/6; divide zero returned 0",
+    "independentAttemptUi": "10/11 executed; stopped on divide zero mismatch",
+    "assistedAttemptSource": "6/6",
+    "assistedAttemptUi": "18/18 by system",
+    "conclusion": "assisted result; not independent completion"
+  },
+  "usage": {
+    "limit": 500000,
+    "used": 550908,
+    "totals": {
+      "input": 544603,
+      "output": 6305,
+      "cached_input": 489856,
+      "reasoning_output": 2299
+    },
+    "cachedIncludedInInput": true,
+    "reasoningIncludedInOutput": true,
+    "boundary": "between_requests"
+  },
+  "evidence": {
+    "portableArchiveBytes": 324840,
+    "portableArchiveSha256": "494f8e9e1bcb5dc8dcbdde6274213a789a72b779f654506720b667d90e06f440",
+    "archiveFilesVerified": 118,
+    "gatewayExchanges": 11,
+    "isolatedTableGit": "retrospective import and exact recovery verified; not live Attempt admission",
+    "formalAttemptAdmission": "not qualified",
+    "isolatedTableGitCaptureRevision": "66ae5aeb8a4a16b8d0c135f64dd82e5396826168",
+    "isolatedTableGitGatewayExchangesRecovered": 11,
+    "parentIsolatedTableGitRevision": "6c4ca52362dc949c5cf2a826a3bad4eeffdc484d",
+    "parentGatewayExchangesRecovered": 38,
+    "optionalNativeSessionArchiveBytes": 234438,
+    "nativeSessionArchiveTableGitPersisted": false
+  },
+  "limits": [
+    "System device checks are not student self-verification.",
+    "The hint was forwarded to the intermediate gateway; provider receipt and causal effect remain unknown.",
+    "Same-host Git restore and native session copy are not SessionFS Fork proof.",
+    "Both student processes stopped on token budgets without normal final submission."
+  ]
+}
