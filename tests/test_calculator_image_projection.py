@@ -26,6 +26,11 @@ class ImageProjectionTest(unittest.TestCase):
             doc=image.reconcile(gateway);doc.update(analysisStatus='completed',captureInventoryStatus='complete')
             receipt=root/'receipt.json';receipt.write_text(json.dumps(doc))
             result = module.image_projection(receipt,gateway)
+            inventory=root/'gateway-capture-inventory.json'
+            inventory.write_text(json.dumps({'schema':'agentlab.gateway_capture_inventory.v1',
+                                             'status':'incomplete','producerObservedCount':2}))
+            with self.assertRaisesRegex(ValueError,'producer inventory'): module.image_projection(receipt,gateway)
+            inventory.unlink()
             (gateway/'0002.upstream-request.json').write_text('{}')
             with self.assertRaisesRegex(ValueError,'differs'): module.image_projection(receipt,gateway)
         self.assertEqual(result['view_image_calls'], 1)
