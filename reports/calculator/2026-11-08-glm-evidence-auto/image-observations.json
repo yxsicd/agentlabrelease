@@ -1,0 +1,15 @@
+{
+  "schema": "agentlab.public_image_observations.v1",
+  "projection_revision": "685cc2602c0e55d4bc7d74ed056511824b83544b",
+  "image_observations": {
+    "availability": "completed",
+    "view_image_calls": 2,
+    "forwarded_to_intermediate": 2,
+    "provider_delivery": "unknown",
+    "capture_inventory": "complete",
+    "receipt_sha256": "c06baa202c14ab48ae065183c15c25019bf20af8f5f123e8dbad351dd3164bb4",
+    "limitation": "仅统计捕获到的查看调用与中间网关转发；不证明模型服务收到、理解或完成任务。"
+  },
+  "trace_sha256": "0669ce9a741eedab95a21f25bc751da81d5993c02382528c8922cf18ef69eb99",
+  "producer_authenticated": false
+}
