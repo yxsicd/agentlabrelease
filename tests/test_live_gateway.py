@@ -1,4 +1,5 @@
 import http.server
+import base64
 import hashlib
 import importlib.util
 import json
@@ -26,6 +27,30 @@ SPEC.loader.exec_module(MODULE)
 
 
 class GatewayCaptureTests(unittest.TestCase):
+    def test_close_reconciles_image_tool_result_without_exposing_image(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {'AGENTLAB_LM_GATEWAY_KEY': 'fixture'}):
+            root = Path(tmp); evidence = root / 'evidence'; evidence.mkdir()
+            participant = MODULE.Participant(evidence, root / 'state', '/bin/true',
+                'http://127.0.0.1:1', 'test-model', implementation='capture-only', api='openai-responses')
+            capture = evidence / 'gateway'
+            event = {'type': 'response.output_item.done', 'item': {'type': 'function_call',
+                     'name': 'view_image', 'call_id': 'call-1'}}
+            image = base64.b64encode(b'private-image').decode()
+            request = {'input': [{'type': 'function_call_output', 'call_id': 'call-1',
+                                  'output': [{'type': 'input_image', 'image_url': 'data:image/jpeg;base64,' + image}]}]}
+            (capture / '0001.response').write_text('data: ' + json.dumps(event) + '\n\n')
+            for name in ('0002.request.json', '0002.upstream-request.json'):
+                (capture / name).write_text(json.dumps(request))
+            (capture / '0002.status.json').write_text(json.dumps({'status': 200}))
+            participant.requests = 2
+            participant.close()
+            result = json.loads((evidence / 'gateway-image-evidence.json').read_text())
+            self.assertEqual(result['analysisStatus'], 'completed')
+            self.assertEqual(result['captureInventoryStatus'], 'incomplete')
+            self.assertEqual(result['calls'][0]['forwarded_to_intermediate'], 'observed')
+            self.assertEqual(result['calls'][0]['provider_delivery'], 'unknown')
+            self.assertNotIn(image, json.dumps(result))
+
     def test_capture_only_responses_preserves_external_agent_and_accounts_usage(self):
         requests = []
         class Upstream(http.server.BaseHTTPRequestHandler):

@@ -136,6 +136,12 @@ original frozen criteria rather than silently rewriting history.
 Use the [image evidence reconciler](../../examples/benchmark-report/image_evidence.py)
 for captured `view_image` responses and subsequent request outputs; its
 intermediate-gateway result does not establish provider delivery or comprehension.
+The real-code-agent capture proxy also writes `gateway-image-evidence.json`
+on shutdown for Responses captures. Consume it with the producer inventory:
+an incomplete capture, unsupported protocol, analysis error or missing receipt
+is an observation limit, not proof that the participant did not inspect an image.
+The receipt is a derived operator observation; durable storage still requires
+the selected Harness's own capture and readback.
 
 ### Actual staged navigation assessment
 

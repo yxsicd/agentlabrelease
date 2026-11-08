@@ -817,3 +817,33 @@ class Participant:
         except OSError:
             # Preserve the original assessment and any existing inventory.
             pass
+        # A screenshot can reach the model through a tool result without a
+        # corresponding native command event. Derive this only after capture
+        # stops, retain the inventory boundary, and never infer provider receipt.
+        image_result = {'schema': 'agentlab.image_evidence_reconciliation.v1',
+                        'scope': 'captured_intermediate_gateway_only', 'calls': [],
+                        'captureInventoryStatus': result['status'],
+                        'analysisStatus': 'not_run'}
+        if self.api != 'openai-responses':
+            image_result['analysisStatus'] = 'unsupported_protocol'
+        elif not self.requests:
+            image_result['analysisStatus'] = 'no_requests'
+        else:
+            try:
+                path = Path(__file__).resolve().parents[1] / 'benchmark-report/image_evidence.py'
+                spec = importlib.util.spec_from_file_location('agentlab_image_evidence', path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                image_result = module.reconcile(self.evidence / 'gateway')
+                image_result['captureInventoryStatus'] = result['status']
+                image_result['analysisStatus'] = 'completed'
+            except Exception as error:
+                image_result['analysisStatus'] = 'error'
+                image_result['errorClass'] = type(error).__name__
+        try:
+            with (self.evidence / 'gateway-image-evidence.json').open('x') as output:
+                json.dump(image_result, output, indent=2)
+                output.write('\n')
+        except OSError:
+            # Missing derived evidence is not a student failure.
+            pass
