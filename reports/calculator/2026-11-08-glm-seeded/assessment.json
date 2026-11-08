@@ -1,0 +1,75 @@
+{
+  "schema": "agentlab.calculator_assessment.v1",
+  "task": "divide-zero-and-repeated-decimal",
+  "taskRevision": "bad0fa3036154e52a69fb469a1d6fd4f408bf3ea",
+  "participant": {
+    "agent": "Codex CLI 0.166.0",
+    "model": "glm-5.3-flash",
+    "teacherHints": 0
+  },
+  "student": {
+    "normalCompletion": false,
+    "termination": "budget_exhausted",
+    "commandsCompleted": 34,
+    "nonzeroCommands": 4,
+    "build": "succeeded",
+    "installation": "observed_success",
+    "taskUiVerification": "attempted",
+    "viewImageCalls": 3,
+    "imagesForwardedToIntermediate": 1,
+    "providerDelivery": "unknown",
+    "evidenceIds": {
+      "build": "item_20",
+      "install": "item_25",
+      "deviceChecks": "item_32",
+      "deviceDisconnected": "item_36"
+    }
+  },
+  "independent": {
+    "sourceChecksPassed": 5,
+    "sourceChecksTotal": 6,
+    "sourceFailed": "divide_zero expected Error, observed 0",
+    "uiChecksPassed": 10,
+    "uiChecksExecuted": 11,
+    "uiChecksPlanned": 18,
+    "uiFirstMismatch": "divide_zero expected Error, observed 0",
+    "actor": "system after student stopped",
+    "candidateHapSha256": "2eed090118b923e592fe29a882b9d6b0d11d8b47903e1e6e90083bf4adcab036"
+  },
+  "harness": {
+    "lockedDependencies": "verified before dispatch",
+    "sourceCheckerFirstAttempt": "SyntaxError on TypeScript enum; evaluator limitation, not student failure",
+    "sourceCheckerFollowup": "Node type transform; source hash unchanged",
+    "deviceDisconnect": "observed during student checks",
+    "studentIntentionalTestCommand": "unsupported test argument; shell pipeline returned zero",
+    "formalAttemptCapture": "not qualified",
+    "tablegitDurability": "not verified for this attempt"
+  },
+  "usage": {
+    "limit": 1000000,
+    "used": 1023148,
+    "boundary": "between requests",
+    "totals": {
+      "input": 1011158,
+      "output": 11990,
+      "cached_input": 969216,
+      "reasoning_output": 6278
+    },
+    "cachedIncludedInInput": true,
+    "reasoningIncludedInOutput": true
+  },
+  "evidence": {
+    "portableArchiveBytes": 259536,
+    "portableArchiveSha256": "20dfe548ea2fa215a6e82ba9b031c24abf875f3b1303b828c522db3581436ea2",
+    "archiveFilesVerified": 75,
+    "gatewayExchanges": 38,
+    "screenshot": "one JPEG, not AVIF",
+    "scope": "excludes build outputs and full workspace"
+  },
+  "limits": [
+    "One task and one attempt do not establish a model ranking.",
+    "Independent device observations are not student self-verification.",
+    "UI execution stopped at first mismatch; remaining steps were not executed.",
+    "Gateway inventory is local, not proof of TableGit persistence or formal admission."
+  ]
+}
