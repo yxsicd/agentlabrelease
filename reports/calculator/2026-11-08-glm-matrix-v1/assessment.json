@@ -1,0 +1,295 @@
+{
+  "schema": "agentlab.evaluation-matrix-projection.v1",
+  "kind": "retrospective_diagnostic_not_rankable",
+  "task": "divide-zero-and-repeated-decimal",
+  "taskRevision": "bad0fa3036154e52a69fb469a1d6fd4f408bf3ea",
+  "participant": {
+    "agent": "Codex CLI 0.166.0",
+    "model": "GLM-5.3-Flash",
+    "reasoning": "provider default; not explicitly disabled"
+  },
+  "sections": [
+    {
+      "name": "任务与实现",
+      "metrics": [
+        {
+          "name": "独立完成",
+          "observation": "未完成",
+          "evidenceKey": "baseline"
+        },
+        {
+          "name": "独立源码检查",
+          "observation": "5/6",
+          "evidenceKey": "baseline"
+        },
+        {
+          "name": "独立界面检查",
+          "observation": "10/11 已执行",
+          "evidenceKey": "baseline"
+        },
+        {
+          "name": "需求理解",
+          "observation": "证据不足",
+          "evidenceKey": "unknown"
+        },
+        {
+          "name": "工程定位",
+          "observation": "经提示后定位",
+          "evidenceKey": "help1"
+        },
+        {
+          "name": "代码正确性",
+          "observation": "帮助后源码 6/6",
+          "evidenceKey": "system"
+        },
+        {
+          "name": "工程规范",
+          "observation": "未检查",
+          "evidenceKey": "unknown"
+        },
+        {
+          "name": "代码复用",
+          "observation": "未检查",
+          "evidenceKey": "unknown"
+        },
+        {
+          "name": "首次构建",
+          "observation": "证据不足",
+          "evidenceKey": "unknown"
+        },
+        {
+          "name": "最终构建",
+          "observation": "学生构建成功",
+          "evidenceKey": "help1"
+        },
+        {
+          "name": "部署启动",
+          "observation": "学生安装成功",
+          "evidenceKey": "help1"
+        }
+      ]
+    },
+    {
+      "name": "操作与验证",
+      "metrics": [
+        {
+          "name": "工具操作",
+          "observation": "有操作，未量化",
+          "evidenceKey": "unknown"
+        },
+        {
+          "name": "页面定位",
+          "observation": "进入计算器",
+          "evidenceKey": "student"
+        },
+        {
+          "name": "控件识别",
+          "observation": "提示后识别可点击祖先",
+          "evidenceKey": "student"
+        },
+        {
+          "name": "操作后确认",
+          "observation": "部分执行",
+          "evidenceKey": "student"
+        },
+        {
+          "name": "测试设计",
+          "observation": "有尝试，未完成",
+          "evidenceKey": "student"
+        },
+        {
+          "name": "断言正确性",
+          "observation": "发现显示值选择错误",
+          "evidenceKey": "student"
+        },
+        {
+          "name": "自主验证完成度",
+          "observation": "未完成；比例未知",
+          "evidenceKey": "student"
+        },
+        {
+          "name": "回归验证",
+          "observation": "学生完整回归未证实",
+          "evidenceKey": "student"
+        },
+        {
+          "name": "系统独立验收",
+          "observation": "帮助后 18/18",
+          "evidenceKey": "system"
+        }
+      ]
+    },
+    {
+      "name": "排障与帮助",
+      "metrics": [
+        {
+          "name": "错误识别",
+          "observation": "发现选择器问题",
+          "evidenceKey": "student"
+        },
+        {
+          "name": "证据收集",
+          "observation": "读取页面布局",
+          "evidenceKey": "student"
+        },
+        {
+          "name": "原因定位",
+          "observation": "发现数字键误识别",
+          "evidenceKey": "student"
+        },
+        {
+          "name": "修复有效性",
+          "observation": "完整自验未通过",
+          "evidenceKey": "student"
+        },
+        {
+          "name": "异常恢复",
+          "observation": "设备异常原因未知",
+          "evidenceKey": "device"
+        },
+        {
+          "name": "调用成功率",
+          "observation": "未计算",
+          "evidenceKey": "unknown"
+        },
+        {
+          "name": "调用收益",
+          "observation": "未逐项标注",
+          "evidenceKey": "unknown"
+        },
+        {
+          "name": "重复无收益",
+          "observation": "未逐项判定",
+          "evidenceKey": "unknown"
+        },
+        {
+          "name": "教师帮助",
+          "observation": "2 次",
+          "evidenceKey": "help2"
+        },
+        {
+          "name": "帮助类型",
+          "observation": "两次诊断提示",
+          "evidenceKey": "help2"
+        },
+        {
+          "name": "帮助后新增进展",
+          "observation": "修复、构建及部分自验",
+          "evidenceKey": "help1"
+        }
+      ]
+    },
+    {
+      "name": "资源与归因",
+      "metrics": [
+        {
+          "name": "输入 token",
+          "observation": "2,612,902",
+          "evidenceKey": "usage"
+        },
+        {
+          "name": "缓存输入 token",
+          "observation": "2,498,304",
+          "evidenceKey": "usage"
+        },
+        {
+          "name": "输出 token",
+          "observation": "31,170",
+          "evidenceKey": "usage"
+        },
+        {
+          "name": "推理输出 token",
+          "observation": "12,892",
+          "evidenceKey": "usage"
+        },
+        {
+          "name": "总 token",
+          "observation": "2,644,072",
+          "evidenceKey": "usage"
+        },
+        {
+          "name": "时长",
+          "observation": "未汇总",
+          "evidenceKey": "unknown"
+        },
+        {
+          "name": "费用",
+          "observation": "未计算",
+          "evidenceKey": "unknown"
+        },
+        {
+          "name": "最终退出",
+          "observation": "预算耗尽，非正常提交",
+          "evidenceKey": "usage"
+        },
+        {
+          "name": "多次运行稳定性",
+          "observation": "不可评估",
+          "evidenceKey": "unknown"
+        },
+        {
+          "name": "学生问题",
+          "observation": "验证脚本文件名不一致",
+          "evidenceKey": "student"
+        },
+        {
+          "name": "Harness／环境",
+          "observation": "设备断连原因未知",
+          "evidenceKey": "device"
+        },
+        {
+          "name": "证据完整度",
+          "observation": "17/17 网关字节恢复；非正式准入",
+          "evidenceKey": "recovery"
+        }
+      ]
+    }
+  ],
+  "evidenceNotes": {
+    "baseline": "首次无帮助阶段：系统源码检查 5/6；界面检查执行 11 项中的 10 项通过、1 项失败后停止，未执行项不算通过。",
+    "help1": "第一次教师诊断提示后，学生完成代码修改、构建和安装。提示与行为先后发生；模型是否收到及因果关系未得到独立证明。",
+    "help2": "累计两次教师诊断提示；只证明提示出现在网关转发请求，不证明最终提供方接收。帮助事实保留，权重未预先冻结。",
+    "system": "第一次帮助后学生停止，系统独立源码检查 6/6、界面检查 18/18。这是系统检查比例，不是学生自主验证成绩，也不是本轮最终完整任务通过率。",
+    "student": "第二次帮助后的学生轨迹：检查可点击祖先与布局，发现显示值选择错误；后续脚本出现文件名不一致，未完成完整自验。",
+    "device": "学生容器报告设备未连接。运行结束后主机模拟器在线；出错时的容器内状态与根因未知，不扣学生能力分。",
+    "usage": "三阶段用量求和。缓存输入是输入的子集，推理输出是输出的子集；预算在请求边界检查，可能越界。",
+    "recovery": "第二次帮助续跑的 17/17 网关交互经隔离事后恢复字节一致；不等于正式在线 Attempt 的持久化准入。",
+    "unknown": "未观察、未检查或缺少可信分母的指标不记零分；后续需按冻结规则采集。"
+  },
+  "scoring": {
+    "overall": null,
+    "reason": "historical assessment did not freeze this scoring rubric and weights before dispatch; evidence insufficient for all dimensions",
+    "availableChecks": [
+      {
+        "name": "post-hint source checks",
+        "passed": 6,
+        "executed": 6,
+        "actor": "system",
+        "percent": 100
+      },
+      {
+        "name": "post-hint UI checks",
+        "passed": 18,
+        "executed": 18,
+        "actor": "system",
+        "percent": 100
+      }
+    ],
+    "assistanceCount": 2,
+    "unknownIsZero": false,
+    "weightsApplied": false
+  },
+  "usage": {
+    "input": 2612902,
+    "cachedInput": 2498304,
+    "output": 31170,
+    "reasoningOutput": 12892,
+    "total": 2644072,
+    "cachedSubsetOfInput": true,
+    "reasoningSubsetOfOutput": true
+  },
+  "sources": [
+    "../2026-11-08-glm-assisted-h01/",
+    "../2026-11-08-glm-assisted-h02-recovery/"
+  ]
+}
